@@ -1,0 +1,287 @@
+schema_version: "1.0"
+task:
+    id: REN-151
+    title: Parallelize independent external calls in the catalog search path
+    source: linear
+    branch: ayanganguly333/ren-151-parallelize-independent-external-calls-in-the-catalog-search
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-151/parallelize-independent-external-calls-in-the-catalog-search-path
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Changes concurrency around an external search integration.
+        - Shared catalog behavior must remain result-equivalent under failures and exact-brand branching.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, priority, label, status, branch context, comments, and relations
+        - getProducts search branch, exact-brand short circuit, RAG fetch, embedding, brand query, fallback, filters, and ordering
+        - Existing search audit, business rules, architecture, and validation evidence
+        - Existing catalog ordering regression-test references
+    excluded_areas:
+        - REN-146 timeout and endpoint configuration
+        - REN-158 ILIKE fallback behavior
+        - Broad getProducts refactoring, schemas, migrations, auth, payment, inventory, and production data
+    dependencies: [DEP-151-001, DEP-151-002]
+    integrations: [INT-151-001]
+    security_boundaries: []
+    state_transitions:
+        [
+            search_received -> exact_brand_checked,
+            exact_brand_checked -> concurrent_branches_started,
+            concurrent_branches_started -> results_combined,
+        ]
+    related_tests: [TEXP-151-001, TEXP-151-004, TEXP-151-005, TEXP-151-006]
+    uncertainties:
+        - The narrowest test seam for module-level external calls must be confirmed during implementation.
+requirements:
+    - id: REQ-151-001
+      description: Start independent RAG work without waiting for embedding/brand matching for non-exact-brand searches.
+      type: explicit
+    - id: REQ-151-002
+      description: Preserve exact-brand, embedding, threshold, RAG-ID, fallback, filter, and ordering semantics.
+      type: explicit
+    - id: REQ-151-003
+      description: Preserve graceful degradation when either independent operation fails.
+      type: explicit
+    - id: REQ-151-004
+      description: Keep timeouts, endpoint changes, schema changes, and unrelated refactors out of scope.
+      type: explicit
+scenarios:
+    - id: SCN-151-001
+      requirement_ids: [REQ-151-001, REQ-151-002]
+      description: Normal non-exact-brand search starts both work groups concurrently and preserves results.
+    - id: SCN-151-002
+      requirement_ids: [REQ-151-001]
+      description: Slow embedding/brand work does not delay starting RAG.
+    - id: SCN-151-003
+      requirement_ids: [REQ-151-001, REQ-151-002]
+      description: Slow RAG does not change brand-match behavior or output semantics.
+    - id: SCN-151-004
+      requirement_ids: [REQ-151-003]
+      description: RAG failure or empty IDs preserves local fallback behavior.
+    - id: SCN-151-005
+      requirement_ids: [REQ-151-003]
+      description: Embedding or brand failure preserves the RAG/local-search path.
+    - id: SCN-151-006
+      requirement_ids: [REQ-151-002]
+      description: Exact-brand search continues to skip RAG.
+    - id: SCN-151-007
+      requirement_ids: [REQ-151-002, REQ-151-004]
+      description: Non-search and explicit filter/sort requests remain unchanged.
+invariants:
+    - id: INV-151-001
+      description: Brand matching never runs before its embedding is available.
+    - id: INV-151-002
+      description: Scheduling changes do not alter returned content or order for identical inputs and dependency responses.
+    - id: INV-151-003
+      description: One independent failure cannot create an unhandled failure when the other path can complete.
+    - id: INV-151-004
+      description: Exact-brand searches never invoke RAG.
+flows:
+    - id: FLOW-151-001
+      description: Normalize search, check exact brand, launch independent branches, then combine through existing logic.
+      state_transitions:
+          [
+              search_received -> exact_brand_checked,
+              exact_brand_checked -> concurrent_branches_started,
+              concurrent_branches_started -> results_combined,
+          ]
+    - id: FLOW-151-002
+      description: Preserve branch-specific failure handling and local fallback.
+      state_transitions: [concurrent_branches_started -> results_combined]
+dependencies:
+    - id: DEP-151-001
+      name: Embedding and brand-match sequence
+      purpose: Supplies embedding and optional fuzzy brand match.
+      owner: Catalog query layer
+      required_state: Existing embedding and database behavior remains available.
+      description: Brand query depends on embedding; the sequence remains ordered.
+      status: resolved
+    - id: DEP-151-002
+      name: Advanced RAG search service
+      purpose: Supplies candidate product IDs from processed search text.
+      owner: Existing external ML/search service
+      required_state: Existing endpoint and response shape remain available.
+      description: RAG is independent of embedding/brand results.
+      status: resolved
+integrations:
+    - id: INT-151-001
+      system: Advanced RAG HTTP service
+      name: Advanced RAG HTTP endpoint
+      purpose: Retrieve candidate product IDs for non-exact-brand searches.
+      contract: Existing GET request, response parsing, and limit remain unchanged.
+      failure_mode: Existing catch/log behavior and local fallback remain unchanged.
+      retry_idempotency: Read-only request; no mutation or retry change.
+      status: existing
+personas:
+    - id: PER-151-001
+      role: storefront_shopper
+      applicability: Customer using free-text catalog search.
+security_boundaries: []
+business_rules:
+    - id: BR-151-001
+      description: Exact brand-name searches remain the fast path and do not call RAG.
+    - id: BR-151-002
+      description: Scheduling does not change search-result content or ordering.
+decisions:
+    - id: DEC-151-001
+      question: How should independent branch failures be isolated?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Use branch-local promises or Promise.allSettled while retaining existing catches.
+      basis: Failure tolerance is existing behavior and the issue is timing-only.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-151-002
+      question: Should exact-brand handling enter the concurrent block?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: No; keep the exact-brand short circuit unchanged.
+      basis: Existing business rule and issue scope preserve it.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-151-001
+      category: unit
+      classification: REQUIRED
+      reason: Deferred promises prove RAG starts before embedding/brand resolves.
+      scenarios: [SCN-151-001, SCN-151-002]
+    - id: TEXP-151-002
+      category: integration
+      classification: REQUIRED
+      reason: Successful responses preserve IDs, content, filters, and ordering.
+      scenarios: [SCN-151-001, SCN-151-003, SCN-151-007]
+    - id: TEXP-151-003
+      category: unit
+      classification: REQUIRED
+      reason: Both external failure directions preserve fallback behavior.
+      scenarios: [SCN-151-004, SCN-151-005]
+    - id: TEXP-151-004
+      category: regression
+      classification: REQUIRED
+      reason: Existing ordering and catalog-query tests protect filters and ordering.
+      scenarios: [SCN-151-001, SCN-151-006, SCN-151-007]
+    - id: TEXP-151-005
+      category: performance
+      classification: REQUIRED
+      reason: Staging p50/p95 timing demonstrates impact without an invented numeric claim.
+      scenarios: [SCN-151-001, SCN-151-002, SCN-151-003]
+    - id: TEXP-151-006
+      category: external_integration
+      classification: REQUIRED
+      reason: Exact-brand skips RAG and non-exact searches preserve the existing RAG contract.
+      scenarios: [SCN-151-004, SCN-151-006]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-151-001
+          scenario_ids: [SCN-151-001, SCN-151-002, SCN-151-003]
+        - requirement_id: REQ-151-002
+          scenario_ids: [SCN-151-001, SCN-151-003, SCN-151-006, SCN-151-007]
+        - requirement_id: REQ-151-003
+          scenario_ids: [SCN-151-004, SCN-151-005]
+        - requirement_id: REQ-151-004
+          scenario_ids: [SCN-151-007]
+    scenario_to_invariants:
+        - scenario_id: SCN-151-001
+          invariant_ids: [INV-151-001, INV-151-002, INV-151-003]
+        - scenario_id: SCN-151-002
+          invariant_ids: [INV-151-001, INV-151-002]
+        - scenario_id: SCN-151-003
+          invariant_ids: [INV-151-001, INV-151-002]
+        - scenario_id: SCN-151-004
+          invariant_ids: [INV-151-002, INV-151-003]
+        - scenario_id: SCN-151-005
+          invariant_ids: [INV-151-002, INV-151-003]
+        - scenario_id: SCN-151-006
+          invariant_ids: [INV-151-004]
+        - scenario_id: SCN-151-007
+          invariant_ids: [INV-151-002]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-151-001
+          test_expectation_ids:
+              [TEXP-151-001, TEXP-151-002, TEXP-151-004, TEXP-151-005]
+        - scenario_id: SCN-151-002
+          test_expectation_ids: [TEXP-151-001, TEXP-151-005]
+        - scenario_id: SCN-151-003
+          test_expectation_ids: [TEXP-151-002, TEXP-151-005]
+        - scenario_id: SCN-151-004
+          test_expectation_ids: [TEXP-151-003, TEXP-151-006]
+        - scenario_id: SCN-151-005
+          test_expectation_ids: [TEXP-151-003]
+        - scenario_id: SCN-151-006
+          test_expectation_ids: [TEXP-151-004, TEXP-151-006]
+        - scenario_id: SCN-151-007
+          test_expectation_ids: [TEXP-151-002, TEXP-151-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: CRIT-151-001
+          severity: MINOR
+          references: [REQ-151-003, SCN-151-004, SCN-151-005]
+          description: Preserve branch-local failure handling instead of allowing combined rejection to remove fallback behavior.
+        - id: CRIT-151-002
+          severity: MINOR
+          references: [REQ-151-002, SCN-151-006, INV-151-004]
+          description: Explicitly test that exact-brand searches never invoke RAG.
+        - id: CRIT-151-003
+          severity: MINOR
+          references: [TEXP-151-005]
+          description: Require staging timing evidence and avoid unmeasured numeric performance claims.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit implementation instruction)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "ed24115564e9673b527ffa9557fd2cdac2c77bed"
+    head_commit: "ed24115564e9673b527ffa9557fd2cdac2c77bed"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-151-001: Capture staging p50/p95 latency and broaden dependency-response coverage before production rollout."
+    evidence:
+        - "Compared origin/master and current HEAD at ed24115564e9673b527ffa9557fd2cdac2c77bed and inspected the uncommitted implementation diff."
+        - "Static review confirms concurrent branch launch, preserved exact-brand short circuit, branch-local catches, unchanged fallback, and unchanged ordering logic."
+        - "Focused and full Bun verification were run separately; review itself did not execute application tests."
+    governance_reentry_required: false

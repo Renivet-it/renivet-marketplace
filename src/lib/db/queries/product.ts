@@ -68,6 +68,7 @@ import {
     wishlists,
     womenPageFeaturedProducts,
 } from "../schema";
+import { runConcurrentSearchTasks } from "../search-concurrency";
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import {
@@ -1184,12 +1185,15 @@ class ProductQuery {
             } else {
                 isRagSearchActive = true;
 
-                try {
-                    // Generate 384-dim embedding for brand matching (brands still use 384-dim)
-                    const searchEmbedding = await getEmbedding(processedSearch);
+                await runConcurrentSearchTasks(
+                    async () => {
+                        try {
+                            // Generate 384-dim embedding for brand matching (brands still use 384-dim)
+                            const searchEmbedding =
+                                await getEmbedding(processedSearch);
 
-                    // 🔍 Detect brand intent
-                    const brandResult = await db.execute(sql`
+                            // 🔍 Detect brand intent
+                            const brandResult = await db.execute(sql`
                     SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
                     FROM brands
                     WHERE embeddings IS NOT NULL
@@ -1197,49 +1201,61 @@ class ProductQuery {
                     LIMIT 1
                 `);
 
-                    const brandRow = Array.isArray(brandResult)
-                        ? brandResult[0]
-                        : brandResult?.rows?.[0];
-                    if (
-                        brandRow &&
-                        Number(brandRow.distance) < BRAND_MATCH_THRESHOLD
-                    ) {
-                        topBrandMatch = {
-                            id: brandRow.id,
-                            name: brandRow.name,
-                            distance: Number(brandRow.distance),
-                        };
-                        console.log(
-                            `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
-                        );
-                    }
-                } catch (e) {
-                    console.warn("Brand intent matching skipped/failed", e);
-                }
-
-                // Fetch absolute best products from the Advanced RAG Python backend
-                try {
-                    console.log(
-                        "[getProducts] Hitting Advanced RAG Engine for query:",
-                        processedSearch
-                    );
-                    const response = await fetch(
-                        `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
-                        { next: { revalidate: 60 } }
-                    );
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (Array.isArray(data)) {
-                            ragProductIds = data.map((d: any) => String(d.id));
+                            const brandRow = Array.isArray(brandResult)
+                                ? brandResult[0]
+                                : brandResult?.rows?.[0];
+                            if (
+                                brandRow &&
+                                Number(brandRow.distance) <
+                                    BRAND_MATCH_THRESHOLD
+                            ) {
+                                topBrandMatch = {
+                                    id: brandRow.id,
+                                    name: brandRow.name,
+                                    distance: Number(brandRow.distance),
+                                };
+                                console.log(
+                                    `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
+                                );
+                            }
+                        } catch (e) {
+                            console.warn(
+                                "Brand intent matching skipped/failed",
+                                e
+                            );
+                        }
+                    },
+                    async () => {
+                        // Fetch absolute best products from the Advanced RAG Python backend
+                        try {
                             console.log(
-                                `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                                "[getProducts] Hitting Advanced RAG Engine for query:",
+                                processedSearch
+                            );
+                            const response = await fetch(
+                                `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
+                                { next: { revalidate: 60 } }
+                            );
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (Array.isArray(data)) {
+                                    ragProductIds = data.map((d: any) =>
+                                        String(d.id)
+                                    );
+                                    console.log(
+                                        `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                                    );
+                                }
+                            }
+                        } catch (error) {
+                            console.error(
+                                "[getProducts] RAG Engine failed:",
+                                error
                             );
                         }
                     }
-                } catch (error) {
-                    console.error("[getProducts] RAG Engine failed:", error);
-                }
+                );
 
                 searchQuery = getCatalogSearchPredicate({
                     processedSearch,
