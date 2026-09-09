@@ -1,41 +1,34 @@
 # SOC 2 CC6/CC7 engineering evidence crosswalk
 
-Date: 2026-09-10
+Source baseline: OWASP ASVS 5.0.0 Level 2 matrix (253 Level 1/2 requirements).
 
-## Scope and limitation
+This is engineering evidence only—not a SOC 2 audit, certification, legal opinion, or full-readiness claim. Policy, HR, vendor, physical-facility, and auditor-attestation controls are excluded.
 
-This is an engineering evidence crosswalk from the reviewed [ASVS L2 matrix](ASVS-L2-CONTROL-MATRIX.md) to the logical themes of SOC 2 CC6 and CC7. It is not a SOC 2 report, audit opinion, certification, legal interpretation, or full readiness assessment. It excludes policy, vendor, HR, physical-facility, and auditor-attestation controls. The statuses below preserve the source matrix’s `Needs-review` status and do not establish control effectiveness.
+| SOC 2 theme | ASVS 5.0 evidence groups | Result | Engineering conclusion |
+|---|---|---|---|
+| CC6.1 logical access controls | V6 Authentication, V7 Session Management, V8 Authorization | Needs-review | Representative server-side authorization tests pass, but complete route/session evidence is absent. |
+| CC6.2 credential and identity lifecycle | V6, V7, V9 Self-contained Tokens, V10 OAuth/OIDC | Needs-review | Clerk integration exists; lifecycle, token rotation, revocation, and provider configuration need external evidence. |
+| CC6.3 role, owner, and privileged access | V8 Authorization | Needs-review | Selected logistics and permission-policy paths are tested; full IDOR/role inventory is unfinished. |
+| CC6.6 access removal | V7, V8, V10 | Needs-review | Account/session removal requires end-to-end and provider evidence. |
+| CC6.7 transmission protection | V12 Secure Communication | **Fail** | V12.3.1 fails because hardcoded unencrypted outbound HTTP calls exist. |
+| CC6.8 data and system boundary protection | V4 API, V5 File Handling, V11 Cryptography, V14 Data Protection | **Fail / Needs-review** | V5.2.1 fails due to upload settings allowing 9,999 files up to 1024GB; remaining controls need evidence. |
+| CC7.1 vulnerability/configuration awareness | V13 Configuration, V15 Secure Coding and Architecture | Needs-review | Full dependency/configuration inventory and remediation evidence are absent. |
+| CC7.2 security monitoring | V16 Security Logging and Error Handling | Needs-review | Audit components exist; coverage, retention, alerting, and sensitive-field handling need review. |
+| CC7.3 incident analysis | V16 plus operational evidence | Needs-review | Incident endpoints exist, but complete triage/response evidence is absent. |
+| CC7.4 response and recovery | V13, V15, V16 | Needs-review | Selected recovery boundaries exist; complete exercises and ownership evidence are absent. |
+| CC7.5 change/remediation tracking | V15 plus repository governance | Needs-review | Work-item governance exists; remediation SLAs and dependency evidence remain incomplete. |
 
-## CC6 — logical and physical access controls
+## Confirmed engineering failures
 
-| SOC 2 theme | ASVS source | Engineering evidence | Status | Gap / follow-up |
-|---|---|---|---|---|
-| CC6.1 — logical access boundaries | V1.2.1, V4.1.1 | `src/middleware.ts:1-309`; `tests/ren-104-boundaries.test.ts:1-90` | Needs-review | Complete route inventory and authorization review. |
-| CC6.2 — authentication controls | V2.1.1, V2.2.1, V3.2.1 | `src/middleware.ts:31-309`; `src/lib/auth/secret-comparison.ts`; `src/lib/auth/cron-access.ts:1-39` | Needs-review | Verify authentication policy, session lifecycle, and anti-automation coverage. |
-| CC6.3 — authorization and least privilege | V4.1.1, V4.2.1 | `src/app/api/permission/route.ts:1-96`; `src/lib/auth/logistics-access.ts:43-110` | Needs-review | Complete owner/role/tenant and IDOR test matrix. |
-| CC6.6 — logical access removal and lifecycle | V3.2.1, V4.1.1 | `src/middleware.ts:31-309`; `src/app/api/account-merge/route.ts:262-361` | Needs-review | Verify revocation, account lifecycle, and post-change access behavior. |
-| CC6.7 — transmission and access protection | V9.1.1, V13.1.1 | `src/lib/delhivery/client.ts`; `src/app/api/finance/tds/export/route.ts:15` | Needs-review | Confirm deployed TLS, API authentication, and route coverage. |
+1. **ASVS V5.2.1 / CC6.8:** `src/app/api/uploadthing/core.ts:427-432` allows 9,999 files with a 1024GB limit.
+2. **ASVS V12.3.1 / CC6.7:** `src/app/api/search/products/route.ts:5` and `src/lib/db/queries/product.ts:1239` use hardcoded unencrypted HTTP endpoints.
 
-## CC7 — system operations
+## Current totals
 
-| SOC 2 theme | ASVS source | Engineering evidence | Status | Gap / follow-up |
-|---|---|---|---|---|
-| CC7.1 — detect and monitor security events | V7.4.1 | `src/lib/db/queries/audit-log.ts`; `src/lib/finance/audit.ts` | Needs-review | Verify event completeness, retention, alerting, and operational ownership. |
-| CC7.2 — monitor anomalies and failures | V7.1.1, V7.4.1 | `src/lib/fb-capi.ts`; `src/lib/db/queries/audit-log.ts` | Needs-review | Review production logs and monitoring response evidence. |
-| CC7.3 — evaluate and respond to issues | V5.1.1, V7.1.1, V13.2.1 | `src/app/api/account-merge/route.ts:36-52`; `src/app/api/admin/monitoring-sla/incidents/route.ts:9-24` | Needs-review | Attach incident-response and validation evidence where available. |
-| CC7.4 — recover from identified issues | V1.2.1, V14.2.1 | `docs/enhancement-improvements/execution-readiness/24-CURRENT_PROJECT_STATUS.md` | Needs-review | Add reproducible recovery, rollback, and dependency-response evidence. |
-| CC7.5 — change and configuration monitoring | V14.2.1 | `tests/ren-105-client-boundaries.test.ts:1-19`; `docs/enhancement-improvements/execution-readiness/24-CURRENT_PROJECT_STATUS.md` | Needs-review | Complete dependency/configuration inventory and deployment evidence. |
+- ASVS requirements assessed: 253
+- Pass: 0
+- Fail: 2
+- N/A: 0
+- Needs-review: 251
 
-## Reconciliation
-
-- Source: REN-125’s reviewed ASVS L2 matrix.
-- Source status: all 16 selected ASVS areas remain `Needs-review`.
-- Crosswalk status: all mappings remain `Needs-review`; no SOC 2 control is marked Pass.
-- Missing evidence is reported as a gap, not as a failed control or an implied pass.
-- The crosswalk covers only engineering evidence relevant to CC6 and CC7.
-
-## Required follow-up
-
-1. Complete the ASVS and IDOR evidence work and update the source matrix.
-2. Verify production configuration, access lifecycle, logging, monitoring, incident response, recovery, and change control.
-3. Have an appropriate security/compliance stakeholder review the mapping terminology before using it in any formal assessment.
+No CC6 or CC7 theme is marked passed until all supporting ASVS requirements and organizational evidence are verified.

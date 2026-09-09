@@ -2,11 +2,11 @@
 
 ## Scope
 
-Create one engineering-scope crosswalk from the completed ASVS control-matrix evidence to SOC 2 Common Criteria CC6 (logical and physical access controls) and CC7 (system operations). The document must identify the evidence source, coverage status, and gaps without claiming policy, vendor, HR, audit-attestation, or full SOC 2 readiness.
+Create one engineering-scope crosswalk from the complete OWASP ASVS 5.0.0 Level 2 matrix (all 253 Level 1/2 requirements) to SOC 2 Common Criteria CC6 and CC7. The document must identify the evidence source, coverage status, and gaps without claiming policy, vendor, HR, audit-attestation, or full SOC 2 readiness.
 
 ## Current finding
 
-`origin/master` contains audit traceability and selected security evidence, but it does not contain a completed ASVS L2 control matrix. REN-125 is therefore an upstream dependency. REN-126 may be implemented only after that matrix is available, or the final document must explicitly mark the affected mappings as pending rather than inventing evidence.
+The corrected REN-125 branch contains the complete ASVS 5.0.0 Level 2 population. REN-126 must preserve its two confirmed failures and 251 `Needs-review` statuses rather than upgrading incomplete evidence.
 
 ## Required output
 
