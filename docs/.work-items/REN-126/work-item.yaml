@@ -1,0 +1,202 @@
+schema_version: "1.0"
+task:
+    id: REN-126
+    title: Cross-map evidence to SOC 2 CC6/CC7 (Security criterion)
+    source: linear
+    branch: ayanganguly333/ren-126-cross-map-evidence-to-soc-2-cc6-cc7
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-126/cross-map-evidence-to-soc-2-cc6-cc7-security-criterion
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Automated Testing Rollout
+        milestone: Compliance Mapping (ASVS/SOC2)
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Compliance evidence mapping can create misleading assurance if unsupported conclusions are recorded.
+        - The task crosses ASVS evidence, security controls, and SOC 2 terminology.
+        - Evidence sources may contain secrets or personal data and require bounded handling.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, priority, status, project milestone, assignee, comments, and relations
+        - origin/master audit traceability and execution-readiness documents
+        - Existing REN-143 security and staging evidence artifacts
+        - Presence or absence of the REN-125 ASVS control matrix
+        - Repository paths and evidence-source boundaries
+    excluded_areas:
+        - Application source, schemas, migrations, production configuration, and QA artifacts
+        - Legal, auditor, vendor, HR, physical-facility, and policy controls
+        - Full SOC 2 readiness or attestation conclusions
+    dependencies: [DEP-126-001]
+    integrations: []
+    security_boundaries: [SEC-126-001]
+    state_transitions: [source_pending -> mapping_drafted -> reviewed -> published]
+    related_tests: [TEXP-126-001, TEXP-126-002, TEXP-126-003]
+    uncertainties:
+        - Some CC6/CC7 mappings remain engineering interpretations and require stakeholder review.
+        - Deployment and operational evidence may require later refresh.
+requirements:
+    - id: REQ-126-001
+      description: Produce a separate engineering-scope crosswalk for applicable evidence against SOC 2 CC6 and CC7.
+      type: explicit
+    - id: REQ-126-002
+      description: Trace every mapping to an ASVS matrix item and reproducible repository or approved evidence source.
+      type: explicit
+    - id: REQ-126-003
+      description: State plainly that the document excludes policy, vendor, HR, physical-facility, attestation, and full SOC 2 readiness conclusions.
+      type: explicit
+    - id: REQ-126-004
+      description: Mark missing evidence as pending or gap and never infer a pass from an absent source.
+      type: inferred
+    - id: REQ-126-005
+      description: Prevent secrets and unnecessary personal data from entering the crosswalk.
+      type: inferred
+scenarios:
+    - id: SCN-126-001
+      requirement_ids: [REQ-126-001, REQ-126-002]
+      description: A reviewer follows each CC6/CC7 row to its ASVS item and evidence source.
+    - id: SCN-126-002
+      requirement_ids: [REQ-126-003]
+      description: A reader sees the engineering-only scope and cannot reasonably mistake the document for a SOC 2 opinion.
+    - id: SCN-126-003
+      requirement_ids: [REQ-126-004]
+      description: A missing ASVS matrix or evidence source is labeled pending rather than marked pass.
+    - id: SCN-126-004
+      requirement_ids: [REQ-126-005]
+      description: The published document contains no credentials, tokens, secret values, or unnecessary customer data.
+invariants:
+    - id: INV-126-001
+      description: Every claimed mapping has a stable source reference and an explicit status.
+    - id: INV-126-002
+      description: CC6 and CC7 evidence is not represented as coverage of unrelated SOC 2 criteria.
+    - id: INV-126-003
+      description: Missing evidence never becomes a pass by implication.
+    - id: INV-126-004
+      description: The artifact contains no secrets or unnecessary personal data.
+flows:
+    - id: FLOW-126-001
+      description: Load ASVS matrix, select applicable CC6/CC7 mappings, attach evidence references, review scope, scan the artifact, and publish the crosswalk.
+      state_transitions: [source_loaded, mapped, scope_checked, scanned, published]
+dependencies:
+    - id: DEP-126-001
+      name: REN-125 ASVS L2 control matrix
+      purpose: Supplies the control IDs and evidence rows that REN-126 must cross-map.
+      owner: Security and compliance audit maintainers
+      required_state: Completed, reviewable ASVS matrix is available from the approved branch/source.
+      description: The reviewed REN-125 matrix is now available in the dependent branch and supplies the crosswalk source.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-126-001
+      role: engineering_reviewer
+      applicability: Reviews source traceability and engineering control status.
+    - id: PER-126-002
+      role: compliance_stakeholder
+      applicability: Uses the crosswalk as engineering evidence with its stated limitations.
+security_boundaries:
+    - id: SEC-126-001
+      description: Evidence artifacts must not expose credentials, tokens, secrets, or unnecessary customer data.
+business_rules:
+    - id: BR-126-001
+      description: The crosswalk is an engineering evidence aid, not a policy statement, legal opinion, audit opinion, or full SOC 2 readiness assessment.
+decisions:
+    - id: DEC-126-001
+      question: Should the crosswalk use the reviewed REN-125 matrix as its source?
+      class: HUMAN_CONFIRMATION
+      options:
+          - name: use_reviewed_matrix
+            description: Use the reviewed REN-125 matrix and preserve its Needs-review statuses.
+            recommended: true
+          - name: pending_only
+            description: Produce only pending mappings even though the matrix is available.
+            recommended: false
+      recommendation: use_reviewed_matrix
+      basis: REN-125 now provides the reviewed source matrix; its conservative statuses must remain unchanged.
+      confidence: high
+      impact: Using the reviewed source enables traceable mapping while preserving evidence uncertainty.
+      status: resolved
+      consequence: The crosswalk must not upgrade any REN-125 Needs-review status to Pass.
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-126-001
+      category: exploratory
+      classification: REQUIRED
+      reason: Confirm each row has a source, status, CC6/CC7 classification, and reproducible path.
+      scenarios: [SCN-126-001, SCN-126-003]
+    - id: TEXP-126-002
+      category: regression
+      classification: REQUIRED
+      reason: Confirm scope language excludes unrelated SOC 2 and non-engineering controls.
+      scenarios: [SCN-126-002]
+    - id: TEXP-126-003
+      category: security
+      classification: REQUIRED
+      reason: Scan the final artifact for secrets and unnecessary personal data.
+      scenarios: [SCN-126-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-126-001
+          scenario_ids: [SCN-126-001]
+        - requirement_id: REQ-126-002
+          scenario_ids: [SCN-126-001]
+        - requirement_id: REQ-126-003
+          scenario_ids: [SCN-126-002]
+        - requirement_id: REQ-126-004
+          scenario_ids: [SCN-126-003]
+        - requirement_id: REQ-126-005
+          scenario_ids: [SCN-126-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-126-001
+          invariant_ids: [INV-126-001, INV-126-002]
+        - scenario_id: SCN-126-002
+          invariant_ids: [INV-126-002]
+        - scenario_id: SCN-126-003
+          invariant_ids: [INV-126-003]
+        - scenario_id: SCN-126-004
+          invariant_ids: [INV-126-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-126-001
+          test_expectation_ids: [TEXP-126-001]
+        - scenario_id: SCN-126-002
+          test_expectation_ids: [TEXP-126-002]
+        - scenario_id: SCN-126-003
+          test_expectation_ids: [TEXP-126-001]
+        - scenario_id: SCN-126-004
+          test_expectation_ids: [TEXP-126-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context contract reviewer
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-126-R01
+          severity: DESIGN_BLOCKER
+          references: [DEP-126-001, DEC-126-001]
+          description: ASVS matrix is absent; remain blocked or obtain explicit choice for pending-only output.
+        - id: CRIT-126-R02
+          severity: MAJOR
+          references: [REQ-126-003, BR-126-001]
+          description: Scope must exclude non-engineering controls and full SOC 2 conclusions.
+        - id: CRIT-126-R03
+          severity: MAJOR
+          references: [REQ-126-002, INV-126-001]
+          description: Evidence traceability and status semantics must be reproducible.
+        - id: CRIT-126-R04
+          severity: MINOR
+          references: [REQ-126-005, INV-126-004]
+          description: Final artifact needs a secret and unnecessary-data scan.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner approved completion after REN-125 source became available)
