@@ -3,7 +3,7 @@ task:
     id: REN-151
     title: Parallelize independent external calls in the catalog search path
     source: linear
-    branch: ayanganguly333/ren-151-parallelize-independent-external-calls-in-the-catalog-search
+    branch: ayanganguly333/ren-151-parallelize-independent-external-calls
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-151/parallelize-independent-external-calls-in-the-catalog-search-path
