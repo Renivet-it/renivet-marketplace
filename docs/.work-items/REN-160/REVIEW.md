@@ -6,7 +6,7 @@
 
 ## Review Scope and Git Evidence
 
-The review covers the clean eight-file `origin/master...HEAD` diff. Application changes are limited to the recommendation query wrapper, a dedicated Redis cache module and export, and focused tests; the remaining files are task-local governance artifacts.
+The review covers the clean eight-file implementation diff proposed in [PR #645](https://github.com/Renivet-it/renivet-marketplace/pull/645). Application changes are limited to the recommendation query wrapper, a dedicated Redis cache module and export, and focused tests; the remaining files are task-local governance artifacts.
 
 ## Requirement Reconciliation
 
