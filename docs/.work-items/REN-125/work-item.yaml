@@ -1,0 +1,178 @@
+schema_version: "1.0"
+task:
+    id: REN-125
+    title: Build OWASP ASVS L2 control matrix with evidence
+    source: linear
+    branch: ayanganguly333/ren-125-build-owasp-asvs-l2-control-matrix-with-evidence
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-125/build-owasp-asvs-l2-control-matrix-with-evidence
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Automated Testing Rollout
+        milestone: Compliance Mapping (ASVS/SOC2)
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Security evidence status can mislead reviewers if unsupported controls are marked Pass.
+        - The matrix is a source artifact for a later SOC 2 mapping.
+        - Evidence may expose secrets or personal data unless bounded.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, status, priority, milestone, assignee, comments, and relations
+        - Existing audit traceability and execution-readiness documentation
+        - Existing security, staging, journey, and work-item evidence artifacts
+        - Automated tests and stable source paths available on origin/master
+        - Evidence, secret, privacy, and scope boundaries
+    excluded_areas:
+        - Application changes, schemas, migrations, production configuration, and deployment
+        - Legal, vendor, HR, physical-facility, policy, and auditor-attestation controls
+        - Claims of complete SOC 2 readiness
+    dependencies: []
+    integrations: []
+    security_boundaries: [SEC-125-001]
+    state_transitions: [sources_collected -> controls_selected -> evidenced -> reviewed -> published]
+    related_tests: [TEXP-125-001, TEXP-125-002, TEXP-125-003]
+    uncertainties:
+        - Some ASVS controls may lack automated tests and require manual review status.
+        - The exact subset of relevant L2 controls must be justified in the matrix.
+requirements:
+    - id: REQ-125-001
+      description: Create a matrix of relevant OWASP ASVS Level 2 controls with one row per selected control.
+      type: explicit
+    - id: REQ-125-002
+      description: Assign each row Pass, Fail, N/A, or Needs-review with a concise rationale.
+      type: explicit
+    - id: REQ-125-003
+      description: Attach reproducible automated-test or repository file/line evidence to each row.
+      type: explicit
+    - id: REQ-125-004
+      description: Preserve visible gaps and avoid unsupported compliance or readiness conclusions.
+      type: inferred
+    - id: REQ-125-005
+      description: Exclude secrets and unnecessary personal data from the published matrix.
+      type: inferred
+scenarios:
+    - id: SCN-125-001
+      requirement_ids: [REQ-125-001, REQ-125-002, REQ-125-003]
+      description: A reviewer follows a selected ASVS control row from status to reproducible evidence.
+    - id: SCN-125-002
+      requirement_ids: [REQ-125-002, REQ-125-004]
+      description: Missing or insufficient evidence is marked Needs-review or Fail rather than Pass.
+    - id: SCN-125-003
+      requirement_ids: [REQ-125-004]
+      description: The document clearly limits conclusions to engineering evidence and identifies open gaps.
+    - id: SCN-125-004
+      requirement_ids: [REQ-125-005]
+      description: The published matrix contains no credentials, tokens, secrets, or unnecessary personal data.
+invariants:
+    - id: INV-125-001
+      description: Every selected control has exactly one status and evidence or an explicit non-pass rationale.
+    - id: INV-125-002
+      description: Absent evidence never becomes a Pass by implication.
+    - id: INV-125-003
+      description: The matrix does not claim policy compliance, certification, or full SOC 2 readiness.
+    - id: INV-125-004
+      description: The artifact contains no secrets or unnecessary personal data.
+flows:
+    - id: FLOW-125-001
+      description: Collect sources, select applicable controls, map evidence and status, review scope, scan for sensitive data, and publish the matrix.
+      state_transitions: [sources_collected, controls_selected, evidenced, scope_checked, scanned, published]
+dependencies: []
+integrations: []
+personas:
+    - id: PER-125-001
+      role: engineering_reviewer
+      applicability: Reviews control status and evidence reproducibility.
+    - id: PER-125-002
+      role: compliance_stakeholder
+      applicability: Uses the matrix as engineering evidence with its limitations.
+security_boundaries:
+    - id: SEC-125-001
+      description: Evidence selection and publication must not expose credentials, tokens, secrets, or unnecessary customer data.
+business_rules:
+    - id: BR-125-001
+      description: The matrix is an engineering evidence aid and not a legal, audit, certification, or full SOC 2 readiness conclusion.
+decisions: []
+test_expectations:
+    - id: TEXP-125-001
+      category: exploratory
+      classification: REQUIRED
+      reason: Check every selected control has a valid status, rationale, and reproducible evidence reference.
+      scenarios: [SCN-125-001, SCN-125-002]
+    - id: TEXP-125-002
+      category: regression
+      classification: REQUIRED
+      reason: Confirm scope language and gap statuses do not make unsupported compliance claims.
+      scenarios: [SCN-125-002, SCN-125-003]
+    - id: TEXP-125-003
+      category: security
+      classification: REQUIRED
+      reason: Scan the final artifact for secrets and unnecessary personal data.
+      scenarios: [SCN-125-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-125-001
+          scenario_ids: [SCN-125-001]
+        - requirement_id: REQ-125-002
+          scenario_ids: [SCN-125-001, SCN-125-002]
+        - requirement_id: REQ-125-003
+          scenario_ids: [SCN-125-001]
+        - requirement_id: REQ-125-004
+          scenario_ids: [SCN-125-002, SCN-125-003]
+        - requirement_id: REQ-125-005
+          scenario_ids: [SCN-125-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-125-001
+          invariant_ids: [INV-125-001]
+        - scenario_id: SCN-125-002
+          invariant_ids: [INV-125-001, INV-125-002]
+        - scenario_id: SCN-125-003
+          invariant_ids: [INV-125-003]
+        - scenario_id: SCN-125-004
+          invariant_ids: [INV-125-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-125-001
+          test_expectation_ids: [TEXP-125-001]
+        - scenario_id: SCN-125-002
+          test_expectation_ids: [TEXP-125-001, TEXP-125-002]
+        - scenario_id: SCN-125-003
+          test_expectation_ids: [TEXP-125-002]
+        - scenario_id: SCN-125-004
+          test_expectation_ids: [TEXP-125-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context contract reviewer
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-125-R01
+          severity: MAJOR
+          references: [REQ-125-002, INV-125-002]
+          description: Missing evidence must remain Needs-review or Fail and never be inferred as Pass.
+        - id: CRIT-125-R02
+          severity: MAJOR
+          references: [REQ-125-004, INV-125-003]
+          description: The matrix must state engineering-only scope and avoid certification or full-readiness claims.
+        - id: CRIT-125-R03
+          severity: MAJOR
+          references: [REQ-125-003, INV-125-001]
+          description: Every row needs reproducible evidence or a documented non-pass rationale.
+        - id: CRIT-125-R04
+          severity: MINOR
+          references: [REQ-125-005, INV-125-004]
+          description: Scan the final artifact for secrets and unnecessary personal data.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner approved REN-125 spec)
