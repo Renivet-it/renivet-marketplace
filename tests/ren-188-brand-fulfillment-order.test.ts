@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { buildBrandFulfillmentOrderSections } from "../src/app/api/corporate-orders/[id]/vendor-po-data";
+import {
+    buildBrandFulfillmentOrderOptionalCopy,
+    buildBrandFulfillmentOrderSections,
+} from "../src/app/api/corporate-orders/[id]/vendor-po-data";
 
 describe("buildBrandFulfillmentOrderSections", () => {
     test("maps stored supplier, customer, delivery, production, QC, and shipment data", () => {
@@ -17,9 +20,6 @@ describe("buildBrandFulfillmentOrderSections", () => {
                 contactPersonName: "Asha",
                 gstNumber: "CUSTOMERGST",
                 mobileNumber: "8888888888",
-                deliveryCity: "Pune",
-                deliveryState: "Maharashtra",
-                deliveryPincode: "411001",
                 deliveryAddress: "Customer address",
                 productConfigSnapshot: {
                     productType: { name: "Cotton Shirt" },
@@ -105,5 +105,48 @@ describe("buildBrandFulfillmentOrderSections", () => {
         expect(sections.production.customizations).toEqual([]);
         expect(sections.production.productionInstructions).toEqual([]);
         expect(sections.production.productType).toBeNull();
+    });
+});
+
+describe("buildBrandFulfillmentOrderOptionalCopy", () => {
+    test("does not invent production or shipping instructions when stored values are missing", () => {
+        expect(
+            buildBrandFulfillmentOrderOptionalCopy({
+                specsSummary: "",
+                deliveryInstructions: null,
+                fulfillmentAddress: null,
+                orderDeliveryAddress: null,
+            })
+        ).toEqual({
+            itemDetail: null,
+            packagingQc: null,
+            packagingShippingNote: null,
+            deliverToAddress: null,
+        });
+    });
+
+    test("preserves stored production details and delivery instructions", () => {
+        expect(
+            buildBrandFulfillmentOrderOptionalCopy({
+                specsSummary: "180 GSM | Cotton",
+                deliveryInstructions: "Pack by size.",
+                fulfillmentAddress: "FO delivery address",
+                orderDeliveryAddress: "Order delivery address",
+            })
+        ).toEqual({
+            itemDetail: "180 GSM | Cotton",
+            packagingQc: "Pack by size.",
+            packagingShippingNote: "Packaging & Shipping: Pack by size.",
+            deliverToAddress: "FO delivery address",
+        });
+    });
+
+    test("falls back only to the stored order delivery address", () => {
+        expect(
+            buildBrandFulfillmentOrderOptionalCopy({
+                fulfillmentAddress: null,
+                orderDeliveryAddress: "Order delivery address",
+            }).deliverToAddress
+        ).toBe("Order delivery address");
     });
 });

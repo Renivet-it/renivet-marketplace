@@ -24,7 +24,10 @@ import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { buildBrandFulfillmentOrderSections } from "../vendor-po-data";
+import {
+    buildBrandFulfillmentOrderOptionalCopy,
+    buildBrandFulfillmentOrderSections,
+} from "../vendor-po-data";
 
 export const runtime = "nodejs";
 
@@ -215,9 +218,12 @@ export async function GET(
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
-    const itemDetail =
-        specsSummary ||
-        "Manufacture and fulfil as per approved corporate specifications.";
+    const optionalCopy = buildBrandFulfillmentOrderOptionalCopy({
+        specsSummary,
+        deliveryInstructions: vendorPo.deliveryInstructions,
+        fulfillmentAddress: vendorPo.deliveryAddress,
+        orderDeliveryAddress: order.deliveryAddress,
+    });
     const operationalSections = buildBrandFulfillmentOrderSections({
         brand: {
             name: order.brand.name,
@@ -285,16 +291,11 @@ export async function GET(
             },
             {
                 label: "Deliver to address",
-                value:
-                    vendorPo.deliveryAddress ||
-                    order.deliveryAddress ||
-                    "As specified in delivery instructions",
+                value: optionalCopy.deliverToAddress,
             },
             {
                 label: "Packaging & QC",
-                value:
-                    vendorPo.deliveryInstructions ||
-                    "Standard protective packaging with corporate packing slip",
+                value: optionalCopy.packagingQc,
             },
             {
                 label: "Marketplace billing",
@@ -305,7 +306,7 @@ export async function GET(
             {
                 description:
                     product?.title ?? productType ?? "Corporate merchandise",
-                detail: itemDetail,
+                detail: optionalCopy.itemDetail ?? undefined,
                 sku: product?.sku ?? product?.nativeSku,
                 hsn,
                 quantity: vendorPo.quantity,
@@ -345,13 +346,13 @@ export async function GET(
             totalAmountPaise,
         },
         notes: Array.from(
-            new Set([
-                "Operational instruction — NOT a purchase order. Renivet is NOT buying from the brand.",
-                "Renivet will generate the Tax Invoice on your behalf per our marketplace agreement.",
-                vendorPo.deliveryInstructions
-                    ? `Packaging & Shipping: ${vendorPo.deliveryInstructions}`
-                    : "Packaging & Shipping: Ship to corporate address per the delivery instructions above.",
-            ])
+            new Set(
+                [
+                    "Operational instruction — NOT a purchase order. Renivet is NOT buying from the brand.",
+                    "Renivet will generate the Tax Invoice on your behalf per our marketplace agreement.",
+                    optionalCopy.packagingShippingNote,
+                ].filter((note): note is string => note !== null)
+            )
         ),
         signatoryName: settings.authorizedSignatoryName,
         declarationCompanyName: settings.legalName,

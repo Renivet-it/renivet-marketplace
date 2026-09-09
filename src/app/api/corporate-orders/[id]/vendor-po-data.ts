@@ -8,23 +8,29 @@ type PartyInput = {
     phone?: string | null;
 };
 
-type QcInput = {
-    status?: string | null;
-    remarks?: string | null;
-    sampleCoveragePercent?: number | null;
-    reviewNotes?: string | null;
-    submittedAt?: string | Date | null;
-    reviewedAt?: string | Date | null;
-} | null;
+type QcInput =
+    | {
+          status?: string | null;
+          remarks?: string | null;
+          sampleCoveragePercent?: number | null;
+          reviewNotes?: string | null;
+          submittedAt?: string | Date | null;
+          reviewedAt?: string | Date | null;
+      }
+    | null
+    | undefined;
 
-type ShipmentInput = {
-    courierName?: string | null;
-    trackingNumber?: string | null;
-    awbNumber?: string | null;
-    status?: string | null;
-    dispatchDate?: string | Date | null;
-    deliveryDate?: string | Date | null;
-} | null;
+type ShipmentInput =
+    | {
+          courierName?: string | null;
+          trackingNumber?: string | null;
+          awbNumber?: string | null;
+          status?: string | null;
+          dispatchDate?: string | Date | null;
+          deliveryDate?: string | Date | null;
+      }
+    | null
+    | undefined;
 
 export type BrandFulfillmentOrderSections = {
     supplier: {
@@ -114,6 +120,33 @@ function configText(value: unknown, keys: string[]) {
 
 function nullableString(value: unknown) {
     return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export function buildBrandFulfillmentOrderOptionalCopy({
+    specsSummary,
+    deliveryInstructions,
+    fulfillmentAddress,
+    orderDeliveryAddress,
+}: {
+    specsSummary?: string | null;
+    deliveryInstructions?: string | null;
+    fulfillmentAddress?: string | null;
+    orderDeliveryAddress?: string | null;
+}) {
+    const itemDetail = nullableString(specsSummary);
+    const packagingQc = nullableString(deliveryInstructions);
+    const deliverToAddress =
+        nullableString(fulfillmentAddress) ??
+        nullableString(orderDeliveryAddress);
+
+    return {
+        itemDetail,
+        packagingQc,
+        deliverToAddress,
+        packagingShippingNote: packagingQc
+            ? `Packaging & Shipping: ${packagingQc}`
+            : null,
+    };
 }
 
 function formatCustomization(customization: OptionalRecord) {

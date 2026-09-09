@@ -126,7 +126,7 @@ describe("REN-180 corporate document integrity", () => {
             "utf8"
         );
 
-        expect(route).toContain("const itemDetail =");
+        expect(route).toContain("detail: optionalCopy.itemDetail ?? undefined");
         expect(route).toContain('description: "Customization / Extras"');
         expect(route).toContain('hsn: "NA"');
     });
