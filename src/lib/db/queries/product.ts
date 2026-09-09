@@ -78,7 +78,10 @@ import {
     getCatalogRequireMediaPredicate,
     shouldRequireCatalogMedia,
 } from "./product-media-filter";
-import { shouldApplySearchRelevanceOrdering } from "./product-ordering";
+import {
+    buildPriorityProductOrderCase,
+    shouldApplySearchRelevanceOrdering,
+} from "./product-ordering";
 import { getCatalogSearchPredicate } from "./product-search-predicate";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
@@ -1458,8 +1461,7 @@ class ProductQuery {
             // Create a CASE statement that gives lower values to priority products
             // Products in the priority list get sorted by their position in the list
             orderBy.push(
-                sql`CASE WHEN ${products.id}::text IN (${sql.raw(priorityProductIds.map((id) => `'${id}'`).join(", "))}) 
-                    THEN 0 ELSE 1 END ASC`
+                sql`CASE ${sql.raw(buildPriorityProductOrderCase(priorityProductIds))} ELSE 999999 END ASC`
             );
         }
 
