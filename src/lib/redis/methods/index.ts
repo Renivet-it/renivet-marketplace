@@ -9,6 +9,7 @@ export * from "./legal";
 export * from "./marketing-strip";
 export * from "./media";
 export * from "./plan";
+export * from "./recommendation";
 export * from "./product-type";
 export * from "./revenue";
 export * from "./role";

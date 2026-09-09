@@ -1,0 +1,260 @@
+schema_version: "1.0"
+task:
+    id: REN-160
+    title: Cache personalized recommendation computation results
+    source: Linear
+    branch: ayanganguly333/ren-160-cache-personalized-recommendation-computation-results
+    status: READY_FOR_DEV
+    linear:
+        priority: Medium
+        status: Backlog
+        url: https://linear.app/renivet/issue/REN-160/cache-personalized-recommendation-computation-results
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Personalized data is cached by user identity and request context.
+        - Redis failure and stale/corrupt payload behavior must not alter storefront availability.
+    escalation_history: []
+investigation:
+    depth: L2
+    investigated_areas:
+        - src/lib/db/queries/recommendation.ts entry point and merged/order/default branches
+        - all getPersonalizedRecommendations callers
+        - Redis connection policy and per-domain cache patterns
+        - ProductWithBrand validation and JSON date coercion
+    excluded_areas:
+        - area: Recommendation scoring and SQL
+          reason: Explicitly out of scope and unchanged by final-result caching.
+        - area: Signal-write invalidation
+          reason: The approved 180-second TTL bounds staleness and the issue does not require eager invalidation.
+    dependencies:
+        - Existing best-effort ioredis client
+        - Existing ProductWithBrand schema
+    integrations:
+        - Redis
+    boundaries:
+        - Authenticated user identity to cache namespace
+        - Redis serialized payload to validated RecommendationResult
+    transitions:
+        - cache hit -> validated result
+        - cache miss/invalid/error -> existing computation -> best-effort cache set -> result
+        - TTL expiry -> recomputation
+    tests:
+        - cache-key isolation and normalization
+        - hit/miss/expiry contract
+        - corrupt payload and Redis failure fallback
+        - anonymous bypass and cold-path regression
+    uncertainties: []
+requirements:
+    - id: REQ-160-001
+      type: explicit
+      description: Cache final personalized recommendation results for 180 seconds.
+      acceptance: Repeated identical authenticated requests use Redis and avoid duplicate computation within TTL.
+    - id: REQ-160-002
+      type: inferred
+      description: Isolate cache entries by user and all request inputs that affect output.
+      acceptance: User ID, limit, and normalized exclusions participate in a versioned bounded key.
+    - id: REQ-160-003
+      type: explicit
+      description: Preserve existing cold-path ranking and fallback behavior.
+      acceptance: Cache misses execute the unchanged recommendation decision tree and return its exact result.
+    - id: REQ-160-004
+      type: inferred
+      description: Fail open when Redis is unavailable or cached data is invalid.
+      acceptance: Cache errors/corruption never fail recommendation requests and trigger current computation.
+    - id: REQ-160-005
+      type: explicit
+      description: Establish cache behavior evidence without changing recommendation algorithms.
+      acceptance: Focused tests cover keying, TTL, hits, misses, invalid data, errors, and anonymous behavior.
+    - id: REQ-160-006
+      type: inferred
+      description: Avoid extending degraded results and coalesce concurrent identical misses in process.
+      acceptance: Only non-default results with at least five products are cached; simultaneous same-key misses share one computation per process.
+scenarios:
+    - id: SCN-160-001
+      requirement_ids: [REQ-160-001, REQ-160-002]
+      description: Identical authenticated request repeats within 180 seconds.
+      expected: Second request returns the validated cached result without recomputation.
+    - id: SCN-160-002
+      requirement_ids: [REQ-160-002, REQ-160-005]
+      description: User, limit, or effective exclusion set differs.
+      expected: Request uses a distinct key; reordered/duplicated equivalent exclusions use the same key.
+    - id: SCN-160-003
+      requirement_ids: [REQ-160-003, REQ-160-004]
+      description: Cache is absent, expired, corrupt, or Redis fails.
+      expected: Existing recommendation computation runs and its result is returned.
+    - id: SCN-160-004
+      requirement_ids: [REQ-160-003, REQ-160-005]
+      description: Anonymous recommendation request executes.
+      expected: Personalized Redis cache is bypassed and platform-default behavior is unchanged.
+    - id: SCN-160-005
+      requirement_ids: [REQ-160-004, REQ-160-006]
+      description: Computation returns an empty/default result or simultaneous requests miss the same key.
+      expected: Empty/default output is not cached, and simultaneous requests share one in-process computation with guaranteed cleanup.
+invariants:
+    - id: INV-160-001
+      description: One user's cached recommendations are never returned to another user.
+    - id: INV-160-002
+      description: Cache use does not alter ranking, scoring, exclusion, source, metadata, or fallback semantics.
+    - id: INV-160-003
+      description: Redis availability and payload validity never become storefront availability dependencies.
+    - id: INV-160-004
+      description: Cache keys contain no raw exclusion list and cached entries expire after 180 seconds.
+    - id: INV-160-005
+      description: Cache operations add no more than a 100 ms application wait per get, set, or delete.
+    - id: INV-160-006
+      description: Cached envelopes bind schema version, owner, and context fingerprint and add no data beyond the existing result.
+flows:
+    - id: FLOW-160-001
+      description: Authenticated request -> contextual cache key -> validated hit or existing compute path -> best-effort TTL write -> result.
+      state_transitions:
+          - requested -> cache-checked -> hit-returned-or-computed -> optionally-cached -> returned
+dependencies:
+    - id: DEP-160-001
+      name: Best-effort Redis connection
+      description: Existing proxy converts Redis command failures into cache-safe fallback values.
+      status: resolved
+      evidence: src/lib/redis/connection-policy.ts
+integrations:
+    - id: INT-160-001
+      system: Redis
+      purpose: Store short-lived per-user recommendation results without becoming required for availability.
+personas:
+    - id: PER-160-001
+      role: Authenticated shopper
+      applicability: Receives personalized recommendations scoped to their own signals and request context.
+    - id: PER-160-002
+      role: Anonymous shopper
+      applicability: Must retain uncached platform-default recommendation behavior.
+security_boundaries:
+    - id: SEC-160-001
+      description: Cache key namespace includes authenticated user identity and output-affecting context.
+    - id: SEC-160-002
+      description: Redis payload is untrusted and schema-validated before use.
+    - id: SEC-160-003
+      description: Cached envelope must match schema version, owner user ID, and context fingerprint before its result is returned.
+business_rules:
+    - id: BR-160-001
+      description: A maximum of 180 seconds of recommendation-signal staleness is accepted.
+decisions:
+    - id: DEC-160-001
+      class: B
+      question: Select TTL within the issue's approved 60-300 second range.
+      recommendation: Use 180 seconds as the midpoint balancing hit rate and freshness.
+      basis: Signals use 7-90 day windows and the user explicitly approved the proposed 180-second design.
+      confidence: high
+      impact: Updated signals may take up to three minutes to appear.
+      consequence: Short bounded staleness in exchange for reduced repeated database load.
+      human_confirmation_required: false
+      status: resolved
+test_expectations:
+    - id: TEXP-160-001
+      category: unit
+      classification: REQUIRED
+      reason: Verify deterministic bounded key generation and context isolation.
+      scenarios: [SCN-160-001, SCN-160-002]
+    - id: TEXP-160-002
+      category: integration
+      classification: REQUIRED
+      reason: Verify hit, miss, TTL write, corruption, and Redis-error behavior around computation.
+      scenarios: [SCN-160-001, SCN-160-003]
+    - id: TEXP-160-003
+      category: regression
+      classification: REQUIRED
+      reason: Verify anonymous bypass and unchanged cold-path output.
+      scenarios: [SCN-160-003, SCN-160-004]
+    - id: TEXP-160-004
+      category: performance
+      classification: REQUIRED
+      reason: Verify cacheability gating, operation budget, per-process single-flight, and cleanup after computation failure.
+      scenarios: [SCN-160-005]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-160-001
+          scenario_ids: [SCN-160-001]
+        - requirement_id: REQ-160-002
+          scenario_ids: [SCN-160-001, SCN-160-002]
+        - requirement_id: REQ-160-003
+          scenario_ids: [SCN-160-003, SCN-160-004]
+        - requirement_id: REQ-160-004
+          scenario_ids: [SCN-160-003]
+        - requirement_id: REQ-160-005
+          scenario_ids: [SCN-160-002, SCN-160-004]
+        - requirement_id: REQ-160-006
+          scenario_ids: [SCN-160-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-160-001
+          invariant_ids: [INV-160-001, INV-160-002, INV-160-004]
+        - scenario_id: SCN-160-002
+          invariant_ids: [INV-160-001, INV-160-004]
+        - scenario_id: SCN-160-003
+          invariant_ids: [INV-160-002, INV-160-003]
+        - scenario_id: SCN-160-004
+          invariant_ids: [INV-160-002]
+        - scenario_id: SCN-160-005
+          invariant_ids: [INV-160-003, INV-160-005, INV-160-006]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-160-001
+          test_expectation_ids: [TEXP-160-001, TEXP-160-002]
+        - scenario_id: SCN-160-002
+          test_expectation_ids: [TEXP-160-001]
+        - scenario_id: SCN-160-003
+          test_expectation_ids: [TEXP-160-002, TEXP-160-003]
+        - scenario_id: SCN-160-004
+          test_expectation_ids: [TEXP-160-003]
+        - scenario_id: SCN-160-005
+          test_expectation_ids: [TEXP-160-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context contract reviewer
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: CRIT-160-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-160-005]
+          description: Complete Critic review before READY_FOR_DEV.
+        - id: CRIT-160-002
+          severity: DESIGN_BLOCKER
+          references: [REQ-160-001, REQ-160-006, INV-160-003]
+          description: Do not cache transient empty/default degraded results.
+        - id: CRIT-160-003
+          severity: MAJOR
+          references: [REQ-160-004, INV-160-005]
+          description: Bound and contain cache failures, including synchronous throws.
+        - id: CRIT-160-004
+          severity: MAJOR
+          references: [REQ-160-006, TEXP-160-004]
+          description: Define concurrent-miss behavior.
+        - id: CRIT-160-005
+          severity: MAJOR
+          references: [SEC-160-001, SEC-160-002, INV-160-006]
+          description: Bind cached value to owner/context and avoid additional personal data.
+        - id: CRIT-160-006
+          severity: MINOR
+          references: [REQ-160-003, TEXP-160-002]
+          description: Test JSON/schema round-trip precisely.
+        - id: CRIT-160-007
+          severity: MINOR
+          references: [REQ-160-003, FLOW-160-001]
+          description: Use a non-recursive uncached computation boundary.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner approved implementation and the proposed 180-second fail-open design)
