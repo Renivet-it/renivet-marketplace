@@ -3,7 +3,7 @@ task:
     id: REN-189
     title: Improve Meta CAPI event match quality and analytics signal integrity
     source: linear
-    branch: ayanganguly333/ren-189-improve-meta-capi-event-match-quality-and-analytics-signal
+    branch: ayanganguly333/ren-189-fix-crawler-matcher
     status: READY_FOR_DEV
 risk:
     initial_risk: L1
