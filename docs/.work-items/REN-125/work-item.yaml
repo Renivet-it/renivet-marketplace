@@ -45,7 +45,7 @@ investigation:
         - The exact subset of relevant L2 controls must be justified in the matrix.
 requirements:
     - id: REQ-125-001
-      description: Create a matrix of relevant OWASP ASVS Level 2 controls with one row per selected control.
+      description: Create a version-pinned OWASP ASVS 5.0.0 Level 2 matrix containing all 253 requirements whose official level is 1 or 2, exactly once.
       type: explicit
     - id: REQ-125-002
       description: Assign each row Pass, Fail, N/A, or Needs-review with a concise rationale.
@@ -74,7 +74,7 @@ scenarios:
       description: The published matrix contains no credentials, tokens, secrets, or unnecessary personal data.
 invariants:
     - id: INV-125-001
-      description: Every selected control has exactly one status and evidence or an explicit non-pass rationale.
+      description: Every one of the 253 official ASVS 5.0.0 Level 1/2 requirements appears exactly once with one status and evidence or an explicit non-pass rationale.
     - id: INV-125-002
       description: Absent evidence never becomes a Pass by implication.
     - id: INV-125-003
@@ -176,26 +176,3 @@ approval:
     state: APPROVED
     design_blockers: []
     approved_by: Ayan Ganguly (owner approved REN-125 spec)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/master
-    base_commit: "d43477e239f22aa0fafc23038667ee12641e61d3"
-    head_commit: "32e25debbdf38497c84411d331980c1d3c06ba5c"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PASS
-        scenarios: PASS
-        invariants: PASS
-        architecture: PASS
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        - "REV-125-001: Complete manual and automated follow-up evidence before changing any Needs-review row to Pass."
-    evidence:
-        - "Compared the approved REN-125 contract with the origin/master-to-32e25debbdf38497c84411d331980c1d3c06ba5c Git diff."
-        - "Confirmed all cited repository paths exist and the matrix contains no secrets or unnecessary personal data."
-    governance_reentry_required: false

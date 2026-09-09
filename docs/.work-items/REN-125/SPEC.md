@@ -2,7 +2,7 @@
 
 ## Scope
 
-Create an engineering evidence matrix for relevant OWASP ASVS Level 2 controls. Each row must contain the ASVS control reference, a concise control statement, status (`Pass`, `Fail`, `N/A`, or `Needs-review`), and reproducible evidence using an automated test or a repository file/line citation.
+Create an engineering evidence matrix against the stable OWASP ASVS 5.0.0 Level 2 profile. Level 2 includes every requirement whose official level is 1 or 2: 253 requirements in the published CSV. Each row must contain the exact official control reference and statement, status (`Pass`, `Fail`, `N/A`, or `Needs-review`), and reproducible evidence or an explicit reason evidence is not yet sufficient.
 
 This is an engineering evidence document only. It is not a legal opinion, audit opinion, certification, or claim of full SOC 2 readiness.
 
@@ -12,11 +12,11 @@ This is an engineering evidence document only. It is not a legal opinion, audit 
 - A missing test or citation is `Needs-review`, not `Pass`.
 - `N/A` requires a short scope reason.
 - Do not include credentials, tokens, secrets, or unnecessary personal data.
-- Keep the matrix focused on relevant ASVS L2 controls for the Renivet application; do not pretend every ASVS control is applicable.
+- Include all 253 requirements in the ASVS 5.0.0 Level 2 profile. Applicability is expressed row-by-row with `N/A` plus a reason, never by silently omitting a requirement.
 
 ## Acceptance criteria
 
-1. Every relevant selected control has exactly one status and evidence or an explicit reason for `Needs-review`/`N/A`.
+1. All 253 ASVS 5.0.0 Level 1/2 requirements appear exactly once with one status and evidence or an explicit reason for `Needs-review`/`N/A`.
 2. Evidence links to an automated test or stable repository path and line reference.
 3. Authentication, authorization/IDOR, session, validation, error handling, data protection, logging, and configuration controls are considered.
 4. Open findings remain visible and are not silently downgraded.
