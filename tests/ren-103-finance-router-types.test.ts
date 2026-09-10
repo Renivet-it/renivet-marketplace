@@ -84,3 +84,19 @@ test("REN-103 product visibility helpers preserve every public predicate", () =>
         "isPublicProductVisible(row.product)",
     ]) expect(visibility).toContain(marker);
 });
+
+test("REN-103 public media builders preserve inferred mappings and null fallbacks", () => {
+    const mediaBuilders = productSource.slice(
+        productSource.indexOf("async getNewEventPage"),
+        productSource.indexOf("async trackProductClick")
+    );
+    expect(mediaBuilders).not.toMatch(/:\s*any\b|\bas\s+any\b|\bany\[\]/);
+    for (const marker of [
+        "mediaMap.get(media.id)",
+        "url: mediaMap.get(media.id)?.url ?? null",
+        "mediaItem: variant.image ? mediaMap.get(variant.image) : null",
+        "url: variant.image",
+        "spec.key",
+        "spec.value",
+    ]) expect(mediaBuilders).toContain(marker);
+});

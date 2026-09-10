@@ -4787,7 +4787,7 @@ class ProductQuery {
         const mediaIds = new Set<string>();
         for (const { product } of publicData) {
             product.media?.forEach((m) => mediaIds.add(m.id));
-            product.variants?.forEach((variant: any) => {
+            product.variants?.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
             });
             if (product.sustainabilityCertificate) {
@@ -4798,15 +4798,15 @@ class ProductQuery {
         // 3) Resolve media from cache
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
-            mediaItems.data.map((item: any) => [item.id, item])
+            mediaItems.data.map((item) => [item.id, item])
         );
 
         // 4) Enhance products with media + policies
-        const enhancedData = publicData.map(({ product, ...rest }: any) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
-                media: (product.media || []).map((media: any) => ({
+                media: (product.media || []).map((media) => ({
                     ...media,
                     mediaItem: mediaMap.get(media.id),
                     url: mediaMap.get(media.id)?.url ?? null,
@@ -4814,7 +4814,7 @@ class ProductQuery {
                 sustainabilityCertificate: product.sustainabilityCertificate
                     ? mediaMap.get(product.sustainabilityCertificate)
                     : null,
-                variants: (product.variants || []).map((variant: any) => ({
+                variants: (product.variants || []).map((variant) => ({
                     ...variant,
                     mediaItem: variant.image
                         ? mediaMap.get(variant.image)
@@ -4831,7 +4831,7 @@ class ProductQuery {
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
                 specifications: (product.specifications || []).map(
-                    (spec: any) => ({
+                    (spec) => ({
                         key: spec.key,
                         value: spec.value,
                     })
@@ -4840,9 +4840,9 @@ class ProductQuery {
         }));
 
         // helper: compute min/max price for a product
-        const getPriceRange = (product: any) => {
+        const getPriceRange = (product) => {
             const prices = (product.variants || [])
-                .map((v: any) =>
+                .map((v) =>
                     Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
                 )
                 .filter((p: number) => !isNaN(p) && p > 0);
@@ -4890,12 +4890,12 @@ class ProductQuery {
             // colors
             if (filters.colors?.length) {
                 const hasColor =
-                    (product.variants || []).some((v: any) =>
+                    (product.variants || []).some((v) =>
                         v.color
                             ? filters.colors!.includes(String(v.color))
                             : false
                     ) ||
-                    (product.media || []).some((m: any) =>
+                    (product.media || []).some((m) =>
                         m.color
                             ? filters.colors!.includes(String(m.color))
                             : false
@@ -4928,7 +4928,7 @@ class ProductQuery {
 
         // 6) Sorting
         if (filters.sortBy === "price") {
-            filtered.sort((a: any, b: any) => {
+            filtered.sort((a, b) => {
                 const aMin = getPriceRange(a.product).min;
                 const bMin = getPriceRange(b.product).min;
                 return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
@@ -4937,7 +4937,7 @@ class ProductQuery {
             // An explicit catalogue sort may override the manually curated
             // section position. With no sort requested (as on the homepage),
             // retain the position order defined in the admin product menu.
-            filtered.sort((a: any, b: any) => {
+            filtered.sort((a, b) => {
                 const aDate = new Date(
                     a.product.createdAt ?? a.createdAt ?? 0
                 ).getTime();
@@ -4984,19 +4984,19 @@ class ProductQuery {
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
-            mediaItems.data.map((item: any) => [item.id, item])
+            mediaItems.data.map((item) => [item.id, item])
         );
 
-        return publicData.map(({ product, ...rest }: any) => ({
+        return publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
-                media: (product.media || []).map((media: any) => ({
+                media: (product.media || []).map((media) => ({
                     ...media,
                     mediaItem: mediaMap.get(media.id),
                     url: mediaMap.get(media.id)?.url ?? null,
                 })),
-                variants: (product.variants || []).map((variant: any) => ({
+                variants: (product.variants || []).map((variant) => ({
                     ...variant,
                     mediaItem: variant.image
                         ? mediaMap.get(variant.image)
@@ -5013,7 +5013,7 @@ class ProductQuery {
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
                 specifications: (product.specifications || []).map(
-                    (spec: any) => ({ key: spec.key, value: spec.value })
+                    (spec) => ({ key: spec.key, value: spec.value })
                 ),
             },
         }));
