@@ -69,6 +69,7 @@ export function CustomerCorporateDashboard({
     initialProfile,
     initialRfqs,
     initialQuotes,
+    initialQuoteId,
     initialPurchaseOrders,
     initialOrders,
     initialTaxInvoices,
@@ -76,13 +77,16 @@ export function CustomerCorporateDashboard({
     initialProfile: any;
     initialRfqs: any[];
     initialQuotes: any[];
+    initialQuoteId?: string;
     initialPurchaseOrders: any[];
     initialOrders: any[];
     initialTaxInvoices: Array<{ orderId: string; invoiceNumber: string }>;
 }) {
     const utils = trpc.useUtils();
     const { startUpload } = useUploadThing("corporateDocumentUploader");
-    const [activeTab, setActiveTab] = useState("overview");
+    const [activeTab, setActiveTab] = useState(
+        initialQuoteId ? "quotes" : "overview"
+    );
     const [quotes, setQuotes] = useState(initialQuotes);
     const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
     const [orderSetupQuoteId, setOrderSetupQuoteId] = useState<string | null>(
@@ -104,7 +108,9 @@ export function CustomerCorporateDashboard({
         initialRfqs[0]?.id ?? null
     );
     const [isRfqDetailsOpen, setIsRfqDetailsOpen] = useState(false);
-    const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
+    const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(
+        Boolean(initialQuoteId && initialQuotes.length)
+    );
     const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
 
     useEffect(() => {
@@ -121,7 +127,7 @@ export function CustomerCorporateDashboard({
         return () => document.removeEventListener("keydown", handleEscape);
     }, [isRfqDetailsOpen, isQuoteDetailsOpen, isOrderDetailsOpen]);
     const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(
-        initialQuotes[0]?.id ?? null
+        initialQuoteId ?? initialQuotes[0]?.id ?? null
     );
 
     const quoteDecision =
@@ -379,7 +385,12 @@ export function CustomerCorporateDashboard({
     };
 
     return (
-        <div className="w-full max-w-full space-y-7 overflow-x-hidden pb-6 font-inter text-[#182131]">
+        <div
+            className="w-full max-w-full space-y-7 overflow-x-hidden pb-6 font-inter text-[#182131]"
+            {...(initialQuoteId
+                ? { "data-resource-found": String(Boolean(initialQuotes.length)) }
+                : {})}
+        >
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
             <section className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_236px]">
