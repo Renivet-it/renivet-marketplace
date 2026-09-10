@@ -1,0 +1,104 @@
+schema_version: "1.0"
+task:
+    id: REN-102
+    title: Remove explicit any from admin finance queue
+    source: linear
+    branch: ayanganguly333/ren-102-40-new-anyas-any-introduced-in-admin-finance-queuetsx
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-102/40-new-anyas-any-introduced-in-admin-finance-queuetsx
+        priority: Medium
+        labels: [tech-debt, security]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Security & Compliance Audit
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L1
+    final_risk: L2
+    reasons:
+        - The component displays and mutates finance and purchase-order state.
+        - The intended change is compile-time only but spans many local data shapes.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-102, admin finance queue, listAdminFinance service output, tRPC AppRouter inference, server page caller]
+    excluded_areas: [finance business-rule changes, API/schema changes, unrelated type debt]
+    dependencies: [DEP-001, DEP-002]
+    integrations: []
+    security_boundaries: [SEC-001]
+    state_transitions: [untyped_component -> inferred_router_types]
+dependencies:
+    - { id: DEP-001, name: listAdminFinance tRPC output, purpose: Authoritative client data shape, description: Existing protected query and service return shape., status: resolved }
+    - { id: DEP-002, name: UploadThing result shape, purpose: Types uploaded PO and proof files, description: Existing hook result must be narrowed structurally., status: resolved }
+integrations: []
+personas:
+    - { id: PER-001, role: finance_admin, applicability: Uses the protected finance queue and dialogs. }
+security_boundaries:
+    - { id: SEC-001, description: Existing finance permissions and mutation inputs must remain unchanged. }
+business_rules:
+    - { id: BR-001, description: This is a compile-time refactor with no runtime finance behavior change., source: REN-102 approved design. }
+decisions:
+    - id: DEC-001
+      question: What is the authoritative component data type?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Infer it from AppRouter listAdminFinance output.
+      basis: Linear explicitly requests tRPC router inference.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+      confirmation_source: Repository and Linear evidence.
+requirements:
+    - { id: REQ-001, description: Target component contains no explicit any or as-any usages., type: explicit }
+    - { id: REQ-002, description: Finance data types derive from the listAdminFinance router output., type: explicit }
+    - { id: REQ-003, description: Runtime filters, totals, pagination, upload handling, rendering, and mutation payloads remain behaviorally unchanged., type: compatibility }
+    - { id: REQ-004, description: Named aliases for each finance collection and queue/dialog row derive from the listAdminFinance router output., type: explicit }
+scenarios:
+    - { id: SCN-001, description: Every finance collection and selected dialog item is statically typed., requirement_ids: [REQ-001, REQ-002] }
+    - { id: SCN-002, description: Upload results are narrowed without explicit any, double assertions, or equivalent unsafe casts., requirement_ids: [REQ-001] }
+    - { id: SCN-003, description: Targeted regression evidence preserves filters, totals, pagination, upload failure handling, and mutation payload fields., requirement_ids: [REQ-003] }
+    - { id: SCN-004, description: Orders, quotes, payments, refunds, purchase orders, payment requests, queue rows, and dialog state use named inferred aliases., requirement_ids: [REQ-002, REQ-004] }
+invariants:
+    - { id: INV-001, description: No finance calculation, mutation payload, permission, or UI branch changes. }
+    - { id: INV-002, description: No explicit any is present in the target component. }
+flows:
+    - { id: FLOW-001, description: Protected listAdminFinance output -> inferred aliases -> finance queue views and dialogs., state_transitions: [untyped_component -> inferred_router_types] }
+test_expectations:
+    - { id: TEXP-001, category: regression, classification: REQUIRED, reason: Source guard prevents explicit any and unsafe double-assertion regressions., scenarios: [SCN-001, SCN-002] }
+    - { id: TEXP-002, category: component, classification: REQUIRED, reason: Assert approved quotes exclude existing PO/order quote IDs; PO review accepts only po_uploaded/po_review; outstanding balance sums max(0 balanceDuePaise); collections sum payment amounts; PAGE_SIZE remains 8 and tab/search reset page; empty uploads retain existing early-return/error handling; accept/reject PO, quote release, collection, refund, and upload mutation payload fields remain unchanged., scenarios: [SCN-003] }
+    - { id: TEXP-003, category: regression, classification: REQUIRED, reason: Assert named aliases derive collection elements from RouterOutputs general corporatePlatform listAdminFinance., scenarios: [SCN-004] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Independent critic subagent
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - Initial source guard did not prohibit unsafe double assertions; contract amended.
+        - Behavioral regression expectations and named-alias traceability were initially vague; final contract enumerates them.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation on 2026-09-11.
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003] }

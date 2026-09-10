@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
+import type { AppRouter } from "@/lib/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn, formatINR, handleClientError } from "@/lib/utils";
 import {
@@ -27,25 +29,38 @@ import {
     WalletCards,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { toast } from "sonner";
 import { AdminDirectOrderWizard } from "./admin-direct-order-wizard";
 
 type WorkspaceTab = "queue" | "orders" | "ledger" | "documents";
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type FinanceData = RouterOutputs["general"]["corporatePlatform"]["listAdminFinance"];
+type FinanceOrder = FinanceData["orders"][number];
+type FinanceQuote = FinanceData["quotes"][number];
+type FinancePayment = FinanceData["payments"][number];
+type FinanceRefund = FinanceData["refunds"][number];
+type FinancePurchaseOrder = FinanceData["purchaseOrders"][number];
+type FinancePaymentRequest = FinanceData["paymentRequests"][number];
+type LedgerRow =
+    | { id: string; kind: "Payment"; status: string; mode: string | null; amount: number; reference: string | null; date: Date | string | null; subtype: string }
+    | { id: string; kind: "Refund"; status: string; mode: string; amount: number; reference: string; date: Date | string | null; subtype: string };
+type PoDraft = { quoteId: string; poNumber: string; poValue: string; poDate: string; deliveryDate: string; note: string };
+type UploadedFile = { name: string; url: string; type: string; size: number; key?: string };
 type QueueRow =
-    | { kind: "release"; id: string; data: any }
-    | { kind: "po"; id: string; data: any };
+    | { kind: "release"; id: string; data: FinanceQuote }
+    | { kind: "po"; id: string; data: FinancePurchaseOrder };
 
 const PAGE_SIZE = 8;
 
-export function AdminFinanceQueue({ initialData }: { initialData: any }) {
+export function AdminFinanceQueue({ initialData }: { initialData: FinanceData }) {
     const router = useRouter();
     const utils = trpc.useUtils();
     const [tab, setTab] = useState<WorkspaceTab>("queue");
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
-    const [selectedPo, setSelectedPo] = useState<any | null>(null);
-    const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+    const [selectedPo, setSelectedPo] = useState<FinancePurchaseOrder | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<FinanceOrder | null>(null);
     const [poReviewNote, setPoReviewNote] = useState("");
     const [addPoOpen, setAddPoOpen] = useState(false);
     const [acceptingQuoteId, setAcceptingQuoteId] = useState<string | null>(
@@ -54,7 +69,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
     const [acceptedQuoteIds, setAcceptedQuoteIds] = useState<Set<string>>(
         () => new Set()
     );
-    const [directOrderPo, setDirectOrderPo] = useState<any | null>(null);
+    const [directOrderPo, setDirectOrderPo] = useState<FinancePurchaseOrder | null>(null);
     const [poDraft, setPoDraft] = useState({
         quoteId: "",
         poNumber: "",
@@ -68,8 +83,9 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         useUploadThing("corporateDocumentUploader");
 
     const latestPaymentRequestByOrder = useMemo(() => {
-        const requests = new Map<string, any>();
+        const requests = new Map<string, FinancePaymentRequest>();
         for (const request of initialData.paymentRequests ?? []) {
+            if (!request.orderId) continue;
             if (!requests.has(request.orderId))
                 requests.set(request.orderId, request);
         }
@@ -78,6 +94,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
     const collectedByOrder = useMemo(() => {
         const amounts = new Map<string, number>();
         for (const payment of initialData.payments ?? []) {
+            if (!payment.orderId) continue;
             if (
                 !["payment_success", "payment_partial"].includes(
                     payment.paymentStatus
@@ -96,7 +113,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         () =>
             new Set(
                 initialData.purchaseOrders
-                    .map((po: any) => po.quoteId)
+                    .map((po) => po.quoteId)
                     .filter(Boolean)
             ),
         [initialData.purchaseOrders]
@@ -105,7 +122,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         () =>
             new Set(
                 initialData.orders
-                    .map((order: any) => {
+                    .map((order) => {
                         const match = String(order.internalNotes ?? "").match(
                             /quote:([a-f0-9-]+)/i
                         );
@@ -116,22 +133,22 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         [initialData.orders]
     );
     const approvedQuotesReadyForOrderRelease = initialData.quotes.filter(
-        (quote: any) =>
+        (quote) =>
             quote.status === "approved" &&
             !quoteIdsWithPurchaseOrders.has(quote.id) &&
             !quoteIdsWithCreatedOrders.has(quote.id)
     );
     const purchaseOrdersAwaitingDecision = initialData.purchaseOrders.filter(
-        (purchaseOrder: any) =>
+        (purchaseOrder) =>
             ["po_uploaded", "po_review"].includes(purchaseOrder.status)
     );
     const outstandingBalancePaise = initialData.orders.reduce(
-        (total: number, order: any) =>
+        (total, order) =>
             total + Math.max(0, order.balanceDuePaise ?? 0),
         0
     );
     const recordedCollectionsPaise = initialData.payments.reduce(
-        (total: number, payment: any) => total + (payment.amountPaise ?? 0),
+        (total, payment) => total + (payment.amountPaise ?? 0),
         0
     );
 
@@ -200,12 +217,12 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         });
 
     const queueRows: QueueRow[] = [
-        ...purchaseOrdersAwaitingDecision.map((data: any) => ({
+        ...purchaseOrdersAwaitingDecision.map((data) => ({
             kind: "po" as const,
             id: `po-${data.id}`,
             data,
         })),
-        ...approvedQuotesReadyForOrderRelease.map((data: any) => ({
+        ...approvedQuotesReadyForOrderRelease.map((data) => ({
             kind: "release" as const,
             id: `release-${data.id}`,
             data,
@@ -221,20 +238,24 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         );
 
     const filteredQueue = queueRows.filter((row) => {
-        const item = row.data;
+        if (row.kind === "po") {
+            return includesSearch(
+                row.data.poNumber,
+                row.data.companyName,
+                row.data.profile?.companyName,
+                row.data.quote?.quoteNumber
+            );
+        }
         return includesSearch(
-            item.poNumber,
-            item.quoteNumber,
-            item.companyName,
-            item.profile?.companyName,
-            item.quote?.quoteNumber
+            row.data.quoteNumber,
+            row.data.profile?.companyName
         );
     });
-    const filteredOrders = initialData.orders.filter((order: any) =>
+    const filteredOrders = initialData.orders.filter((order) =>
         includesSearch(order.publicOrderId, order.companyName, order.status)
     );
     const ledgerRows = [
-        ...initialData.payments.map((data: any) => ({
+        ...initialData.payments.map((data) => ({
             id: `payment-${data.id}`,
             kind: "Payment" as const,
             status: data.paymentStatus,
@@ -244,15 +265,15 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
             date: data.paymentDate ?? data.createdAt,
             subtype: data.paymentType,
         })),
-        ...initialData.refunds.map((data: any) => ({
+        ...initialData.refunds.map((data) => ({
             id: `refund-${data.id}`,
             kind: "Refund" as const,
             status: data.refundStatus,
-            mode: data.refundMode ?? "Refund",
+            mode: data.refundMethod || "Refund",
             amount: data.refundAmountPaise,
             reference: data.refundReference ?? data.id,
-            date: data.refundDate ?? data.createdAt,
-            subtype: data.refundType ?? "Credit",
+            date: data.createdAt,
+            subtype: "Credit",
         })),
     ].filter((row) =>
         includesSearch(
@@ -263,7 +284,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
             row.subtype
         )
     );
-    const filteredQuotes = initialData.quotes.filter((quote: any) =>
+    const filteredQuotes = initialData.quotes.filter((quote) =>
         includesSearch(
             quote.quoteNumber,
             quote.profile?.companyName,
@@ -290,11 +311,11 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         setPage(1);
     }, [tab, search]);
 
-    const openPoReview = (po: any) => {
+    const openPoReview = (po: FinancePurchaseOrder) => {
         setPoReviewNote(po.reviewNotes ?? "");
         setSelectedPo(po);
     };
-    const openAddPoForQuote = (quote: any) => {
+    const openAddPoForQuote = (quote: FinanceQuote) => {
         setPoDraft({
             quoteId: quote.id,
             poNumber: "",
@@ -306,7 +327,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
         setPoFile(null);
         setAddPoOpen(true);
     };
-    const openCollection = (order: any) => {
+    const openCollection = (order: FinanceOrder) => {
         setSelectedOrder(order);
     };
 
@@ -404,7 +425,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
                 )}
                 {tab === "orders" && (
                     <OrdersTable
-                        rows={pagedRows as any[]}
+                        rows={pagedRows as FinanceOrder[]}
                         paymentRequests={latestPaymentRequestByOrder}
                         collectedByOrder={collectedByOrder}
                         openCollection={openCollection}
@@ -412,10 +433,10 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
                         taxPending={issueTax.isPending}
                     />
                 )}
-                {tab === "ledger" && <LedgerTable rows={pagedRows as any[]} />}
+                {tab === "ledger" && <LedgerTable rows={pagedRows as LedgerRow[]} />}
                 {tab === "documents" && (
                     <DocumentsTable
-                        rows={pagedRows as any[]}
+                        rows={pagedRows as FinanceQuote[]}
                         issueProforma={(quoteId) =>
                             issueProforma.mutate({ quoteId })
                         }
@@ -483,7 +504,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
                 open={addPoOpen}
                 onClose={() => setAddPoOpen(false)}
                 quotes={initialData.quotes.filter(
-                    (quote: any) =>
+                    (quote) =>
                         quote.status === "approved" &&
                         !quoteIdsWithPurchaseOrders.has(quote.id)
                 )}
@@ -514,7 +535,7 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
                             size: file.size,
                             key: file.key,
                             type:
-                                (file as any).type ||
+                                ("type" in file && typeof file.type === "string" ? file.type : "") ||
                                 poFile.type ||
                                 "application/pdf",
                         },
@@ -532,9 +553,9 @@ function QueueTable({
     createDirectOrder,
 }: {
     rows: QueueRow[];
-    openPoReview: (po: any) => void;
-    openAddPo: (quote: any) => void;
-    createDirectOrder: (po: any) => void;
+    openPoReview: (po: FinancePurchaseOrder) => void;
+    openAddPo: (quote: FinanceQuote) => void;
+    createDirectOrder: (po: FinancePurchaseOrder) => void;
 }) {
     if (!rows.length) return <EmptyTable title="No finance actions waiting" />;
     return (
@@ -552,29 +573,31 @@ function QueueTable({
             </thead>
             <tbody>
                 {rows.map((row) => {
-                    const item = row.data;
-                    const isPo = row.kind === "po";
+                    const po = row.kind === "po" ? row.data : null;
+                    const quote = row.kind === "release" ? row.data : null;
+                    const isPo = Boolean(po);
                     const issueCount =
-                        item.validationSummary?.issues?.length ?? 0;
+                        po?.validationSummary?.issues?.length ?? 0;
                     return (
                         <tr
                             key={row.id}
                             className="border-t border-slate-100 hover:bg-slate-50/70"
                         >
                             <Td strong>
-                                {isPo ? item.poNumber : item.quoteNumber}
+                                {po?.poNumber ?? quote?.quoteNumber}
                             </Td>
                             <Td>
                                 <div className="max-w-56 truncate font-medium text-slate-800">
-                                    {item.profile?.companyName ??
-                                        item.companyName ??
+                                    {po?.profile?.companyName ??
+                                        po?.companyName ??
+                                        quote?.profile?.companyName ??
                                         "Buyer company pending"}
                                 </div>
                                 <div className="mt-0.5 text-11 text-slate-500">
-                                    {isPo
-                                        ? (item.quote?.quoteNumber ??
+                                    {po
+                                        ? (po.quote?.quoteNumber ??
                                           "No linked quote")
-                                        : `${item.quantity} unit(s)`}
+                                        : `${quote?.quantity ?? 0} unit(s)`}
                                 </div>
                             </Td>
                             <Td>
@@ -584,14 +607,14 @@ function QueueTable({
                             </Td>
                             <Td strong>
                                 {formatINR(
-                                    isPo
-                                        ? item.poValuePaise
-                                        : item.totalAmountPaise
+                                    po
+                                        ? po.poValuePaise
+                                        : (quote?.totalAmountPaise ?? 0)
                                 )}
                             </Td>
                             <Td>
                                 <SmallBadge tone={isPo ? "amber" : "green"}>
-                                    {isPo ? toLabel(item.status) : "Approved"}
+                                    {po ? toLabel(po.status) : "Approved"}
                                 </SmallBadge>
                             </Td>
                             <Td>
@@ -616,7 +639,7 @@ function QueueTable({
                                             size="sm"
                                             variant="outline"
                                             className="h-8 text-xs"
-                                            onClick={() => openPoReview(item)}
+                                            onClick={() => po && openPoReview(po)}
                                         >
                                             <Eye /> Review
                                         </Button>
@@ -625,7 +648,7 @@ function QueueTable({
                                             className="h-8 text-xs"
                                             disabled={issueCount > 0}
                                             onClick={() =>
-                                                createDirectOrder(item)
+                                                po && createDirectOrder(po)
                                             }
                                         >
                                             Direct order
@@ -635,7 +658,7 @@ function QueueTable({
                                     <Button
                                         size="sm"
                                         className="h-8 text-xs"
-                                        onClick={() => openAddPo(item)}
+                                        onClick={() => quote && openAddPo(quote)}
                                     >
                                         <Upload /> Add emailed PO
                                     </Button>
@@ -657,10 +680,10 @@ function OrdersTable({
     issueTax,
     taxPending,
 }: {
-    rows: any[];
-    paymentRequests: Map<string, any>;
+    rows: FinanceOrder[];
+    paymentRequests: Map<string, FinancePaymentRequest>;
     collectedByOrder: Map<string, number>;
-    openCollection: (order: any) => void;
+    openCollection: (order: FinanceOrder) => void;
     issueTax: (id: string) => void;
     taxPending: boolean;
 }) {
@@ -787,7 +810,7 @@ function OrdersTable({
     );
 }
 
-function LedgerTable({ rows }: { rows: any[] }) {
+function LedgerTable({ rows }: { rows: LedgerRow[] }) {
     if (!rows.length)
         return <EmptyTable title="No payments or refunds recorded" />;
     return (
@@ -846,11 +869,11 @@ function DocumentsTable({
     acceptingQuoteId,
     pending,
 }: {
-    rows: any[];
+    rows: FinanceQuote[];
     issueProforma: (id: string) => void;
     acceptQuote: (id: string) => void;
     canAddPo: (id: string) => boolean;
-    openAddPo: (quote: any) => void;
+    openAddPo: (quote: FinanceQuote) => void;
     acceptedQuoteIds: Set<string>;
     acceptingQuoteId: string | null;
     pending: boolean;
@@ -996,7 +1019,7 @@ function PoReviewDialog({
     onReview,
     pending,
 }: {
-    po: any | null;
+    po: FinancePurchaseOrder | null;
     note: string;
     setNote: (value: string) => void;
     onClose: () => void;
@@ -1131,8 +1154,8 @@ function PaymentWorkspaceDialog({
     onClose,
     onComplete,
 }: {
-    order: any | null;
-    paymentRequest: any | null;
+    order: FinanceOrder | null;
+    paymentRequest: FinancePaymentRequest | null;
     onClose: () => void;
     onComplete: () => Promise<void>;
 }) {
@@ -1197,7 +1220,7 @@ function PaymentWorkspaceDialog({
                     return toast.error(
                         "Enter the bank or transaction reference"
                     );
-                let proofFile: any = null;
+                let proofFile: UploadedFile | null = null;
                 if (proof) {
                     const uploaded = await startUpload([proof]);
                     const file = uploaded?.[0];
@@ -1208,7 +1231,7 @@ function PaymentWorkspaceDialog({
                         key: file.key,
                         size: file.size,
                         type:
-                            (file as any).type ||
+                            ("type" in file && typeof file.type === "string" ? file.type : "") ||
                             proof.type ||
                             "application/octet-stream",
                     };
@@ -1486,9 +1509,9 @@ function AddPurchaseOrderDialog({
 }: {
     open: boolean;
     onClose: () => void;
-    quotes: any[];
-    draft: any;
-    setDraft: (value: any) => void;
+    quotes: FinanceQuote[];
+    draft: PoDraft;
+    setDraft: Dispatch<SetStateAction<PoDraft>>;
     file: File | null;
     setFile: (value: File | null) => void;
     pending: boolean;
@@ -1506,7 +1529,7 @@ function AddPurchaseOrderDialog({
         setDraft({ ...draft, [key]: value });
     useEffect(() => {
         if (!selectedQuote) return;
-        setDraft((current: any) => ({
+        setDraft((current) => ({
             ...current,
             poValue:
                 current.poValue ||
