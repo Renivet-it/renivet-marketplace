@@ -20,6 +20,14 @@ import { z } from "zod";
 const f = createUploadthing();
 export const utApi = new UTApi();
 
+export const BRAND_MEDIA_UPLOAD_LIMITS = {
+    image: { maxFileCount: 20, maxFileSize: "8MB" },
+    video: { maxFileCount: 5, maxFileSize: "64MB" },
+    audio: { maxFileCount: 10, maxFileSize: "32MB" },
+    pdf: { maxFileCount: 10, maxFileSize: "16MB" },
+    text: { maxFileCount: 10, maxFileSize: "1MB" },
+} as const;
+
 export const uploadRouter = {
     blogThumbnailUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
         .middleware(async () => {
@@ -424,12 +432,7 @@ export const uploadRouter = {
             };
         }),
     brandMediaUploader: f({
-        image: { maxFileCount: 9999, maxFileSize: "1024GB" },
-        video: { maxFileCount: 9999, maxFileSize: "1024GB" },
-        audio: { maxFileCount: 9999, maxFileSize: "1024GB" },
-        pdf: { maxFileCount: 9999, maxFileSize: "1024GB" },
-        blob: { maxFileCount: 9999, maxFileSize: "1024GB" },
-        text: { maxFileCount: 9999, maxFileSize: "1024GB" },
+        ...BRAND_MEDIA_UPLOAD_LIMITS,
     })
         .middleware(async () => {
             const auth = await clerkAuth();

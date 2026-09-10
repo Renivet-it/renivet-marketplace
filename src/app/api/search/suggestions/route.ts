@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-
-// const PYTHON_SERVICE_URL =
-//     process.env.EMBEDDING_SERVICE_URL || "http://localhost:8000";
-// const PYTHON_SERVICE_URL =
-//     process.env.EMBEDDING_SERVICE_URL || "http://64.227.137.174:8000";
-const PYTHON_SERVICE_URL = "http://64.227.137.174:8000";
+import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 
 function toSuggestionStrings(data: unknown): string[] {
     if (!Array.isArray(data)) return [];
@@ -34,16 +29,18 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
     }
 
-    const upstreamUrl = new URL("/suggestions/ai-suggestions", PYTHON_SERVICE_URL);
+    const upstreamUrl = buildEmbeddingServiceUrl("/suggestions/ai-suggestions");
+    if (!upstreamUrl) return NextResponse.json([]);
     upstreamUrl.searchParams.set("query", query);
 
     try {
         const response = await fetch(upstreamUrl, {
-            signal: request.signal,
+            signal: AbortSignal.any([request.signal, AbortSignal.timeout(5000)]),
             headers: {
                 Accept: "application/json",
             },
             cache: "no-store",
+            redirect: "error",
         });
 
         if (!response.ok) {
