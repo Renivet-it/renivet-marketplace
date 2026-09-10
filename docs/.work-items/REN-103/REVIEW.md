@@ -1,54 +1,53 @@
-# REVIEW: REN-103 — Type safety erosion — finance router and product parsing increments
+# REVIEW: REN-103 — Type safety erosion — finance router increment
 
 ## Executive Result
 
-`REVIEW_PASSED` with `NO_DRIFT`. Compared `origin/master` base `767906d507f39a7816f752399482c5de883ea16a` to head `0fd72d851ac4b60fe9c95bf114b7b074cd0f7d2d`. Pull request: https://github.com/Renivet-it/renivet-marketplace/pull/652. Governance re-entry is not required.
+REVIEW_FAILED. MATERIAL_DRIFT: the requested visibility-only slice is not present in the authoritative base-to-head diff, and the two target helpers remain explicitly typed with `any`. Governance re-entry is required.
 
 ## Review Scope and Git Evidence
 
-The diff includes the finance router refactor, product quantity normalization, product parser input typing, focused regression tests, and task-local governance artifacts. Product visibility, media, revenue, order-ops, and remaining cleanup remain out of scope.
+Compared `origin/master` (`767906d507f39a7816f752399482c5de883ea16a`) to HEAD (`383311be5f3db3765f6f18e7dd68f89527e29c90`) on `ayanganguly333/ren-103-finance-router-types`. Linear REN-103 is Backlog and describes an incremental type-safety task; the approved local contract is READY_FOR_DEV/APPROVED. The worktree has pre-existing governance-only changes: `REVIEW.md` deleted, `SPEC.md` modified, and `work-item.yaml` modified; application source is clean.
 
 ## Requirement Reconciliation
 
-- REQ-001: PASS — targeted finance and product helper/parser code has no explicit unsafe-any annotation/cast forms.
-- REQ-002: PASS — finance authorization uses typed Context and role-derived permissions.
-- REQ-003: PASS — finance enum schemas and values remain unchanged.
-- REQ-004: PASS — dynamic JSON acceptance and audit value field/content behavior are preserved.
-- REQ-005: PASS — authorization, service calls, mutation ordering, and procedure contracts remain unchanged.
-- REQ-006: PASS — product quantity normalization retains existing coercion and preservation behavior.
-- REQ-007: PASS — parser inputs use generic named boundaries and retain safeParse success, sanitized fallback, and logging branches.
+REQ-001/REQ-008 fail for this requested slice: `src/lib/db/queries/product.ts:231` has `isPublicProductVisible = (product: any)`, and line 240 has `row: { product?: any }`. The predicate itself checks existence, active, available, published, not deleted, approved, and active brand, but the required named shapes are absent. No corresponding visibility hunk exists in the base-to-head diff.
+
+REQ-002–REQ-007 are outside this new visibility-only slice; the existing branch contains their earlier finance, quantity, and parser increments, but they are not re-verified as part of this finding.
 
 ## Scenario Reconciliation
 
-SCN-001 through SCN-006 pass. Existing finance access/service/audit flows and product quantity/parser paths remain intact; the focused source guard covers the targeted unsafe-any forms and parser branches.
+SCN-007 fails because the helpers do not use named product/section-row shapes. The predicate and delegation are present, but the required unsafe-any regression outcome is not met. SCN-001–SCN-006 are not applicable to the requested new slice.
 
 ## Invariant Reconciliation
 
-INV-001 through INV-004 pass. No finance decision or mutation semantics changed, AppRouter compatibility remains intact, product quantities retain their values/normalization, and malformed parser fallback behavior remains unchanged.
+INV-005 is only partially satisfied: the runtime predicate is unchanged, but the type-safety invariant for the requested helper boundary is violated. INV-001–INV-004 are outside this slice.
 
 ## Flow and Architecture Review
 
-FLOW-001 and FLOW-002 pass. Typed boundaries were added locally at existing finance and product helper edges without changing database schemas, migrations, APIs, dependencies, or configuration.
+FLOW-002 is relevant. Existing section consumers filter through `isPublicSectionProductRow` (for example lines 3849, 3919, 3989, 4060, 4150, 4220, 4290, 4360, 4430, 4500, 4570, and 4640), so changing the boundary types can remain local. No schema, migration, API, or database change is evidenced.
 
 ## Security and Integration Review
 
-SEC-001 passes. Existing authentication, role-derived finance authorization, service/database/audit integrations, and failure ordering remain unchanged. No new retry or idempotency behavior was introduced.
+The runtime visibility predicate does not broaden or narrow in the inspected implementation. However, this is a public-catalog trust boundary (SEC-001/REQ-008), and the requested compile-time hardening is absent. No external integration or idempotency behavior is changed or applicable.
 
 ## Scope and Drift Review
 
-Scope passes and drift is `NO_DRIFT`. The PR continues to use one branch/PR with separate incremental commits, while later product formatting and order-operation slices remain deferred.
+The requested new slice is limited to two type annotations in `product.ts`; the authoritative diff does not contain those changes. This is MATERIAL_DRIFT against REQ-008/SCN-007/TEXP-006, not a harmless implementation variation.
 
 ## Test Expectation Review
 
-- TEXP-001: PASS — finance unsafe-any source guard.
-- TEXP-002: PASS — finance compatibility markers.
-- TEXP-003: PASS — full suite completed with 340 passed, 1 skipped, 0 failed.
-- TEXP-004: PASS — product quantity normalization markers.
-- TEXP-005: PASS — product parser typing, safeParse, fallback, and logging markers.
+TEXP-006 is not evidenced as satisfied: no visibility-helper source-guard change or focused test change appears in the base-to-head diff. Static inspection only; tests were not executed by REVIEW.
 
 ## Findings
 
-None.
+### REV-001
+
+- Severity: BLOCKER
+- Category: requirement
+- Description: The requested visibility slice is missing; both public visibility helpers still use explicit `any` annotations.
+- Evidence: REQ-001, REQ-008, SCN-007, INV-005, TEXP-006; `src/lib/db/queries/product.ts:231` and `:240`; no matching hunk in `origin/master...383311be`.
+- Impact: The public visibility type-safety boundary remains unaddressed and the required regression guard cannot pass.
+- Recommendation: Add named product and section-row input shapes for the two helpers, preserve the exact predicate/delegation, add the required focused source guard, then rerun SPEC governance and REVIEW.
 
 ## Decisions Requiring Attention
 
@@ -56,4 +55,4 @@ None.
 
 ## Final Recommendation
 
-The combined REN-103 finance-router, product-quantity, and product-parser increments satisfy the approved contract with no blocking findings, required actions, or governance re-entry requirement.
+Do not mark READY. Resolve REV-001 and rerun governance validation and the independent review. Governance re-entry is required because the implementation does not match the approved/requested slice.

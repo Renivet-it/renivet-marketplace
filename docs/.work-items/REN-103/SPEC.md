@@ -13,6 +13,7 @@ This increment addresses the finance-router slice of REN-103 in `src/lib/trpc/ro
 - REQ-005: Authorization, procedure inputs/outputs, service calls, and finance behavior remain unchanged.
 - REQ-006: `sanitizeProductQuantities` uses a named input shape for product and variant quantities without changing normalization behavior; normalization remains `Number(value)`, non-finite values to `0`, `Math.trunc`, then `Math.max(0, ...)`, while product null/undefined and missing/non-array variants retain their current values.
 - REQ-007: Product parse helpers use `unknown`/named input types and preserve successful schema parsing plus the existing sanitized fallback and logging behavior for malformed rows.
+- REQ-008: Public product visibility helpers use a named product/section-row shape and preserve the exact active, available, published, undeleted, approved, and active-brand predicate.
 
 ## Design
 
@@ -26,10 +27,12 @@ Use the existing `Context` type from the tRPC context module for `assertFinanceA
 - SCN-004: The source guard rejects reintroduction of explicit unsafe-any syntax in the finance router.
 - SCN-005: Product quantity normalization preserves null/undefined product quantities and non-negative integer variant quantities without explicit unsafe-any syntax in the helper.
 - SCN-006: Product array and single-row parsing preserve schema-success output and sanitized fallback output on validation failure.
+- SCN-007: Public product and section-row visibility helpers preserve the existing inclusion predicate.
 - INV-001: No finance calculation, authorization decision, database mutation, or audit payload semantics change.
 - INV-002: The router remains compatible with the existing AppRouter procedure contract.
 - INV-003: Product quantity normalization returns the same product shape and normalized quantity values.
 - INV-004: Product parsing retains existing logging and fallback behavior without filtering malformed rows or throwing new errors.
+- INV-005: Public visibility does not broaden or narrow the existing product predicate.
 
 ## Flow, dependencies, and security
 
@@ -45,6 +48,7 @@ Dependencies are the existing `Context`, finance schema enums, finance services,
 - TEXP-003 (`regression`, REQUIRED): existing finance tests and complete Bun test suite pass.
 - TEXP-004 (`regression`, REQUIRED): product quantity helper source guard and focused markers cover `Number`, `Number.isFinite`, `Math.trunc`, `Math.max(0, ...)`, null/undefined preservation, and non-array variant preservation.
 - TEXP-005 (`regression`, REQUIRED): product parse-helper source guard covers schema safeParse success and sanitized fallback/logging branches.
+- TEXP-006 (`regression`, REQUIRED): visibility helper source guard covers every existing predicate and section-row delegation.
 
 ## Failure and compatibility contract
 

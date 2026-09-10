@@ -13,6 +13,8 @@ The product scope was narrowed to `sanitizeProductQuantities` only. The remainin
 
 The follow-up parser review identified unsafe `any` inputs and missing parser coverage. Resolved by using a generic `T extends ProductQuantityInput` boundary for both parser helpers and adding focused coverage for safeParse success, sanitized fallback, and logging branches. Existing fallback casts are intentionally retained because they are part of the approved behavior contract and are no longer `any` casts.
 
+The visibility review identified the two remaining unsafe helper annotations and missing TEXP-006 coverage. Resolved by typing both helpers with `ProductWithBrand`/section-row shapes and adding predicate/delegation markers.
+
 ## Final verdict
 
 The amended finance-router and bounded product-quantity increment is ready for implementation. The critic reviewed requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies in a fresh read-only context. No unresolved design blockers remain.

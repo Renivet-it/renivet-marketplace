@@ -66,3 +66,21 @@ test("REN-103 product parsers preserve safeParse fallback behavior", () => {
         "single validation failed, returning sanitized fallback",
     ]) expect(parsers).toContain(marker);
 });
+
+test("REN-103 product visibility helpers preserve every public predicate", () => {
+    const visibility = productSource.slice(
+        productSource.indexOf("const isPublicProductVisible"),
+        productSource.indexOf("interface CreateWomenPageFeaturedProduct")
+    );
+    expect(visibility).not.toMatch(/:\s*any\b|\bas\s+any\b|\bany\[\]/);
+    for (const marker of [
+        "ProductWithBrand | null | undefined",
+        "isActive === true",
+        "isAvailable === true",
+        "isPublished === true",
+        "isDeleted === false",
+        'verificationStatus === "approved"',
+        "brand?.isActive === true",
+        "isPublicProductVisible(row.product)",
+    ]) expect(visibility).toContain(marker);
+});

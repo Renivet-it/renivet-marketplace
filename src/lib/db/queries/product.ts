@@ -228,7 +228,9 @@ const publicProductBrandIsActiveFilter = sql`EXISTS (
       AND b.is_active = true
 )`;
 
-const isPublicProductVisible = (product: any) =>
+const isPublicProductVisible = (
+    product: ProductWithBrand | null | undefined
+) =>
     !!product &&
     product.isActive === true &&
     product.isAvailable === true &&
@@ -237,7 +239,7 @@ const isPublicProductVisible = (product: any) =>
     product.verificationStatus === "approved" &&
     product.brand?.isActive === true;
 
-const isPublicSectionProductRow = (row: { product?: any }) =>
+const isPublicSectionProductRow = (row: { product?: ProductWithBrand }) =>
     isPublicProductVisible(row.product);
 
 interface CreateWomenPageFeaturedProduct {
