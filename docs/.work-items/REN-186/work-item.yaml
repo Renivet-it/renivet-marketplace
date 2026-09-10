@@ -4,7 +4,7 @@ task:
     title: Corporate order document identity settings must distinguish GST registration address from operational office address
     source: linear
     branch: ayanganguly333/ren-186-corporate-order-document-identity-settings-must-distinguish
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-186/corporate-order-document-identity-settings-must-distinguish
         priority: Medium
@@ -240,3 +240,27 @@ traceability:
         - { scenario_id: SCN-007, test_expectation_ids: [TEXP-001, TEXP-003, TEXP-005] }
         - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }
         - { scenario_id: SCN-009, test_expectation_ids: [TEXP-004] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115
+    head_commit: 83d4cb56054a76e60c03dceb338f8912a26409b3
+    pr_url: null
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: [REV-001]
+    required_actions:
+        - "REV-001: Complete route-level guards/tests for the approved eight-route matrix and rerun the timed-out type-check."
+    evidence:
+        - Compared the approved REN-186 contract with the origin/master-to-head Git diff.
+        - "Base: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115; head: 83d4cb56054a76e60c03dceb338f8912a26409b3."
+        - "Full Bun test suite, focused REN-186 tests, and governance validation passed."
+    governance_reentry_required: true
