@@ -220,8 +220,8 @@ implementation_review:
   artifact: REVIEW.md
   result: REVIEW_PASSED_WITH_FINDINGS
   base_branch: origin/master
-  base_commit: fa5dedc35c2807ce2e459d383bf70abde1728a52
-  head_commit: 2c1fa81e09b2168f8d5097769673696a961b1ae8
+  base_commit: 60d4f0e77c1accde952205c2784c7ee8512cf8b1
+  head_commit: 561899f88ad7433155d5f7a2494d7460fbdf56a6
   pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/647
   material_drift: MINOR_DRIFT
   reconciliation:
@@ -237,7 +237,7 @@ implementation_review:
     - "REV-001: Add full payout-cycle detail to the historical audit in a follow-up."
   evidence:
     - Compared the approved REN-185 contract with the recorded origin/master-to-head Git diff.
-    - "Base: fa5dedc35c2807ce2e459d383bf70abde1728a52; head: 2c1fa81e4e7b0d4e3fcebdb2eaf3ea70c9c6f8a5."
+    - "Base: 60d4f0e77c1accde952205c2784c7ee8512cf8b1; head: 561899f88ad7433155d5f7a2494d7460fbdf56a6."
     - "Full test suite and targeted policy tests passed before review; governance validation passed."
   governance_reentry_required: false
 traceability:

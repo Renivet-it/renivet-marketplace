@@ -4,13 +4,13 @@
 
 Result: `REVIEW_PASSED_WITH_FINDINGS` with `MINOR_DRIFT` limited to audit-detail completeness. Governance re-entry is not required. The implementation uses gross sales/services, applies the confirmed ₹5,00,000 individual/HUF threshold, adds gross-sales tracking, and keeps historical correction read-only.
 
-Base commit: `fa5dedc35c2807ce2e459d383bf70abde1728a52` (`origin/master`)
+Base commit: `60d4f0e77c1accde952205c2784c7ee8512cf8b1` (`origin/master`)
 
-Head commit: `2c1fa81e4e7b0d4e3fcebdb2eaf3ea70c9c6f8a5`
+Head commit: `561899f88ad7433155d5f7a2494d7460fbdf56a6`
 
 ## Review Scope and Git Evidence
 
-Compared the approved REN-185 contract and Linear issue against the base-to-head diff. Changed implementation paths include the finance schema/query, payout calculation/persistence, TDS calculation, rollover, protected finance route, migration, statement metadata, policy tests, and task-local governance artifacts. The branch has no uncommitted application changes at review time; PR URL is not yet available.
+Compared the approved REN-185 contract and Linear issue against the base-to-head diff. Changed implementation paths include the finance schema/query, payout calculation/persistence, TDS calculation, rollover, protected finance route, migration, statement metadata, policy tests, and task-local governance artifacts. The branch has no uncommitted application changes at review time; PR #647 is open.
 
 ## Requirement Reconciliation
 
