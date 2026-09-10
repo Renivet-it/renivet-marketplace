@@ -23,3 +23,24 @@ test("REN-102 preserves finance queue behavior markers", () => {
         "setPage(1)",
     ]) expect(source).toContain(marker);
 });
+
+test("REN-102 preserves upload failures and finance mutation payloads", () => {
+    for (const marker of [
+        'return toast.error("Purchase order upload failed")',
+        'throw new Error("Payment proof upload failed")',
+        "purchaseOrderId: selectedPo.id",
+        "validationSummary: selectedPo.validationSummary",
+        "acceptQuote.mutate({ quoteId })",
+        "issueProforma.mutate({ quoteId })",
+        "quoteId: poDraft.quoteId",
+        "uploadedFile: {",
+        "orderId: order.id",
+        "expiresInDays: 7",
+        "sendEmail: true",
+        "paymentReference: reference.trim()",
+        "paymentDate,",
+        "proofFile,",
+        "refundMethod || \"Refund\"",
+        "refundReference ?? data.id",
+    ]) expect(source).toContain(marker);
+});
