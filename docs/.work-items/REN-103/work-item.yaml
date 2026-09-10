@@ -114,7 +114,7 @@ implementation_review:
     base_branch: origin/master
     base_commit: "767906d507f39a7816f752399482c5de883ea16a"
     head_commit: "cd0661137bc30cefc5e673c52b2630a674b49c37"
-    pr_url: null
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/652
     material_drift: NO_DRIFT
     reconciliation:
         requirements: PASS

@@ -6,7 +6,7 @@
 
 ## Review Scope and Git Evidence
 
-The diff contains the approved REN-103 governance artifacts, `src/lib/trpc/routes/general/finance.ts`, and `tests/ren-103-finance-router-types.test.ts`. The router diff removes all explicit `: any`, `as any`, and `any[]` annotations/casts while retaining the contract-approved `z.any()` schemas for arbitrary JSON input.
+The diff contains the approved REN-103 governance artifacts, `src/lib/trpc/routes/general/finance.ts`, and `tests/ren-103-finance-router-types.test.ts`. Pull request: https://github.com/Renivet-it/renivet-marketplace/pull/652. The router diff removes all explicit `: any`, `as any`, and `any[]` annotations/casts while retaining the contract-approved `z.any()` schemas for arbitrary JSON input.
 
 ## Requirement Reconciliation
 
