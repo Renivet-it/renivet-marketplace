@@ -3,7 +3,7 @@ task:
     id: REN-189
     title: Improve Meta CAPI event match quality and analytics signal integrity
     source: linear
-    branch: ayanganguly333/ren-189-improve-meta-capi-event-match-quality-and-analytics-signal
+    branch: ayanganguly333/ren-189-fix-crawler-matcher
     status: READY_FOR_DEV
 risk:
     initial_risk: L1
@@ -213,23 +213,24 @@ approval:
 implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/master
-    base_commit: "27b9a69fd5ee4ffa766e195a494b1cfe9f907266"
-    head_commit: "8c5f66c776aa183b5baa78e20f484416382ea6d9"
+    base_branch: main
+    base_commit: "c0852b3512031fe0f27babd5965f2fa3a0ec5022"
+    head_commit: "bb5384027765cbcc5740b1eeb35392cd4babd939"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
         requirements: PARTIAL
         scenarios: PARTIAL
-        invariants: PARTIAL
+        invariants: PASS
         architecture: PARTIAL
-        security: PARTIAL
+        security: PASS
         test_coverage: PARTIAL
         scope: PASS
     blocking_findings: []
     required_actions:
         - "Complete Meta Test Events, crawler/browser inspection, and 48–72-hour EMQ verification after deployment."
     evidence:
-        - "Compared the approved contract with the origin/master-to-8c5f66c776aa183b5baa78e20f484416382ea6d9 Git diff."
+        - "Compared the approved contract with the c0852b3512031fe0f27babd5965f2fa3a0ec5022-to-bb5384027765cbcc5740b1eeb35392cd4babd939 Git diff."
+        - "The diff changes only explicit crawler signatures and their real-classifier regression fixtures."
         - "Static review found required external and post-deployment validation remains operator-owned."
     governance_reentry_required: false
