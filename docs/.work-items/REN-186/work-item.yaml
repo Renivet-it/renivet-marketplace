@@ -257,8 +257,7 @@ implementation_review:
         test_coverage: PASS
         scope: PASS
     blocking_findings: []
-    required_actions:
-        - "CI: Complete the TypeScript check; the local command timed out without diagnostics."
+    required_actions: []
     evidence:
         - Compared the approved REN-186 contract with the origin/master-to-head Git diff.
         - "Base: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115; head: 521f5998a4623c1d3bad492a78cdb0dd7aa1956f."
