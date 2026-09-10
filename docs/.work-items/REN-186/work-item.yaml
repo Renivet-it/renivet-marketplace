@@ -242,7 +242,7 @@ traceability:
         - { scenario_id: SCN-009, test_expectation_ids: [TEXP-004] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
+    result: REVIEW_FAILED
     base_branch: origin/master
     base_commit: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115
     head_commit: 83d4cb56054a76e60c03dceb338f8912a26409b3

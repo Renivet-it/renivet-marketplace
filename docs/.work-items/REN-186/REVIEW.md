@@ -1,6 +1,6 @@
 # REN-186 Implementation Review
 
-Result: `REVIEW_PASSED_WITH_FINDINGS`
+Result: `REVIEW_FAILED`
 
 ## Comparison
 
