@@ -44,6 +44,11 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    moveSelectedMedia,
+    removeSelectedMedia,
+    uniqueSelectedMedia,
+} from "@/lib/product-media-selection";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
@@ -569,6 +574,24 @@ export function ProductManageForm({
             },
         });
 
+    const handleProductMediaChange = (items: BrandMediaItem[]) => {
+        const orderedMedia = uniqueSelectedMedia(items);
+        const mediaWithPosition = orderedMedia.map((item, i) => ({
+            id: item.id,
+            position: i + 1,
+        }));
+
+        form.setValue("media", mediaWithPosition, { shouldDirty: true });
+        setSelectedMedia(orderedMedia);
+
+        if (product?.id) {
+            updateProductMedia({
+                productId: product.id,
+                media: mediaWithPosition,
+            });
+        }
+    };
+
     const isPending = isCreating || isUpdating;
 
     return (
@@ -686,7 +709,7 @@ export function ProductManageForm({
                                                             <div
                                                                 key={media.id}
                                                                 className={cn(
-                                                                    "aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted",
+                                                                    "group relative aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted",
                                                                     i === 0 &&
                                                                         "col-span-2 row-span-2"
                                                                 )}
@@ -703,6 +726,90 @@ export function ProductManageForm({
                                                                     width={500}
                                                                     className="size-full rounded-sm object-cover"
                                                                 />
+                                                                <span className="absolute left-3 top-3 flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow">
+                                                                    {i + 1}
+                                                                </span>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="icon"
+                                                                    className="absolute right-3 top-3 size-7 rounded-full opacity-100 shadow"
+                                                                    aria-label={`Remove ${media.name}`}
+                                                                    onClick={(
+                                                                        event
+                                                                    ) => {
+                                                                        event.stopPropagation();
+                                                                        handleProductMediaChange(
+                                                                            removeSelectedMedia(
+                                                                                selectedMedia,
+                                                                                media.id
+                                                                            )
+                                                                        );
+                                                                    }}
+                                                                    disabled={
+                                                                        isPending ||
+                                                                        isUpdatingMedia
+                                                                    }
+                                                                >
+                                                                    <Icons.X className="size-4" />
+                                                                </Button>
+                                                                <div className="absolute bottom-3 right-3 flex gap-1 opacity-100">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="secondary"
+                                                                        size="icon"
+                                                                        className="size-7 rounded-full shadow"
+                                                                        aria-label={`Move ${media.name} up`}
+                                                                        disabled={
+                                                                            i ===
+                                                                                0 ||
+                                                                            isPending ||
+                                                                            isUpdatingMedia
+                                                                        }
+                                                                        onClick={(
+                                                                            event
+                                                                        ) => {
+                                                                            event.stopPropagation();
+                                                                            handleProductMediaChange(
+                                                                                moveSelectedMedia(
+                                                                                    selectedMedia,
+                                                                                    i,
+                                                                                    -1
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Icons.ArrowUp className="size-3.5" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="secondary"
+                                                                        size="icon"
+                                                                        className="size-7 rounded-full shadow"
+                                                                        aria-label={`Move ${media.name} down`}
+                                                                        disabled={
+                                                                            i ===
+                                                                                selectedMedia.length -
+                                                                                    1 ||
+                                                                            isPending ||
+                                                                            isUpdatingMedia
+                                                                        }
+                                                                        onClick={(
+                                                                            event
+                                                                        ) => {
+                                                                            event.stopPropagation();
+                                                                            handleProductMediaChange(
+                                                                                moveSelectedMedia(
+                                                                                    selectedMedia,
+                                                                                    i,
+                                                                                    1
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Icons.ArrowDown className="size-3.5" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         )
                                                     )}
@@ -1014,12 +1121,15 @@ export function ProductManageForm({
                                             <FormControl>
                                                 <Checkbox
                                                     checked={field.value}
-                                                    onCheckedChange={field.onChange}
+                                                    onCheckedChange={
+                                                        field.onChange
+                                                    }
                                                     disabled={isPending}
                                                 />
                                             </FormControl>
                                             <FormLabel>
-                                                Customization is available for this product
+                                                Customization is available for
+                                                this product
                                             </FormLabel>
                                         </div>
                                         <FormMessage />
@@ -2267,31 +2377,7 @@ export function ProductManageForm({
                 setIsOpen={setIsMediaSelectorOpen}
                 accept="image/*, video/*"
                 multiple
-                onSelectionComplete={(items) => {
-                    const uniqueMedia = Array.from(
-                        new Map(items.map((m) => [m.id, m])).values()
-                    );
-
-                    // Console log the selected media with id and position
-                    const mediaWithPosition = uniqueMedia.map((item, i) => ({
-                        id: item.id,
-                        position: i + 1,
-                    }));
-                    console.log("Selected Media:", mediaWithPosition);
-
-                    form.setValue("media", mediaWithPosition, {
-                        shouldDirty: true,
-                    });
-
-                    setSelectedMedia(uniqueMedia);
-                    // Call tRPC mutation to update product media
-                    if (product?.id) {
-                        updateProductMedia({
-                            productId: product.id, // Use string directly
-                            media: mediaWithPosition,
-                        });
-                    }
-                }}
+                onSelectionComplete={handleProductMediaChange}
             />
 
             <MediaSelectModal

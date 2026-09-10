@@ -1,0 +1,194 @@
+schema_version: "1.0"
+task:
+    id: REN-196
+    title: Product image cannot be properly deselected
+    source: linear
+    branch: ayanganguly333/ren-196-product-image-cannot-be-properly-deselected
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-196/product-image-cannot-be-properly-deselected
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - Contained client-side selection UX change using the existing product-media persistence path.
+        - No schema, upload, authorization, payment, inventory, or external-integration behavior changes.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-196 issue and comments/relations
+        - ProductManageForm media state and updateProductMedia mutation
+        - MediaSelectModal selection state and completion callback
+        - ProductMediaSelectSingle card click and checkbox behavior
+        - Existing media position validation and database update query
+    excluded_areas:
+        - Media-library delete and upload APIs; not part of product selection UX
+        - Database schema and migrations; existing JSON media positions are sufficient
+        - Public storefront rendering; it consumes persisted product media order
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: []
+    security_boundaries: []
+    state_transitions:
+        - media_picker_opened -> working_selection_initialized
+        - working_selection_changed -> ordered_selection_updated
+        - ordered_selection_updated -> product_media_persisted
+dependencies:
+    - id: DEP-001
+      name: MediaSelectModal
+      purpose: Owns the working ordered selection and completion callback.
+      description: Existing modal supports upload, search, and selection but currently has no explicit selected-items removal or ordering UI.
+      status: resolved
+    - id: DEP-002
+      name: ProductManageForm
+      purpose: Converts selected media to persisted product media positions.
+      description: Existing callback maps array order to contiguous positions and calls updateProductMedia for existing products.
+      status: resolved
+    - id: DEP-003
+      name: updateProductMedia validation and query
+      purpose: Persists the ordered media IDs and positions.
+      description: Existing input accepts media IDs and numeric positions; no server change is required.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: A user can remove any currently selected product image using a visible, direct remove control.
+      type: explicit
+    - id: REQ-002
+      description: A user can choose and change the sequence of selected product images before saving.
+      type: explicit
+    - id: REQ-003
+      description: Completing selection persists the final ordered selection using contiguous positions beginning at 1.
+      type: inferred
+    - id: REQ-004
+      description: Existing media-picker upload, search, selection, cancel, and single-select behavior remains functional.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      description: User selects images A, B, and C, then removes B with its visible remove control; only A and C remain selected.
+      requirement_ids: [REQ-001]
+    - id: SCN-002
+      description: User moves C before A, completes selection, and the product receives C at position 1 and A at position 2.
+      requirement_ids: [REQ-002, REQ-003]
+    - id: SCN-003
+      description: User clicks remove or move on a selected item; the media-card click handler does not toggle the item unexpectedly.
+      requirement_ids: [REQ-001, REQ-002]
+    - id: SCN-004
+      description: User closes and reopens the picker after completion; the current saved order and removals are shown.
+      requirement_ids: [REQ-003]
+    - id: SCN-005
+      description: User uploads/searches/selects media or uses cancel/single-select; existing behavior remains available.
+      requirement_ids: [REQ-004]
+invariants:
+    - id: INV-001
+      description: The working selection contains no duplicate media IDs.
+    - id: INV-002
+      description: Persisted positions are contiguous and match the working selection order.
+    - id: INV-003
+      description: An explicit remove or move action cannot also trigger card selection toggling.
+flows:
+    - id: FLOW-001
+      description: Open picker -> initialize ordered selection -> select/remove/reorder -> Done -> map order to positions -> persist through existing mutation.
+      state_transitions:
+          [
+              media_picker_opened -> working_selection_initialized,
+              working_selection_changed -> ordered_selection_updated,
+              ordered_selection_updated -> product_media_persisted,
+          ]
+integrations: []
+personas:
+    - id: PER-001
+      role: product_editor
+      applicability: Configures the ordered media shown for a product.
+security_boundaries: []
+business_rules:
+    - id: BR-001
+      description: The first selected media item remains the product's primary media because existing consumers use the first item.
+      source: Existing storefront and dashboard product media consumers.
+decisions:
+    - id: DEC-001
+      question: How should sequence selection be exposed?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Use selected-item move up/down controls and a visible numbered selected list inside the existing modal.
+      basis: Works with the current ordered array and is keyboard-accessible without introducing drag-and-drop dependencies.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-001
+      category: component
+      classification: REQUIRED
+      reason: Selection removal, ordering, event propagation, and modal initialization are the changed UI behavior.
+      scenarios: [SCN-001, SCN-002, SCN-003, SCN-004]
+    - id: TEXP-002
+      category: regression
+      classification: REQUIRED
+      reason: Existing picker upload, search, cancel, Done, and single-select behavior must remain intact.
+      scenarios: [SCN-005]
+    - id: TEXP-003
+      category: ui_ux
+      classification: REQUIRED
+      reason: The remove affordance and sequence controls must be visible and accessible in the product media workflow.
+      scenarios: [SCN-001, SCN-002, SCN-003]
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    required_categories: []
+    categories_reviewed: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-003] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-003] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-002, SCN-004] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-005] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-005, invariant_ids: [] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-002] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: master
+    base_commit: "fa5dedc35c2807ce2e459d383bf70abde1728a52"
+    head_commit: "6208d8a46dc22cde638900684e88b227b372969a"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: NOT_APPLICABLE
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add a mounted component/UI test for the visible remove and sequence controls when the dashboard modal test harness is available."
+    evidence:
+        - "Compared the approved REN-196 contract with the committed base-to-head implementation diff and task-local tests on the REN-196 branch."
+    governance_reentry_required: false
