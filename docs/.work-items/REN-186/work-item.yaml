@@ -1,0 +1,242 @@
+schema_version: "1.0"
+task:
+    id: REN-186
+    title: Corporate order document identity settings must distinguish GST registration address from operational office address
+    source: linear
+    branch: ayanganguly333/ren-186-corporate-order-document-identity-settings-must-distinguish
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-186/corporate-order-document-identity-settings-must-distinguish
+        priority: Medium
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - GST/legal identity and corporate PDF output affect tax and financial compliance.
+        - The change adds a persisted schema distinction and touches multiple document routes.
+        - Incorrect address/GSTIN selection can produce materially misleading documents.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-186 description, issue dependencies, and branch
+        - corporate document settings schema, validation, tRPC update, and dashboard panel
+        - shared corporate document identity/address helpers
+        - proforma, invoice, commission invoice, receipt voucher, settlement, and vendor PO routes
+        - hardcoded GSTIN and address fallback call sites
+    excluded_areas:
+        - Production data mutation or correction
+        - GST filings and Finance/CA registration changes
+        - Historical PDF regeneration
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - finance_confirmation_missing -> implementation_blocked
+        - finance_confirmation_received -> implementation_ready
+dependencies:
+    - id: DEP-001
+      name: confirmed GST identity facts
+      purpose: Establishes the registration-address/GSTIN pairing that the model must represent.
+      description: User confirmed GSTIN 10AANCR5687A1ZG and Bangalore registered office on 2026-09-10; implementation must not write them automatically.
+      status: resolved
+    - id: DEP-002
+      name: corporate document settings persistence
+      purpose: Stores registration and optional operational address fields.
+      description: Existing address columns remain registration address; migration adds nullable operational columns.
+      status: resolved
+    - id: DEP-003
+      name: corporate PDF identity routes
+      purpose: Consume shared settings for legal identity output.
+      description: Multiple routes currently use shared settings, and commission/settlement routes contain fabricated fallbacks.
+      status: resolved
+integrations:
+    - id: INT-001
+      system: Corporate document PDF generation
+      purpose: Renders tax/legal identity and operational context from settings.
+      failure_mode: Missing required GST identity must produce the established precondition error, not fabricated values.
+personas:
+    - id: PER-001
+      role: finance_authorizer
+      applicability: Confirms the registration-address/GSTIN pairing.
+    - id: PER-002
+      role: settings_operator
+      applicability: Maintains registration and operational address values.
+security_boundaries:
+    - id: SEC-001
+      description: Legal identity and tax document fields are privileged settings and must not be inferred from operational data.
+business_rules:
+    - id: BR-001
+      description: Existing address fields are the GST registration address.
+      source: REN-186 and user confirmation on 2026-09-10.
+    - id: BR-002
+      description: Operational address is optional and cannot replace the registration address in GST/legal identity output.
+      source: REN-186 implementation contract.
+    - id: BR-003
+      description: No fabricated GSTIN or unrelated address fallback may appear in a corporate document.
+      source: REN-186 implementation contract.
+decisions:
+    - id: DEC-001
+      question: Which address does the current address block represent?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Preserve it as the GST registration address for backwards compatibility.
+      basis: Existing documents use it as legal identity; changing its meaning would risk historical and current output.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: User confirmation in conversation on 2026-09-10.
+    - id: DEC-002
+      question: Should confirmed address/GSTIN facts be written to production settings?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: No; add model/UI support only and leave data entry to an authorized settings operator.
+      basis: The issue requires Finance/CA confirmation and the user supplied facts without requesting a production-data mutation.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: User confirmation in conversation on 2026-09-10.
+requirements:
+    - id: REQ-001
+      description: Admins can view and save distinct registration and operational addresses.
+      type: explicit
+    - id: REQ-002
+      description: Existing settings rows remain compatible when operational fields are null.
+      type: compatibility
+    - id: REQ-003
+      description: GST/legal identity output uses registration address and configured GSTIN.
+      type: explicit
+    - id: REQ-004
+      description: Corporate documents fail closed instead of fabricating GSTIN/address identity data.
+      type: explicit
+    - id: REQ-005
+      description: Regression tests cover validation, persistence, address selection, authorization, route output, side-effect ordering, and fail-closed behavior.
+      type: explicit
+    - id: REQ-006
+      description: Address separation does not change tax/place-of-supply calculations or stored historical document/financial data.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      description: Legacy row with only registration address renders existing identity and null operational address.
+      requirement_ids: [REQ-002, REQ-003]
+    - id: SCN-002
+      description: Operator saves both address blocks and reloads both exact values.
+      requirement_ids: [REQ-001, REQ-002]
+    - id: SCN-003
+      description: GST document with both addresses renders registration address and GSTIN in legal identity output.
+      requirement_ids: [REQ-003]
+    - id: SCN-004
+      description: Missing GST identity is rejected instead of rendered with fabricated defaults.
+      requirement_ids: [REQ-004]
+    - id: SCN-005
+      description: Operational context uses operational address when present and registration address when absent.
+      requirement_ids: [REQ-003, REQ-005]
+    - id: SCN-006
+      description: All eight corporate PDF routes follow the identity/operational address matrix without swapping fields.
+      requirement_ids: [REQ-003, REQ-005]
+    - id: SCN-007
+      description: Partial operational address is absent for fallback; explicit clearing clears values; omitted legacy fields preserve values.
+      requirement_ids: [REQ-002, REQ-005]
+    - id: SCN-008
+      description: Commission invoice rejects incomplete identity before allocating a document number and preserves existing retry allocation behavior when valid.
+      requirement_ids: [REQ-004, REQ-005]
+    - id: SCN-009
+      description: Settings authorization remains enforced and failure telemetry does not emit raw identity values.
+      requirement_ids: [REQ-005]
+invariants:
+    - id: INV-001
+      description: Existing address columns consistently mean GST registration address.
+    - id: INV-002
+      description: Missing GSTIN is never replaced by a hardcoded GSTIN.
+    - id: INV-003
+      description: New operational fields do not mutate existing settings or historical snapshots.
+    - id: INV-004
+      description: Registration and operational addresses cannot be silently swapped.
+    - id: INV-005
+      description: Identity validation precedes document-number allocation and other document writes.
+    - id: INV-006
+      description: Address display separation cannot alter tax/place-of-supply inputs.
+flows:
+    - id: FLOW-001
+      description: Settings panel -> validated update -> persisted registration and optional operational addresses -> shared document identity rendering.
+      state_transitions: [finance_confirmation_received -> implementation_ready]
+    - id: FLOW-002
+      description: Missing legal identity -> shared guard -> precondition response; no fabricated PDF identity.
+      state_transitions: [identity_incomplete -> document_blocked]
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Optional operational fields and registration/operational formatter selection must be deterministic.
+      scenarios: [SCN-001, SCN-002, SCN-005]
+    - id: TEXP-002
+      category: regression
+      classification: REQUIRED
+      reason: Affected corporate routes must use registration identity and remove fabricated defaults.
+      scenarios: [SCN-003, SCN-004]
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: Existing rows must remain readable with nullable operational columns.
+      scenarios: [SCN-001, SCN-002]
+    - id: TEXP-004
+      category: api
+      classification: REQUIRED
+      reason: Every affected route and settings authorization path must assert the documented response and side-effect ordering.
+      scenarios: [SCN-006, SCN-008, SCN-009]
+    - id: TEXP-005
+      category: regression
+      classification: REQUIRED
+      reason: Tax/place-of-supply and stored historical data remain unchanged by address display separation.
+      scenarios: [SCN-006, SCN-007]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIC.md
+    reviewer: Independent critic subagent
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - Initial independent critic blocked incomplete route matrix and underspecified guard, migration, side-effect, and test behavior; all were amended.
+        - Follow-up independent critic flagged the unresolved Linear Finance/CA dependency; user confirmation was recorded in Linear on 2026-09-10.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation and Linear clarification comment on 2026-09-10.
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-003, SCN-005] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-005, SCN-006, SCN-007, SCN-008, SCN-009] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-006, SCN-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002, INV-004] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-001, INV-004] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-001, INV-004, INV-006] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-003, INV-004] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-002, INV-005] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-003] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-001, TEXP-002] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-002, TEXP-004, TEXP-005] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-001, TEXP-003, TEXP-005] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-004] }

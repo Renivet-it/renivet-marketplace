@@ -143,6 +143,37 @@ export function corporatePartyAddress(party: {
         .join(", ");
 }
 
+export function corporateOperationalAddress(settings: {
+    operationalAddressLine1?: string | null;
+    operationalAddressLine2?: string | null;
+    operationalCity?: string | null;
+    operationalState?: string | null;
+    operationalPostalCode?: string | null;
+    operationalCountry?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+}) {
+    const operational = corporatePartyAddress({
+        addressLine1: settings.operationalAddressLine1,
+        addressLine2: settings.operationalAddressLine2,
+        city: settings.operationalCity,
+        state: settings.operationalState,
+        postalCode: settings.operationalPostalCode,
+        country: settings.operationalCountry,
+    });
+    return operational &&
+        settings.operationalAddressLine1?.trim() &&
+        settings.operationalCity?.trim() &&
+        settings.operationalState?.trim() &&
+        settings.operationalPostalCode?.trim()
+        ? operational
+        : corporatePartyAddress(settings);
+}
+
 export function gstStateCode(gstin?: string | null) {
     return /^\d{2}/.exec(gstin?.trim() ?? "")?.[0] ?? null;
 }
