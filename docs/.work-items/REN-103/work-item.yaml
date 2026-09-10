@@ -1,0 +1,110 @@
+schema_version: "1.0"
+task:
+    id: REN-103
+    title: Type safety erosion — finance router increment
+    source: linear
+    branch: ayanganganguly333/ren-103-finance-router-types
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-103/type-safety-erosion-402-any-309-as-any-across-the-repo
+        priority: Medium
+        labels: [tech-debt, security]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Security & Compliance Audit
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Finance router changes cross authorization, finance services, database enum values, and audit events.
+        - The approved increment is compile-time focused but must preserve finance behavior and security boundaries.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-103, finance router, tRPC context, finance services, finance schema values, audit helper, existing tests]
+    excluded_areas: [product.ts, order-ops.ts, order queries, remaining repository any cleanup, schema/migration changes]
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: []
+    security_boundaries: [SEC-001]
+    state_transitions: [untyped-finance-router -> typed-finance-router]
+dependencies:
+    - { id: DEP-001, name: tRPC Context, purpose: Type authenticated user and query context, description: Existing repository context type., status: resolved }
+    - { id: DEP-002, name: finance schema/service types, purpose: Type enum and service boundary values, description: Existing finance schemas and helpers., status: resolved }
+    - { id: DEP-003, name: finance audit helper, purpose: Preserve audit JSON payload typing, description: Existing writeFinanceAuditEvent contract., status: resolved }
+integrations: []
+personas:
+    - { id: PER-001, role: finance_admin, applicability: Uses protected finance procedures and audit-backed workflows. }
+security_boundaries:
+    - { id: SEC-001, description: Existing authentication, finance module authorization, user identity, and audit behavior must remain unchanged. }
+business_rules:
+    - { id: BR-001, description: This increment is a type-only refactor with no intentional runtime finance behavior change., source: REN-103 approved incremental scope. }
+decisions:
+    - id: DEC-001
+      question: Which REN-103 slice is implemented in this PR?
+      class: B
+      status: resolved
+      recommendation: Finance router first; defer product and order-ops to later PRs.
+      basis: Linear explicitly requests incremental prioritization and finance/order-ops are named priorities.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+      confirmation_source: User confirmation in conversation on 2026-09-11.
+requirements:
+    - id: REQ-001
+      description: "Finance router has no explicit any annotations/casts (: any, as any, any[]); existing z.any() schemas remain unchanged to preserve arbitrary JSON input acceptance."
+      type: explicit
+    - { id: REQ-002, description: Context and finance inputs use inferred or named repository types., type: explicit }
+    - { id: REQ-003, description: Refund costAllocation and COD categorization retain their existing enumerated value sets without runtime narrowing or widening., type: compatibility }
+    - { id: REQ-004, description: Dynamic JSON inputs retain arbitrary-value acceptance and typed audit conversion preserves existing fields and values., type: compatibility }
+    - { id: REQ-005, description: Authorization, procedure contracts, service calls, and finance behavior remain unchanged., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: Authorized finance users reach the same view/manage procedures., requirement_ids: [REQ-002, REQ-005] }
+    - { id: SCN-002, description: Unauthorized and forbidden requests retain existing errors., requirement_ids: [REQ-005] }
+    - { id: SCN-003, description: Finance procedures preserve inputs, service calls, database writes, and audit events., requirement_ids: [REQ-003, REQ-004, REQ-005] }
+    - { id: SCN-004, description: Source regression guard prevents unsafe any annotations/casts while allowing documented z.any() schemas., requirement_ids: [REQ-001] }
+invariants:
+    - { id: INV-001, description: No finance calculation, authorization decision, database mutation, or audit payload semantics change. }
+    - { id: INV-002, description: The router remains compatible with the existing AppRouter procedure contract. }
+flows:
+    - { id: FLOW-001, description: tRPC context/input -> typed guard/service arguments -> existing finance service/database/audit boundaries., state_transitions: [untyped-finance-router -> typed-finance-router] }
+test_expectations:
+    - { id: TEXP-001, category: regression, classification: REQUIRED, reason: Source guard prevents explicit any annotations/casts while allowing documented z.any() schemas., scenarios: [SCN-004] }
+    - { id: TEXP-002, category: unit, classification: REQUIRED, reason: Focused assertions cover context narrowing, exact enum values, arbitrary JSON compatibility, audit payload preservation, and unchanged procedure markers., scenarios: [SCN-001, SCN-003] }
+    - { id: TEXP-003, category: regression, classification: REQUIRED, reason: Existing finance tests and complete Bun suite must pass., scenarios: [SCN-001, SCN-002, SCN-003] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Independent critic subagent
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { classification: DESIGN_BLOCKER, description: Original unsafe-any scope and dynamic JSON/audit compatibility were ambiguous; amended in SPEC and work-item contract. }
+        - { classification: MAJOR, description: Original context narrowing, enum mapping, and test expectations were underspecified; amended with explicit boundaries and TEXP-002. }
+        - { classification: MINOR, description: Original failure and compatibility semantics were implicit; amended with explicit preservation rules. }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation on 2026-09-11.
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-002, TEXP-003] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002, TEXP-003] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }

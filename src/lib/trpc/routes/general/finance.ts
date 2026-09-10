@@ -3,6 +3,7 @@ import { legalCache } from "@/lib/redis/methods/legal";
 import {
     getFinanceModuleAccess,
     hasFinanceAdminAccess,
+    isAjSuperAdmin,
 } from "@/lib/finance/access";
 import {
     computeTdsDeduction,
@@ -54,6 +55,8 @@ import {
     updateFinanceRefundQcStatus,
 } from "@/lib/finance/refunds";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
+import type { Context } from "@/lib/trpc/context";
+import { getUserPermissions } from "@/lib/utils";
 import {
     adminProcedure,
     createTRPCRouter,
@@ -65,14 +68,22 @@ import { z } from "zod";
 
 const financeModuleEnum = z.enum(financeModules);
 
-async function assertFinanceAccess(ctx: any, moduleKey: (typeof financeModules)[number], mode: "view" | "manage") {
+function toAuditValue(value: object | null | undefined): Record<string, unknown> | null {
+    return value ? Object.fromEntries(Object.entries(value)) : null;
+}
+
+async function assertFinanceAccess(
+    ctx: Context,
+    moduleKey: (typeof financeModules)[number],
+    mode: "view" | "manage"
+): Promise<void> {
     if (!ctx.user?.id) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "You're not authorized" });
     }
 
     const access = await getFinanceModuleAccess({
         userId: ctx.user.id,
-        sitePermissions: ctx.user.sitePermissions ?? 0,
+        sitePermissions: getUserPermissions(ctx.user.roles ?? []).sitePermissions,
         roles: ctx.user.roles ?? [],
         moduleKey,
     });
@@ -176,7 +187,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 reasonCode: input.reasonCode,
                 notes: input.notes,
                 refundType: input.refundType,
-                costAllocation: input.costAllocation as any,
+                costAllocation: input.costAllocation,
                 returnShippingPaidBy: input.returnShippingPaidBy,
                 evidenceUrls: input.evidenceUrls,
                 actorId: ctx.user.id,
@@ -330,7 +341,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 remittanceDate: input.remittanceDate
                     ? input.remittanceDate.toISOString().slice(0, 10)
                     : undefined,
-                status: categorization.status as any,
+                status: categorization.status,
                 notes: input.notes,
                 metadata: {
                     categorizedBy: "manual_snapshot",
@@ -355,7 +366,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "cod_reconciliation.snapshot_upserted",
                 entityType: "cod_reconciliation",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
             });
 
             return row;
@@ -460,7 +471,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "payout_cycle.created",
                 entityType: "payout_cycle",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -578,8 +589,8 @@ export const financeComplianceRouter = createTRPCRouter({
                     actionType: "brand_bank_details_changed",
                     entityType: "brand_payout_config",
                     entityId: row.id,
-                    beforeValue: previous as any,
-                    afterValue: row as any,
+                    beforeValue: toAuditValue(previous),
+                    afterValue: toAuditValue(row),
                     reason: "bank_details_updated",
                     title: "Brand payout bank details changed",
                     message: `Bank details changed for brand ${row.id}. Review immediately.`,
@@ -598,8 +609,8 @@ export const financeComplianceRouter = createTRPCRouter({
                     actionType: "brand_payout_config.upserted",
                     entityType: "brand_payout_config",
                     entityId: row.id,
-                    beforeValue: previous as any,
-                    afterValue: row as any,
+                    beforeValue: toAuditValue(previous),
+                    afterValue: toAuditValue(row),
                 });
             }
 
@@ -644,7 +655,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "commission_rule.upserted",
                 entityType: "commission_rule",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -717,7 +728,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "hsn_master.upserted",
                 entityType: "hsn_master",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -741,7 +752,7 @@ export const financeComplianceRouter = createTRPCRouter({
             const rows = await ctx.queries.financeCompliance.bulkUpsertHsn(
                 Array.from(rowsByHsnCode.values()).map((row) => ({ ...row, metadata: {} }))
             );
-            await writeFinanceAuditEvent({ actorId: ctx.user.id, actionType: "hsn_master.bulk_upserted", entityType: "hsn_master", entityId: "bulk", afterValue: { count: rows.length } as any });
+            await writeFinanceAuditEvent({ actorId: ctx.user.id, actionType: "hsn_master.bulk_upserted", entityType: "hsn_master", entityId: "bulk", afterValue: { count: rows.length } });
             return { count: rows.length };
         }),
 
@@ -788,7 +799,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "gst_report.generated",
                 entityType: "gst_report_run",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
                 metadata: {
                     monthKey: row.monthKey,
                 },
@@ -841,8 +852,8 @@ export const financeComplianceRouter = createTRPCRouter({
                 entityType: "platform_setting",
                 entityId: row.key,
                 reason: "platform_setting_updated",
-                beforeValue: previous as any,
-                afterValue: row as any,
+                beforeValue: toAuditValue(previous),
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -893,7 +904,7 @@ export const financeComplianceRouter = createTRPCRouter({
                     : "module_access.upserted",
                 entityType: "module_access",
                 entityId: row.id,
-                afterValue: row as any,
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -904,7 +915,7 @@ export const financeComplianceRouter = createTRPCRouter({
             await assertFinanceAccess(ctx, "monthly_pl", "view");
             const access = await getFinanceModuleAccess({
                 userId: ctx.user.id,
-                sitePermissions: ctx.user.sitePermissions ?? 0,
+                sitePermissions: getUserPermissions(ctx.user.roles ?? []).sitePermissions,
                 roles: ctx.user.roles ?? [],
                 moduleKey: "monthly_pl",
             });
@@ -970,8 +981,8 @@ export const financeComplianceRouter = createTRPCRouter({
                 actionType: "monthly_pl.entry_upserted",
                 entityType: "pl_manual_entry",
                 entityId: row.id,
-                beforeValue: before as any,
-                afterValue: row as any,
+                beforeValue: toAuditValue(before),
+                afterValue: toAuditValue(row),
             });
             return row;
         }),
@@ -1136,8 +1147,8 @@ export const financeComplianceRouter = createTRPCRouter({
                     actionType: "legal_contact.gro_changed",
                     entityType: "legal_contact",
                     entityId: row.id,
-                    beforeValue: previous as any,
-                    afterValue: row as any,
+                    beforeValue: toAuditValue(previous),
+                    afterValue: toAuditValue(row),
                     reason: input.notes ?? "grievance_redressal_officer_updated",
                     title: "Grievance Redressal Officer details changed",
                     message: `GRO details were updated to ${row.name} effective ${row.effectiveFrom}.`,
@@ -1157,8 +1168,8 @@ export const financeComplianceRouter = createTRPCRouter({
                     actionType: "legal_contact.upserted",
                     entityType: "legal_contact",
                     entityId: row.id,
-                    beforeValue: previous as any,
-                    afterValue: row as any,
+                    beforeValue: toAuditValue(previous),
+                    afterValue: toAuditValue(row),
                     metadata: {
                         role: input.role,
                     },
@@ -1207,7 +1218,7 @@ export const financeComplianceRouter = createTRPCRouter({
             throw new TRPCError({ code: "UNAUTHORIZED", message: "You're not authorized" });
         }
         const canManageMonitoring = hasFinanceAdminAccess({
-            sitePermissions: ctx.user.sitePermissions,
+                sitePermissions: getUserPermissions(ctx.user.roles ?? []).sitePermissions,
             roles: ctx.user.roles ?? [],
         });
         return {
