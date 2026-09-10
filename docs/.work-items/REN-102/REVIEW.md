@@ -6,7 +6,7 @@
 
 ## Review Scope and Git Evidence
 
-The committed diff changes the approved task-local governance artifacts, `src/components/corporate-platform/admin-finance-queue.tsx`, and `tests/ren-102-admin-finance-types.test.ts`. The worktree was clean at review start. The component diff replaces explicit `any` annotations with types inferred from `AppRouter` and narrows upload results structurally.
+The committed diff changes the approved task-local governance artifacts, `src/components/corporate-platform/admin-finance-queue.tsx`, and `tests/ren-102-admin-finance-types.test.ts`. Pull request: https://github.com/Renivet-it/renivet-marketplace/pull/651. The worktree was clean at review start. The component diff replaces explicit `any` annotations with types inferred from `AppRouter` and narrows upload results structurally.
 
 ## Requirement Reconciliation
 
