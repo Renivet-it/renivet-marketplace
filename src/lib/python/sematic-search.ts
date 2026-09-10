@@ -1,5 +1,7 @@
 import axios from "axios";
 
+export const EMBEDDING_PROVIDER_TIMEOUT_MS = 15_000;
+
             // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
 
 /**
@@ -14,6 +16,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
                 headers: {
                     "Content-Type": "application/json",
                 },
+                timeout: EMBEDDING_PROVIDER_TIMEOUT_MS,
             }
         );
 
@@ -46,6 +49,7 @@ export async function getEmbedding768(text: string): Promise<number[]> {
                 headers: {
                     "Content-Type": "application/json",
                 },
+                timeout: EMBEDDING_PROVIDER_TIMEOUT_MS,
             }
         );
 

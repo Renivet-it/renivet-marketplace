@@ -1,0 +1,202 @@
+schema_version: "1.0"
+task:
+  id: REN-148
+  title: Confirm/schedule sync cadence for the external search index
+  source: linear
+  branch: ayanganguly333/ren-148-confirmschedule-sync-cadence-for-the-external-search-index
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-148/confirmschedule-sync-cadence-for-the-external
+    priority: High
+    labels: [qa-finding]
+    status: Backlog
+    assignee: Ayan Ganguly
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - External embedding provider calls can fail or run longer than a request window.
+    - Cron authorization protects a production database-writing endpoint.
+    - Coverage counters are needed to detect catalog/index drift.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - Linear REN-148 description, comments, and relations
+    - Manual semantic and suggestion embedding scripts
+    - Existing cron routes and CRON_SECRET authorization
+    - Product eligibility flags and embedding columns
+    - External embedding provider client
+    - Search query path and explicit out-of-scope architecture
+  excluded_areas:
+    - Production scheduler registration and secret provisioning; deployment-operator configuration
+    - Direct pgvector replacement for external RAG; explicitly out of scope
+    - Production execution of the sync before implementation and review
+  dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+  integrations: [INT-001]
+  security_boundaries: [SEC-001]
+  state_transitions:
+    - manual_only -> scheduled_endpoint_available
+    - scheduled_run_started -> partial_or_complete_sync
+    - provider_failure -> retry_on_next_run
+dependencies:
+  - id: DEP-001
+    name: products catalog
+    purpose: Supplies active, published, non-deleted products and embedding columns.
+    description: Product flags and target vector columns define scheduled coverage.
+    status: resolved
+  - id: DEP-002
+    name: embedding provider
+    purpose: Generates 384- and 768-dimensional vectors.
+    description: The existing HTTP embedding client is reused with per-product failure isolation.
+    status: resolved
+  - id: DEP-003
+    name: cron authorization
+    purpose: Prevents unauthenticated database-writing sync requests.
+    description: Existing bearer CRON_SECRET authorization protects the new route.
+    status: resolved
+  - id: DEP-004
+    name: deployment scheduler
+    purpose: Invokes the protected endpoint at the documented daily cadence.
+    description: Production scheduler configuration is external deployment-operator work.
+    status: resolved
+integrations:
+  - id: INT-001
+    system: External embedding service
+    purpose: Generates product vectors used by existing search-related paths.
+    failure_mode: Individual provider failures are counted and retried on a later run without aborting or corrupting other rows.
+personas:
+  - id: PER-001
+    role: deployment_operator
+    applicability: Configures the daily scheduler URL and CRON_SECRET.
+  - id: PER-002
+    role: catalog_operator
+    applicability: Uses coverage counters to identify stale or missing embeddings.
+security_boundaries:
+  - id: SEC-001
+    description: The sync endpoint requires the existing CRON_SECRET bearer authorization and does not expose vectors.
+business_rules:
+  - id: BR-001
+    description: Only active, published, non-deleted products are eligible for scheduled coverage.
+    source: Linear REN-148 acceptance criteria and product schema.
+  - id: BR-002
+    description: Existing external RAG search behavior remains unchanged in this staged step.
+    source: Linear REN-148 explicit out-of-scope architecture.
+decisions:
+  - id: DEC-001
+    question: What cadence should the deployment scheduler use?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Run daily at 02:00 Asia/Kolkata with a 10-minute request timeout; deployment registration remains operator configuration.
+    basis: The issue requests cadence confirmation and existing repository documentation uses an external cron service.
+    confidence: high
+    consequence: low
+    human_confirmation_required: false
+requirements:
+  - id: REQ-001
+    description: The sync covers only active, published, non-deleted products with missing embeddings, using deterministic ID ordering and a maximum batch of 25 per run.
+    type: explicit
+  - id: REQ-002
+    description: The sync is protected by CRON_SECRET, prevents overlapping runs with a Postgres advisory lock, and isolates provider failures per product with a 15-second timeout and at most two retries.
+    type: explicit
+  - id: REQ-003
+    description: The endpoint reports per-product coverage counters and partial failures without exposing vectors, and uses no-store responses.
+    type: explicit
+  - id: REQ-004
+    description: Manual embedding scripts remain usable for backfills, use the correct provider dimension, and the external RAG search path is unchanged.
+    type: explicit
+  - id: REQ-005
+    description: The Asia/Kolkata daily cadence, 10-minute timeout, retry policy, and authenticated scheduler request are documented.
+    type: inferred
+scenarios:
+  - id: SCN-001
+    description: A scheduled run selects only active, published, non-deleted products missing one or both target embeddings, in ID order and within the batch limit.
+    requirement_ids: [REQ-001]
+  - id: SCN-002
+    description: A provider failure for one product is retried and counted while other eligible products continue processing; a successful dimension may be saved independently.
+    requirement_ids: [REQ-002, REQ-003]
+  - id: SCN-003
+    description: A request without a valid CRON_SECRET is rejected without provider calls or database writes.
+    requirement_ids: [REQ-002]
+  - id: SCN-004
+    description: A successful or lock-skipped run returns processed, updated, skipped, failed, partiallyUpdated, and alreadyRunning counters without vector payloads.
+    requirement_ids: [REQ-003]
+  - id: SCN-005
+    description: Manual backfill script entry points remain present and external RAG query behavior is not altered.
+    requirement_ids: [REQ-004]
+  - id: SCN-006
+    description: Deployment operators have a documented 02:00 Asia/Kolkata cadence, 10-minute timeout, retry policy, and bearer request shape.
+    requirement_ids: [REQ-005]
+invariants:
+  - id: INV-001
+    description: Ineligible or already-complete products are never modified by the scheduled sync.
+  - id: INV-002
+    description: A provider failure cannot prevent independent eligible products from being attempted.
+  - id: INV-003
+    description: No unauthenticated request can trigger embedding generation or product updates.
+  - id: INV-004
+    description: The search query path and external RAG ordering remain unchanged.
+flows:
+  - id: FLOW-001
+    description: Authenticated scheduler request -> advisory lock -> deterministic eligible selection -> bounded provider calls -> eligibility-rechecked updates -> coverage response.
+    state_transitions: [manual_only -> scheduled_endpoint_available, scheduled_run_started -> partial_or_complete_sync, provider_failure -> retry_on_next_run]
+test_expectations:
+  - id: TEXP-001
+    category: unit
+    classification: REQUIRED
+    reason: Eligibility, missing-vector selection, batching, counters, and failure isolation must be deterministic.
+    scenarios: [SCN-001, SCN-002, SCN-004]
+  - id: TEXP-002
+    category: api
+    classification: REQUIRED
+    reason: Cron authorization and response behavior protect the production sync endpoint.
+    scenarios: [SCN-003, SCN-004]
+  - id: TEXP-003
+    category: regression
+    classification: REQUIRED
+    reason: Manual script entry points and the external RAG search path must remain unchanged.
+    scenarios: [SCN-005]
+  - id: TEXP-004
+    category: exploratory
+    classification: REQUIRED
+    reason: Scheduler documentation must be checked against the deployed endpoint and configured secret.
+    scenarios: [SCN-006]
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent critic subagent
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - The semantic embedding script used the 384-dimensional provider for a 768-dimensional column; the approved contract now fixes and tests this mapping.
+    - Bounded execution, advisory locking, eligibility re-checks, timeout/retry behavior, counters, and scheduler handoff are now explicit.
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Independent Critic review and contract approval on 2026-09-10
+traceability:
+  requirement_to_scenarios:
+    - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+    - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-003] }
+    - { requirement_id: REQ-003, scenario_ids: [SCN-002, SCN-004] }
+    - { requirement_id: REQ-004, scenario_ids: [SCN-005] }
+    - { requirement_id: REQ-005, scenario_ids: [SCN-006] }
+  scenario_to_invariants:
+    - { scenario_id: SCN-001, invariant_ids: [INV-001] }
+    - { scenario_id: SCN-002, invariant_ids: [INV-002] }
+    - { scenario_id: SCN-003, invariant_ids: [INV-003] }
+    - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-002] }
+    - { scenario_id: SCN-005, invariant_ids: [INV-004] }
+    - { scenario_id: SCN-006, invariant_ids: [INV-003] }
+  scenario_to_test_expectations:
+    - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+    - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+    - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+    - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001, TEXP-002] }
+    - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
+    - { scenario_id: SCN-006, test_expectation_ids: [TEXP-004] }
