@@ -70,15 +70,18 @@ export function normalizeBrowserSignals({
     unauthorized,
     forbidden,
     notFound,
+    resourceFound = true,
 }: {
     finalUrl: string;
     unauthorized: boolean;
     forbidden: boolean;
     notFound: boolean;
+    resourceFound?: boolean;
 }): NormalizedOutcome {
     if (notFound) return "not_found";
     if (unauthorized || /\/auth\/(signin|signup)/.test(finalUrl)) return "unauthorized";
     if (forbidden) return "forbidden";
+    if (!resourceFound) return "forbidden";
     return "allow";
 }
 
@@ -131,13 +134,14 @@ async function runBrowserCase(
         });
         const signalOutput = requireSuccess(
             await run(
-                ["--session", session, "eval", "JSON.stringify({ unauthorized: /unauthenticated|authentication required|sign in/i.test(document.body.innerText), forbidden: /forbidden|not authorized|access denied/i.test(document.body.innerText), notFound: /not found|404/i.test(document.body.innerText) })"]
+                ["--session", session, "eval", `JSON.stringify({ unauthorized: /unauthenticated|authentication required|sign in/i.test(document.body.innerText), forbidden: /forbidden|not authorized|access denied/i.test(document.body.innerText), notFound: /not found|404/i.test(document.body.innerText), resourceFound: ${item.resource === "corporate_quote" ? 'document.querySelector("[data-resource-found=\\"true\\"]") !== null' : "true"} })`]
             )
         );
         const signals = JSON.parse(signalOutput) as {
             unauthorized: boolean;
             forbidden: boolean;
             notFound: boolean;
+            resourceFound: boolean;
         };
         const observed = normalizeBrowserSignals({ finalUrl, ...signals });
         result = {

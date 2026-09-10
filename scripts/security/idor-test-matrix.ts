@@ -63,7 +63,7 @@ type ResourceDefinition = {
 const definitions: Record<IdorResource, ResourceDefinition> = {
     order: {
         channel: "browser",
-        target: "/profile/orders/{orderId}",
+        target: "/orders/{orderId}",
         sensitivity: "personal",
         scope: "customer",
     },

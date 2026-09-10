@@ -7,6 +7,7 @@ import {
     validateMatrix,
     validateTargetOrigin,
     buildApiRequest,
+    buildBrowserUrl,
 } from "./idor-test-matrix";
 import { normalizeBrowserSignals } from "./run-idor-browser-matrix";
 
@@ -52,6 +53,51 @@ describe("REN-124 IDOR matrix contract", () => {
             "duplicate case id",
             "mutating case is not allowed",
         ]);
+    });
+
+    test("binds browser resources to their real resource routes", () => {
+        const fixtures = {
+            ownerUserId: "owner",
+            wrongUserId: "wrong",
+            ownerBrandId: "brand-a",
+            wrongBrandId: "brand-b",
+            resources: {
+                order: { id: "order-1", ownerUserId: "owner", tamperedId: "order-2" },
+                invoice: {
+                    orderId: "order-1",
+                    ownerUserId: "owner",
+                    token: "invoice-token",
+                    wrongToken: "wrong-token",
+                    mismatchOrderId: "order-2",
+                },
+                corporateQuote: {
+                    id: "quote-1",
+                    ownerUserId: "owner",
+                    ownerBrandId: "brand-a",
+                    tamperedId: "quote-2",
+                },
+                paymentRequest: {
+                    token: "secret-token",
+                    wrongToken: "wrong-secret-token",
+                    status: "open" as const,
+                },
+                address: { id: "address-1", ownerUserId: "owner", tamperedId: "address-2" },
+                cart: { ownerUserId: "owner", tamperedUserId: "wrong" },
+            },
+        };
+        const orderCase = idorMatrix.find(
+            (item) => item.resource === "order" && item.accessMode === "owner"
+        )!;
+        const quoteCase = idorMatrix.find(
+            (item) => item.resource === "corporate_quote" && item.accessMode === "owner"
+        )!;
+
+        expect(new URL(buildBrowserUrl(orderCase, "http://localhost:3000", fixtures)).pathname).toBe(
+            "/orders/order-1"
+        );
+        expect(new URL(buildBrowserUrl(quoteCase, "http://localhost:3000", fixtures)).searchParams.get("quoteId")).toBe(
+            "quote-1"
+        );
     });
 
     test("classifies HTTP and tRPC authorization results without body inspection", () => {
@@ -174,6 +220,15 @@ describe("REN-124 IDOR matrix contract", () => {
                 unauthorized: false,
                 forbidden: true,
                 notFound: false,
+            })
+        ).toBe("forbidden");
+        expect(
+            normalizeBrowserSignals({
+                finalUrl: "http://localhost:3000/profile/corporate?quoteId=quote-2",
+                unauthorized: false,
+                forbidden: false,
+                notFound: false,
+                resourceFound: false,
             })
         ).toBe("forbidden");
         expect(
