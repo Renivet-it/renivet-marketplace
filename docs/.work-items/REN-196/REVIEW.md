@@ -5,7 +5,7 @@
 REVIEW_PASSED_WITH_FINDINGS. The implementation is within the approved
 contract with NO_DRIFT. The comparison uses base
 `fa5dedc35c2807ce2e459d383bf70abde1728a52` and head
-`6208d8a46dc22cde638900684e88b227b372969a` and includes the committed
+`982ec7fa976872a7ab75d1ca3c2ce918cfba80c1` and includes the committed
 REN-196 changes. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence

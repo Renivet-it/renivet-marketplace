@@ -175,7 +175,7 @@ implementation_review:
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: master
     base_commit: "fa5dedc35c2807ce2e459d383bf70abde1728a52"
-    head_commit: "6208d8a46dc22cde638900684e88b227b372969a"
+    head_commit: "982ec7fa976872a7ab75d1ca3c2ce918cfba80c1"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
