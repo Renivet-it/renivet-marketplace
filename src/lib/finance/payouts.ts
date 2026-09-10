@@ -4,6 +4,7 @@ import {
     getFinancialYearForDate,
 } from "@/lib/finance/calculations";
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
+import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 
 type ResolvedRule = {
@@ -325,6 +326,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                         bankAccountNumber: brand.bankAccountNumber,
                         bankAccountNumberLast4: brand.bankAccountNumber?.slice(-4),
                         bankIfscCode: brand.bankIfscCode,
+                        entityType: brand.entityType,
                         rzpAccountId: brand.rzpAccountId,
                         gstin: brand.gstin,
                         pan: brand.pan,
@@ -482,20 +484,23 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             summary.brandId,
             financialYear
         );
+        const thresholdPaise = getSection194OThresholdPaise(
+            String(summary.metadata.entityType ?? "")
+        );
         const tdsPreview = computeTdsDeduction({
-            cumulativeCommissionPaise:
-                tracking?.annualCommissionYtdPaise ?? tracking?.cumulativeCommissionPaise ?? 0,
-            cycleCommissionPaise: summary.commissionPaise,
-            thresholdPaise: tracking?.thresholdPaise ?? undefined,
+            cumulativeSalesPaise:
+                tracking?.annualSalesYtdPaise ?? tracking?.cumulativeSalesPaise ?? 0,
+            cycleSalesPaise: summary.grossSalesPaise,
+            thresholdPaise,
             rateBps: tracking?.tdsRateBps ?? undefined,
         });
 
         summary.tdsPaise = tdsPreview.deductiblePaise;
         summary.metadata.tdsFinancialYear = financialYear;
         summary.metadata.tdsNote = tdsPreview.note;
-        summary.metadata.tdsCumulativeCommissionBeforePaise =
-            tracking?.annualCommissionYtdPaise ?? tracking?.cumulativeCommissionPaise ?? 0;
-        summary.metadata.tdsCumulativeCommissionAfterPaise =
+        summary.metadata.tdsCumulativeSalesBeforePaise =
+            tracking?.annualSalesYtdPaise ?? tracking?.cumulativeSalesPaise ?? 0;
+        summary.metadata.tdsCumulativeSalesAfterPaise =
             tdsPreview.postCycleCumulativePaise;
         summary.metadata.tdsDeductedYtdPaise =
             tracking?.tdsDeductedYtdPaise ?? tracking?.cumulativeTdsPaise ?? 0;
@@ -506,11 +511,11 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             amountPaise: -summary.tdsPaise,
             metadata: {
                 financialYear,
-                thresholdPaise: tracking?.thresholdPaise ?? 3_000_000,
+                thresholdPaise,
                 rateBps: tracking?.tdsRateBps ?? 100,
-                cumulativeCommissionBeforePaise:
-                    tracking?.annualCommissionYtdPaise ?? tracking?.cumulativeCommissionPaise ?? 0,
-                cumulativeCommissionAfterPaise: tdsPreview.postCycleCumulativePaise,
+                cumulativeSalesBeforePaise:
+                    tracking?.annualSalesYtdPaise ?? tracking?.cumulativeSalesPaise ?? 0,
+                cumulativeSalesAfterPaise: tdsPreview.postCycleCumulativePaise,
                 thresholdCrossed: tdsPreview.thresholdCrossed,
             },
         });
@@ -563,28 +568,33 @@ async function persistCycleSummary(params: {
         if (currentTracking?.lastAppliedCycleId === updated.id) {
             continue;
         }
-        const previousAnnualCommission =
-            currentTracking?.annualCommissionYtdPaise ??
-            currentTracking?.cumulativeCommissionPaise ??
+        const previousAnnualSales =
+            currentTracking?.annualSalesYtdPaise ??
+            currentTracking?.cumulativeSalesPaise ??
             0;
         const previousAnnualTds =
             currentTracking?.tdsDeductedYtdPaise ??
             currentTracking?.cumulativeTdsPaise ??
             0;
+        const thresholdPaise = getSection194OThresholdPaise(
+            String(summary.metadata.entityType ?? "")
+        );
         const crossingNow =
-            previousAnnualCommission < 3_000_000 &&
-            previousAnnualCommission + summary.commissionPaise >= 3_000_000;
+            previousAnnualSales < thresholdPaise &&
+            previousAnnualSales + summary.grossSalesPaise >= thresholdPaise;
         await financeComplianceQueries.upsertBrandTdsTracking({
             brandId: summary.brandId,
             financialYear,
-            annualCommissionYtdPaise: previousAnnualCommission + summary.commissionPaise,
+            annualCommissionYtdPaise: currentTracking?.annualCommissionYtdPaise ?? 0,
+            annualSalesYtdPaise: previousAnnualSales + summary.grossSalesPaise,
             tdsDeductedYtdPaise: previousAnnualTds + summary.tdsPaise,
             thresholdCrossedAt:
                 currentTracking?.thresholdCrossedAt ??
                 (crossingNow ? new Date() : null),
-            cumulativeCommissionPaise: previousAnnualCommission + summary.commissionPaise,
+            cumulativeCommissionPaise: currentTracking?.cumulativeCommissionPaise ?? 0,
+            cumulativeSalesPaise: previousAnnualSales + summary.grossSalesPaise,
             cumulativeTdsPaise: previousAnnualTds + summary.tdsPaise,
-            thresholdPaise: currentTracking?.thresholdPaise ?? 3_000_000,
+            thresholdPaise,
             tdsRateBps: currentTracking?.tdsRateBps ?? 100,
             lastAppliedCycleId: updated.id,
         });

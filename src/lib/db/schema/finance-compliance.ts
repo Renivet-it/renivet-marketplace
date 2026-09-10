@@ -400,6 +400,9 @@ export const brandTdsTracking = pgTable(
         annualCommissionYtdPaise: integer("annual_commission_ytd_paise")
             .notNull()
             .default(0),
+        annualSalesYtdPaise: integer("annual_sales_ytd_paise")
+            .notNull()
+            .default(0),
         tdsDeductedYtdPaise: integer("tds_deducted_ytd_paise")
             .notNull()
             .default(0),
@@ -407,10 +410,13 @@ export const brandTdsTracking = pgTable(
         cumulativeCommissionPaise: integer("cumulative_commission_paise")
             .notNull()
             .default(0),
+        cumulativeSalesPaise: integer("cumulative_sales_paise")
+            .notNull()
+            .default(0),
         cumulativeTdsPaise: integer("cumulative_tds_paise")
             .notNull()
             .default(0),
-        thresholdPaise: integer("threshold_paise").notNull().default(3000000),
+        thresholdPaise: integer("threshold_paise").notNull().default(50000000),
         tdsRateBps: integer("tds_rate_bps").notNull().default(100),
         lastAppliedCycleId: uuid("last_applied_cycle_id").references(
             () => brandPayoutCycles.id,

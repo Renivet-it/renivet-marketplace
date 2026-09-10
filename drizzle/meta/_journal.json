@@ -1793,6 +1793,13 @@
             "when": 1788378000000,
             "tag": "0282_corporate_quote_customizations",
             "breakpoints": true
+        },
+        {
+            "idx": 256,
+            "version": "7",
+            "when": 1789054440609,
+            "tag": "0283_section_194_o_gross_sales_tracking",
+            "breakpoints": true
         }
     ]
 }

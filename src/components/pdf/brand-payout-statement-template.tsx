@@ -290,8 +290,8 @@ export function BrandPayoutStatementTemplate(props: {
         metadata?: {
             tdsFinancialYear?: string;
             tdsNote?: string;
-            tdsCumulativeCommissionBeforePaise?: number;
-            tdsCumulativeCommissionAfterPaise?: number;
+            tdsCumulativeSalesBeforePaise?: number;
+            tdsCumulativeSalesAfterPaise?: number;
             tdsDeductedYtdPaise?: number;
         };
     };
@@ -393,9 +393,9 @@ export function BrandPayoutStatementTemplate(props: {
                                     </Text>
                                 </View>
                                 <View style={styles.row}>
-                                    <Text style={styles.rowLabel}>Commission YTD</Text>
+                                    <Text style={styles.rowLabel}>Gross sales YTD</Text>
                                     <Text style={styles.rowValue}>
-                                        {formatInr(summary.metadata?.tdsCumulativeCommissionAfterPaise ?? 0)}
+                                        {formatInr(summary.metadata?.tdsCumulativeSalesAfterPaise ?? 0)}
                                     </Text>
                                 </View>
                                 <View style={styles.row}>
