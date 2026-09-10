@@ -185,15 +185,7 @@ export function assertCorporateLegalIdentity(settings: {
     state?: string | null;
     postalCode?: string | null;
 }) {
-    const missing = [
-        ["GSTIN", settings.gstin],
-        ["address", settings.addressLine1],
-        ["city", settings.city],
-        ["state", settings.state],
-        ["postal code", settings.postalCode],
-    ]
-        .filter(([, value]) => !value?.trim())
-        .map(([label]) => label);
+    const missing = getCorporateLegalIdentityMissingFields(settings);
     if (missing.length) {
         throw new TRPCError({
             code: "PRECONDITION_FAILED",
@@ -202,6 +194,24 @@ export function assertCorporateLegalIdentity(settings: {
             )}`,
         });
     }
+}
+
+export function getCorporateLegalIdentityMissingFields(settings: {
+    gstin?: string | null;
+    addressLine1?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+}) {
+    return [
+        ["GSTIN", settings.gstin],
+        ["address", settings.addressLine1],
+        ["city", settings.city],
+        ["state", settings.state],
+        ["postal code", settings.postalCode],
+    ]
+        .filter(([, value]) => !value?.trim())
+        .map(([label]) => label);
 }
 
 function orderDeliveryAddress(order: {

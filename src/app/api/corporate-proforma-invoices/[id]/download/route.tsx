@@ -20,6 +20,7 @@ import {
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
+    getCorporateLegalIdentityMissingFields,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import {
@@ -162,6 +163,14 @@ export async function GET(
               })
             : Promise.resolve(null),
     ]);
+
+    const identityMissing = getCorporateLegalIdentityMissingFields(settings);
+    if (identityMissing.length) {
+        return NextResponse.json(
+            { message: `Complete Renivet corporate document settings: ${identityMissing.join(", ")}` },
+            { status: 422 }
+        );
+    }
 
     const taxableValuePaise = invoice.subtotalPaise;
     const quantity = order?.quantity ?? quote?.quantity ?? 1;
@@ -362,7 +371,7 @@ export async function GET(
     }
 
     const renivetAddress =
-        corporatePartyAddress(settings) || "Bangalore, India";
+        corporatePartyAddress(settings);
 
     // Strict derivation from exact Quote / Invoice record
     const totalGstFromDb = quote?.gstAmountPaise ?? invoice.gstAmountPaise;

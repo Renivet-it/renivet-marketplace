@@ -40,6 +40,17 @@ test("REN-186 corporate routes do not fabricate Renivet GST identity", () => {
     expect(settlement).not.toContain('"19AAACR1234F1Z5"');
     expect(commission).toContain("assertCorporateLegalIdentity(settings)");
     expect(settlement).toContain("assertCorporateLegalIdentity(settings)");
+
+    for (const route of [
+        "../src/app/api/corporate-proforma-invoices/[id]/download/route.tsx",
+        "../src/app/api/corporate-orders/[id]/invoice.pdf/route.tsx",
+        "../src/app/api/corporate-orders/[id]/receipt-voucher.pdf/route.tsx",
+        "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
+    ]) {
+        expect(readFileSync(new URL(route, import.meta.url), "utf8")).toContain(
+            "getCorporateLegalIdentityMissingFields(settings)"
+        );
+    }
 });
 
 test("REN-186 settings distinguish registration and operational address fields", () => {
