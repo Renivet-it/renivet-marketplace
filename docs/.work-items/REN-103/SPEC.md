@@ -12,6 +12,7 @@ This increment addresses the finance-router slice of REN-103 in `src/lib/trpc/ro
 - REQ-004: Dynamic JSON inputs (`z.any()` fields such as bank snapshots, GST totals/validation summaries, and platform-setting values) retain their current arbitrary-value acceptance; audit before/after values are converted only through a typed JSON-compatible boundary that preserves dates, nulls, nested objects, arrays, and scalar content.
 - REQ-005: Authorization, procedure inputs/outputs, service calls, and finance behavior remain unchanged.
 - REQ-006: `sanitizeProductQuantities` uses a named input shape for product and variant quantities without changing normalization behavior; normalization remains `Number(value)`, non-finite values to `0`, `Math.trunc`, then `Math.max(0, ...)`, while product null/undefined and missing/non-array variants retain their current values.
+- REQ-007: Product parse helpers use `unknown`/named input types and preserve successful schema parsing plus the existing sanitized fallback and logging behavior for malformed rows.
 
 ## Design
 
@@ -24,9 +25,11 @@ Use the existing `Context` type from the tRPC context module for `assertFinanceA
 - SCN-003: Refund, COD, payout, tax, deletion, and audit procedures retain their input and service-call behavior.
 - SCN-004: The source guard rejects reintroduction of explicit unsafe-any syntax in the finance router.
 - SCN-005: Product quantity normalization preserves null/undefined product quantities and non-negative integer variant quantities without explicit unsafe-any syntax in the helper.
+- SCN-006: Product array and single-row parsing preserve schema-success output and sanitized fallback output on validation failure.
 - INV-001: No finance calculation, authorization decision, database mutation, or audit payload semantics change.
 - INV-002: The router remains compatible with the existing AppRouter procedure contract.
 - INV-003: Product quantity normalization returns the same product shape and normalized quantity values.
+- INV-004: Product parsing retains existing logging and fallback behavior without filtering malformed rows or throwing new errors.
 
 ## Flow, dependencies, and security
 
@@ -41,6 +44,7 @@ Dependencies are the existing `Context`, finance schema enums, finance services,
 - TEXP-002 (`unit`, REQUIRED): focused assertions cover typed context narrowing, the exact refund/COD enum values, arbitrary JSON input compatibility, audit payload field/value preservation, and unchanged procedure markers.
 - TEXP-003 (`regression`, REQUIRED): existing finance tests and complete Bun test suite pass.
 - TEXP-004 (`regression`, REQUIRED): product quantity helper source guard and focused markers cover `Number`, `Number.isFinite`, `Math.trunc`, `Math.max(0, ...)`, null/undefined preservation, and non-array variant preservation.
+- TEXP-005 (`regression`, REQUIRED): product parse-helper source guard covers schema safeParse success and sanitized fallback/logging branches.
 
 ## Failure and compatibility contract
 
@@ -48,7 +52,7 @@ Authorization failures remain `UNAUTHORIZED`/`FORBIDDEN` before finance work. Ex
 
 ## Out of scope
 
-Other REN-103 increments such as product parsing/visibility/media/revenue, `order-ops.ts`, order queries, and remaining repository files are intentionally deferred to later commits in this PR or follow-up work.
+Other REN-103 increments such as product visibility/media/revenue, `order-ops.ts`, order queries, and remaining repository files are intentionally deferred to later commits in this PR or follow-up work.
 
 ## Approval
 

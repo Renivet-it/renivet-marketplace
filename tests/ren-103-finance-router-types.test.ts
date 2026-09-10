@@ -48,3 +48,21 @@ test("REN-103 product quantity helper preserves normalization boundaries", () =>
         "Array.isArray(product.variants)",
     ]) expect(helper).toContain(marker);
 });
+
+test("REN-103 product parsers preserve safeParse fallback behavior", () => {
+    const parsers = productSource.slice(
+        productSource.indexOf("const parseProductArraySafely"),
+        productSource.indexOf("const getProductStockExpression")
+    );
+    expect(parsers).not.toMatch(/:\s*any\b|\bas\s+any\b|\bany\[\]/);
+    for (const marker of [
+        "T extends ProductQuantityInput",
+        "productData: T",
+        "productWithBrandSchema.array().safeParse",
+        "productWithBrandSchema.safeParse",
+        "return sanitizedProducts as ProductWithBrand[]",
+        "return sanitizedProduct as ProductWithBrand",
+        "array validation failed, returning sanitized fallback",
+        "single validation failed, returning sanitized fallback",
+    ]) expect(parsers).toContain(marker);
+});

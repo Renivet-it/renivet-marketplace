@@ -134,7 +134,9 @@ const sanitizeProductQuantities = (product: ProductQuantityInput) => ({
         : product.variants,
 });
 
-const parseProductArraySafely = (productsData: any[]): ProductWithBrand[] => {
+const parseProductArraySafely = <T extends ProductQuantityInput>(
+    productsData: T[]
+): ProductWithBrand[] => {
     const sanitizedProducts = productsData.map(sanitizeProductQuantities);
     const parsed = productWithBrandSchema.array().safeParse(sanitizedProducts);
 
@@ -149,7 +151,9 @@ const parseProductArraySafely = (productsData: any[]): ProductWithBrand[] => {
     return sanitizedProducts as ProductWithBrand[];
 };
 
-const parseSingleProductSafely = (productData: any): ProductWithBrand => {
+const parseSingleProductSafely = <T extends ProductQuantityInput>(
+    productData: T
+): ProductWithBrand => {
     const sanitizedProduct = sanitizeProductQuantities(productData);
     const parsed = productWithBrandSchema.safeParse(sanitizedProduct);
 
