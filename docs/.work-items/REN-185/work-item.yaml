@@ -222,7 +222,7 @@ implementation_review:
   base_branch: origin/master
   base_commit: fa5dedc35c2807ce2e459d383bf70abde1728a52
   head_commit: 2c1fa81e09b2168f8d5097769673696a961b1ae8
-  pr_url: null
+  pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/647
   material_drift: MINOR_DRIFT
   reconciliation:
     requirements: PARTIAL
