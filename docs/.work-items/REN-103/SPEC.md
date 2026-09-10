@@ -2,7 +2,7 @@
 
 ## Scope
 
-This increment addresses the finance-router slice of REN-103 in `src/lib/trpc/routes/general/finance.ts`. It removes explicit `any`, `as any`, and `any[]` usage from this file while preserving the existing tRPC procedures, authorization checks, finance service calls, database writes, audit events, and serialized API behavior.
+This increment addresses the finance-router slice of REN-103 in `src/lib/trpc/routes/general/finance.ts` and a bounded product-quantity helper slice in `src/lib/db/queries/product.ts`. It removes explicit `any`, `as any`, and `any[]` usage from the targeted finance router and quantity helper while preserving all existing behavior.
 
 ## Requirements
 
@@ -11,6 +11,7 @@ This increment addresses the finance-router slice of REN-103 in `src/lib/trpc/ro
 - REQ-003: Refund `costAllocation` remains the existing four-value Zod enum, and COD categorization remains the existing `pending | matched | discrepancy | overdue | critical | ghost` value set, with no runtime narrowing or widening.
 - REQ-004: Dynamic JSON inputs (`z.any()` fields such as bank snapshots, GST totals/validation summaries, and platform-setting values) retain their current arbitrary-value acceptance; audit before/after values are converted only through a typed JSON-compatible boundary that preserves dates, nulls, nested objects, arrays, and scalar content.
 - REQ-005: Authorization, procedure inputs/outputs, service calls, and finance behavior remain unchanged.
+- REQ-006: `sanitizeProductQuantities` uses a named input shape for product and variant quantities without changing normalization behavior; normalization remains `Number(value)`, non-finite values to `0`, `Math.trunc`, then `Math.max(0, ...)`, while product null/undefined and missing/non-array variants retain their current values.
 
 ## Design
 
@@ -22,12 +23,15 @@ Use the existing `Context` type from the tRPC context module for `assertFinanceA
 - SCN-002: Invalid or unauthorized requests retain existing UNAUTHORIZED/FORBIDDEN behavior.
 - SCN-003: Refund, COD, payout, tax, deletion, and audit procedures retain their input and service-call behavior.
 - SCN-004: The source guard rejects reintroduction of explicit unsafe-any syntax in the finance router.
+- SCN-005: Product quantity normalization preserves null/undefined product quantities and non-negative integer variant quantities without explicit unsafe-any syntax in the helper.
 - INV-001: No finance calculation, authorization decision, database mutation, or audit payload semantics change.
 - INV-002: The router remains compatible with the existing AppRouter procedure contract.
+- INV-003: Product quantity normalization returns the same product shape and normalized quantity values.
 
 ## Flow, dependencies, and security
 
 FLOW-001: tRPC procedure context/input → typed access guard and service arguments → existing finance service/database/audit boundary.
+FLOW-002: Product query/database rows → typed quantity normalization helper → existing parsing consumers.
 
 Dependencies are the existing `Context`, finance schema enums, finance services, and `writeFinanceAuditEvent`. SEC-001 requires existing authentication, module-level permission checks, tenant/user identity, and audit behavior to remain unchanged. No schema, migration, external integration, or production configuration change is in scope.
 
@@ -36,6 +40,7 @@ Dependencies are the existing `Context`, finance schema enums, finance services,
 - TEXP-001 (`regression`, REQUIRED): source guard confirms no explicit annotation/cast unsafe-any syntax in `finance.ts` while allowing the documented existing `z.any()` schemas.
 - TEXP-002 (`unit`, REQUIRED): focused assertions cover typed context narrowing, the exact refund/COD enum values, arbitrary JSON input compatibility, audit payload field/value preservation, and unchanged procedure markers.
 - TEXP-003 (`regression`, REQUIRED): existing finance tests and complete Bun test suite pass.
+- TEXP-004 (`regression`, REQUIRED): product quantity helper source guard and focused markers cover `Number`, `Number.isFinite`, `Math.trunc`, `Math.max(0, ...)`, null/undefined preservation, and non-array variant preservation.
 
 ## Failure and compatibility contract
 
@@ -43,7 +48,7 @@ Authorization failures remain `UNAUTHORIZED`/`FORBIDDEN` before finance work. Ex
 
 ## Out of scope
 
-Other REN-103 increments such as `product.ts`, `order-ops.ts`, order queries, and remaining repository files are intentionally deferred to separate PRs.
+Other REN-103 increments such as product parsing/visibility/media/revenue, `order-ops.ts`, order queries, and remaining repository files are intentionally deferred to later commits in this PR or follow-up work.
 
 ## Approval
 

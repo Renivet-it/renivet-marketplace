@@ -109,16 +109,27 @@ const toNonNegativeInt = (value: unknown) => {
     return Math.max(0, Math.trunc(numeric));
 };
 
-const sanitizeProductQuantities = (product: any) => ({
+type ProductQuantityInput = {
+    quantity?: unknown;
+    variants?: unknown;
+    [key: string]: unknown;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const sanitizeProductQuantities = (product: ProductQuantityInput) => ({
     ...product,
     quantity:
         product.quantity === null || product.quantity === undefined
             ? product.quantity
             : toNonNegativeInt(product.quantity),
     variants: Array.isArray(product.variants)
-        ? product.variants.map((variant: any) => ({
-              ...variant,
-              quantity: toNonNegativeInt(variant.quantity),
+        ? product.variants.map((variant) => ({
+              ...(isRecord(variant) ? variant : {}),
+              quantity: toNonNegativeInt(
+                  isRecord(variant) ? variant.quantity : undefined
+              ),
           }))
         : product.variants,
 });
