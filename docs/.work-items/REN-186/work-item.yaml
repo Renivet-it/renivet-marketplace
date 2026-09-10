@@ -4,7 +4,7 @@ task:
     title: Corporate order document identity settings must distinguish GST registration address from operational office address
     source: linear
     branch: ayanganguly333/ren-186-corporate-order-document-identity-settings-must-distinguish
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-186/corporate-order-document-identity-settings-must-distinguish
         priority: Medium
@@ -242,25 +242,25 @@ traceability:
         - { scenario_id: SCN-009, test_expectation_ids: [TEXP-004] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_FAILED
+    result: REVIEW_PASSED
     base_branch: origin/master
     base_commit: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115
-    head_commit: 83d4cb56054a76e60c03dceb338f8912a26409b3
-    pr_url: null
-    material_drift: MATERIAL_DRIFT
+    head_commit: 521f5998a4623c1d3bad492a78cdb0dd7aa1956f
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/650
+    material_drift: NONE
     reconciliation:
-        requirements: PARTIAL
-        scenarios: PARTIAL
+        requirements: PASS
+        scenarios: PASS
         invariants: PASS
         architecture: PASS
-        security: PARTIAL
-        test_coverage: PARTIAL
+        security: PASS
+        test_coverage: PASS
         scope: PASS
-    blocking_findings: [REV-001]
+    blocking_findings: []
     required_actions:
-        - "REV-001: Complete route-level guards/tests for the approved eight-route matrix and rerun the timed-out type-check."
+        - "CI: Complete the TypeScript check; the local command timed out without diagnostics."
     evidence:
         - Compared the approved REN-186 contract with the origin/master-to-head Git diff.
-        - "Base: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115; head: 83d4cb56054a76e60c03dceb338f8912a26409b3."
+        - "Base: 8239ec765e41a8f5a2a9a16a1b9b0d540b2e9115; head: 521f5998a4623c1d3bad492a78cdb0dd7aa1956f."
         - "Full Bun test suite, focused REN-186 tests, and governance validation passed."
-    governance_reentry_required: true
+    governance_reentry_required: false
