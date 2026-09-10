@@ -13,6 +13,7 @@ import { userCache } from "@/lib/redis/methods";
 import {
     corporateDocumentService,
     corporatePartyAddress,
+    getCorporateLegalIdentityMissingFields,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import { corporateOrderService } from "@/lib/services/corporate-order";
@@ -95,6 +96,14 @@ export async function GET(
                       })
                     : Promise.resolve(null),
             ]);
+
+        const identityMissing = getCorporateLegalIdentityMissingFields(settings);
+        if (identityMissing.length) {
+            return NextResponse.json(
+                { message: `Complete Renivet corporate document settings: ${identityMissing.join(", ")}` },
+                { status: 422 }
+            );
+        }
 
         if (!voucher) {
             return NextResponse.json(

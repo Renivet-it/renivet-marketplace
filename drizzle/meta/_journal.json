@@ -1800,6 +1800,13 @@
             "when": 1789054440609,
             "tag": "0283_section_194_o_gross_sales_tracking",
             "breakpoints": true
+        },
+        {
+            "idx": 257,
+            "version": "7",
+            "when": 1789054440610,
+            "tag": "0284_corporate_document_operational_address",
+            "breakpoints": true
         }
     ]
 }
