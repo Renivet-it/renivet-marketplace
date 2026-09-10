@@ -38,7 +38,11 @@ import {
     executePayoutCycle,
     runPayoutCycleAlerts,
 } from "@/lib/finance/payouts";
-import { buildQuarterlyTdsExport, runTdsFinancialYearRollover } from "@/lib/finance/tds";
+import {
+    auditBrandTdsThreshold,
+    buildQuarterlyTdsExport,
+    runTdsFinancialYearRollover,
+} from "@/lib/finance/tds";
 import {
     approveFinanceRefundCase,
     createFinanceRefundCase,
@@ -648,8 +652,8 @@ export const financeComplianceRouter = createTRPCRouter({
     computeTdsPreview: protectedProcedure
         .input(
             z.object({
-                cumulativeCommissionPaise: z.number().int().nonnegative(),
-                cycleCommissionPaise: z.number().int().nonnegative(),
+                cumulativeSalesPaise: z.number().int().nonnegative(),
+                cycleSalesPaise: z.number().int().nonnegative(),
                 thresholdPaise: z.number().int().optional(),
                 rateBps: z.number().int().optional(),
             })
@@ -661,6 +665,13 @@ export const financeComplianceRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "tds_reports", "view");
             return ctx.queries.financeCompliance.listBrandTdsTracking(input?.financialYear);
+        }),
+
+    auditBrandTdsThreshold: protectedProcedure
+        .input(z.object({ financialYear: z.string().optional() }).optional())
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "tds_reports", "view");
+            return auditBrandTdsThreshold(input?.financialYear);
         }),
 
     exportQuarterlyTdsPreview: adminProcedure

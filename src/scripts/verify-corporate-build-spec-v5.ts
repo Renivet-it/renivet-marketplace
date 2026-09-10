@@ -44,15 +44,15 @@ console.log("✓ GST Apparel & Chapter 63 rates validated!");
 // 2. Test BUG-003 TDS rates & entity-type thresholds
 console.log("\n2. Testing TDS §194-O (BUG-003)...");
 const companyTds = computeTdsDeduction({
-    cumulativeCommissionPaise: 0,
-    cycleCommissionPaise: 1_200_000, // Rs 12,000 commission
+    cumulativeSalesPaise: 0,
+    cycleSalesPaise: 1_200_000, // Rs 12,000 gross sales
     entityType: "company",
 });
 assert(companyTds.deductiblePaise === 1200, `Company TDS at 0.1% of Rs 12,000 should be Rs 12 (1200 paise), got ${companyTds.deductiblePaise}`);
 
 const individualTdsBelow = computeTdsDeduction({
-    cumulativeCommissionPaise: 20_000_000, // Rs 2,00,000 (below 5L)
-    cycleCommissionPaise: 1_000_000, // Rs 10,000
+    cumulativeSalesPaise: 20_000_000, // Rs 2,00,000 (below 5L)
+    cycleSalesPaise: 1_000_000, // Rs 10,000
     entityType: "individual",
 });
 assert(individualTdsBelow.deductiblePaise === 0, `Individual below 5L threshold should have Rs 0 TDS, got ${individualTdsBelow.deductiblePaise}`);

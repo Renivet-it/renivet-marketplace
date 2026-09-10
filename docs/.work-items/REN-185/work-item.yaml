@@ -1,0 +1,238 @@
+schema_version: "1.0"
+task:
+    id: REN-185
+    title: Section 194-O TDS threshold hardcoded ~16-17x too low
+    source: linear
+    branch: ayanganguly333/ren-185-section-194-o-tds-threshold-hardcoded-16-17x-too-low-30000
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-185/section-194-o-tds-threshold-hardcoded-16-17x-too-low-30000
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Finance-compliance withholding behavior may change for live brand payouts.
+        - Historical tracking and withholding corrections can affect financial records, customer funds, and statutory reporting.
+        - Applicable statutory treatment and correction authority require human confirmation.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-185 description, comments, relations, and issue branch
+        - Official Income Tax Department Section 194-O guidance
+        - brand_tds_tracking schema default and persistence query
+        - payout preview/persistence threshold fallbacks and crossing logic
+        - financial-year rollover threshold seed
+        - computeTdsDeduction default and existing TDS-related verification script
+    excluded_areas:
+        - Production data audit execution and correction; blocked pending authorization
+        - Schema migration and application source changes; prohibited during SPEC
+        - Corporate reseller Section 52 TCS/194-O model; explicitly out of scope
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004, DEP-005]
+    integrations: [INT-001]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - statutory_rule_unconfirmed -> implementation_blocked
+        - audit_scope_unapproved -> correction_blocked
+        - approved_rule_and_audit_scope -> implementation_ready
+dependencies:
+    - id: DEP-001
+      name: brand_tds_tracking schema
+      purpose: Supplies the persisted threshold and annual tracking state.
+      description: The schema default is 3,000,000 paise and existing rows may retain that value.
+      status: resolved
+    - id: DEP-002
+      name: payout calculation and persistence
+      purpose: Calculates TDS previews and updates annual tracking.
+      description: payouts.ts uses 3,000,000 paise in metadata, crossing logic, and persisted fallback values.
+      status: resolved
+    - id: DEP-003
+      name: financial-year rollover
+      purpose: Seeds tracking rows for active brands.
+      description: tds.ts seeds every rollover row with 3,000,000 paise.
+      status: resolved
+    - id: DEP-004
+      name: TDS calculation logic
+      purpose: Applies threshold and rate rules.
+      description: calculations.ts already defaults individual/HUF input to 50,000,000 paise but receives persisted overrides from the affected paths.
+      status: resolved
+    - id: DEP-005
+      name: historical finance records
+      purpose: Determines whether prior withholding was incorrect and what correction is permitted.
+      description: Requires read-only audit evidence before any mutation or financial reconciliation.
+      status: resolved
+integrations:
+    - id: INT-001
+      system: Income Tax Department statutory guidance
+      purpose: Confirms the currently applicable Section 194-O threshold and eligibility conditions.
+      failure_mode: If current law or entity applicability is uncertain, implementation and corrections remain blocked.
+personas:
+    - id: PER-001
+      role: finance_authorizer
+      applicability: Confirms statutory rule, affected entity population, and correction authority.
+    - id: PER-002
+      role: finance_operator
+      applicability: Runs an approved read-only audit and, only if authorized, executes a documented reconciliation.
+security_boundaries:
+    - id: SEC-001
+      description: Historical financial records and withholding corrections require authenticated finance authorization and must not be exposed or mutated by ordinary payout callers.
+business_rules:
+    - id: BR-001
+      description: The ordinary brand-payout path must use the currently approved Section 194-O threshold and entity eligibility rules.
+      source: Linear REN-185 and current official Income Tax Department guidance.
+    - id: BR-002
+      description: Historical rows are evidence to audit, not records to rewrite automatically.
+      source: Linear REN-185 correction requirement and finance-data safety.
+decisions:
+    - id: DEC-001
+      question: What statutory threshold and entity eligibility rules govern this implementation at release time?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Use the confirmed ₹5,00,000 individual/HUF threshold measured against gross sales/services.
+      basis: Finance compliance behavior is high consequence and the issue explicitly requires re-confirmation at implementation time.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: User confirmation in conversation on 2026-09-10.
+    - id: DEC-002
+      question: What historical correction procedure is authorized for rows affected by the old default?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Run a read-only audit first; defer refunds, ledger adjustments, reversals, and filing changes pending separate finance approval.
+      basis: The issue requires correction of potentially incorrect withholding, which is an irreversible financial action without an approved procedure.
+      confidence: medium
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: User confirmation in conversation on 2026-09-10.
+requirements:
+    - id: REQ-001
+      description: All ordinary brand-payout threshold defaults and fallback call sites use one approved Section 194-O policy.
+      type: explicit
+    - id: REQ-002
+      description: Historical tracking rows affected by the old default are identified by a read-only audit before any correction.
+      type: explicit
+    - id: REQ-003
+      description: No historical financial record or withholding amount is mutated without an approved correction procedure and authorized actor.
+      type: explicit
+    - id: REQ-004
+      description: TDS threshold boundary behavior and financial-year rollover initialization are covered by regression tests.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      description: An individual/HUF brand below the approved annual threshold has no Section 194-O deduction.
+      requirement_ids: [REQ-001, REQ-004]
+    - id: SCN-002
+      description: A brand at or above the approved threshold follows the approved deduction rule and rate.
+      requirement_ids: [REQ-001, REQ-004]
+    - id: SCN-003
+      description: Financial-year rollover initializes tracking with the approved threshold and no fabricated historical totals.
+      requirement_ids: [REQ-001, REQ-004]
+    - id: SCN-004
+      description: Read-only audit identifies current-year rows created with the old threshold and reports affected payout/withholding evidence.
+      requirement_ids: [REQ-002]
+    - id: SCN-005
+      description: An attempted correction without approved procedure or finance authorization is blocked.
+      requirement_ids: [REQ-003]
+invariants:
+    - id: INV-001
+      description: No ordinary payout path uses a stale hardcoded threshold after implementation.
+    - id: INV-002
+      description: Historical tracking and withholding records are not silently rewritten by a threshold-default deployment.
+    - id: INV-003
+      description: TDS calculation, persisted tracking, metadata, and rollover initialization use the same approved policy.
+flows:
+    - id: FLOW-001
+      description: Approved statutory rule -> shared threshold policy -> payout preview/persistence and rollover -> regression evidence.
+      state_transitions:
+          [
+              statutory_rule_unconfirmed -> implementation_blocked,
+              approved_rule_and_audit_scope -> implementation_ready,
+          ]
+    - id: FLOW-002
+      description: Authorized read-only audit -> affected-row report -> separately approved correction procedure -> controlled reconciliation.
+      state_transitions:
+          [
+              audit_scope_unapproved -> correction_blocked,
+              approved_rule_and_audit_scope -> implementation_ready,
+          ]
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Threshold default and below/exact/above boundary behavior must be deterministic.
+      scenarios: [SCN-001, SCN-002]
+    - id: TEXP-002
+      category: regression
+      classification: REQUIRED
+      reason: Payout metadata, crossing logic, persisted fallback, and rollover must share the approved threshold.
+      scenarios: [SCN-002, SCN-003]
+    - id: TEXP-003
+      category: exploratory
+      classification: REQUIRED
+      reason: The read-only audit classifies legacy tracking rows without mutating financial records.
+      scenarios: [SCN-004, SCN-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIC.md
+    reviewer: Independent critic subagent
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - Gross sales/services is the confirmed Section 194-O threshold base.
+        - Existing legacy rows require read-only audit and no automatic mutation.
+        - A database migration and regression tests are required.
+approval:
+    state: APPROVED
+    design_blockers:
+        - DEC-001: Human confirmation of the currently applicable statutory rule and entity eligibility is required.
+        - DEC-002: Human confirmation of the historical audit correction procedure and authorization is required.
+    approved_by: User confirmation in conversation on 2026-09-10
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-005] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
