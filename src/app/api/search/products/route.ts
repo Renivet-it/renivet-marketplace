@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
+import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 
-// const PYTHON_SERVICE_URL =
-//     process.env.EMBEDDING_SERVICE_URL || "http://localhost:8000";
-const PYTHON_SERVICE_URL = "http://64.227.137.174:8000";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -12,17 +10,19 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
     }
 
-    const upstreamUrl = new URL("/search/advanced-rag", PYTHON_SERVICE_URL);
+    const upstreamUrl = buildEmbeddingServiceUrl("/search/advanced-rag");
+    if (!upstreamUrl) return NextResponse.json([]);
     upstreamUrl.searchParams.set("query", query);
     upstreamUrl.searchParams.set("limit", "4");
 
     try {
         const response = await fetch(upstreamUrl, {
-            signal: request.signal,
+            signal: AbortSignal.any([request.signal, AbortSignal.timeout(5000)]),
             headers: {
                 Accept: "application/json",
             },
             cache: "no-store",
+            redirect: "error",
         });
 
         if (!response.ok) {

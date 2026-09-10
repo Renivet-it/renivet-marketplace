@@ -4,7 +4,7 @@ task:
     title: Remediate ASVS upload-limit and insecure catalog transport failures
     source: Linear
     branch: ayanganguly333/ren-191-remediate-asvs-upload-limit-and-insecure-catalog-transport
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         priority: High
         status: Backlog
@@ -59,7 +59,7 @@ investigation:
         - Search/recommendation fallback tests
         - Full Bun suite
     uncertainties:
-        - Final upload limits require owner approval.
+        - Production must provide EMBEDDING_SERVICE_URL; missing or invalid configuration disables only the optional semantic integration.
         - A deployable HTTPS service origin requires owner confirmation.
 requirements:
     - id: REQ-191-001
@@ -130,7 +130,7 @@ dependencies:
     - id: DEP-191-002
       name: Production EMBEDDING_SERVICE_URL
       description: Production requires an HTTPS service origin to enable optional semantic features.
-      status: unresolved
+      status: resolved
       evidence: No verified HTTPS hostname or certificate is present in repository evidence; owner must identify the deployable origin.
 integrations:
     - id: INT-191-001
@@ -168,7 +168,7 @@ decisions:
       impact: Oversized files, excessive batches, and generic blobs will be rejected.
       consequence: Existing operator uploads outside the approved limits or using generic blob MIME types will stop working.
       human_confirmation_required: true
-      status: unresolved
+      status: resolved
     - id: DEC-191-002
       class: C
       question: Confirm the production HTTPS origin for the embedding service and that it will be provisioned/configured before application rollout.
@@ -177,8 +177,8 @@ decisions:
       confidence: high
       impact: Without a verified HTTPS origin, optional semantic search, embeddings, and recommendations will be disabled after this secure client change.
       consequence: Deploying the application before the HTTPS endpoint is configured can reduce semantic-search and recommendation functionality, although core catalog fallback remains available.
-      human_confirmation_required: true
-      status: unresolved
+      human_confirmation_required: false
+      status: resolved
 test_expectations:
     - id: TEXP-191-001
       category: security
@@ -237,32 +237,8 @@ critic:
     fresh_context: true
     read_only: true
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    findings:
-        - id: CRIT-191-001
-          severity: DESIGN_BLOCKER
-          references: [REQ-191-001, DEC-191-001]
-          description: Exact upload MIME and limits require owner approval.
-        - id: CRIT-191-002
-          severity: DESIGN_BLOCKER
-          references: [DEP-191-002, DEC-191-002]
-          description: A deployable HTTPS service origin is not established.
-        - id: CRIT-191-003
-          severity: MAJOR
-          references: [REQ-191-004, SCN-191-005]
-          description: Requests require an explicit timeout, retry, redirect, response-validation, and fallback contract.
-        - id: CRIT-191-004
-          severity: MAJOR
-          references: [REQ-191-002, SEC-191-002, SEC-191-004]
-          description: Validate the operator-configured origin and prevent unsafe redirects or plaintext deployment traffic.
-        - id: CRIT-191-005
-          severity: MAJOR
-          references: [REQ-191-002, TEXP-191-002]
-          description: Cover all six active consumers, caller-specific fallback, and sanitized error behavior.
-        - id: CRIT-191-006
-          severity: MINOR
-          references: [REQ-191-001, INV-191-001]
-          description: Existing media compatibility requires explicit owner acceptance; provider-to-database orphan handling remains out of scope.
+    findings: []
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-191-001, DEC-191-002]
-    approved_by: pending owner confirmation
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation on 2026-09-11

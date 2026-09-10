@@ -9,6 +9,7 @@ import {
     getEmbedding768,
     preprocessSearchQuery,
 } from "@/lib/python/sematic-search";
+import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -1248,13 +1249,19 @@ class ProductQuery {
                     async () => {
                         // Fetch absolute best products from the Advanced RAG Python backend
                         try {
-                            console.log(
-                                "[getProducts] Hitting Advanced RAG Engine for query:",
-                                processedSearch
+                            const upstreamUrl = buildEmbeddingServiceUrl(
+                                "/search/advanced-rag"
                             );
+                            if (!upstreamUrl) return;
+                            upstreamUrl.searchParams.set("query", processedSearch);
+                            upstreamUrl.searchParams.set("limit", "150");
                             const response = await fetch(
-                                `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
-                                { next: { revalidate: 60 } }
+                                upstreamUrl,
+                                {
+                                    next: { revalidate: 60 },
+                                    redirect: "error",
+                                    signal: AbortSignal.timeout(5000),
+                                }
                             );
 
                             if (response.ok) {
@@ -1263,16 +1270,11 @@ class ProductQuery {
                                     ragProductIds = data.map((d: any) =>
                                         String(d.id)
                                     );
-                                    console.log(
-                                        `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
-                                    );
+                                    return;
                                 }
                             }
-                        } catch (error) {
-                            console.error(
-                                "[getProducts] RAG Engine failed:",
-                                error
-                            );
+                        } catch {
+                            // RAG is optional; the database/text-search path remains authoritative.
                         }
                     }
                 );

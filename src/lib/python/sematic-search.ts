@@ -1,8 +1,6 @@
 import axios from "axios";
-
+import { requireEmbeddingServiceUrl } from "@/lib/python/service-url";
 export const EMBEDDING_PROVIDER_TIMEOUT_MS = 15_000;
-
-            // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
 
 /**
  * Generate 384-dim embedding using MiniLM model (legacy)
@@ -10,13 +8,14 @@ export const EMBEDDING_PROVIDER_TIMEOUT_MS = 15_000;
 export async function getEmbedding(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${"http://64.227.137.174:8000"}/embeddings/generate`,
+            requireEmbeddingServiceUrl("/embeddings/generate"),
             { text },
             {
                 headers: {
                     "Content-Type": "application/json",
                 },
                 timeout: EMBEDDING_PROVIDER_TIMEOUT_MS,
+                maxRedirects: 0,
             }
         );
 
@@ -26,11 +25,8 @@ export async function getEmbedding(text: string): Promise<number[]> {
             throw new Error("Invalid 384-dim embedding generated");
         }
         return embedding;
-    } catch (error: any) {
-        console.error("Error generating 384-dim embedding:", error);
-        const errorMessage =
-            error.response?.data?.detail || "Failed to generate embedding";
-        throw new Error(errorMessage);
+    } catch {
+        throw new Error("Failed to generate embedding");
     }
 }
 
@@ -42,14 +38,14 @@ export async function getEmbedding(text: string): Promise<number[]> {
 export async function getEmbedding768(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
-            // `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
+            requireEmbeddingServiceUrl("/embeddings/generate-768"),
             { text },
             {
                 headers: {
                     "Content-Type": "application/json",
                 },
                 timeout: EMBEDDING_PROVIDER_TIMEOUT_MS,
+                maxRedirects: 0,
             }
         );
 
@@ -59,12 +55,8 @@ export async function getEmbedding768(text: string): Promise<number[]> {
             throw new Error("Invalid 768-dim embedding generated");
         }
         return embedding;
-    } catch (error: any) {
-        console.error("Error generating 768-dim embedding:", error);
-        const errorMessage =
-            error.response?.data?.detail ||
-            "Failed to generate 768-dim embedding";
-        throw new Error(errorMessage);
+    } catch {
+        throw new Error("Failed to generate 768-dim embedding");
     }
 }
 
