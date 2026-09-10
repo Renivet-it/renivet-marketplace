@@ -3,7 +3,7 @@ task:
     id: REN-103
     title: Type safety erosion — finance router increment
     source: linear
-    branch: ayanganganguly333/ren-103-finance-router-types
+    branch: ayanganguly333/ren-103-finance-router-types
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-103/type-safety-erosion-402-any-309-as-any-across-the-repo
