@@ -17,6 +17,7 @@ import {
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
+    getCorporateLegalIdentityMissingFields,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -116,6 +117,14 @@ export async function GET(
                 orderBy: [desc(corporateShipments.createdAt)],
             }),
         ]);
+
+    const identityMissing = getCorporateLegalIdentityMissingFields(settings);
+    if (identityMissing.length) {
+        return NextResponse.json(
+            { message: `Complete Renivet corporate document settings: ${identityMissing.join(", ")}` },
+            { status: 422 }
+        );
+    }
 
     const productConfig = (order.productConfigSnapshot ?? {}) as Record<
         string,

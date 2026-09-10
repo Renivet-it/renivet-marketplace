@@ -143,6 +143,37 @@ export function corporatePartyAddress(party: {
         .join(", ");
 }
 
+export function corporateOperationalAddress(settings: {
+    operationalAddressLine1?: string | null;
+    operationalAddressLine2?: string | null;
+    operationalCity?: string | null;
+    operationalState?: string | null;
+    operationalPostalCode?: string | null;
+    operationalCountry?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+}) {
+    const operational = corporatePartyAddress({
+        addressLine1: settings.operationalAddressLine1,
+        addressLine2: settings.operationalAddressLine2,
+        city: settings.operationalCity,
+        state: settings.operationalState,
+        postalCode: settings.operationalPostalCode,
+        country: settings.operationalCountry,
+    });
+    return operational &&
+        settings.operationalAddressLine1?.trim() &&
+        settings.operationalCity?.trim() &&
+        settings.operationalState?.trim() &&
+        settings.operationalPostalCode?.trim()
+        ? operational
+        : corporatePartyAddress(settings);
+}
+
 export function gstStateCode(gstin?: string | null) {
     return /^\d{2}/.exec(gstin?.trim() ?? "")?.[0] ?? null;
 }
@@ -154,15 +185,7 @@ export function assertCorporateLegalIdentity(settings: {
     state?: string | null;
     postalCode?: string | null;
 }) {
-    const missing = [
-        ["GSTIN", settings.gstin],
-        ["address", settings.addressLine1],
-        ["city", settings.city],
-        ["state", settings.state],
-        ["postal code", settings.postalCode],
-    ]
-        .filter(([, value]) => !value?.trim())
-        .map(([label]) => label);
+    const missing = getCorporateLegalIdentityMissingFields(settings);
     if (missing.length) {
         throw new TRPCError({
             code: "PRECONDITION_FAILED",
@@ -171,6 +194,24 @@ export function assertCorporateLegalIdentity(settings: {
             )}`,
         });
     }
+}
+
+export function getCorporateLegalIdentityMissingFields(settings: {
+    gstin?: string | null;
+    addressLine1?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+}) {
+    return [
+        ["GSTIN", settings.gstin],
+        ["address", settings.addressLine1],
+        ["city", settings.city],
+        ["state", settings.state],
+        ["postal code", settings.postalCode],
+    ]
+        .filter(([, value]) => !value?.trim())
+        .map(([label]) => label);
 }
 
 function orderDeliveryAddress(order: {

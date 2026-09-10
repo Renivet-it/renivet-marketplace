@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
+    assertCorporateLegalIdentity,
     corporatePartyAddress,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
@@ -101,6 +102,15 @@ export async function GET(
                 }),
             ]);
 
+        try {
+            assertCorporateLegalIdentity(settings);
+        } catch (error) {
+            if (error instanceof Error && "code" in error && error.code === "PRECONDITION_FAILED") {
+                return NextResponse.json({ message: error.message }, { status: 422 });
+            }
+            throw error;
+        }
+
         if (!statement) {
             return NextResponse.json(
                 {
@@ -148,8 +158,8 @@ export async function GET(
             },
             renivet: {
                 name: "Renivet Marketplace Pvt Ltd",
-                address: settings.addressLine1 ? `${settings.addressLine1}, ${settings.city || ""}, ${settings.state || ""} - ${settings.postalCode || ""}` : "Renivet HQ, Kolkata, West Bengal - 700135",
-                gstin: settings.gstin || "19AAACR1234F1Z5",
+                address: corporatePartyAddress(settings),
+                gstin: settings.gstin,
                 pan: settings.pan || "AAACR1234F",
                 supportEmail: settings.supportEmail || "support@renivet.com",
             },

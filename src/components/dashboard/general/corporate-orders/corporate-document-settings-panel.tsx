@@ -20,6 +20,12 @@ type Draft = {
     state: string;
     postalCode: string;
     country: string;
+    operationalAddressLine1: string;
+    operationalAddressLine2: string;
+    operationalCity: string;
+    operationalState: string;
+    operationalPostalCode: string;
+    operationalCountry: string;
     email: string;
     phone: string;
     bankName: string;
@@ -46,6 +52,12 @@ const emptyDraft: Draft = {
     state: "",
     postalCode: "",
     country: "India",
+    operationalAddressLine1: "",
+    operationalAddressLine2: "",
+    operationalCity: "",
+    operationalState: "",
+    operationalPostalCode: "",
+    operationalCountry: "India",
     email: "",
     phone: "",
     bankName: "IDFC First Bank",
@@ -115,6 +127,20 @@ export function CorporateDocumentSettingsPanel() {
                             state: optional(draft.state),
                             postalCode: optional(draft.postalCode),
                             country: draft.country,
+                            operationalAddressLine1: optional(
+                                draft.operationalAddressLine1
+                            ),
+                            operationalAddressLine2: optional(
+                                draft.operationalAddressLine2
+                            ),
+                            operationalCity: optional(draft.operationalCity),
+                            operationalState: optional(draft.operationalState),
+                            operationalPostalCode: optional(
+                                draft.operationalPostalCode
+                            ),
+                            operationalCountry: optional(
+                                draft.operationalCountry
+                            ),
                             email: optional(draft.email),
                             phone: optional(draft.phone),
                             bankName: optional(draft.bankName),
@@ -161,6 +187,14 @@ export function CorporateDocumentSettingsPanel() {
                     value={draft.cin}
                     onChange={(value) => set("cin", value.toUpperCase())}
                 />
+                <div className="md:col-span-2 xl:col-span-3">
+                    <h3 className="text-sm font-semibold text-slate-800">
+                        GST registration address
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                        Used for GST/legal identity on corporate documents.
+                    </p>
+                </div>
                 <Field
                     label="Address line 1"
                     value={draft.addressLine1}
@@ -191,6 +225,20 @@ export function CorporateDocumentSettingsPanel() {
                     value={draft.country}
                     onChange={(value) => set("country", value)}
                 />
+                <div className="md:col-span-2 xl:col-span-3 mt-2">
+                    <h3 className="text-sm font-semibold text-slate-800">
+                        Operational / office address
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                        Optional physical office address; it never replaces the GST registration address.
+                    </p>
+                </div>
+                <Field label="Address line 1" value={draft.operationalAddressLine1} onChange={(value) => set("operationalAddressLine1", value)} />
+                <Field label="Address line 2" value={draft.operationalAddressLine2} onChange={(value) => set("operationalAddressLine2", value)} />
+                <Field label="City" value={draft.operationalCity} onChange={(value) => set("operationalCity", value)} />
+                <Field label="State" value={draft.operationalState} onChange={(value) => set("operationalState", value)} />
+                <Field label="Postal code" value={draft.operationalPostalCode} onChange={(value) => set("operationalPostalCode", value)} />
+                <Field label="Country" value={draft.operationalCountry} onChange={(value) => set("operationalCountry", value)} />
                 <Field
                     label="Billing email"
                     value={draft.email}

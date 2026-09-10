@@ -13,6 +13,7 @@ import { splitCorporateGstByPlaceOfSupply } from "@/lib/finance/corporate-place-
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
+    assertCorporateLegalIdentity,
     getCorporateDocumentSettings,
     gstStateCode,
     nextCorporateDocumentNumber,
@@ -128,6 +129,14 @@ export async function GET(
                 where: eq(brandConfidentials.id, order.brand.id),
             }),
         ]);
+        try {
+            assertCorporateLegalIdentity(settings);
+        } catch (error) {
+            if (error instanceof Error && "code" in error && error.code === "PRECONDITION_FAILED") {
+                return NextResponse.json({ message: error.message }, { status: 422 });
+            }
+            throw error;
+        }
 
         const commissionTaxablePaise = order.commissionAmountPaise;
 
@@ -212,7 +221,7 @@ export async function GET(
             orderDate: order.createdAt ?? invoiceDate,
             customerName: order.brand.name,
             address: brandAddress,
-            state: brandConfidential?.state || settings.state || "West Bengal",
+            state: brandConfidential?.state || settings.state || "Not provided",
             amount: commissionTotalPaise,
             deliveryAmount: 0,
             customerGstin: brandConfidential?.gstin || "Unregistered",
@@ -261,12 +270,12 @@ export async function GET(
                 name: "Renivet Marketplace Pvt Ltd",
                 logoUrl: renivetLogoUrl,
                 confidential: {
-                    addressLine1: settings.addressLine1 || "Renivet HQ",
+                    addressLine1: settings.addressLine1,
                     addressLine2: settings.addressLine2 || undefined,
-                    city: settings.city || "Kolkata",
-                    state: settings.state || "West Bengal",
-                    postalCode: settings.postalCode || "700135",
-                    gstin: settings.gstin || "19AAACR1234F1Z5",
+                    city: settings.city,
+                    state: settings.state,
+                    postalCode: settings.postalCode,
+                    gstin: settings.gstin,
                     cin: settings.cin || undefined,
                     email: settings.supportEmail || "support@renivet.com",
                     phone: settings.supportPhone || "+91-9876543210",
