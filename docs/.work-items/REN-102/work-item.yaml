@@ -106,8 +106,8 @@ implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED
     base_branch: origin/master
-    base_commit: "e3da08ed9fefedad6d4b17a9edfbdd98dda284cb"
-    head_commit: "d49fc58619e91b90a55afa25764beccf1eb6918b"
+    base_commit: "c2d346a783d7b501f59db035956b45beee6f45b9"
+    head_commit: "786335901beed83f41e8a5642c69a5c6f18213b0"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
