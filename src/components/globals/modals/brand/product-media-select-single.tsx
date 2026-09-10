@@ -62,6 +62,7 @@ export function ProductMediaSelectSingle({
                 <Checkbox
                     checked={isSelected}
                     onCheckedChange={(value) => handleSelection(!!value)}
+                    onClick={(event) => event.stopPropagation()}
                     className="absolute left-3 top-3 bg-background"
                 />
             </div>

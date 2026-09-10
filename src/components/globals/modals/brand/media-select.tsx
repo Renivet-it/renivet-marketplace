@@ -12,12 +12,24 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
+import {
+    moveSelectedMedia,
+    removeSelectedMedia,
+    uniqueSelectedMedia,
+} from "@/lib/product-media-selection";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { handleClientError } from "@/lib/utils";
 import { BrandMediaItem } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
-import { Dispatch, SetStateAction, useMemo, useRef, useState } from "react";
+import {
+    Dispatch,
+    SetStateAction,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { toast } from "sonner";
 import { ProductMediaSelectSingle } from "./product-media-select-single";
 
@@ -43,8 +55,13 @@ export function MediaSelectModal({
     onSelectionComplete,
 }: PageProps) {
     const [search, setSearch] = useState("");
-    const [selectedItems, setSelectedItems] =
-        useState<BrandMediaItem[]>(selectedMedia);
+    const [selectedItems, setSelectedItems] = useState<BrandMediaItem[]>(() =>
+        uniqueSelectedMedia(selectedMedia)
+    );
+
+    useEffect(() => {
+        if (isOpen) setSelectedItems(uniqueSelectedMedia(selectedMedia));
+    }, [isOpen, selectedMedia]);
 
     const inputRef = useRef<HTMLInputElement>(null!);
 
@@ -106,9 +123,13 @@ export function MediaSelectModal({
         setSelectedItems((prev) => {
             if (!multiple) return isSelected ? [media] : [];
             return isSelected
-                ? [...prev, media]
-                : prev.filter((x) => x.id !== media.id);
+                ? uniqueSelectedMedia([...prev, media])
+                : removeSelectedMedia(prev, media.id);
         });
+    };
+
+    const moveSelection = (index: number, offset: -1 | 1) => {
+        setSelectedItems((prev) => moveSelectedMedia(prev, index, offset));
     };
 
     return (
@@ -158,6 +179,85 @@ export function MediaSelectModal({
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
+
+                    {multiple && selectedItems.length > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium">
+                                Selected sequence
+                            </p>
+                            <div className="grid gap-2 rounded-lg border p-2 sm:grid-cols-2">
+                                {selectedItems.map((item, index) => (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center gap-2 rounded-md border bg-muted/30 p-2"
+                                    >
+                                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                                            {index + 1}
+                                        </span>
+                                        <img
+                                            src={item.url}
+                                            alt={item.alt || item.name}
+                                            className="size-10 shrink-0 rounded object-cover"
+                                        />
+                                        <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                                            {item.name}
+                                        </span>
+                                        <div className="flex shrink-0 items-center gap-1">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7"
+                                                aria-label={`Move ${item.name} up`}
+                                                disabled={index === 0}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    moveSelection(index, -1);
+                                                }}
+                                            >
+                                                <Icons.ArrowUp className="size-3.5" />
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7"
+                                                aria-label={`Move ${item.name} down`}
+                                                disabled={
+                                                    index ===
+                                                    selectedItems.length - 1
+                                                }
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    moveSelection(index, 1);
+                                                }}
+                                            >
+                                                <Icons.ArrowDown className="size-3.5" />
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-7 text-destructive hover:text-destructive"
+                                                aria-label={`Remove ${item.name}`}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setSelectedItems((prev) =>
+                                                        removeSelectedMedia(
+                                                            prev,
+                                                            item.id
+                                                        )
+                                                    );
+                                                }}
+                                            >
+                                                <Icons.X className="size-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid max-h-80 grid-cols-2 gap-4 overflow-scroll rounded-lg border p-2 md:grid-cols-6">
                         {itemsToMap.map((media) => (
