@@ -20,7 +20,7 @@ import {
     isSearchAnalyticsId,
     logSearchResultCount,
 } from "@/lib/search/search-engine";
-import { getAbsoluteURL } from "@/lib/utils";
+import { getAbsoluteURL as buildAbsoluteURL } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
@@ -915,7 +915,7 @@ async function StorefrontProductsFetch({
                               item: {
                                   "@type": "Product",
                                   name: product.title,
-                                  url: getAbsoluteURL(
+                                  url: buildAbsoluteURL(
                                       `/products/${product.slug}`
                                   ),
                                   ...(image ? { image } : {}),
@@ -929,7 +929,7 @@ async function StorefrontProductsFetch({
                                                     product.isAvailable
                                                         ? "https://schema.org/InStock"
                                                         : "https://schema.org/OutOfStock",
-                                                url: getAbsoluteURL(
+                                                url: buildAbsoluteURL(
                                                     `/products/${product.slug}`
                                                 ),
                                             },
