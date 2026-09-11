@@ -31,6 +31,7 @@ import {
     type CategoryCatalogCacheInput,
 } from "./catalog-cache";
 import { FestiveFloralDivider } from "./festive-floral-divider";
+import { FestiveMobileCatalogHeader } from "./festive-mobile-catalog-header";
 import { FestiveMobileSearch } from "./festive-mobile-search";
 import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
@@ -181,67 +182,26 @@ export async function StorefrontCatalogPage({
                 </aside>
 
                 <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
-                    <div className="md:hidden">
-                        {theme === "festive" ? (
+                    {theme === "festive" ? (
+                        <div className="md:hidden">
                             <FestiveMobileSearch>
                                 <ProductSearch
                                     searchBasePath={basePath}
-                                    inlineResults={theme === "festive"}
+                                    inlineResults
                                     className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
                                 />
                             </FestiveMobileSearch>
-                        ) : (
+                        </div>
+                    ) : (
+                        <div className="md:hidden">
                             <ProductSearch
                                 searchBasePath={basePath}
                                 className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
                             />
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    <ShopMobileActions
-                        theme={theme}
-                        defaultSortBy={defaultSortBy}
-                        defaultSortOrder={defaultSortOrder}
-                        hideRecommendationSorts={hideRecommendationSorts}
-                        filters={
-                            <Suspense
-                                fallback={
-                                    <MobileFilterLoadingButton
-                                        className={
-                                            theme === "festive"
-                                                ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
-                                                : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
-                                        }
-                                    />
-                                }
-                            >
-                                <StorefrontFiltersFetch
-                                    displayMode="mobile"
-                                    className={
-                                        theme === "festive"
-                                            ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
-                                            : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
-                                    }
-                                    brandIds={params.brandIds}
-                                    categoryId={params.categoryId}
-                                    subCategoryId={subCategoryId}
-                                    productTypeId={params.productTypeId}
-                                    search={params.search}
-                                    minPrice={params.minPrice}
-                                    maxPrice={params.maxPrice}
-                                    colors={params.colors}
-                                    sizes={params.sizes}
-                                    minDiscount={params.minDiscount}
-                                    lockedBrandId={lockedBrandId}
-                                    hideBrandFilter={hideBrandFilter}
-                                    curatedProductIds={curatedProductIds}
-                                    theme={theme}
-                                />
-                            </Suspense>
-                        }
-                    />
-
-                    <Suspense fallback={<ShopProductsSkeleton />}>
+                    <Suspense fallback={<ShopProductsSkeleton theme={theme} />}>
                         <StorefrontProductsFetch
                             searchParams={searchParams}
                             productTypes={productTypes}
@@ -267,6 +227,49 @@ export async function StorefrontCatalogPage({
                                         }
                                     />
                                 </div>
+                            }
+                        />
+
+                        <ShopMobileActions
+                            theme={theme}
+                            defaultSortBy={defaultSortBy}
+                            defaultSortOrder={defaultSortOrder}
+                            hideRecommendationSorts={hideRecommendationSorts}
+                            filters={
+                                <Suspense
+                                    fallback={
+                                        <MobileFilterLoadingButton
+                                            className={
+                                                theme === "festive"
+                                                    ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
+                                                    : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                            }
+                                        />
+                                    }
+                                >
+                                    <StorefrontFiltersFetch
+                                        displayMode="mobile"
+                                        className={
+                                            theme === "festive"
+                                                ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
+                                                : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                        }
+                                        brandIds={params.brandIds}
+                                        categoryId={params.categoryId}
+                                        subCategoryId={subCategoryId}
+                                        productTypeId={params.productTypeId}
+                                        search={params.search}
+                                        minPrice={params.minPrice}
+                                        maxPrice={params.maxPrice}
+                                        colors={params.colors}
+                                        sizes={params.sizes}
+                                        minDiscount={params.minDiscount}
+                                        lockedBrandId={lockedBrandId}
+                                        hideBrandFilter={hideBrandFilter}
+                                        curatedProductIds={curatedProductIds}
+                                        theme={theme}
+                                    />
+                                </Suspense>
                             }
                         />
                     </Suspense>
@@ -885,15 +888,23 @@ async function StorefrontProductsFetch({
 
     return (
         <div className="space-y-4 md:space-y-3">
-            <div className="block md:hidden">
-                <SearchableProductTypes
-                    productTypes={productTypesForPills}
-                    productTypeId={productTypeIdRaw ?? ""}
-                    initialProducts={finalData?.data ?? []}
-                    basePath={basePath}
-                    theme={theme}
-                />
-            </div>
+            <FestiveMobileCatalogHeader
+                enabled={theme === "festive"}
+                topClass="top-[102px]"
+            >
+                <div
+                    className={`md:hidden ${theme === "festive" ? "space-y-3 pb-1 pt-1" : "block"}`}
+                >
+                    <SearchableProductTypes
+                        productTypes={productTypesForPills}
+                        productTypeId={productTypeIdRaw ?? ""}
+                        initialProducts={finalData?.data ?? []}
+                        basePath={basePath}
+                        theme={theme}
+                    />
+                    {theme === "festive" ? <FestiveFloralDivider /> : null}
+                </div>
+            </FestiveMobileCatalogHeader>
 
             <div
                 className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-40 md:block md:space-y-3 md:pb-2 md:shadow-[0_10px_18px_-18px_rgba(36,55,84,0.55)] ${theme === "festive" ? "md:bg-[#F0EBE2]" : "md:bg-[#ffffff]"}`}
@@ -911,8 +922,6 @@ async function StorefrontProductsFetch({
 
                 <div className="border-b border-[#e4e9ef]" />
             </div>
-
-            {theme === "festive" ? <FestiveFloralDivider /> : null}
 
             <ShopProducts
                 initialData={{
@@ -997,9 +1006,9 @@ function ShopFiltersSkeleton() {
     );
 }
 
-function ShopProductsSkeleton() {
+function ShopProductsSkeleton({ theme }: { theme?: "festive" }) {
     return (
-        <div className="space-y-5">
+        <div className={`space-y-5 ${theme === "festive" ? "pt-1" : ""}`}>
             <div className="scrollbar-hide flex gap-2 overflow-hidden pb-2">
                 <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />
                 <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />

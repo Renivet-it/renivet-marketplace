@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-test("renders the festive lotus above the mobile search content", async () => {
+test("does not add a standalone lotus beside the festive search", async () => {
     let DecoratedSearch:
         | undefined
         | ((props: { children: React.ReactNode }) => React.ReactNode);
@@ -26,13 +26,9 @@ test("renders the festive lotus above the mobile search content", async () => {
         )
     );
 
-    const lotusPosition = html.indexOf(
-        "/assets/festive-season/festive-mobile-actions-lotus.svg"
-    );
     const searchPosition = html.indexOf("Product search");
 
-    expect(lotusPosition).toBeGreaterThan(-1);
-    expect(searchPosition).toBeGreaterThan(lotusPosition);
-    expect(html).toContain("data-festive-search-lotus=\"true\"");
-    expect(html).toContain("self-end");
+    expect(searchPosition).toBeGreaterThan(-1);
+    expect(html).not.toContain("festive-mobile-actions-lotus.svg");
+    expect(html).not.toContain("data-festive-search-lotus");
 });
