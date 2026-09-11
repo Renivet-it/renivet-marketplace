@@ -1,0 +1,156 @@
+schema_version: "1.0"
+task:
+    id: REN-152
+    title: Consolidate duplicated checkout business logic across the two independent checkout implementations
+    source: linear
+    branch: ayanganguly333/ren-152-consolidate-duplicated-checkout-business-logic-across-the
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-152/consolidate-duplicated-checkout-business-logic-across-the-two
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Checkout pricing, coupon, availability, and item persistence affect payment preparation.
+        - Two customer entry surfaces must remain behaviorally compatible.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [checkout-content.tsx, checkout-section.tsx, order-payment-page.tsx, cart mutation router, pricing utility, customer-order access guard, related checkout tests]
+    excluded_areas: [Razorpay wrapper, order creation backend, schema migrations, REN-133, REN-144]
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001, INT-002]
+    security_boundaries: [SEC-001]
+    state_transitions: [checkout-local-customization -> persisted-cart-customization]
+dependencies:
+    - { id: DEP-001, name: cart customization mutation, purpose: Persist per-item requests, description: Existing updateCustomizationRequest mutation., status: resolved }
+    - { id: DEP-002, name: pricing utility, purpose: Preserve coupon and total semantics, description: Existing calculateTotalPriceWithCoupon utility., status: resolved }
+integrations:
+    - { id: INT-001, system: cart updateCustomizationRequest tRPC mutation, purpose: Persist trimmed per-item customization text or null and invalidate canonical cart cache. }
+    - { id: INT-002, system: coupon validateCoupon tRPC mutation, purpose: Preserve existing validation request response and error behavior for manual and TRYNEW20 coupons. }
+personas:
+    - { id: PER-001, role: customer, applicability: Uses cart, buy-now, and reward checkout entry points. }
+security_boundaries:
+    - { id: SEC-001, description: Existing authenticated cart ownership and order-placement restrictions remain enforced. }
+business_rules:
+    - { id: BR-001, description: Equivalent checkout inputs must yield equivalent availability and price/coupon outputs. }
+decisions:
+    - id: DEC-001
+      question: Should the checkout page surfaces be merged?
+      class: A
+      status: resolved
+      recommendation: No; extract shared behavior while retaining both route surfaces.
+      basis: Linear explicitly excludes merging the two UIs.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+requirements:
+    - { id: REQ-001, description: Shared pure functions produce identical availability and price/coupon outputs for identical cart inputs., type: explicit }
+    - { id: REQ-002, description: TRYNEW20 constants and eligibility are defined once and consumed by both checkout flows., type: explicit }
+    - { id: REQ-003, description: Admin-order guard state and UI notification wiring are exposed once and consumed by all three checkout files., type: explicit }
+    - { id: REQ-004, description: Checkout customization requests save on blur through the existing mutation, trim to 500 characters, clear as null, serialize writes per item with latest-value coalescing, report failures, disable progression while pending, and refetch canonical cart state after the final successful queue drain., type: explicit }
+    - { id: REQ-005, description: Buy-now, reward, coupon API, payment toggle, tax, order creation, and Razorpay behavior remain unchanged., type: compatibility }
+    - { id: REQ-006, description: Shared order-detail-by-brand assembly preserves first-seen brand and item ordering plus all existing item reward and customization fields., type: explicit }
+scenarios:
+    - { id: SCN-001, description: Equivalent paid cart items yield identical availability and price/coupon outputs., requirement_ids: [REQ-001, REQ-005] }
+    - { id: SCN-002, description: Unavailable and unselected items are consistently excluded., requirement_ids: [REQ-001] }
+    - { id: SCN-003, description: Reward checkout retains zero paid price and reward discount semantics., requirement_ids: [REQ-001, REQ-005] }
+    - { id: SCN-004, description: TRYNEW20 applies and clears under one shared threshold policy., requirement_ids: [REQ-002, REQ-005] }
+    - { id: SCN-005, description: Checkout customization serializes writes per item coalesces edits made in flight to the latest value and refetches canonical state only after the final successful queue drain so an older write cannot overwrite a newer value., requirement_ids: [REQ-004] }
+    - { id: SCN-006, description: Blocked operator accounts see consistent guard behavior across checkout components., requirement_ids: [REQ-003] }
+    - { id: SCN-007, description: Shared order-detail-by-brand assembly preserves current ordering and item payloads., requirement_ids: [REQ-006, REQ-005] }
+    - { id: SCN-008, description: Ordinary cart buy-now reward-only and mixed sources preserve current selection quantity identifier ordering and reward semantics., requirement_ids: [REQ-001, REQ-005] }
+    - { id: SCN-009, description: An eligible TRYNEW20 result never replaces a manually entered coupon., requirement_ids: [REQ-002, REQ-005] }
+    - { id: SCN-010, description: A rejected TRYNEW20 validation may be retried when eligibility is evaluated again., requirement_ids: [REQ-002, REQ-005] }
+    - { id: SCN-011, description: A stale TRYNEW20 validation completion cannot overwrite newer coupon or cart state., requirement_ids: [REQ-002, REQ-005] }
+invariants:
+    - { id: INV-001, description: Payment, tax, order creation, coupon validation, and Razorpay contracts do not change. }
+    - { id: INV-002, description: Shared calculations are pure and deterministic. }
+    - { id: INV-003, description: Both checkout routes remain independently renderable. }
+    - { id: INV-004, description: Server-side order authorization remains authoritative and is not replaced by the client guard hook. }
+flows:
+    - { id: FLOW-001, description: Cart and reward inputs -> shared availability and calculation inputs -> existing pricing utility -> existing checkout consumers., state_transitions: [] }
+    - { id: FLOW-002, description: Checkout customization edit -> existing cart mutation -> canonical cart refetch., state_transitions: [checkout-local-customization -> persisted-cart-customization] }
+    - { id: FLOW-003, description: Normalized checkout items -> stable first-seen brand grouping -> unchanged order-detail payloads., state_transitions: [] }
+test_expectations:
+    - { id: TEXP-001, category: unit, classification: REQUIRED, reason: Equivalent input carts must produce identical normalized and pricing outputs., scenarios: [SCN-001, SCN-002, SCN-003, SCN-008] }
+    - { id: TEXP-002, category: regression, classification: REQUIRED, reason: Shared auto-coupon policy preserves threshold removal manual-coupon retry and stale-result behavior., scenarios: [SCN-004, SCN-009, SCN-010, SCN-011] }
+    - { id: TEXP-003, category: component, classification: REQUIRED, reason: Checkout uses the existing customization mutation and shared guard hook., scenarios: [SCN-005, SCN-006] }
+    - { id: TEXP-004, category: regression, classification: REQUIRED, reason: Existing checkout and complete Bun suites protect payment and route compatibility., scenarios: [SCN-001, SCN-003, SCN-004, SCN-008] }
+    - { id: TEXP-005, category: component, classification: REQUIRED, reason: Blur persistence covers pending state success refetch clear failure retry remount recovery and edits made while a write is in flight proving per-item serialization latest-value coalescing and final canonical refetch., scenarios: [SCN-005] }
+    - { id: TEXP-006, category: unit, classification: REQUIRED, reason: Shared order-by-brand assembly preserves ordering and complete item payloads., scenarios: [SCN-007] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation on 2026-09-11
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-008] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-004, SCN-009, SCN-010, SCN-011] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-006] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-005] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-001, SCN-003, SCN-004, SCN-007, SCN-008] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-003, INV-004] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-010, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-011, invariant_ids: [INV-001, INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-004] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-004] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002, TEXP-004] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003, TEXP-005] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-006] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-001, TEXP-004] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-010, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-011, test_expectation_ids: [TEXP-002] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: origin/master
+    base_commit: "3bb358b419a3d7e85d79a09616f3d79c564384a7"
+    head_commit: "cf600b9a0221c0f308f25da39ff2c9ea3b0fd620"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - Compared origin/master merge base and exact branch head, including uncommitted implementation files.
+        - Shared helpers cover availability pricing coupon policy request ordering persistence integration and complete stable order payload assembly.
+        - All approved checkout consumers use the shared contracts and checkout-specific tests cover the required boundaries.
+    governance_reentry_required: false
