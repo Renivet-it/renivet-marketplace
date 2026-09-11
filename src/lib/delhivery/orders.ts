@@ -177,6 +177,13 @@ export const cancelOrder = async (waybill: string) => {
   return res.data;
 };
 
+export const getCancellationTracking = async (waybill: string) => {
+  const res = await delhiveryClient.get("/api/v1/packages/json", {
+    params: { waybill },
+  });
+  return res.data;
+};
+
 /**
  * Create a Return (RTO)
  */

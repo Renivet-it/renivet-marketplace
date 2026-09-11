@@ -1,7 +1,16 @@
 import { db } from "@/lib/db";
 import { orders, orderShipments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { cancelOrder as cancelDelhiveryOrder } from "@/lib/delhivery/orders";
+import {
+    cancelOrder as cancelDelhiveryOrder,
+    getCancellationTracking,
+} from "@/lib/delhivery/orders";
+import {
+    appendCancellationEvidence,
+    extractDelhiveryShipmentStatus,
+    isExplicitCancellationSuccess,
+    isTerminalCancellationStatus,
+} from "@/lib/delhivery/cancellation";
 import { razorpay } from "@/lib/razorpay";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
@@ -40,42 +49,7 @@ export async function executeOrderCancellation({
         return; // Already cancelled
     }
 
-    // 2. Process refund if payment was made via Razorpay
-    let nextPaymentStatus = order.paymentStatus;
-    if (order.paymentStatus === "paid" && order.paymentId) {
-        try {
-            const rzpRefund = await razorpay.payments.refund(
-                order.paymentId,
-                {
-                    amount: order.totalAmount,
-                    speed: "normal",
-                    reverse_all: 1,
-                    notes: {
-                        reason: reasonCode || "Order cancelled",
-                        orderId: order.id,
-                    },
-                }
-            );
-
-            await refundQueries.createRefund({
-                id: rzpRefund.id,
-                userId: order.userId,
-                orderId: order.id,
-                paymentId: order.paymentId,
-                status: "pending",
-                amount: order.totalAmount,
-            });
-
-            nextPaymentStatus = "refund_pending";
-        } catch (error) {
-            console.error("Refund error details in helper:", error);
-            nextPaymentStatus = "refund_failed";
-        }
-    } else {
-        nextPaymentStatus = order.paymentMethod === "COD" ? "cancelled" : "failed";
-    }
-
-    // 3. Cancel shipments in Delhivery / Shiprocket
+    // 2. Carrier cancellation must be verified before financial/local effects.
     const hasShiprocketShipment = order.shipments.some(
         (shipment) => !!shipment.shiprocketOrderId
     );
@@ -92,10 +66,39 @@ export async function executeOrderCancellation({
             );
             
             for (const trackingId of delhiveryTrackingIds) {
-                try {
-                    await cancelDelhiveryOrder(trackingId);
-                } catch (delhiveryError) {
-                    console.error(`Delhivery cancellation failed for tracking ID ${trackingId}:`, delhiveryError);
+                const attemptId = `${shipment.id}:${trackingId}`;
+                const cancelResponse = await cancelDelhiveryOrder(trackingId);
+                let evidence = appendCancellationEvidence(
+                    shipment.delhiveryTrackingJson,
+                    {
+                        attemptId,
+                        phase: "request",
+                        recordedAt: new Date().toISOString(),
+                        response: cancelResponse,
+                    }
+                );
+                await db.update(orderShipments).set({
+                    delhiveryTrackingJson: evidence,
+                    updatedAt: new Date(),
+                }).where(eq(orderShipments.id, shipment.id));
+                if (!isExplicitCancellationSuccess(cancelResponse)) {
+                    throw new Error("Delhivery cancellation was not accepted");
+                }
+                const trackingResponse = await getCancellationTracking(trackingId);
+                evidence = appendCancellationEvidence(evidence, {
+                    attemptId,
+                    phase: "verification",
+                    recordedAt: new Date().toISOString(),
+                    response: trackingResponse,
+                });
+                await db.update(orderShipments).set({
+                    delhiveryTrackingJson: evidence,
+                    updatedAt: new Date(),
+                }).where(eq(orderShipments.id, shipment.id));
+                if (!isTerminalCancellationStatus(
+                    extractDelhiveryShipmentStatus(trackingResponse)
+                )) {
+                    throw new Error("Delhivery cancellation is not terminal");
                 }
             }
 
@@ -118,9 +121,48 @@ export async function executeOrderCancellation({
                     updatedAt: new Date(),
                 })
                 .where(eq(orderShipments.id, shipment.id));
-        } catch (error) {
-            console.error("Shipment cancellation error in helper:", error);
+        } catch {
+            await createOperationalAlert({
+                entityType: "order_shipment",
+                entityId: shipment.id,
+                type: "shipment_cancellation_divergence",
+                severity: "critical",
+                ownerRole: "order_manager",
+                title: "Delhivery cancellation requires reconciliation",
+                message: `Shipment ${shipment.id} has not reached a terminal carrier cancellation state.`,
+                dedupeKey: `delhivery:cancellation:${shipment.id}`,
+            });
+            throw new Error("Carrier cancellation could not be verified");
         }
+    }
+
+    // 3. Process refund only after every carrier cancellation is verified.
+    let nextPaymentStatus = order.paymentStatus;
+    if (order.paymentStatus === "paid" && order.paymentId) {
+        try {
+            const rzpRefund = await razorpay.payments.refund(order.paymentId, {
+                amount: order.totalAmount,
+                speed: "normal",
+                reverse_all: 1,
+                notes: {
+                    reason: reasonCode || "Order cancelled",
+                    orderId: order.id,
+                },
+            });
+            await refundQueries.createRefund({
+                id: rzpRefund.id,
+                userId: order.userId,
+                orderId: order.id,
+                paymentId: order.paymentId,
+                status: "pending",
+                amount: order.totalAmount,
+            });
+            nextPaymentStatus = "refund_pending";
+        } catch {
+            nextPaymentStatus = "refund_failed";
+        }
+    } else {
+        nextPaymentStatus = order.paymentMethod === "COD" ? "cancelled" : "failed";
     }
 
     // 4. Restore product stock
