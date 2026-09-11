@@ -36,12 +36,11 @@ test("renders festive mobile actions with functional sides and centered artwork"
     expect(html).toContain(
         "/assets/festive-season/festive-mobile-actions-border.svg"
     );
-    expect(html).toContain("grid-cols-[1fr_auto_1fr]");
-    expect(html).toContain("data-festive-lotus-medallion=\"true\"");
-    expect(html).toContain("data-festive-bottom-spacing=\"true\"");
+    expect(html).toContain("grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]");
+    expect(html).toContain('data-festive-lotus-medallion="true"');
+    expect(html).not.toContain('data-festive-bottom-spacing="true"');
     expect(html).toContain("h-16");
     expect(html).toContain("size-[48px]");
     expect(html).toContain("[&amp;_button]:text-base");
-    expect(html).toContain("h-4");
     expect(html).not.toContain("size-[58px]");
 });

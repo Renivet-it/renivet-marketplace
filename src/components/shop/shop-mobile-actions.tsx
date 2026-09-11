@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { FestiveMobileActionsFrame } from "./festive-mobile-actions-frame";
 import { ShopSortByWithDefault } from "./shop-filters";
 
@@ -19,9 +19,29 @@ export function ShopMobileActions({
     hideRecommendationSorts,
     theme,
 }: ShopMobileActionsProps) {
+    const [isFooterVisible, setIsFooterVisible] = useState(false);
+
+    useEffect(() => {
+        if (theme !== "festive") return;
+
+        const footer = document.querySelector("[data-site-footer]");
+        if (!footer) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => setIsFooterVisible(entry.isIntersecting),
+            { threshold: 0.01 }
+        );
+        observer.observe(footer);
+
+        return () => observer.disconnect();
+    }, [theme]);
+
     if (theme === "festive") {
         return (
-            <div className="fixed inset-x-0 bottom-0 z-50 bg-[#F0EBE2] pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-6px_18px_rgba(45,38,26,0.08)] md:hidden">
+            <div
+                className={`fixed inset-x-0 bottom-0 z-50 bg-[#F0EBE2] pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-6px_18px_rgba(45,38,26,0.08)] transition-transform duration-200 md:hidden ${isFooterVisible ? "pointer-events-none translate-y-full" : "translate-y-0"}`}
+                aria-hidden={isFooterVisible}
+            >
                 <FestiveMobileActionsFrame
                     filters={filters}
                     sort={

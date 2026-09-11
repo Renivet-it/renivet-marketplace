@@ -12,7 +12,7 @@ export function FestiveMobileActionsFrame({
 }: FestiveMobileActionsFrameProps) {
     return (
         <div className="bg-[#F0EBE2]">
-            <div className="grid h-16 grid-cols-[1fr_auto_1fr] items-center px-5 [&_button]:text-base">
+            <div className="grid h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-2 [&_button]:min-w-0 [&_button]:truncate [&_button]:text-base">
                 <div className="flex h-full min-w-0 items-center justify-center">
                     {filters}
                 </div>
@@ -63,11 +63,6 @@ export function FestiveMobileActionsFrame({
                     backgroundPosition: "bottom center",
                     backgroundSize: "auto 21px",
                 }}
-            />
-            <div
-                data-festive-bottom-spacing="true"
-                aria-hidden="true"
-                className="h-4"
             />
         </div>
     );

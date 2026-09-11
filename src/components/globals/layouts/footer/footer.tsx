@@ -20,9 +20,9 @@ interface FooterProps extends GenericProps {
 }
 
 export function Footer({ className, legal, ...props }: FooterProps) {
-
     return (
         <footer
+            data-site-footer="true"
             className={cn(
                 "flex justify-center bg-primary text-primary-foreground",
                 className

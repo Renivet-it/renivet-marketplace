@@ -213,22 +213,15 @@ export function NavbarMob({ className, ...props }: GenericProps) {
     const navContainerRef = useRef<ElementRef<"div"> | null>(null);
     const navListRef = useRef<ElementRef<"ul"> | null>(null);
 
-    // useEffect(() => {
-    //     if (typeof document === "undefined") return;
-
-    //     if (isMenuOpen) document.body.style.overflow = "hidden";
-    //     else document.body.style.overflow = "auto";
-    // }, [isMenuOpen]);
     useEffect(() => {
+        const originalOverflowY = document.body.style.overflowY;
+
         if (isMenuOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "auto";
+            document.body.style.overflowY = "hidden";
         }
 
-        // Cleanup on unmount
         return () => {
-            document.body.style.overflow = "auto";
+            document.body.style.overflowY = originalOverflowY;
         };
     }, [isMenuOpen]);
 
