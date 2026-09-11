@@ -4,7 +4,7 @@ task:
     title: "[SEO][P0] Festive SEO + Performance Readiness"
     source: linear
     branch: feat/seo-phase-1-foundation
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear: { url: https://linear.app/renivet/issue/REN-215, priority: Urgent, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
 risk:
     initial_risk: L2
@@ -68,14 +68,14 @@ traceability:
         - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
+    result: REVIEW_FAILED
     base_branch: origin/main
-    base_commit: "94748ff793dd06c0aadbc6c7a092223154417cb7"
-    head_commit: "b51707218e5ce80fda6444cabea1f9c9c643a7d5"
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
     pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
-    material_drift: MINOR_DRIFT
-    reconciliation: { requirements: PASS, scenarios: PASS, invariants: PASS, architecture: PASS, security: PASS, test_coverage: PARTIAL, scope: PASS }
-    blocking_findings: []
-    required_actions: ["Add browser-based performance and rendered structured-data verification when the browser harness is available."]
-    evidence: ["Compared approved contract with implementation diff and passing SEO contract tests."]
-    governance_reentry_required: false
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: FAIL, scenarios: FAIL, invariants: FAIL, architecture: FAIL, security: PASS, test_coverage: FAIL, scope: FAIL }
+    blocking_findings: ["REV-215-001: Festive Product JSON-LD uses the wrong media shape.", "REV-215-002: PR #658 contains 683 unrelated changed files and governance CI fails."]
+    required_actions: ["Correct the schema media projection and isolate the SEO commits on current main, then rerun rendered verification."]
+    evidence: ["PR #658 compares main 0cbf02a024d90db0461683906dc0a098a0c209b3 with head 029d7dc55c82e2cfb55443bc39a95d157ea82bf0 across 683 files.", "Workflow run 34649025488 fails governance validation; catalog media is projected as mediaItem while JSON-LD reads media.url."]
+    governance_reentry_required: true

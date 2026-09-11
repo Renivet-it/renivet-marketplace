@@ -4,7 +4,7 @@ task:
     title: "[SEO][P0] Fix /shop Metadata & Page Semantics"
     source: linear
     branch: feat/seo-phase-1-foundation
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear: { url: https://linear.app/renivet/issue/REN-216, priority: Urgent, labels: [Bug], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
 risk:
     initial_risk: L1
@@ -54,14 +54,14 @@ traceability:
         - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_PASSED
+    result: REVIEW_FAILED
     base_branch: origin/main
-    base_commit: "94748ff793dd06c0aadbc6c7a092223154417cb7"
-    head_commit: "b51707218e5ce80fda6444cabea1f9c9c643a7d5"
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
     pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
-    material_drift: NO_DRIFT
-    reconciliation: { requirements: PASS, scenarios: PASS, invariants: PASS, architecture: PASS, security: PASS, test_coverage: PASS, scope: PASS }
-    blocking_findings: []
-    required_actions: []
-    evidence: ["Compared approved contract with implementation diff and passing SEO contract tests."]
-    governance_reentry_required: false
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: PARTIAL, scenarios: PARTIAL, invariants: PARTIAL, architecture: FAIL, security: NOT_APPLICABLE, test_coverage: PARTIAL, scope: FAIL }
+    blocking_findings: ["REV-216-001: The two-file shop fix is bundled in a 683-file PR that fails governance CI."]
+    required_actions: ["Move the SEO commits to a clean current-main branch and add rendered shop/Events verification."]
+    evidence: ["Shop title and 154-character description are present, but PR #658 contains 683 files and workflow run 34649025488 fails governance validation."]
+    governance_reentry_required: true

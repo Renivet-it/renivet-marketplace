@@ -4,7 +4,7 @@ task:
     title: "[SEO][P0] Build Database-Driven Dynamic Sitemap"
     source: linear
     branch: feat/seo-phase-1-foundation
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear: { url: https://linear.app/renivet/issue/REN-217, priority: Urgent, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
 risk:
     initial_risk: L2
@@ -68,14 +68,14 @@ traceability:
         - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002, TEXP-003] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
+    result: REVIEW_FAILED
     base_branch: origin/main
-    base_commit: "94748ff793dd06c0aadbc6c7a092223154417cb7"
-    head_commit: "b51707218e5ce80fda6444cabea1f9c9c643a7d5"
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
     pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
-    material_drift: MINOR_DRIFT
-    reconciliation: { requirements: PASS, scenarios: PARTIAL, invariants: PARTIAL, architecture: PASS, security: PASS, test_coverage: PARTIAL, scope: PASS }
-    blocking_findings: []
-    required_actions: ["Add deterministic deduplication and high-volume sitemap sharding when the catalog approaches the approved threshold."]
-    evidence: ["Compared approved contract with database-backed sitemap diff and passing SEO contract tests."]
-    governance_reentry_required: false
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: FAIL, scenarios: FAIL, invariants: FAIL, architecture: FAIL, security: PARTIAL, test_coverage: FAIL, scope: FAIL }
+    blocking_findings: ["REV-217-001: Required count-based bounded query and sitemap sharding are absent.", "REV-217-002: Category sitemap URLs conflict with the shop canonical.", "REV-217-003: PR #658 contains 683 files and fails governance CI."]
+    required_actions: ["Implement bounded threshold-based sharding and canonical-consistent category URLs on a clean current-main branch."]
+    evidence: ["src/app/sitemap.ts has unrestricted findMany queries, no generateSitemaps, and emits category query URLs canonicalized to /shop.", "Workflow run 34649025488 fails governance validation for the oversized PR."]
+    governance_reentry_required: true
