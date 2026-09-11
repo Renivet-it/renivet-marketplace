@@ -1,6 +1,13 @@
+import { redis } from "@/lib/redis";
 import { mediaCache } from "@/lib/redis/methods";
+import {
+    createRecommendationCache,
+    withPersonalizedRecommendationCache,
+    type RedisCacheClient,
+} from "@/lib/redis/methods/recommendation";
 import { ProductWithBrand, productWithBrandSchema } from "@/lib/validations";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "..";
 import { hasMedia } from "../helperfilter";
 import {
@@ -56,6 +63,34 @@ export interface RecommendationResult {
     };
 }
 
+const recommendationResultSchema = z.object({
+    products: productWithBrandSchema.array(),
+    source: z.enum([
+        "order_history",
+        "wishlist",
+        "browsing_history",
+        "search_history",
+        "platform_defaults",
+        "mixed",
+    ]),
+    metadata: z
+        .object({
+            categoryId: z.string().optional(),
+            brandId: z.string().optional(),
+            productTypeId: z.string().optional(),
+        })
+        .optional(),
+});
+
+const recommendationResultCache =
+    createRecommendationCache<RecommendationResult>({
+        client: redis as RedisCacheClient,
+        parseResult(value) {
+            const parsed = recommendationResultSchema.safeParse(value);
+            return parsed.success ? parsed.data : null;
+        },
+    });
+
 // Event weights for scoring
 const EVENT_WEIGHTS = {
     add_to_cart: 5,
@@ -93,6 +128,23 @@ class RecommendationQuery {
             return this.getPlatformDefaults(limit, excludeProductIds);
         }
 
+        return withPersonalizedRecommendationCache({
+            cache: recommendationResultCache,
+            context: { userId, limit, excludeProductIds },
+            compute: () =>
+                this.getUncachedPersonalizedRecommendations(
+                    userId,
+                    limit,
+                    excludeProductIds
+                ),
+        });
+    }
+
+    private async getUncachedPersonalizedRecommendations(
+        userId: string,
+        limit: number,
+        excludeProductIds: string[]
+    ): Promise<RecommendationResult> {
         try {
             // Case 1: Check if user has past orders
             const hasOrders = await this.userHasOrders(userId);

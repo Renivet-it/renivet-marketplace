@@ -1,0 +1,311 @@
+schema_version: "1.0"
+task:
+  id: REN-124
+  title: Build systematic IDOR test matrix
+  source: linear
+  branch: ayanganguly333/ren-124-build-systematic-idor-test-matrix
+  status: IN_REVIEW
+  linear:
+    url: https://linear.app/renivet/issue/REN-124/build-systematic-idor-test-matrix
+    priority: High
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+risk:
+  initial_risk: L3
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  reasons:
+    - The work tests authentication and object-level authorization across customer, corporate, finance, and token-based resource boundaries.
+    - Browser automation and direct HTTP probes can expose sensitive data or mutate production state if target and fixture handling are unsafe.
+    - Wrong-user and tampered-identifier results are security findings that require deterministic evidence and fail-closed interpretation.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - Linear REN-124 description, comments, milestone, and relations
+    - tRPC transport/context and protected procedure middleware
+    - Customer order, cart, and address procedures
+    - Corporate order, quote, payment-request, and document surfaces
+    - Invoice signed-token route
+    - Existing agent-browser spike, Bun test conventions, and security documentation
+  excluded_areas:
+    - Production execution and credential provisioning; explicitly unsafe and out of scope
+    - Implementing authorization fixes; this issue is test-matrix construction
+    - Mutating operations and real payment confirmation; read-only coverage only
+  dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+  integrations: [INT-001, INT-002]
+  security_boundaries: [SEC-001, SEC-002, SEC-003]
+  state_transitions:
+    - matrix_manifest -> case_execution
+    - case_execution -> redacted_evidence
+    - unauthorized_access_detected -> nonzero_exit_and_finding
+dependencies:
+  - id: DEP-001
+    name: seeded test identities and resource fixtures
+    purpose: Supplies owner, wrong-user, unauthenticated, and tampered identifiers without committing secrets.
+    description: A typed operator-provided local/staging fixture contract binds symbolic cases to verified ownership, scope, status, and token relationships before execution.
+    status: resolved
+  - id: DEP-002
+    name: local or staging application origin
+    purpose: Provides the target for direct HTTP and browser execution.
+    description: The runner validates the target and blocks production-looking origins unless explicitly acknowledged.
+    status: resolved
+  - id: DEP-003
+    name: agent-browser CLI
+    purpose: Exercises UI-reachable paths with isolated authenticated browser sessions.
+    description: Existing repository dependency and command seam are reused; browser sessions are always cleaned up.
+    status: resolved
+  - id: DEP-004
+    name: Bun runtime and fetch transport
+    purpose: Executes direct API probes and deterministic manifest tests.
+    description: Existing Bun scripts and test runner are used without adding dependencies.
+    status: resolved
+  - id: DEP-005
+    name: route and browser response contracts
+    purpose: Maps HTTP status, tRPC error codes, redirects, and browser denial signals to normalized matrix outcomes.
+    description: The manifest declares resource/channel-specific classification rules; unsupported or ambiguous responses fail as execution errors.
+    status: resolved
+integrations:
+  - id: INT-001
+    system: Renivet local/staging HTTP and tRPC endpoints
+    purpose: Exercises direct API and UI-reachable resource access using supplied fixtures.
+    failure_mode: Network, authentication, or unexpected server failures are reported as errors, never interpreted as authorization passes.
+  - id: INT-002
+    system: agent-browser
+    purpose: Runs browser cases with saved operator-provided auth state.
+    failure_mode: Browser startup, navigation, snapshot, or cleanup failure fails the run and emits only redacted metadata.
+personas:
+  - id: PER-001
+    role: security_test_operator
+    applicability: Supplies safe target, fixture IDs, and isolated auth state, then reviews redacted evidence.
+  - id: PER-002
+    role: maintainer
+    applicability: Runs deterministic matrix validation in CI and triages failing authorization cases.
+security_boundaries:
+  - id: SEC-001
+    description: Only explicitly allowlisted loopback or staging origins are allowed; non-local execution requires explicit acknowledgement and redirect-origin enforcement.
+  - id: SEC-002
+    description: Secrets, auth state, resource tokens, and response bodies never enter committed files or evidence output.
+  - id: SEC-003
+    description: Deny expectations are fail-closed; transport or fixture errors cannot be classified as safe authorization denials.
+business_rules:
+  - id: BR-001
+    description: Owner access is the positive control; unauthenticated, wrong-user, and tampered-identifier cases must not expose the protected resource.
+    source: Linear REN-124 access-mode matrix requirement.
+  - id: BR-002
+    description: Public payment-request token access is tested as a capability boundary and must not be conflated with account ownership; mutating POST actions are excluded from this read-only matrix.
+    source: Existing public token route and payment-request service behavior.
+decisions:
+  - id: DEC-001
+    question: Should the matrix run against production or provision production-like credentials?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Restrict default execution to local/staging and require an explicit operator acknowledgement for any non-local target; do not provision credentials in the repository.
+    basis: The issue requests security testing, while repository evidence shows sensitive order, invoice, address, and payment-token surfaces.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+  - id: DEC-002
+    question: Should payment-request POST checkout/confirm be exercised by this read-only security matrix?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Exclude mutating POST actions and cover only GET capability and account-bound read/preflight behavior; create a separate mocked/idempotency test plan for payment mutations.
+    basis: The live POST actions create payment orders and confirm payment state, while REN-124 asks for an IDOR matrix and the harness must remain read-only.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+requirements:
+  - id: REQ-001
+    description: Provide one machine-readable matrix covering order, invoice, corporate quote, payment-request token, address, and cart resources across unauthenticated, wrong-user, owner, and tampered-identifier access modes, with explicit customer/brand/admin persona scope and capability-token cases.
+    type: explicit
+  - id: REQ-002
+    description: Route each case through browser automation when UI-reachable and direct HTTP/tRPC when not UI-reachable, with explicit endpoint/page and expected outcome metadata.
+    type: explicit
+  - id: REQ-003
+    description: Execute cases with a validated typed fixture contract, isolated identities, and read-only requests; return nonzero status for unexpected authorization outcomes, fixture drift, cleanup failure, or execution errors.
+    type: inferred
+  - id: REQ-004
+    description: Prevent production accidents and sensitive-data leakage through a positive origin allowlist, redirect enforcement, explicit non-local acknowledgement, redacted evidence, and guaranteed browser cleanup.
+    type: inferred
+  - id: REQ-005
+    description: Document fixture setup, commands, resource coverage, expected status/outcome classes, evidence format, and CI/operator usage.
+    type: explicit
+  - id: REQ-006
+    description: Define capability-token semantics and keep payment-request POST checkout/confirm outside this read-only matrix.
+    type: inferred
+scenarios:
+  - id: SCN-001
+    description: Matrix validation confirms all six resources have all four access modes, channel, fixture binding, and expected outcome.
+    requirement_ids: [REQ-001, REQ-002]
+  - id: SCN-002
+    description: Unauthenticated probes for protected order, invoice, corporate quote, address, and cart surfaces are denied; public token behavior follows its explicit capability contract.
+    requirement_ids: [REQ-001, REQ-003]
+  - id: SCN-003
+    description: Wrong-user probes cannot read another user's order, invoice, quote, address, or cart; token cases use an invalid or unrelated token where applicable.
+    requirement_ids: [REQ-001, REQ-003]
+  - id: SCN-004
+    description: Owner probes succeed for each resource where the fixture and route contract define owner access.
+    requirement_ids: [REQ-001, REQ-003]
+  - id: SCN-005
+    description: Tampered identifiers and malformed tokens are denied or not found and never treated as successful access.
+    requirement_ids: [REQ-001, REQ-003]
+  - id: SCN-006
+    description: Browser cases run in isolated sessions and close cleanly; direct HTTP cases preserve only redacted status/outcome evidence.
+    requirement_ids: [REQ-002, REQ-004]
+  - id: SCN-007
+    description: Production-looking origins and missing safety acknowledgement fail before any request or browser navigation is attempted.
+    requirement_ids: [REQ-003, REQ-004]
+  - id: SCN-008
+    description: A provider timeout, network error, malformed response, or missing fixture is reported as an execution error rather than an authorization denial.
+    requirement_ids: [REQ-003, REQ-004]
+  - id: SCN-009
+    description: The runbook enables an operator or CI job to reproduce the matrix and attach redacted JSON evidence without secrets.
+    requirement_ids: [REQ-005]
+  - id: SCN-010
+    description: Corporate cases distinguish customer-owner, unrelated-customer, authorized-brand, unrelated-brand, and privileged/admin scope for each applicable resource.
+    requirement_ids: [REQ-001, REQ-002]
+  - id: SCN-011
+    description: Invoice and payment-token cases distinguish valid capability, unauthenticated capability, unrelated authenticated user, wrong/malformed token, expired token, and resource/token mismatch without assuming account ownership.
+    requirement_ids: [REQ-001, REQ-006]
+  - id: SCN-012
+    description: Fixture preflight verifies ownership, scope, token status, and resource stability; any drift or ambiguous response aborts the run as an error.
+    requirement_ids: [REQ-003, REQ-004]
+invariants:
+  - id: INV-001
+    description: Every matrix case has exactly one resource, access mode, execution channel, target, fixture binding, and expected outcome.
+  - id: INV-002
+    description: No request or browser case executes against a blocked target or mutating operation.
+  - id: INV-003
+    description: No secret, auth state, token, or response body is emitted to committed or result artifacts.
+  - id: INV-004
+    description: Unexpected allow, deny, not-found, or transport outcomes are distinguishable and never silently coerced.
+  - id: INV-005
+    description: Owner positive controls and negative access controls are evaluated symmetrically for the same resource contract.
+  - id: INV-006
+    description: Payment-request POST checkout and confirm are never invoked by the read-only matrix.
+  - id: INV-007
+    description: A fixture ownership/status drift or ambiguous response invalidates the run instead of being classified as a security pass.
+flows:
+  - id: FLOW-001
+    description: Safe target/fixture validation -> manifest validation -> channel-specific case execution -> normalized redacted evidence -> exit/report.
+    state_transitions: [matrix_manifest -> case_execution, case_execution -> redacted_evidence, unauthorized_access_detected -> nonzero_exit_and_finding]
+test_expectations:
+  - id: TEXP-001
+    category: unit
+    classification: REQUIRED
+    reason: Manifest completeness, target safety, outcome normalization, redaction, and fail-closed result handling must be deterministic.
+    scenarios: [SCN-001, SCN-007, SCN-008]
+  - id: TEXP-002
+    category: integration
+    classification: REQUIRED
+    reason: Direct HTTP runner must exercise the non-UI API/tRPC cases with owner and negative identities.
+    scenarios: [SCN-002, SCN-003, SCN-004, SCN-005]
+  - id: TEXP-003
+    category: e2e
+    classification: REQUIRED
+    reason: Browser runner must exercise UI-reachable cases in isolated sessions and clean up.
+    scenarios: [SCN-002, SCN-003, SCN-004, SCN-005, SCN-006]
+  - id: TEXP-004
+    category: security
+    classification: REQUIRED
+    reason: The test harness must prove target blocking, secret redaction, and fail-closed handling of execution failures.
+    scenarios: [SCN-006, SCN-007, SCN-008]
+  - id: TEXP-005
+    category: exploratory
+    classification: REQUIRED
+    reason: The runbook and redacted evidence format must be usable by an operator against seeded local/staging fixtures.
+    scenarios: [SCN-009]
+  - id: TEXP-006
+    category: security
+    classification: REQUIRED
+    reason: Capability-token classification, corporate role/scope coverage, fixture ownership preflight, and explicit payment POST exclusion must be enforced by tests.
+    scenarios: [SCN-010, SCN-011, SCN-012]
+  - id: TEXP-007
+    category: performance
+    classification: REQUIRED
+    reason: Browser and HTTP cases need bounded timeouts, cleanup aggregation, and deterministic abort behavior.
+    scenarios: [SCN-006, SCN-008, SCN-012]
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent Critic subagent
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - "CRIT-001 DESIGN_BLOCKER: Corporate resources require explicit customer, brand, unrelated-brand, and admin scope cases; revised in REQ-001 and SCN-010."
+    - "CRIT-002 DESIGN_BLOCKER: Target safety requires a positive origin allowlist and redirect enforcement; revised in REQ-004, SEC-001, and SCN-007."
+    - "CRIT-003 MAJOR: Payment POST actions can mutate state; revised to an explicit GET-only scope in DEC-002, REQ-006, and INV-006."
+    - "CRIT-004 MAJOR: Capability-token semantics were underspecified; revised in SCN-011 and BR-002."
+    - "CRIT-005 MAJOR: HTTP/tRPC/browser classification mappings were underspecified; revised in REQ-002, DEP-005, and INV-004."
+    - "CRIT-006 MAJOR: Fixture ownership/status contract was missing; revised in DEP-001, REQ-003, and SCN-012."
+    - "CRIT-007 MAJOR: Browser cleanup failure semantics were missing; revised in REQ-003, REQ-004, and TEXP-007."
+    - "CRIT-008 MAJOR: Dynamic-state drift and concurrency were missing; revised in SCN-012 and INV-007."
+    - "CRIT-009 MINOR: Evidence correlation fields were missing; revised by the safe evidence contract and REQ-005."
+    - "CRIT-010 MINOR: Runtime compatibility was underspecified; revised in the runbook requirement and DEP-003/DEP-004 evidence."
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Independent Critic review and contract approval on 2026-09-10
+traceability:
+  requirement_to_scenarios:
+    - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004, SCN-005] }
+    - { requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-006] }
+    - { requirement_id: REQ-003, scenario_ids: [SCN-002, SCN-003, SCN-004, SCN-005, SCN-007, SCN-008] }
+    - { requirement_id: REQ-004, scenario_ids: [SCN-006, SCN-007, SCN-008] }
+    - { requirement_id: REQ-005, scenario_ids: [SCN-009] }
+    - { requirement_id: REQ-006, scenario_ids: [SCN-011] }
+  scenario_to_invariants:
+    - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-005] }
+    - { scenario_id: SCN-002, invariant_ids: [INV-002, INV-004, INV-005] }
+    - { scenario_id: SCN-003, invariant_ids: [INV-002, INV-004, INV-005] }
+    - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-005] }
+    - { scenario_id: SCN-005, invariant_ids: [INV-002, INV-004] }
+    - { scenario_id: SCN-006, invariant_ids: [INV-002, INV-003] }
+    - { scenario_id: SCN-007, invariant_ids: [INV-002, INV-004] }
+    - { scenario_id: SCN-008, invariant_ids: [INV-003, INV-004] }
+    - { scenario_id: SCN-009, invariant_ids: [INV-003, INV-004] }
+    - { scenario_id: SCN-010, invariant_ids: [INV-001, INV-005] }
+    - { scenario_id: SCN-011, invariant_ids: [INV-004, INV-006] }
+    - { scenario_id: SCN-012, invariant_ids: [INV-002, INV-007] }
+  scenario_to_test_expectations:
+    - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+    - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002, TEXP-003] }
+    - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002, TEXP-003] }
+    - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002, TEXP-003] }
+    - { scenario_id: SCN-005, test_expectation_ids: [TEXP-002, TEXP-003] }
+    - { scenario_id: SCN-006, test_expectation_ids: [TEXP-003, TEXP-004] }
+    - { scenario_id: SCN-007, test_expectation_ids: [TEXP-001, TEXP-004] }
+    - { scenario_id: SCN-008, test_expectation_ids: [TEXP-001, TEXP-004] }
+    - { scenario_id: SCN-009, test_expectation_ids: [TEXP-005] }
+    - { scenario_id: SCN-010, test_expectation_ids: [TEXP-006] }
+    - { scenario_id: SCN-011, test_expectation_ids: [TEXP-006] }
+    - { scenario_id: SCN-012, test_expectation_ids: [TEXP-006, TEXP-007] }
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: master
+  base_commit: "4e27098fb3d518671b4ce8abaecf9988d9a776df"
+  head_commit: "ebfbd63d0759cdeec3b07cdccbc5ef7452454d27"
+  pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/649
+  material_drift: NO_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-003: Run the matrix against safe local/staging fixtures and attach only redacted JSON reports."
+  evidence:
+    - "Compared the approved contract with PR #649 from 4e27098fb3d518671b4ce8abaecf9988d9a776df to ebfbd63d0759cdeec3b07cdccbc5ef7452454d27."
+    - "Order browser cases now target /orders/{orderId}; corporate quote cases consume quoteId through the existing profile page and expose only a boolean resource-presence signal to the browser runner."
+    - "The focused matrix tests and full repository test suite passed; live fixture execution remains operator-provisioned and was not evidenced by the review."
+  governance_reentry_required: false

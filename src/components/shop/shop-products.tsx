@@ -1,5 +1,6 @@
 "use client";
 
+import { sendProductClickEvent } from "@/lib/analytics/product-click";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
@@ -43,6 +44,9 @@ interface PageProps extends GenericProps {
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
+    catalogContext?: "festive";
+    theme?: "festive";
+    searchId?: string;
 }
 
 export function ShopProducts({
@@ -55,32 +59,14 @@ export function ShopProducts({
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
+    catalogContext,
+    theme,
+    searchId,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
-
-    const handleProductClick = (productId: string, brandId: string) => {
-        try {
-            const payload = JSON.stringify({ productId, brandId });
-
-            if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-                const blob = new Blob([payload], {
-                    type: "application/json",
-                });
-                navigator.sendBeacon("/api/products/track-click", blob);
-                return;
-            }
-
-            void fetch("/api/products/track-click", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: payload,
-                keepalive: true,
-            });
-        } catch (error) {
-            console.error("Failed to track click:", error);
-        }
-    };
+    const logSearchClickMutation =
+        trpc.general.search.logSearchClick.useMutation();
 
     const [page, setPage] = useQueryState(
         "shopPage",
@@ -206,6 +192,7 @@ export function ShopProducts({
                 maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
             prioritizeNewProducts,
+            catalogContext,
             requireMedia: true,
             useRecommendations:
                 !search &&
@@ -222,6 +209,7 @@ export function ShopProducts({
             effectiveBrandIds,
             defaultSortBy,
             prioritizeNewProducts,
+            catalogContext,
             minPrice,
             maxPrice,
             categoryId,
@@ -504,18 +492,25 @@ export function ShopProducts({
                         return (
                             <div
                                 key={product.id}
-                                onClick={() =>
-                                    handleProductClick(
+                                onClick={() => {
+                                    sendProductClickEvent(
                                         product.id,
                                         product.brandId
-                                    )
-                                }
+                                    );
+                                    if (searchId) {
+                                        logSearchClickMutation.mutate({
+                                            searchId,
+                                            productId: product.id,
+                                        });
+                                    }
+                                }}
                                 className="cursor-pointer"
                             >
                                 <ProductCard
                                     product={product}
                                     isWishlisted={isWishlisted}
                                     userId={userId}
+                                    theme={theme}
                                 />
                             </div>
                         );

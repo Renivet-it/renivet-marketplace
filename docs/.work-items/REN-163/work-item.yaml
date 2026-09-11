@@ -1,0 +1,295 @@
+schema_version: "1.0"
+task:
+    id: REN-163
+    title: Return the customer to their originating context on payment cancellation, not always /mycart
+    source: linear
+    branch: ayanganguly333/ren-163-return-the-originating-context-on-payment
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-163/return-the-customer-to-their-originating-context-on-payment
+        priority: Low
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change is a contained customer-facing navigation fix.
+        - Payment and Razorpay integration paths require L2 treatment.
+        - Incorrect context restoration can strand a customer in the wrong retry flow.
+    escalation_history:
+        - from: L1
+          to: L2
+          reason: Payment/Razorpay path rule and retry-context semantics.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, description, comments, and relations.
+        - Shared Razorpay customer payment options and ondismiss callback.
+        - Buy Now and swap-reward query-state derivation in checkout-content.tsx.
+        - Normal cart payment caller in order-payment-page.tsx.
+        - Existing checkout URL parameter contract.
+        - Corporate Razorpay callers and explicit exclusion boundary.
+        - Existing tests and repository branch state.
+    excluded_areas:
+        - Payment verification and signature validation.
+        - Order persistence, stock mutation, cart deletion, and reconciliation.
+        - Database schemas, migrations, APIs, webhooks, and production configuration.
+        - Application source and tests during specification phase.
+    dependencies: [DEP-163-001, DEP-163-002, DEP-163-003]
+    integrations: [INT-163-001]
+    security_boundaries: [SEC-163-001]
+    state_transitions:
+        [payment_modal_open -> customer_dismissal -> cancellation_ui -> local_retry_context]
+    related_tests: [TEXP-163-001, TEXP-163-002, TEXP-163-003, TEXP-163-004, TEXP-163-005, TEXP-163-006]
+    uncertainties:
+        - Browser-level Razorpay cancellation verification requires test-mode credentials/runtime access.
+        - Execution cannot begin until the repository branch matches the Linear task branch.
+requirements:
+    - id: REQ-163-001
+      description: Preserve the existing payment-cancellation modal state and delay before navigation.
+      type: explicit
+    - id: REQ-163-002
+      description: Return Buy Now cancellation to checkout with the original Buy Now parameters.
+      type: explicit
+    - id: REQ-163-003
+      description: Return swap-reward cancellation to checkout with the redemption identifier.
+      type: explicit
+    - id: REQ-163-004
+      description: Preserve normal-cart cancellation to /mycart.
+      type: explicit
+    - id: REQ-163-005
+      description: Keep cancellation destinations same-origin and omit missing optional query parameters.
+      type: inferred
+    - id: REQ-163-006
+      description: Preserve /mycart fallback for the existing pending-order payment caller.
+      type: explicit
+    - id: REQ-163-007
+      description: If Buy Now or swap-reward context is incomplete, fall back to /mycart.
+      type: inferred
+    - id: REQ-163-008
+      description: Keep payment success, order, inventory, cart, and corporate payment behavior unchanged.
+      type: inferred
+scenarios:
+    - id: SCN-163-001
+      requirement_ids: [REQ-163-001, REQ-163-002]
+      description: Buy Now payment dismissal preserves the Buy Now checkout context.
+    - id: SCN-163-002
+      requirement_ids: [REQ-163-001, REQ-163-003]
+      description: Swap-reward payment dismissal preserves the redemption checkout context.
+    - id: SCN-163-003
+      requirement_ids: [REQ-163-001, REQ-163-004]
+      description: Normal-cart payment dismissal returns to /mycart.
+    - id: SCN-163-004
+      requirement_ids: [REQ-163-005]
+      description: Optional values are omitted safely and no external-origin destination is produced.
+    - id: SCN-163-005
+      requirement_ids: [REQ-163-006]
+      description: Payment for an existing pending order retains the helper's /mycart fallback.
+    - id: SCN-163-006
+      requirement_ids: [REQ-163-005, REQ-163-007]
+      description: Incomplete Buy Now or swap-reward context falls back to /mycart without opening an unusable checkout.
+    - id: SCN-163-007
+      requirement_ids: [REQ-163-008]
+      description: Successful payment and unrelated corporate payment flows remain unchanged.
+invariants:
+    - id: INV-163-001
+      description: Cancellation navigation never changes payment authorization or order persistence state.
+    - id: INV-163-002
+      description: Every cancellation destination is a local application path with no attacker-controlled origin.
+    - id: INV-163-003
+      description: Normal-cart fallback remains exactly /mycart.
+    - id: INV-163-004
+      description: Cancellation does not invoke payment, order, cart, or inventory mutations or automatic retries.
+    - id: INV-163-005
+      description: A later successful-payment callback is not suppressed or altered by cancellation-destination wiring.
+flows:
+    - id: FLOW-163-001
+      description: Checkout caller derives a local cancellation path, shared helper receives it, dismissal shows existing UI, and delayed navigation returns to that path.
+      state_transitions: [payment_modal_open, customer_dismissal, cancellation_ui, local_retry_context]
+dependencies:
+    - id: DEP-163-001
+      name: Razorpay options callback contract
+      purpose: Keeps the existing ondismiss callback shape valid.
+      owner: Checkout maintainers
+      required_state: The helper can receive an optional local cancellation path.
+      description: Existing Razorpay customer payment options already expose ondismiss.
+      status: resolved
+    - id: DEP-163-002
+      name: Checkout URL parameter contract
+      purpose: Preserves Buy Now and swap-reward state across cancellation navigation.
+      owner: Storefront maintainers
+      required_state: Existing checkout route accepts buy_now/item/variant/qty and swap_reward/redemption.
+      description: checkout-content.tsx already reads these parameters.
+      status: resolved
+    - id: DEP-163-003
+      name: Execution branch alignment
+      purpose: Ensures the implementation is isolated to the correct Linear task branch.
+      owner: Ayan Ganguly
+      required_state: Current branch matches ayanganguly333/ren-163-return-the-originating-context-on-payment.
+      description: Current branch is ayanganguly333/ren-129-reassess-the-5-second-delayed-posthog-init.
+      status: resolved
+integrations:
+    - id: INT-163-001
+      system: Razorpay browser checkout
+      purpose: Supplies the customer dismissal callback.
+      failure_mode: Existing cancellation UI remains visible and navigation occurs only after the existing delay.
+      retry_idempotency: No automatic retry or payment/order mutation is introduced.
+personas:
+    - id: PER-163-001
+      role: shopper
+      applicability: Customer who dismisses Razorpay from normal, Buy Now, or swap-reward checkout.
+security_boundaries:
+    - id: SEC-163-001
+      description: Fixed same-origin routes and URLSearchParams encoding prevent external redirect injection.
+business_rules:
+    - id: BR-163-001
+      description: Payment cancellation returns the shopper to the retry context that initiated payment.
+decisions:
+    - id: DEC-163-001
+      question: Should cancellation use browser history or explicit flow URLs?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Use explicit same-origin flow URLs because the issue identifies stable caller state and history can be stale or unrelated.
+      basis: Existing checkout query parameters encode the retry contexts directly.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-163-001
+      category: unit
+      classification: REQUIRED
+      reason: Covers destination construction for all customer checkout modes and missing optional values.
+      scenarios: [SCN-163-001, SCN-163-002, SCN-163-003, SCN-163-004]
+    - id: TEXP-163-002
+      category: component
+      classification: REQUIRED
+      reason: Covers the shared ondismiss callback and preservation of existing cancellation UI state.
+      scenarios: [SCN-163-001, SCN-163-002, SCN-163-003]
+    - id: TEXP-163-003
+      category: regression
+      classification: REQUIRED
+      reason: Protects payment success/order behavior, normal-cart fallback, pending-order caller fallback, and corporate initialization from unintended changes.
+      scenarios: [SCN-163-003, SCN-163-005, SCN-163-007]
+    - id: TEXP-163-004
+      category: security
+      classification: REQUIRED
+      reason: Confirms same-origin fixed routes and encoded query values.
+      scenarios: [SCN-163-004]
+    - id: TEXP-163-005
+      category: e2e
+      classification: REQUIRED
+      reason: Manual Razorpay test-mode verification across the three entry contexts.
+      scenarios: [SCN-163-001, SCN-163-002, SCN-163-003]
+    - id: TEXP-163-006
+      category: unit
+      classification: REQUIRED
+      reason: Covers incomplete context fallback, preserved dismissal state, and non-suppression of later payment success handling.
+      scenarios: [SCN-163-006, SCN-163-007]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-163-001
+          scenario_ids: [SCN-163-001, SCN-163-002, SCN-163-003]
+        - requirement_id: REQ-163-002
+          scenario_ids: [SCN-163-001]
+        - requirement_id: REQ-163-003
+          scenario_ids: [SCN-163-002]
+        - requirement_id: REQ-163-004
+          scenario_ids: [SCN-163-003]
+        - requirement_id: REQ-163-005
+          scenario_ids: [SCN-163-004]
+        - requirement_id: REQ-163-006
+          scenario_ids: [SCN-163-005]
+        - requirement_id: REQ-163-007
+          scenario_ids: [SCN-163-006]
+        - requirement_id: REQ-163-008
+          scenario_ids: [SCN-163-007]
+    scenario_to_invariants:
+        - scenario_id: SCN-163-001
+          invariant_ids: [INV-163-001, INV-163-002, INV-163-004]
+        - scenario_id: SCN-163-002
+          invariant_ids: [INV-163-001, INV-163-002, INV-163-004]
+        - scenario_id: SCN-163-003
+          invariant_ids: [INV-163-001, INV-163-003, INV-163-004]
+        - scenario_id: SCN-163-004
+          invariant_ids: [INV-163-002]
+        - scenario_id: SCN-163-005
+          invariant_ids: [INV-163-001, INV-163-003, INV-163-004]
+        - scenario_id: SCN-163-006
+          invariant_ids: [INV-163-002, INV-163-004]
+        - scenario_id: SCN-163-007
+          invariant_ids: [INV-163-001, INV-163-004, INV-163-005]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-163-001
+          test_expectation_ids: [TEXP-163-001, TEXP-163-002, TEXP-163-005]
+        - scenario_id: SCN-163-002
+          test_expectation_ids: [TEXP-163-001, TEXP-163-002, TEXP-163-005]
+        - scenario_id: SCN-163-003
+          test_expectation_ids: [TEXP-163-001, TEXP-163-002, TEXP-163-003, TEXP-163-005]
+        - scenario_id: SCN-163-004
+          test_expectation_ids: [TEXP-163-001, TEXP-163-004]
+        - scenario_id: SCN-163-005
+          test_expectation_ids: [TEXP-163-003]
+        - scenario_id: SCN-163-006
+          test_expectation_ids: [TEXP-163-001, TEXP-163-006]
+        - scenario_id: SCN-163-007
+          test_expectation_ids: [TEXP-163-003, TEXP-163-006]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-163-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-163-006, SCN-163-005, DEP-163-003, FLOW-163-001]
+          description: Resolved by explicitly covering the pending-order caller and preserving its /mycart fallback.
+        - id: CRIT-163-002
+          severity: MAJOR
+          references: [REQ-163-007, SCN-163-006, TEXP-163-006]
+          description: Resolved by defining /mycart fallback for incomplete Buy Now or swap-reward context.
+        - id: CRIT-163-003
+          severity: MINOR
+          references: [INV-163-005, TEXP-163-006]
+          description: Resolved by adding an explicit non-suppression test expectation for later successful payment handling.
+        - id: CRIT-163-004
+          severity: MINOR
+          references: [TEXP-163-001, TEXP-163-002, TEXP-163-006]
+          description: Resolved by adding deterministic unit/component expectations for destination, delay, state, and malformed context.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (REN-163 task branch aligned and independent Critic findings resolved)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "3346f17f21803daab46356c37a309c318a1f0ec7"
+    head_commit: "d2243c833048299b1c5fe9e1eccc0513d028bc3d"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/627
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Perform manual Razorpay test-mode QA for normal cart, Buy Now, and swap-reward entry contexts before merge."
+    evidence:
+        - "Compared the approved REN-163 contract with the exact base-to-head Git diff from origin/master to d2243c837a2a59c0bc8c8e2f55a08a3f9b4afc7b."
+        - "The implementation preserves the existing cancellation UI state and three-second delay while adding an optional local destination."
+        - "Pure destination tests cover all approved customer contexts, malformed context, query encoding, and external-origin rejection."
+    governance_reentry_required: false

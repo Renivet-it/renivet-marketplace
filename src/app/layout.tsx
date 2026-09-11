@@ -125,6 +125,34 @@ export default function RootLayout({ children }: LayoutProps) {
         >
             <head>
                 <meta charSet="utf-8" />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@graph": [
+                                {
+                                    "@type": "Organization",
+                                    name: siteConfig.name,
+                                    url: getAbsoluteURL(),
+                                    logo: getAbsoluteURL(
+                                        "/images/renivet-logo.png"
+                                    ),
+                                    sameAs: Object.values(
+                                        siteConfig.links
+                                    ).filter((link) =>
+                                        link.startsWith("https://")
+                                    ),
+                                },
+                                {
+                                    "@type": "WebSite",
+                                    name: siteConfig.name,
+                                    url: getAbsoluteURL(),
+                                },
+                            ],
+                        }),
+                    }}
+                />
                 {/* Preload the mobile banner LCP image to eliminate resource load delay.
                     Without this, the browser waits for the Suspense boundary to resolve
                     before discovering the image (~2.5s delay). */}

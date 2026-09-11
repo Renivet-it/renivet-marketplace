@@ -1,0 +1,81 @@
+schema_version: "1.0"
+task:
+    id: REN-215
+    title: "[SEO][P0] Festive SEO + Performance Readiness"
+    source: linear
+    branch: feat/seo-phase-1-foundation
+    status: IN_REVIEW
+    linear: { url: https://linear.app/renivet/issue/REN-215, priority: Urgent, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons: [Spans route metadata, server data, JSON-LD, and image loading; incorrect schema or priority can affect indexing and paid landing performance.]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-215, festive page, festive presentation, product query, product schema reference, site config]
+    excluded_areas: [Force-dynamic to revalidate decision, analytics wiring, UTM policy, conversion copy]
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001]
+    security_boundaries: []
+    state_transitions: [campaign_config -> rendered_metadata_and_schema]
+dependencies:
+    - { id: DEP-001, name: Festive product query, purpose: Featured product IDs and authoritative product data, description: Existing read-only query, status: resolved }
+    - { id: DEP-002, name: Festive art assets, purpose: Above-fold and OG imagery, description: Existing assets are the authoritative campaign art source., status: resolved }
+integrations: [{ id: INT-001, name: Search crawlers, system: Google Search, purpose: Consume metadata and JSON-LD, description: External validation through rendered HTML and Rich Results Test. }]
+personas: [{ id: PER-001, role: paid_search_visitor, applicability: Lands on the festive page from campaign traffic. }]
+security_boundaries: [{ id: SEC-001, description: Public schema projection excludes internal IDs, inventory internals, customer data, unpublished/deleted products, and private media. }]
+business_rules: [{ id: BR-001, description: Never fabricate product price, availability, ratings, or campaign facts., source: REN-215 requirements }]
+decisions:
+    - { id: DEC-001, question: Should this implementation change force-dynamic?, class: AUTO_DECIDE, status: resolved, recommendation: No; preserve force-dynamic and raise refresh cadence as a separate product decision., basis: Linear explicitly excludes this architecture decision from REN-215., confidence: high, consequence: low, human_confirmation_required: false, confirmation_source: REN-215 }
+requirements:
+    - { id: REQ-001, description: Festive page has one current campaign H1 and matching title/description/OG copy., type: explicit }
+    - { id: REQ-002, description: Featured products expose truthful Product/ItemList JSON-LD without fabricated ratings., type: explicit }
+    - { id: REQ-003, description: Exactly the genuine above-fold image gets priority and festive-specific OG art is used when available., type: explicit }
+    - { id: REQ-004, description: Existing canonical, sitemap inclusion, SSR, analytics, and force-dynamic behavior remain intact., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: Rendered festive HTML contains one current H1 and campaign-accurate metadata., requirement_ids: [REQ-001] }
+    - { id: SCN-002, description: Rendered festive HTML contains valid truthful product schema for featured products., requirement_ids: [REQ-002] }
+    - { id: SCN-003, description: Mobile/desktop inspection identifies one above-fold priority image and the OG asset is campaign-specific or documented unavailable., requirement_ids: [REQ-003] }
+    - { id: SCN-004, description: Existing canonical/sitemap/SSR/analytics/force-dynamic behavior is unchanged., requirement_ids: [REQ-004] }
+invariants:
+    - { id: INV-001, description: Structured data uses only authoritative product fields and never ratings/reviews without data. }
+    - { id: INV-002, description: Existing route identity, indexing, rendering, and analytics contracts remain unchanged. }
+flows: [{ id: FLOW-001, description: Campaign/product source -> server metadata, schema, image hints -> crawler and browser., state_transitions: [source_data -> rendered_seo] }]
+test_expectations:
+    - { id: TEXP-001, category: ui_ux, classification: REQUIRED, reason: View-source and mobile/desktop visual checks verify H1, current copy, and the single priority image., scenarios: [SCN-001, SCN-003] }
+    - { id: TEXP-002, category: external_integration, classification: REQUIRED, reason: Rich Results Test validates truthful product schema and OG inspection confirms the campaign asset., scenarios: [SCN-002, SCN-003] }
+    - { id: TEXP-003, category: regression, classification: REQUIRED, reason: Source checks preserve canonical, sitemap, SSR, analytics, and force-dynamic behavior., scenarios: [SCN-004] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: Huygens, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [Stale audit target resolved to the live StorefrontCatalogPage route., Campaign source/fallback and product schema projection are explicitly bounded., Priority, analytics, failure, privacy, and regression expectations are explicit.] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-12 after independent critic review }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/main
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: FAIL, scenarios: FAIL, invariants: FAIL, architecture: FAIL, security: PASS, test_coverage: FAIL, scope: FAIL }
+    blocking_findings: ["REV-215-001: Festive Product JSON-LD uses the wrong media shape.", "REV-215-002: PR #658 contains 683 unrelated changed files and governance CI fails."]
+    required_actions: ["Correct the schema media projection and isolate the SEO commits on current main, then rerun rendered verification."]
+    evidence: ["PR #658 compares main 0cbf02a024d90db0461683906dc0a098a0c209b3 with head 029d7dc55c82e2cfb55443bc39a95d157ea82bf0 across 683 files.", "Workflow run 34649025488 fails governance validation; catalog media is projected as mediaItem while JSON-LD reads media.url."]
+    governance_reentry_required: true

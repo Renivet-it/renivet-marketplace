@@ -614,6 +614,7 @@ class FinanceComplianceQuery {
             .select({
                 brandId: brands.id,
                 brandName: brands.name,
+                entityType: brandConfidentials.entityType,
                 payoutMethod: brandPayoutConfig.payoutMethod,
                 holdbackPercentBps: brandPayoutConfig.holdbackPercentBps,
                 minimumPayoutPaise: brandPayoutConfig.minimumPayoutPaise,
@@ -690,9 +691,11 @@ class FinanceComplianceQuery {
                 ],
                 set: {
                     annualCommissionYtdPaise: values.annualCommissionYtdPaise,
+                    annualSalesYtdPaise: values.annualSalesYtdPaise,
                     tdsDeductedYtdPaise: values.tdsDeductedYtdPaise,
                     thresholdCrossedAt: values.thresholdCrossedAt,
                     cumulativeCommissionPaise: values.cumulativeCommissionPaise,
+                    cumulativeSalesPaise: values.cumulativeSalesPaise,
                     cumulativeTdsPaise: values.cumulativeTdsPaise,
                     thresholdPaise: values.thresholdPaise,
                     tdsRateBps: values.tdsRateBps,

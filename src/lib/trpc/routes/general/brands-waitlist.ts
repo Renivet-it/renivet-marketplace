@@ -1,7 +1,7 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import {
     createTRPCRouter,
     isTRPCAuth,

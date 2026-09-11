@@ -9,6 +9,7 @@ import {
     getEmbedding768,
     preprocessSearchQuery,
 } from "@/lib/python/sematic-search";
+import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -43,6 +44,7 @@ import {
     beautyTopPicks,
     brands,
     categories,
+    festiveSeasonProducts,
     homeandlivingNewArrival,
     homeandlivingTopPicks,
     homeNewArrivals,
@@ -50,7 +52,6 @@ import {
     homeProductMayAlsoLikeThese,
     homeProductPageList,
     homeProductSection,
-    festiveSeasonProducts,
     kidsFreshCollectionSection,
     menPageFeaturedProducts,
     newProductEventPage,
@@ -68,11 +69,23 @@ import {
     wishlists,
     womenPageFeaturedProducts,
 } from "../schema";
+import { runConcurrentSearchTasks } from "../search-concurrency";
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
+import {
+    buildCatalogMediaPostFilterObservation,
+    emitCatalogMediaPostFilterObservation,
+    filterProductsByResolvedMedia,
+    getCatalogRequireMediaPredicate,
+    shouldRequireCatalogMedia,
+} from "./product-media-filter";
+import {
+    buildPriorityProductOrderCase,
+    shouldApplySearchRelevanceOrdering,
+} from "./product-ordering";
+import { getCatalogSearchPredicate } from "./product-search-predicate";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
-import { shouldApplySearchRelevanceOrdering } from "./product-ordering";
 
 type EventFilters = {
     page?: number;
@@ -97,21 +110,34 @@ const toNonNegativeInt = (value: unknown) => {
     return Math.max(0, Math.trunc(numeric));
 };
 
-const sanitizeProductQuantities = (product: any) => ({
+type ProductQuantityInput = {
+    quantity?: unknown;
+    variants?: unknown;
+    [key: string]: unknown;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
+
+const sanitizeProductQuantities = (product: ProductQuantityInput) => ({
     ...product,
     quantity:
         product.quantity === null || product.quantity === undefined
             ? product.quantity
             : toNonNegativeInt(product.quantity),
     variants: Array.isArray(product.variants)
-        ? product.variants.map((variant: any) => ({
-              ...variant,
-              quantity: toNonNegativeInt(variant.quantity),
+        ? product.variants.map((variant) => ({
+              ...(isRecord(variant) ? variant : {}),
+              quantity: toNonNegativeInt(
+                  isRecord(variant) ? variant.quantity : undefined
+              ),
           }))
         : product.variants,
 });
 
-const parseProductArraySafely = (productsData: any[]): ProductWithBrand[] => {
+const parseProductArraySafely = <T extends ProductQuantityInput>(
+    productsData: T[]
+): ProductWithBrand[] => {
     const sanitizedProducts = productsData.map(sanitizeProductQuantities);
     const parsed = productWithBrandSchema.array().safeParse(sanitizedProducts);
 
@@ -126,7 +152,9 @@ const parseProductArraySafely = (productsData: any[]): ProductWithBrand[] => {
     return sanitizedProducts as ProductWithBrand[];
 };
 
-const parseSingleProductSafely = (productData: any): ProductWithBrand => {
+const parseSingleProductSafely = <T extends ProductQuantityInput>(
+    productData: T
+): ProductWithBrand => {
     const sanitizedProduct = sanitizeProductQuantities(productData);
     const parsed = productWithBrandSchema.safeParse(sanitizedProduct);
 
@@ -201,7 +229,9 @@ const publicProductBrandIsActiveFilter = sql`EXISTS (
       AND b.is_active = true
 )`;
 
-const isPublicProductVisible = (product: any) =>
+const isPublicProductVisible = (
+    product: ProductWithBrand | null | undefined
+) =>
     !!product &&
     product.isActive === true &&
     product.isAvailable === true &&
@@ -210,7 +240,7 @@ const isPublicProductVisible = (product: any) =>
     product.verificationStatus === "approved" &&
     product.brand?.isActive === true;
 
-const isPublicSectionProductRow = (row: { product?: any }) =>
+const isPublicSectionProductRow = (row: { product?: ProductWithBrand }) =>
     isPublicProductVisible(row.product);
 
 interface CreateWomenPageFeaturedProduct {
@@ -1071,6 +1101,8 @@ class ProductQuery {
         priorityProductIds,
         isSummerCollection,
         isUnder999,
+        curatedProductIds,
+        curatedDefaultOrder,
     }: {
         limit: number;
         page: number;
@@ -1101,6 +1133,8 @@ class ProductQuery {
         priorityProductIds?: string[];
         isSummerCollection?: boolean | null;
         isUnder999?: boolean | null;
+        curatedProductIds?: string[];
+        curatedDefaultOrder?: string[];
     }) {
         console.log(
             "[getProducts] search:",
@@ -1128,7 +1162,7 @@ class ProductQuery {
         const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
-        const shouldRequireMedia = !!requireMedia;
+        const shouldRequireMedia = shouldRequireCatalogMedia(requireMedia);
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
@@ -1172,12 +1206,15 @@ class ProductQuery {
             } else {
                 isRagSearchActive = true;
 
-                try {
-                    // Generate 384-dim embedding for brand matching (brands still use 384-dim)
-                    const searchEmbedding = await getEmbedding(processedSearch);
+                await runConcurrentSearchTasks(
+                    async () => {
+                        try {
+                            // Generate 384-dim embedding for brand matching (brands still use 384-dim)
+                            const searchEmbedding =
+                                await getEmbedding(processedSearch);
 
-                    // 🔍 Detect brand intent
-                    const brandResult = await db.execute(sql`
+                            // 🔍 Detect brand intent
+                            const brandResult = await db.execute(sql`
                     SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
                     FROM brands
                     WHERE embeddings IS NOT NULL
@@ -1185,93 +1222,67 @@ class ProductQuery {
                     LIMIT 1
                 `);
 
-                    const brandRow = Array.isArray(brandResult)
-                        ? brandResult[0]
-                        : brandResult?.rows?.[0];
-                    if (
-                        brandRow &&
-                        Number(brandRow.distance) < BRAND_MATCH_THRESHOLD
-                    ) {
-                        topBrandMatch = {
-                            id: brandRow.id,
-                            name: brandRow.name,
-                            distance: Number(brandRow.distance),
-                        };
-                        console.log(
-                            `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
-                        );
-                    }
-                } catch (e) {
-                    console.warn("Brand intent matching skipped/failed", e);
-                }
-
-                // Fetch absolute best products from the Advanced RAG Python backend
-                try {
-                    console.log(
-                        "[getProducts] Hitting Advanced RAG Engine for query:",
-                        processedSearch
-                    );
-                    const response = await fetch(
-                        `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
-                        { next: { revalidate: 60 } }
-                    );
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (Array.isArray(data)) {
-                            ragProductIds = data.map((d: any) => String(d.id));
-                            console.log(
-                                `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                            const brandRow = Array.isArray(brandResult)
+                                ? brandResult[0]
+                                : brandResult?.rows?.[0];
+                            if (
+                                brandRow &&
+                                Number(brandRow.distance) <
+                                    BRAND_MATCH_THRESHOLD
+                            ) {
+                                topBrandMatch = {
+                                    id: brandRow.id,
+                                    name: brandRow.name,
+                                    distance: Number(brandRow.distance),
+                                };
+                                console.log(
+                                    `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
+                                );
+                            }
+                        } catch (e) {
+                            console.warn(
+                                "Brand intent matching skipped/failed",
+                                e
                             );
                         }
-                    }
-                } catch (error) {
-                    console.error("[getProducts] RAG Engine failed:", error);
-                }
+                    },
+                    async () => {
+                        // Fetch absolute best products from the Advanced RAG Python backend
+                        try {
+                            const upstreamUrl = buildEmbeddingServiceUrl(
+                                "/search/advanced-rag"
+                            );
+                            if (!upstreamUrl) return;
+                            upstreamUrl.searchParams.set("query", processedSearch);
+                            upstreamUrl.searchParams.set("limit", "150");
+                            const response = await fetch(
+                                upstreamUrl,
+                                {
+                                    next: { revalidate: 60 },
+                                    redirect: "error",
+                                    signal: AbortSignal.timeout(5000),
+                                }
+                            );
 
-                const localSearchPattern = `%${processedSearch}%`;
-                const localSearchFallbackQuery = or(
-                    ilike(products.title, localSearchPattern),
-                    ilike(products.description, localSearchPattern),
-                    ilike(products.metaTitle, localSearchPattern),
-                    ilike(products.metaDescription, localSearchPattern),
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM brands b
-                    WHERE b.id = ${products.brandId}
-                      AND LOWER(b.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM categories c
-                    WHERE c.id = ${products.categoryId}
-                      AND LOWER(c.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM sub_categories sc
-                    WHERE sc.id = ${products.subcategoryId}
-                      AND LOWER(sc.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM product_types pt
-                    WHERE pt.id = ${products.productTypeId}
-                      AND LOWER(pt.name) LIKE ${localSearchPattern}
-                )`
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (Array.isArray(data)) {
+                                    ragProductIds = data.map((d: any) =>
+                                        String(d.id)
+                                    );
+                                    return;
+                                }
+                            }
+                        } catch {
+                            // RAG is optional; the database/text-search path remains authoritative.
+                        }
+                    }
                 );
 
-                // Apply search filter
-                if (ragProductIds.length > 0) {
-                    searchQuery = or(
-                        inArray(products.id, ragProductIds),
-                        localSearchFallbackQuery
-                    );
-                } else {
-                    // Fall back to the local catalogue when the external RAG engine
-                    // is connected to a different product copy or returns no ids.
-                    searchQuery = localSearchFallbackQuery;
-                }
+                searchQuery = getCatalogSearchPredicate({
+                    processedSearch,
+                    ragProductIds,
+                });
             }
         }
 
@@ -1411,17 +1422,39 @@ class ProductQuery {
                 )`
                 : undefined,
             // Filter for products with media (images) - used by shop page
-            shouldRequireMedia ? hasMedia(products, "media") : undefined,
+            getCatalogRequireMediaPredicate(shouldRequireMedia),
             isSummerCollection !== undefined && isSummerCollection !== null
                 ? eq(products.isSummerCollection, isSummerCollection)
                 : undefined,
             isUnder999 !== undefined && isUnder999 !== null
                 ? eq(products.isUnder999, isUnder999)
                 : undefined,
+            curatedProductIds !== undefined
+                ? curatedProductIds.length
+                    ? inArray(products.id, curatedProductIds)
+                    : sql`false`
+                : undefined,
         ].filter(Boolean);
 
         // --- OrderBy construction ---
         const orderBy: any[] = [];
+
+        // Curated catalogues (such as Festive Season) use the administrator's
+        // sequence by default. Shopper-selected sort values deliberately take
+        // precedence while the product-ID scope remains enforced above.
+        if (
+            curatedDefaultOrder?.length &&
+            (!sortBy || sortBy === "recommended") &&
+            !search
+        ) {
+            const cases = curatedDefaultOrder
+                .map(
+                    (id, index) =>
+                        `WHEN products.id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
+                )
+                .join(" ");
+            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
+        }
 
         // Keep currently tagged NEW products ahead of the older catalogue on
         // the New Arrivals landing page. June 2026 has a one-off 3-month tag;
@@ -1447,8 +1480,7 @@ class ProductQuery {
             // Create a CASE statement that gives lower values to priority products
             // Products in the priority list get sorted by their position in the list
             orderBy.push(
-                sql`CASE WHEN ${products.id}::text IN (${sql.raw(priorityProductIds.map((id) => `'${id}'`).join(", "))}) 
-                    THEN 0 ELSE 1 END ASC`
+                sql`CASE ${sql.raw(buildPriorityProductOrderCase(priorityProductIds))} ELSE 999999 END ASC`
             );
         }
 
@@ -1553,6 +1585,10 @@ class ProductQuery {
             orderBy.push(desc(products.createdAt));
         }
 
+        if (curatedProductIds !== undefined) {
+            orderBy.push(asc(products.id));
+        }
+
         // --- Query the DB ---
         const whereClause = and(...filters);
         const [data, totalRows] = await Promise.all([
@@ -1635,31 +1671,19 @@ class ProductQuery {
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
-        const filteredData = shouldRequireMedia
-            ? parsed.filter((product) => {
-                  // Check if product has at least one media item with a valid URL
-                  const hasValidMedia = product.media.some(
-                      (m) => m.mediaItem?.url
-                  );
-                  return hasValidMedia;
-              })
-            : parsed;
+        const filteredData = filterProductsByResolvedMedia(
+            parsed,
+            shouldRequireMedia
+        );
 
-        if (shouldRequireMedia && search) {
-            console.log(
-                `[getProducts] Filtered ${parsed.length} -> ${filteredData.length} products`
-            );
-            if (filteredData.length > 0) {
-                console.log(
-                    "[getProducts] Sample passed media:",
-                    JSON.stringify(filteredData[0].media, null, 2)
-                );
-            } else if (parsed.length > 0) {
-                console.log(
-                    "[getProducts] Sample rejected media:",
-                    JSON.stringify(parsed[0].media, null, 2)
-                );
-            }
+        const mediaPostFilterObservation =
+            buildCatalogMediaPostFilterObservation({
+                inputCount: parsed.length,
+                outputCount: filteredData.length,
+                hasSearch: Boolean(search),
+            });
+        if (mediaPostFilterObservation) {
+            emitCatalogMediaPostFilterObservation(mediaPostFilterObservation);
         }
 
         return {
@@ -3510,7 +3534,7 @@ class ProductQuery {
                                 const [result] = await tx
                                     .update(productVariants)
                                     .set({
-                                        quantity: sql`${productVariants.quantity} - ${item.quantity}`,
+                                        quantity: sql`GREATEST(${productVariants.quantity} - ${item.quantity}, 0)`,
                                         updatedAt: new Date(),
                                     })
                                     .where(
@@ -3531,7 +3555,7 @@ class ProductQuery {
                                 const [result] = await tx
                                     .update(products)
                                     .set({
-                                        quantity: sql`${products.quantity} - ${item.quantity}`,
+                                        quantity: sql`GREATEST(${products.quantity} - ${item.quantity}, 0)`,
                                         updatedAt: new Date(),
                                     })
                                     .where(eq(products.id, item.productId))
@@ -4765,7 +4789,7 @@ class ProductQuery {
         const mediaIds = new Set<string>();
         for (const { product } of publicData) {
             product.media?.forEach((m) => mediaIds.add(m.id));
-            product.variants?.forEach((variant: any) => {
+            product.variants?.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
             });
             if (product.sustainabilityCertificate) {
@@ -4776,15 +4800,15 @@ class ProductQuery {
         // 3) Resolve media from cache
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
-            mediaItems.data.map((item: any) => [item.id, item])
+            mediaItems.data.map((item) => [item.id, item])
         );
 
         // 4) Enhance products with media + policies
-        const enhancedData = publicData.map(({ product, ...rest }: any) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
-                media: (product.media || []).map((media: any) => ({
+                media: (product.media || []).map((media) => ({
                     ...media,
                     mediaItem: mediaMap.get(media.id),
                     url: mediaMap.get(media.id)?.url ?? null,
@@ -4792,7 +4816,7 @@ class ProductQuery {
                 sustainabilityCertificate: product.sustainabilityCertificate
                     ? mediaMap.get(product.sustainabilityCertificate)
                     : null,
-                variants: (product.variants || []).map((variant: any) => ({
+                variants: (product.variants || []).map((variant) => ({
                     ...variant,
                     mediaItem: variant.image
                         ? mediaMap.get(variant.image)
@@ -4809,7 +4833,7 @@ class ProductQuery {
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
                 specifications: (product.specifications || []).map(
-                    (spec: any) => ({
+                    (spec) => ({
                         key: spec.key,
                         value: spec.value,
                     })
@@ -4818,9 +4842,9 @@ class ProductQuery {
         }));
 
         // helper: compute min/max price for a product
-        const getPriceRange = (product: any) => {
+        const getPriceRange = (product) => {
             const prices = (product.variants || [])
-                .map((v: any) =>
+                .map((v) =>
                     Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
                 )
                 .filter((p: number) => !isNaN(p) && p > 0);
@@ -4868,12 +4892,12 @@ class ProductQuery {
             // colors
             if (filters.colors?.length) {
                 const hasColor =
-                    (product.variants || []).some((v: any) =>
+                    (product.variants || []).some((v) =>
                         v.color
                             ? filters.colors!.includes(String(v.color))
                             : false
                     ) ||
-                    (product.media || []).some((m: any) =>
+                    (product.media || []).some((m) =>
                         m.color
                             ? filters.colors!.includes(String(m.color))
                             : false
@@ -4906,7 +4930,7 @@ class ProductQuery {
 
         // 6) Sorting
         if (filters.sortBy === "price") {
-            filtered.sort((a: any, b: any) => {
+            filtered.sort((a, b) => {
                 const aMin = getPriceRange(a.product).min;
                 const bMin = getPriceRange(b.product).min;
                 return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
@@ -4915,7 +4939,7 @@ class ProductQuery {
             // An explicit catalogue sort may override the manually curated
             // section position. With no sort requested (as on the homepage),
             // retain the position order defined in the admin product menu.
-            filtered.sort((a: any, b: any) => {
+            filtered.sort((a, b) => {
                 const aDate = new Date(
                     a.product.createdAt ?? a.createdAt ?? 0
                 ).getTime();
@@ -4962,19 +4986,19 @@ class ProductQuery {
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
-            mediaItems.data.map((item: any) => [item.id, item])
+            mediaItems.data.map((item) => [item.id, item])
         );
 
-        return publicData.map(({ product, ...rest }: any) => ({
+        return publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
-                media: (product.media || []).map((media: any) => ({
+                media: (product.media || []).map((media) => ({
                     ...media,
                     mediaItem: mediaMap.get(media.id),
                     url: mediaMap.get(media.id)?.url ?? null,
                 })),
-                variants: (product.variants || []).map((variant: any) => ({
+                variants: (product.variants || []).map((variant) => ({
                     ...variant,
                     mediaItem: variant.image
                         ? mediaMap.get(variant.image)
@@ -4991,7 +5015,7 @@ class ProductQuery {
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
                 specifications: (product.specifications || []).map(
-                    (spec: any) => ({ key: spec.key, value: spec.value })
+                    (spec) => ({ key: spec.key, value: spec.value })
                 ),
             },
         }));
@@ -5655,6 +5679,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }): Promise<{ name: string; count: number }[]> {
         try {
             const whereConditions = [
@@ -5668,6 +5693,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {
@@ -5755,6 +5785,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<{ id: string; name: string; slug: string; count: number }[]> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -5772,6 +5803,11 @@ class ProductQuery {
                 eq(products.verificationStatus, "approved"),
                 eq(brands.isActive, true),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.search?.length
                     ? ilike(products.title, `%${filters.search}%`)
                     : undefined,
@@ -5887,6 +5923,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<Map<string, number>> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -5903,6 +5940,11 @@ class ProductQuery {
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.brandIds?.length
                     ? inArray(products.brandId, filters.brandIds)
                     : undefined,
@@ -5996,6 +6038,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<Map<string, number>> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -6012,6 +6055,11 @@ class ProductQuery {
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.brandIds?.length
                     ? inArray(products.brandId, filters.brandIds)
                     : undefined,
@@ -6131,6 +6179,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6143,6 +6192,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {
@@ -6208,6 +6262,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6220,6 +6275,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {

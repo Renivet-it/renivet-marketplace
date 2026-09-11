@@ -11,6 +11,10 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
+import {
+    applySearchFailure,
+    applySearchSuccess,
+} from "@/lib/search/search-navigation";
 import { trpc } from "@/lib/trpc/client";
 import { cn, formatINR } from "@/lib/utils";
 import {
@@ -352,6 +356,18 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             [pathname, router, searchBasePath, searchParams, searchParamsString]
         );
 
+        const navigateToProcessedSearch = useCallback(
+            (destination: string) => {
+                const currentUrl = `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`;
+                if (destination === currentUrl) {
+                    setIsSearchLoading(false);
+                    return;
+                }
+                router.push(destination);
+            },
+            [pathname, router, searchParamsString]
+        );
+
         useEffect(() => {
             const handleSearchResultsReady = (event: Event) => {
                 const completedQuery = (
@@ -385,14 +401,18 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const processSearchMutation =
             trpc.general.search.processSearch.useMutation({
                 onSuccess: (result) => {
-                    setShowSuggestions(false);
-                    setIsSheetOpen(false);
-                    navigateToCatalogWithSearch(result.originalQuery);
+                    applySearchSuccess(result, {
+                        closeSuggestions: () => setShowSuggestions(false),
+                        closeSheet: () => setIsSheetOpen(false),
+                        navigate: navigateToProcessedSearch,
+                    });
                 },
                 onError: (error, variables) => {
                     console.error("Search error:", error);
-                    setIsSheetOpen(false);
-                    navigateToCatalogWithSearch(variables.query);
+                    applySearchFailure(variables, {
+                        closeSheet: () => setIsSheetOpen(false),
+                        navigateWithQuery: navigateToCatalogWithSearch,
+                    });
                 },
             });
 
@@ -672,7 +692,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         >
                             <Icons.Search className="size-[18px] text-primary" />
                             <span className="flex-1 truncate text-left text-13 tracking-wide text-[#7d7567]">
-                                Search for products, brands...
+                                {localSearch || "Search for products, brands..."}
                             </span>
                         </button>
                     </SheetTrigger>

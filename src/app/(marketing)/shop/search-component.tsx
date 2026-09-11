@@ -16,6 +16,22 @@ type Product = {
     [k: string]: any;
 };
 
+export function getProductTypePillClassName({
+    active,
+    theme,
+}: {
+    active: boolean;
+    theme?: "festive";
+}) {
+    return cn(
+        "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
+        active &&
+            (theme === "festive"
+                ? "border-[#DF2463] bg-[#DF2463] text-white shadow-[0_4px_14px_rgba(223,36,99,0.24)] hover:border-[#DF2463] hover:bg-[#DF2463]"
+                : "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]")
+    );
+}
+
 export function SearchableProductTypes({
     productTypes,
     initialProducts = [],
@@ -23,6 +39,7 @@ export function SearchableProductTypes({
     productTypeId,
     isDesktop = false,
     basePath = "/shop",
+    theme,
 }: {
     productTypes: {
         id: string;
@@ -34,6 +51,7 @@ export function SearchableProductTypes({
     productTypeId?: string;
     isDesktop?: boolean;
     basePath?: string;
+    theme?: "festive";
 }) {
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get("search") ?? "";
@@ -118,23 +136,23 @@ export function SearchableProductTypes({
         <div
             className={cn(
                 "space-y-3",
-                isDesktop && "flex flex-1 flex-col gap-3 bg-white"
+                isDesktop &&
+                    `flex flex-1 flex-col gap-3 ${theme === "festive" ? "bg-[#F0EBE2]" : "bg-white"}`
             )}
         >
             <div
                 className={cn(
                     "scrollbar-hide flex gap-2.5 overflow-x-auto pb-2",
                     isDesktop &&
-                        `bg-white ${!showAll ? "flex-nowrap" : "flex-wrap"}`
+                        `${theme === "festive" ? "bg-[#F0EBE2]" : "bg-white"} ${!showAll ? "flex-nowrap" : "flex-wrap"}`
                 )}
             >
                 <a
                     href={allItemsHref}
-                    className={cn(
-                        "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
-                        !productTypeId &&
-                            "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]"
-                    )}
+                    className={getProductTypePillClassName({
+                        active: !productTypeId,
+                        theme,
+                    })}
                 >
                     All Items
                 </a>
@@ -148,11 +166,10 @@ export function SearchableProductTypes({
                             <a
                                 key={type.id}
                                 href={getTypeHref(type.id)}
-                                className={cn(
-                                    "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
-                                    productTypeId === type.id &&
-                                        "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]"
-                                )}
+                                className={getProductTypePillClassName({
+                                    active: productTypeId === type.id,
+                                    theme,
+                                })}
                             >
                                 {type.displayName}
                             </a>

@@ -1,0 +1,330 @@
+schema_version: "1.0"
+task:
+    id: REN-188
+    title: FO add operational fulfillment sections to Brand Fulfillment Order
+    source: linear
+    branch: ayanganguly333/ren-188-fo-add-operational-fulfillment-sections-to-brand-fulfillment
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-188/fo-add-operational-fulfillment-sections-to-brand-fulfillment
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The PDF is used as an operational supplier instruction and will display order, customer, QC, and shipment data.
+        - The route has an existing authorization boundary and financial snapshot that must remain unchanged.
+        - The implementation is read-only with no schema, payment, tax, or provider mutation.
+    escalation_history:
+        - L1 -> L2 because the change spans the protected document route, shared PDF template, and multiple stored operational records.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-188 description, scope, acceptance intent, and relationships
+        - Brand Fulfillment Order route and authorization in vendor-po.pdf/route.tsx
+        - Shared CorporateCommercialDocumentData and React PDF template
+        - Corporate order, vendor fulfillment order, customization, QC, and shipment schemas
+        - Existing latest QC query and order/shipment relationship patterns
+        - Existing document integrity and corporate document tests
+    excluded_areas:
+        - area: Tax, GST, HSN, pricing, and totals calculation
+          reason: Explicitly display-only and out of scope.
+        - area: Schema/migration and state mutation behavior
+          reason: Existing stored data is sufficient and the issue requires no writes.
+        - area: General commercial documents and dashboard UI
+          reason: No required dependency path from the Brand Fulfillment Order PDF.
+    dependencies: [DEP-188-001, DEP-188-002, DEP-188-003, DEP-188-004]
+    integrations: [INT-188-001]
+    security_boundaries: [SEC-188-001, SEC-188-002]
+    state_transitions:
+        - authenticated_request -> authorization_checked
+        - authorization_checked -> stored_operational_data_loaded
+        - stored_operational_data_loaded -> display_only_pdf_rendered
+    related_tests: [TEXP-188-001, TEXP-188-002, TEXP-188-003, TEXP-188-004]
+    uncertainties:
+        - The precise visual layout should follow the existing template styles while ensuring sections remain legible across one or more PDF pages.
+        - QC status labels must use the persisted enum values without introducing a new business-status mapping.
+requirements:
+    - id: REQ-188-001
+      description: The PDF identifies the supplier brand in a clearly labelled FULFILLED BY block using stored brand identity/address/contact data.
+      type: explicit
+    - id: REQ-188-002
+      description: The PDF identifies the corporate customer in a clearly labelled CORPORATE CUSTOMER block using stored company, contact, GSTIN, and order identity data.
+      type: explicit
+    - id: REQ-188-003
+      description: The PDF identifies the destination in a clearly labelled DELIVER TO block using stored fulfillment delivery mode and address.
+      type: explicit
+    - id: REQ-188-004
+      description: The PDF presents stored product configuration, customization, production instructions, size breakdown, and quantity without changing their values.
+      type: explicit
+    - id: REQ-188-005
+      description: The PDF presents actionable QC information from the latest stored QC submission without creating or inferring a QC decision.
+      type: explicit
+    - id: REQ-188-006
+      description: The PDF presents stored delivery and shipment information when available.
+      type: explicit
+    - id: REQ-188-007
+      description: Missing optional values remain blank or use a consistent unavailable marker; no fallback date, fabricated status, or generic value may imply unavailable data exists.
+      type: explicit
+    - id: REQ-188-008
+      description: Existing persisted tax, pricing, totals, document number, endpoint, and authorization behavior remain unchanged.
+      type: explicit
+scenarios:
+    - id: SCN-188-001
+      requirement_ids: [REQ-188-001, REQ-188-002, REQ-188-003]
+      description: An authorized brand member downloads a complete Brand Fulfillment Order and sees explicit supplier, corporate customer, and destination blocks.
+    - id: SCN-188-002
+      requirement_ids: [REQ-188-004, REQ-188-006]
+      description: A complete order displays stored product configuration, customization, size/quantity, delivery, and shipment details.
+    - id: SCN-188-003
+      requirement_ids: [REQ-188-005]
+      description: An order with a latest QC submission displays its stored status and available remarks/review information without changing the QC decision.
+    - id: SCN-188-004
+      requirement_ids: [REQ-188-005, REQ-188-007]
+      description: An order without a QC submission shows unavailable QC information and does not imply approval.
+    - id: SCN-188-005
+      requirement_ids: [REQ-188-006, REQ-188-007]
+      description: An order without shipment or expected-date data leaves those fields unavailable and does not generate a date or status.
+    - id: SCN-188-006
+      requirement_ids: [REQ-188-007, REQ-188-008]
+      description: Existing tax and totals render exactly as persisted while optional operational fields are absent or blank.
+    - id: SCN-188-007
+      requirement_ids: [REQ-188-008]
+      description: An unauthenticated or unauthorized requester receives the existing rejection and no PDF data.
+invariants:
+    - id: INV-188-001
+      description: No new operational section performs a write or changes order, FO, shipment, QC, customization, inventory, or numbering state.
+    - id: INV-188-002
+      description: Missing stored optional data cannot become a fabricated date, status, address, or instruction.
+    - id: INV-188-003
+      description: Existing persisted tax, pricing, totals, and document identity values are not recalculated or replaced.
+    - id: INV-188-004
+      description: Every new operational record displayed is behind the existing document authorization boundary.
+    - id: INV-188-005
+      description: A missing QC submission never renders as an approved or released QC decision.
+flows:
+    - id: FLOW-188-001
+      description: Authenticated request -> existing authorization -> read order/FO/brand and optional QC/shipment records -> map stored values -> render the Brand Fulfillment Order PDF.
+      state_transitions:
+          - from: authenticated_request
+            to: authorization_checked
+          - from: authorization_checked
+            to: stored_operational_data_loaded
+          - from: stored_operational_data_loaded
+            to: display_only_pdf_rendered
+    - id: FLOW-188-002
+      description: Missing optional operational record -> unavailable field -> PDF remains usable without implying a business decision.
+      state_transitions:
+          - from: optional_record_missing
+            to: unavailable_field_rendered
+          - from: unavailable_field_rendered
+            to: display_only_pdf_rendered
+dependencies:
+    - id: DEP-188-001
+      name: Corporate order and brand identity records
+      purpose: Supply supplier and customer identity fields.
+      description: Existing order and brand records are already loaded by the protected PDF route.
+      status: resolved
+    - id: DEP-188-002
+      name: Issued corporate fulfillment order
+      purpose: Supply FO identity, delivery instructions, stored configuration, pricing snapshot, customizations, and size/quantity values.
+      description: The issued FO is the authoritative operational document source and is read without mutation.
+      status: resolved
+    - id: DEP-188-003
+      name: Latest corporate QC submission
+      purpose: Supply stored QC status and available operational notes.
+      description: The existing QC query pattern selects the latest submission and related stored information.
+      status: resolved
+    - id: DEP-188-004
+      name: Corporate shipment record
+      purpose: Supply stored courier, tracking, AWB, status, and shipment dates.
+      description: Shipment data is optional and may be absent before dispatch.
+      status: resolved
+integrations:
+    - id: INT-188-001
+      system: React PDF renderer
+      purpose: Render stored operational data into the existing Brand Fulfillment Order PDF.
+      failure_mode: Rendering failure returns the existing route error behavior; no order or operational record is mutated.
+      retry_idempotency: Rendering is read-only and repeatable for the same stored snapshot.
+personas:
+    - id: PER-188-001
+      role: supplier_brand_operator
+      applicability: Uses the Brand Fulfillment Order to manufacture, package, quality-check, and dispatch the corporate order.
+    - id: PER-188-002
+      role: corporate_operations_user
+      applicability: Reviews the customer, destination, production, and delivery instructions represented in the FO.
+security_boundaries:
+    - id: SEC-188-001
+      description: Existing authentication, site order permission, and supplier-brand membership checks remain mandatory before PDF data is loaded.
+    - id: SEC-188-002
+      description: New customer, QC, shipment, and operational fields must not broaden access beyond the existing Brand Fulfillment Order audience.
+business_rules:
+    - id: BR-188-001
+      description: A missing stored optional field is unavailable, not a reason to invent a value.
+    - id: BR-188-002
+      description: A Brand Fulfillment Order is an operational instruction and must not change the financial snapshot or tax authority of the document.
+    - id: BR-188-003
+      description: QC status shown in the PDF is the latest persisted submission status and is not inferred from missing data.
+decisions:
+    - id: DEC-188-001
+      question: Should operational content be added as structured template sections or generic reference rows?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Add structured optional sections while retaining existing references for document identity and financial presentation.
+      basis: Explicit labels and unavailable-value behavior are easier to preserve in structured sections.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-188-002
+      question: What should the document show when expected delivery, QC, or shipment data is absent?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Show an unavailable marker or blank field and never generate a default date or status.
+      basis: Linear explicitly requires blank fields when unavailable and the current route has a synthetic expected-date fallback to remove.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-188-003
+      question: Should the new display fields alter tax or pricing calculations?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: No; retain the existing persisted FO tax and pricing snapshot exactly.
+      basis: Linear explicitly excludes tax determination and the route already receives persisted tax fields.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-188-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies operational-data mapping, explicit section labels, and unavailable-value behavior without a database write.
+    - id: TEXP-188-002
+      category: regression
+      classification: REQUIRED
+      reason: Protects existing tax, totals, document identity, PDF endpoint, and authorization behavior.
+    - id: TEXP-188-003
+      category: integration
+      classification: REQUIRED
+      reason: Verifies the route loads the latest QC and stored shipment data and renders complete and partial operational records.
+    - id: TEXP-188-004
+      category: exploratory
+      classification: REQUIRED
+      reason: Manually verifies complete and incomplete Brand Fulfillment Order PDFs for supplier usability and absence of fabricated values.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-188-001
+          scenario_ids: [SCN-188-001]
+        - requirement_id: REQ-188-002
+          scenario_ids: [SCN-188-001]
+        - requirement_id: REQ-188-003
+          scenario_ids: [SCN-188-001]
+        - requirement_id: REQ-188-004
+          scenario_ids: [SCN-188-002]
+        - requirement_id: REQ-188-005
+          scenario_ids: [SCN-188-003, SCN-188-004]
+        - requirement_id: REQ-188-006
+          scenario_ids: [SCN-188-002, SCN-188-005]
+        - requirement_id: REQ-188-007
+          scenario_ids: [SCN-188-004, SCN-188-005, SCN-188-006]
+        - requirement_id: REQ-188-008
+          scenario_ids: [SCN-188-006, SCN-188-007]
+    scenario_to_invariants:
+        - scenario_id: SCN-188-001
+          invariant_ids: [INV-188-004]
+        - scenario_id: SCN-188-002
+          invariant_ids: [INV-188-001, INV-188-003]
+        - scenario_id: SCN-188-003
+          invariant_ids: [INV-188-003, INV-188-005]
+        - scenario_id: SCN-188-004
+          invariant_ids: [INV-188-002, INV-188-005]
+        - scenario_id: SCN-188-005
+          invariant_ids: [INV-188-001, INV-188-002]
+        - scenario_id: SCN-188-006
+          invariant_ids: [INV-188-002, INV-188-003]
+        - scenario_id: SCN-188-007
+          invariant_ids: [INV-188-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-188-001
+          test_expectation_ids: [TEXP-188-001, TEXP-188-003, TEXP-188-004]
+        - scenario_id: SCN-188-002
+          test_expectation_ids: [TEXP-188-001, TEXP-188-003, TEXP-188-004]
+        - scenario_id: SCN-188-003
+          test_expectation_ids: [TEXP-188-001, TEXP-188-003]
+        - scenario_id: SCN-188-004
+          test_expectation_ids: [TEXP-188-001, TEXP-188-003, TEXP-188-004]
+        - scenario_id: SCN-188-005
+          test_expectation_ids: [TEXP-188-001, TEXP-188-004]
+        - scenario_id: SCN-188-006
+          test_expectation_ids: [TEXP-188-002, TEXP-188-004]
+        - scenario_id: SCN-188-007
+          test_expectation_ids: [TEXP-188-002]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_codex_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - id: CRIT-188-001
+          severity: minor
+          disposition: addressed
+        - id: CRIT-188-002
+          severity: minor
+          disposition: addressed
+        - id: CRIT-188-003
+          severity: minor
+          disposition: addressed
+        - id: CRIT-188-004
+          severity: minor
+          disposition: addressed
+        - id: CRIT-188-005
+          severity: minor
+          disposition: addressed
+        - id: CRIT-188-006
+          severity: minor
+          disposition: addressed
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit REN-188 spec approval)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: b43e819b37421456eb253116b11001fcf0b86b29
+    head_commit: b2b834e72627ff9722a6759203b93b2871f86716
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/641
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-188-001: Manually verify complete and incomplete generated PDFs before production rollout."
+    evidence:
+        - Compared origin/master b43e819b37421456eb253116b11001fcf0b86b29 with corrected implementation head b2b834e72627ff9722a6759203b93b2871f86716.
+        - Reviewed the protected PDF route, operational mapper, shared PDF template, and REN-180/REN-188 tests against the approved contract.
+        - Confirmed the prior missing-data finding is resolved by the optional-copy helper and regression tests for stored and absent values.
+    governance_reentry_required: false

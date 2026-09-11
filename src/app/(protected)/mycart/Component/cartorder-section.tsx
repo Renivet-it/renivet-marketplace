@@ -13,6 +13,7 @@ import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { isCartItemAvailable } from "./cart-availability";
 import { EmptyCartRecommendations } from "./empty-cart-recommendations";
 import { ProductCartCard } from "./product-cart-card";
 
@@ -39,30 +40,21 @@ export function CartPage({
     const { data: activeRewardCartItem, refetch: refetchRewardCartItem } =
         trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
 
-    const { mutate: removeRewardCartItem, isPending: isRemovingRewardCartItem } =
-        trpc.general.swapRewards.removeRewardCartItem.useMutation({
-            onSuccess: () => {
-                toast.success("Reward removed from cart");
-                refetchRewardCartItem();
-            },
-            onError: (err) => handleClientError(err),
-        });
+    const {
+        mutate: removeRewardCartItem,
+        isPending: isRemovingRewardCartItem,
+    } = trpc.general.swapRewards.removeRewardCartItem.useMutation({
+        onSuccess: () => {
+            toast.success("Reward removed from cart");
+            refetchRewardCartItem();
+        },
+        onError: (err) => handleClientError(err),
+    });
 
-    const availableCart = userCart?.filter(
-        (c) =>
-            c.product.isPublished &&
-            c.product.verificationStatus === "approved" &&
-            !c.product.isDeleted &&
-            c.product.isAvailable &&
-            (!!c.product.quantity ? c.product.quantity > 0 : true) &&
-            c.product.isActive &&
-            (!c.variant ||
-                (c.variant && !c.variant.isDeleted && c.variant.quantity > 0))
-    );
+    const availableCart = userCart?.filter(isCartItemAvailable) ?? [];
 
-    const unavailableCart = userCart?.filter(
-        (item) => !availableCart.map((i) => i.id).includes(item.id)
-    );
+    const unavailableCart =
+        userCart?.filter((item) => !isCartItemAvailable(item)) ?? [];
 
     const totalPrice = availableCart
         ?.filter((item) => item.status)
@@ -76,9 +68,10 @@ export function CartPage({
             return acc + itemPrice * item.quantity;
         }, 0);
 
-    const paidItemCount = availableCart
-        ?.filter((item) => item.status)
-        .reduce((acc, item) => acc + item.quantity, 0) ?? 0;
+    const paidItemCount =
+        availableCart
+            ?.filter((item) => item.status)
+            .reduce((acc, item) => acc + item.quantity, 0) ?? 0;
 
     const hasRewardCartItem = !!activeRewardCartItem?.selection;
     const itemCount = paidItemCount + (hasRewardCartItem ? 1 : 0);
@@ -132,7 +125,7 @@ export function CartPage({
                                     {unavailableCart?.length === 1
                                         ? "One item in your bag is"
                                         : `${unavailableCart?.length} items in your bag are`}{" "}
-                                     no longer available. We recommend reviewing
+                                    no longer available. We recommend reviewing
                                     your selection.
                                 </p>
                             </div>
@@ -169,12 +162,19 @@ export function CartPage({
                         <p className="text-sm font-medium text-[#314224]">
                             {totalPrice >= FREE_DELIVERY_THRESHOLD
                                 ? "Free shipping unlocked!"
-                                : `Add ${formatINR(FREE_DELIVERY_THRESHOLD - (totalPrice ?? 0), {
-                                      input: "paise",
-                                  })} more for free shipping`}
+                                : `Add ${formatINR(
+                                      FREE_DELIVERY_THRESHOLD -
+                                          (totalPrice ?? 0),
+                                      {
+                                          input: "paise",
+                                      }
+                                  )} more for free shipping`}
                         </p>
                         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e7b63]">
-                            Target {formatINR(FREE_DELIVERY_THRESHOLD, { input: "paise" })}
+                            Target{" "}
+                            {formatINR(FREE_DELIVERY_THRESHOLD, {
+                                input: "paise",
+                            })}
                         </span>
                     </div>
                     <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e3ead9]">
@@ -195,11 +195,15 @@ export function CartPage({
                                         Reward item
                                     </p>
                                     <h3 className="mt-1 text-base font-semibold text-[#3f2c17]">
-                                        {activeRewardCartItem.selection.product.title}
+                                        {
+                                            activeRewardCartItem.selection
+                                                .product.title
+                                        }
                                     </h3>
                                     <p className="mt-1 text-sm text-[#735d38]">
                                         Added as your Swap & Reward redemption.
-                                        It will stay at {formatINR(0)} in checkout.
+                                        It will stay at {formatINR(0)} in
+                                        checkout.
                                     </p>
                                     <div className="mt-3 flex flex-wrap items-center gap-2">
                                         <span className="rounded-full border border-[#d8c7ab] bg-white/75 px-3 py-1 text-xs font-medium text-[#7c5831]">
@@ -207,10 +211,14 @@ export function CartPage({
                                         </span>
                                         <span className="rounded-full border border-[#e8dac0] bg-[#fffaf1] px-3 py-1 text-xs font-medium text-[#8f6a3e]">
                                             Value{" "}
-                                            {formatINR(activeRewardCartItem.selection.rewardValue, {
-                                                input: "paise",
-                                                keepDecimals: true,
-                                            })}
+                                            {formatINR(
+                                                activeRewardCartItem.selection
+                                                    .rewardValue,
+                                                {
+                                                    input: "paise",
+                                                    keepDecimals: true,
+                                                }
+                                            )}
                                         </span>
                                     </div>
                                 </div>
@@ -220,7 +228,8 @@ export function CartPage({
                                     onClick={() =>
                                         removeRewardCartItem({
                                             redemptionId:
-                                                activeRewardCartItem.redemption.id,
+                                                activeRewardCartItem.redemption
+                                                    .id,
                                         })
                                     }
                                     disabled={isRemovingRewardCartItem}
@@ -232,7 +241,7 @@ export function CartPage({
                         </div>
                     ) : null}
 
-                    {availableCart?.map((item) => (
+                    {userCart?.map((item) => (
                         <ProductCartCard
                             item={item}
                             key={item.id}

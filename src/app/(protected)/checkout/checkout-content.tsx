@@ -14,13 +14,23 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea-general";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { buildMetaPurchaseTrackingEvent } from "@/lib/analytics/meta-purchase";
-import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
+import { trackMetaPurchase } from "@/lib/analytics/meta-purchase";
+import {
+    assembleOrderDetailsByBrand,
+    AUTO_COUPON_CODE,
+    createCustomizationPersistence,
+    createRequestGuard,
+    filterAvailableCheckoutItems,
+    getAutoCouponAction,
+    toCheckoutPriceItems,
+} from "@/lib/checkout/shared";
 import { fbEvent } from "@/lib/fbpixel";
+import { useCustomerOrderGuard } from "@/lib/hooks/use-customer-order-guard";
 import {
     createRazorpayPaymentOptions,
     initializeRazorpayPayment,
 } from "@/lib/razorpay/payment";
+import { getCustomerPaymentCancellationPath } from "@/lib/razorpay/payment-cancellation";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -46,15 +56,13 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import ShippingAddress from "../mycart/Component/address-stepper/address-stepper";
 import { OrderProductCard } from "../mycart/Component/payment-stepper/ordered-product-card-view";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000;
-const AUTO_COUPON_CODE = "TRYNEW20";
-const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
 
 export default function CheckoutContent({ userId }: { userId: string }) {
     const router = useRouter();
@@ -67,6 +75,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const buyNowQty = searchParams.get("qty");
     const isSwapReward = searchParams.get("swap_reward") === "true";
     const rewardRedemptionId = searchParams.get("redemption");
+    const paymentCancellationPath = getCustomerPaymentCancellationPath({
+        isBuyNow,
+        buyNowItemId,
+        buyNowVariantId,
+        buyNowQty,
+        isSwapReward,
+        rewardRedemptionId,
+    });
 
     const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
     const [processingModalTitle, setProcessingModalTitle] = useState("");
@@ -87,6 +103,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const [customizationRequests, setCustomizationRequests] = useState<
         Record<string, string>
     >({});
+    const [pendingCustomizationIds, setPendingCustomizationIds] = useState<
+        Set<string>
+    >(new Set());
+    const customizationPersistence = useRef<ReturnType<
+        typeof createCustomizationPersistence
+    > | null>(null);
+    const autoCouponGuard = useRef(createRequestGuard());
+    const autoCouponActive = useRef(false);
 
     const swapRewardStatusQuery =
         trpc.general.swapRewards.getSwapRewardStatus.useQuery(undefined, {
@@ -129,8 +153,42 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         { enabled: !!userId }
     );
 
-    const { data: user } = trpc.general.users.currentUser.useQuery();
-    const isAdmin = Boolean(user && !canPlaceCustomerOrder(user));
+    const { data: user, isPending: isUserLoading } =
+        trpc.general.users.currentUser.useQuery();
+    const { isBlocked: isAdmin } = useCustomerOrderGuard(user, isUserLoading);
+
+    const updateCustomization =
+        trpc.general.users.cart.updateCustomizationRequest.useMutation();
+    if (!customizationPersistence.current) {
+        customizationPersistence.current = createCustomizationPersistence({
+            userId,
+            write: (input) => updateCustomization.mutateAsync(input),
+            refetch: refetchCart,
+        });
+    }
+
+    const persistCustomization = async (item: any, value: string) => {
+        const itemId = String(item.id);
+        setPendingCustomizationIds((current) => new Set(current).add(itemId));
+        try {
+            await customizationPersistence.current!.save(item, value);
+            setCustomizationRequests((current) => {
+                const next = { ...current };
+                delete next[itemId];
+                return next;
+            });
+        } catch (error) {
+            handleClientError(error);
+        } finally {
+            if (!customizationPersistence.current!.isPending(itemId)) {
+                setPendingCustomizationIds((current) => {
+                    const next = new Set(current);
+                    next.delete(itemId);
+                    return next;
+                });
+            }
+        }
+    };
 
     const rewardCheckoutQuery =
         trpc.general.swapRewards.getRewardCheckoutItem.useQuery(
@@ -179,20 +237,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
         if (!userCart) return [];
 
-        const filtered = userCart.filter(
-            (item) =>
-                item.product.isPublished &&
-                item.product.verificationStatus === "approved" &&
-                !item.product.isDeleted &&
-                item.product.isAvailable &&
-                (!!item.product.quantity ? item.product.quantity > 0 : true) &&
-                item.product.isActive &&
-                (!item.variant ||
-                    (item.variant &&
-                        !item.variant.isDeleted &&
-                        item.variant.quantity > 0)) &&
-                item.status
-        );
+        const filtered = filterAvailableCheckoutItems(userCart);
 
         if (isBuyNow && buyNowItemId) {
             const buyNowItem = filtered.find(
@@ -332,35 +377,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             };
         }
 
-        const items = availableItems.map((item) => {
-            const checkoutItem = item as any;
-            const itemPrice = checkoutItem.isSwapRewardItem
-                ? 0
-                : checkoutItem.variantId
-                  ? (checkoutItem.product.variants?.find(
-                        (v: any) => v.id === checkoutItem.variantId
-                    )?.price ??
-                    checkoutItem.product.price ??
-                    0)
-                  : (checkoutItem.product.price ?? 0);
-
-            const compareAtPrice = checkoutItem.variantId
-                ? (checkoutItem.product.variants?.find(
-                      (v: any) => v.id === checkoutItem.variantId
-                  )?.compareAtPrice ??
-                  checkoutItem.product.compareAtPrice ??
-                  itemPrice)
-                : (checkoutItem.product.compareAtPrice ?? itemPrice);
-
-            return {
-                price: itemPrice,
-                compareAtPrice: compareAtPrice,
-                quantity: checkoutItem.quantity,
-                categoryId: checkoutItem.product.categoryId,
-                subCategoryId: checkoutItem.product.subcategoryId,
-                productTypeId: checkoutItem.product.productTypeId,
-            };
-        });
+        const items = toCheckoutPriceItems(availableItems as any[]);
 
         return calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
@@ -475,37 +492,34 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             },
         });
 
-    const trackMetaPurchase = (completedOrderIds: string[]) => {
-        if (completedOrderIds.length === 0) {
-            console.error("Skipping Meta Purchase without completed order IDs");
-            return;
-        }
-
-        const { eventId, purchasePayload } = buildMetaPurchaseTrackingEvent({
-            completedOrderIds,
-            totalAmountPaise: payableTotalPaise,
-            items: availableItems.map((item: any) => ({
-                productId: item.product.id,
-                quantity: item.quantity,
-            })),
-        });
-
-        fbEvent("Purchase", purchasePayload, { eventId });
-        trackPurchaseCapi(
-            eventId,
+    const trackCompletedPurchase = (completedOrderIds: string[]) => {
+        trackMetaPurchase(
             {
-                em: user?.email,
-                ph: selectedShippingAddress?.phone,
-                fn: user?.firstName ?? undefined,
-                ln: user?.lastName ?? undefined,
-                ct: selectedShippingAddress?.city,
-                st: selectedShippingAddress?.state,
-                zp: selectedShippingAddress?.zip,
-                external_id: user?.id,
+                completedOrderIds,
+                totalAmountPaise: payableTotalPaise,
+                items: availableItems.map((item: any) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                })),
+                userData: {
+                    em: user?.email,
+                    ph: selectedShippingAddress?.phone,
+                    fn: user?.firstName ?? undefined,
+                    ln: user?.lastName ?? undefined,
+                    ct: selectedShippingAddress?.city,
+                    st: selectedShippingAddress?.state,
+                    zp: selectedShippingAddress?.zip,
+                    external_id: user?.id,
+                },
+                sourceUrl: getAbsoluteURL(window.location.href),
             },
-            purchasePayload,
-            getAbsoluteURL(window.location.href)
-        ).catch((err) => console.error("CAPI Purchase Error:", err));
+            {
+                sendPixel: fbEvent,
+                sendCapi: trackPurchaseCapi,
+                reportError: (message, error) =>
+                    console.error(`${message}:`, error),
+            }
+        );
     };
 
     const buildOrderDetailsByBrand = ({
@@ -519,126 +533,32 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     }) => {
         if (!selectedShippingAddress || !user) return [];
 
-        const itemsByBrand = (availableItems as any[]).reduce(
-            (acc, item) => {
-                const brandId = item.product.brandId;
-                if (!acc[brandId]) acc[brandId] = [];
-                acc[brandId].push(item);
-                return acc;
-            },
-            {} as Record<string, typeof availableItems>
-        );
-
-        return (Object.entries(itemsByBrand) as [string, any[]][]).map(
-            ([, brandItems]) => {
-                const brandTotal = brandItems.reduce(
-                    (acc: number, item: any) => {
-                        const price = item.isSwapRewardItem
-                            ? 0
-                            : item.variantId
-                              ? (item.product.variants?.find(
-                                    (v: any) => v.id === item.variantId
-                                )?.price ??
-                                item.product.price ??
-                                0)
-                              : (item.product.price ?? 0);
-                        return acc + price * item.quantity;
-                    },
-                    0
-                );
-                const brandCouponDiscount = Number(
-                    paymentMethod === "reward"
-                        ? 0
-                        : (
-                              (priceList.couponDiscount ?? 0) *
-                              (brandTotal /
-                                  Math.max(
-                                      priceList.items -
-                                          (priceList.productDiscount ?? 0),
-                                      1
-                                  ))
-                          ).toFixed(2)
-                );
-                const brandTaxAmount =
-                    paymentMethod === "reward"
-                        ? 0
-                        : brandItems.reduce(
-                              (sum: number, item: any) =>
-                                  sum +
-                                  (taxLinesById.get(String(item.id))
-                                      ?.taxPaise ?? 0),
-                              0
-                          );
-
-                return {
-                    userId: user.id,
-                    coupon:
-                        paymentMethod === "reward" || !hasPaidItems
-                            ? undefined
-                            : appliedCoupon?.code,
-                    addressId: selectedShippingAddress.id,
-                    deliveryAmount: priceList.delivery,
-                    taxAmount: brandTaxAmount,
-                    totalAmount:
-                        paymentMethod === "reward"
-                            ? 0
-                            : Math.max(
-                                  0,
-                                  Number(
-                                      (
-                                          brandTotal - brandCouponDiscount
-                                      ).toFixed(2)
-                                  )
-                              ),
-                    discountAmount: paymentMethod === "reward" ? brandTotal : 0,
-                    couponDiscountAmount: brandCouponDiscount,
-                    paymentMethod,
-                    totalItems: brandItems.reduce(
-                        (acc: number, item: any) => acc + item.quantity,
-                        0
-                    ),
-                    shiprocketOrderId: null,
-                    shiprocketShipmentId: null,
-                    items: brandItems.map((item: any) => ({
-                        price: item.variantId
-                            ? (item.product.variants.find(
-                                  (v: any) => v.id === item.variantId
-                              )?.price ??
-                              item.product.price ??
-                              0)
-                            : (item.product.price ?? 0),
-                        brandId: item.product.brandId,
-                        productId: item.product.id,
-                        variantId: item.variantId,
-                        sku: item.variant?.nativeSku ?? item.product.nativeSku,
-                        quantity: item.quantity,
-                        customizationRequest: item.product
-                            .customizationAvailable
-                            ? (
-                                  customizationRequests[item.id] ??
-                                  item.customizationRequest ??
-                                  ""
-                              ).trim() || null
-                            : null,
-                        categoryId: item.product.categoryId,
-                        isSwapRewardItem: !!item.isSwapRewardItem,
-                        swapRewardRedemptionId:
-                            item.swapRewardRedemptionId ?? undefined,
-                    })),
-                    razorpayOrderId,
-                    ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
-                    ...(paymentMethod === "reward"
-                        ? {
-                              isSwapRewardOrder: true,
-                              swapRewardRedemptionId:
-                                  rewardRedemptionId ?? undefined,
-                          }
-                        : {}),
-                };
-            }
-        );
+        return assembleOrderDetailsByBrand({
+            items: availableItems as any[],
+            userId: user.id,
+            addressId: selectedShippingAddress.id,
+            couponCode: appliedCoupon?.code,
+            deliveryAmount: priceList.delivery,
+            couponDiscount: priceList.couponDiscount ?? 0,
+            productDiscount: priceList.productDiscount ?? 0,
+            itemsSubtotal: priceList.items,
+            paymentMethod,
+            paymentOrderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            taxForItem: (id) => taxLinesById.get(id)?.taxPaise ?? 0,
+            customizationForItem: (item: any) =>
+                item.product.customizationAvailable
+                    ? (
+                          customizationRequests[item.id] ??
+                          item.customizationRequest ??
+                          ""
+                      ).trim() || null
+                    : null,
+            rewardRedemptionId: rewardRedemptionId ?? undefined,
+            hasPaidItems,
+            zeroRewardItemPrice: false,
+        });
     };
-
     const { mutate: deleteItemFromCart, isPending: isRemoving } =
         trpc.general.orders.deleteItemFromCart.useMutation({
             onError: (err) => handleClientError(err),
@@ -685,41 +605,40 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
         });
 
-    const {
-        mutateAsync: validateCouponSilently,
-        isPending: isAutoCouponChecking,
-    } = trpc.general.coupons.validateCoupon.useMutation();
+    const { mutateAsync: validateCouponSilently } =
+        trpc.general.coupons.validateCoupon.useMutation();
 
     useEffect(() => {
-        const shouldAutoApply = cartValue > AUTO_COUPON_MIN_CART_VALUE;
-        const isTryNewCouponApplied =
-            appliedCoupon?.code?.toUpperCase() === AUTO_COUPON_CODE;
-
-        if (!shouldAutoApply) {
-            if (isTryNewCouponApplied) setAppliedCoupon(null);
+        const action = getAutoCouponAction(
+            cartValue,
+            appliedCoupon?.code?.toUpperCase()
+        );
+        if (action.type === "clear") {
+            setAppliedCoupon(null);
             return;
         }
+        if (action.type !== "apply" || autoCouponActive.current) return;
 
-        if (appliedCoupon || isAutoCouponChecking) return;
+        const requestId = autoCouponGuard.current.next();
+        autoCouponActive.current = true;
 
         validateCouponSilently({
-            code: AUTO_COUPON_CODE,
+            code: action.code,
             totalAmount: cartValue,
         })
             .then((data) => {
+                if (!autoCouponGuard.current.isCurrent(requestId)) return;
                 setAppliedCoupon(data);
                 setCouponCode("");
             })
             .catch(() => {
                 // Keep checkout smooth even if auto coupon is not available/valid.
+            })
+            .finally(() => {
+                autoCouponActive.current = false;
             });
-    }, [
-        appliedCoupon,
-        cartValue,
-        isAutoCouponChecking,
-        setAppliedCoupon,
-        validateCouponSilently,
-    ]);
+        return () => autoCouponGuard.current.invalidate();
+    }, [appliedCoupon, cartValue, setAppliedCoupon, validateCouponSilently]);
 
     const { mutate: initPayment, isPending: isPaymentInitializing } =
         useMutation({
@@ -769,6 +688,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
                 const options = createRazorpayPaymentOptions({
                     orderId: razorpayOrderId,
+                    cancelRedirectUrl: paymentCancellationPath,
                     deliveryAddress: selectedShippingAddress,
                     prices: {
                         ...priceList,
@@ -811,7 +731,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     },
                     orderIntentId: orderIntent.id,
                     onOrderSuccess: playSwapStampCelebration,
-                    onPurchaseSuccess: trackMetaPurchase,
+                    onPurchaseSuccess: trackCompletedPurchase,
                 });
 
                 initializeRazorpayPayment(options);
@@ -868,7 +788,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 );
             }
 
-            trackMetaPurchase(completedOrderIds);
+            trackCompletedPurchase(completedOrderIds);
 
             if (!isBuyNow) {
                 deleteItemFromCart({ userId });
@@ -933,7 +853,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 );
             }
 
-            trackMetaPurchase(completedOrderIds);
+            trackCompletedPurchase(completedOrderIds);
 
             setProcessingModalTitle("Reward Redeemed Successfully");
             setProcessingModalDescription(
@@ -1148,6 +1068,15 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                             ),
                                         }))
                                     }
+                                    onBlur={(event) =>
+                                        void persistCustomization(
+                                            item,
+                                            event.currentTarget.value
+                                        )
+                                    }
+                                    disabled={pendingCustomizationIds.has(
+                                        String(item.id)
+                                    )}
                                     placeholder="E.g. Add initials, preferred color, or special instructions"
                                     maxLength={500}
                                     className="min-h-20 resize-none border-amber-200 bg-white"
@@ -1197,6 +1126,15 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                             <p className="mt-0.5 text-xs text-gray-500">
                                                 Extra savings with coupon
                                             </p>
+                                            {appliedCoupon.code.toUpperCase() ===
+                                                AUTO_COUPON_CODE && (
+                                                <p className="mt-1 text-xs text-green-700">
+                                                    {
+                                                        "TRYNEW20 was automatically applied"
+                                                    }{" "}
+                                                    to eligible carts.
+                                                </p>
+                                            )}
                                         </>
                                     ) : (
                                         <>
@@ -1596,7 +1534,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             rewardCheckoutQuery.isLoading ||
                             activeRewardCartItemQuery.isLoading ||
                             availableItems.length === 0 ||
-                            isAdmin
+                            isAdmin ||
+                            pendingCustomizationIds.size > 0
                         }
                     >
                         {isProcessing || isPaymentInitializing

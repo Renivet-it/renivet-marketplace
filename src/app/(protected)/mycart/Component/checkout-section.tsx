@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { DEFAULT_MESSAGES } from "@/config/const";
-import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
+import {
+    AUTO_COUPON_CODE,
+    createRequestGuard,
+    filterAvailableCheckoutItems,
+    getAutoCouponAction,
+    toCheckoutPriceItems,
+} from "@/lib/checkout/shared";
+import { useCustomerOrderGuard } from "@/lib/hooks/use-customer-order-guard";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -36,8 +43,6 @@ interface PageProps {
     userId: string;
 }
 
-const AUTO_COUPON_CODE = "TRYNEW20";
-const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
 const FREE_SHIPPING_THRESHOLD = 999 * 100;
 
 export default function CheckoutSection({ userId }: PageProps) {
@@ -52,7 +57,7 @@ export default function CheckoutSection({ userId }: PageProps) {
     });
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
-    const isAdmin = Boolean(user && !canPlaceCustomerOrder(user));
+    const { isBlocked: isAdmin } = useCustomerOrderGuard(user, isUserFetching);
 
     const { data: activeRewardCartItem } =
         trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
@@ -65,20 +70,7 @@ export default function CheckoutSection({ userId }: PageProps) {
         });
 
     const availableCart = useMemo(
-        () =>
-            userCart?.filter(
-                (c) =>
-                    c.product.isPublished &&
-                    c.product.verificationStatus === "approved" &&
-                    !c.product.isDeleted &&
-                    c.product.isAvailable &&
-                    (!!c.product.quantity ? c.product.quantity > 0 : true) &&
-                    c.product.isActive &&
-                    (!c.variant ||
-                        (c.variant &&
-                            !c.variant.isDeleted &&
-                            c.variant.quantity > 0))
-            ) || [],
+        () => filterAvailableCheckoutItems(userCart, false),
         [userCart]
     );
 
@@ -142,30 +134,7 @@ export default function CheckoutSection({ userId }: PageProps) {
     );
 
     const priceList = useMemo(() => {
-        const items = selectedItems.map((item) => {
-            const itemPrice = item.variantId
-                ? (item.product.variants.find((v) => v.id === item.variantId)
-                      ?.price ??
-                  item.product.price ??
-                  0)
-                : (item.product.price ?? 0);
-
-            const compareAtPrice = item.variantId
-                ? (item.product.variants.find((v) => v.id === item.variantId)
-                      ?.compareAtPrice ??
-                  item.product.compareAtPrice ??
-                  itemPrice)
-                : (item.product.compareAtPrice ?? itemPrice);
-
-            return {
-                price: itemPrice,
-                compareAtPrice: compareAtPrice,
-                quantity: item.quantity,
-                categoryId: item.product.categoryId,
-                subCategoryId: item.product.subcategoryId,
-                productTypeId: item.product.productTypeId,
-            };
-        });
+        const items = toCheckoutPriceItems(selectedItems);
 
         return calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
@@ -213,51 +182,44 @@ export default function CheckoutSection({ userId }: PageProps) {
             },
         });
 
-    const {
-        mutateAsync: validateCouponSilently,
-        isPending: isAutoCouponChecking,
-    } = trpc.general.coupons.validateCoupon.useMutation();
-
-    const hasAutoApplied = useRef(false);
+    const { mutateAsync: validateCouponSilently } =
+        trpc.general.coupons.validateCoupon.useMutation();
+    const autoCouponGuard = useRef(createRequestGuard());
+    const autoCouponActive = useRef(false);
 
     useEffect(() => {
-        const shouldAutoApply = totalPrice > AUTO_COUPON_MIN_CART_VALUE;
-        const isTryNewCouponApplied =
-            appliedCoupon?.code?.toUpperCase() === AUTO_COUPON_CODE;
-
-        if (!shouldAutoApply) {
-            if (isTryNewCouponApplied) {
-                setAppliedCoupon(null);
-                setCouponCode("");
-            }
-            hasAutoApplied.current = false;
+        const action = getAutoCouponAction(
+            totalPrice,
+            appliedCoupon?.code?.toUpperCase()
+        );
+        if (action.type === "clear") {
+            setAppliedCoupon(null);
+            setCouponCode("");
+            return;
+        }
+        if (action.type !== "apply" || autoCouponActive.current) {
             return;
         }
 
-        if (appliedCoupon || hasAutoApplied.current || isAutoCouponChecking) {
-            return;
-        }
-
-        hasAutoApplied.current = true;
+        const requestId = autoCouponGuard.current.next();
+        autoCouponActive.current = true;
         validateCouponSilently({
-            code: AUTO_COUPON_CODE,
+            code: action.code,
             totalAmount: totalPrice,
         })
             .then((data) => {
+                if (!autoCouponGuard.current.isCurrent(requestId)) return;
                 setAppliedCoupon(data);
                 setCouponCode("");
             })
             .catch(() => {
-                hasAutoApplied.current = false;
                 // Keep checkout smooth even if auto coupon is not available/valid.
+            })
+            .finally(() => {
+                autoCouponActive.current = false;
             });
-    }, [
-        appliedCoupon,
-        isAutoCouponChecking,
-        setAppliedCoupon,
-        totalPrice,
-        validateCouponSilently,
-    ]);
+        return () => autoCouponGuard.current.invalidate();
+    }, [appliedCoupon, setAppliedCoupon, totalPrice, validateCouponSilently]);
 
     return (
         <div className="w-full space-y-4">
@@ -524,22 +486,33 @@ export default function CheckoutSection({ userId }: PageProps) {
                         <div className="mt-3 space-y-3">
                             {/* Applied coupon banner */}
                             {appliedCoupon && (
-                                <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/60 px-3 py-2">
-                                    <span className="text-xs font-semibold text-green-700">
-                                        {appliedCoupon.code} — saving{" "}
-                                        {formatPriceTag(
-                                            +convertPaiseToRupees(
-                                                priceList.discount
-                                            )
-                                        )}
-                                    </span>
-                                    <button
-                                        onClick={() => setAppliedCoupon(null)}
-                                        className="text-xs font-semibold uppercase text-red-500 hover:underline"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
+                                <>
+                                    <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/60 px-3 py-2">
+                                        <span className="text-xs font-semibold text-green-700">
+                                            {appliedCoupon.code} — saving{" "}
+                                            {formatPriceTag(
+                                                +convertPaiseToRupees(
+                                                    priceList.discount
+                                                )
+                                            )}
+                                        </span>
+                                        <button
+                                            onClick={() =>
+                                                setAppliedCoupon(null)
+                                            }
+                                            className="text-xs font-semibold uppercase text-red-500 hover:underline"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                    {appliedCoupon.code.toUpperCase() ===
+                                        AUTO_COUPON_CODE && (
+                                        <p className="mt-1 text-xs text-green-700">
+                                            TRYNEW20 was automatically applied
+                                            to eligible carts.
+                                        </p>
+                                    )}
+                                </>
                             )}
 
                             {/* Manual Input */}

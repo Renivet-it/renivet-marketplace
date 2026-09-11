@@ -2,9 +2,9 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
-import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
-import { CachedUser, ResponseData } from "./lib/validations";
 import { buildAuthRedirectUrl } from "./lib/auth/redirect";
+import { cFetch, hasPermission } from "./lib/utils";
+import { ResponseData } from "./lib/validations";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
@@ -39,11 +39,19 @@ export default clerkMiddleware(async (auth, req) => {
             path: url.pathname,
         });
 
-        const res = await cFetch<ResponseData<CachedUser>>(
+        const res = await cFetch<
+            ResponseData<{
+                isAuthorized: boolean;
+                sitePermissions: number;
+                brandPermissions: number;
+                brandId: string | null;
+            }>
+        >(
             new URL(
                 `/api/permission?${searchParams.toString()}`,
                 url
-            ).toString()
+            ).toString(),
+            { headers: { cookie: req.headers.get("cookie") ?? "" } }
         );
         // Do not redirect the homepage back to itself when a newly-created
         // Clerk user is still being synchronized to the local database.
@@ -54,18 +62,16 @@ export default clerkMiddleware(async (auth, req) => {
         }
 
         if (url.pathname.startsWith("/dashboard")) {
-            const existingUser = res.data!.data!;
-            const { brandPermissions, sitePermissions } = getUserPermissions(
-                existingUser.roles
-            );
+            const routingContext = res.data?.data;
+            if (!routingContext?.isAuthorized)
+                return NextResponse.redirect(new URL("/", url));
+            const { brandPermissions, sitePermissions, brandId } =
+                routingContext;
 
             if (url.pathname === "/dashboard") {
-                if (existingUser.brand) {
+                if (brandId) {
                     return NextResponse.redirect(
-                        new URL(
-                            `/dashboard/brands/${existingUser.brand.id}/analytics`,
-                            url
-                        )
+                        new URL(`/dashboard/brands/${brandId}/analytics`, url)
                     );
                 } else {
                     // Find the first route the user has permission for
@@ -126,7 +132,7 @@ export default clerkMiddleware(async (auth, req) => {
             }
 
             if (url.pathname.startsWith("/dashboard/general")) {
-                if (existingUser.brand)
+                if (brandId)
                     return NextResponse.redirect(new URL("/dashboard", url));
 
                 const routes = generalSidebarConfig
@@ -218,9 +224,9 @@ export default clerkMiddleware(async (auth, req) => {
                 if (isBrandProductsRoute && canManageProductsAcrossBrands)
                     return NextResponse.next();
 
-                if (!existingUser.brand)
+                if (!brandId)
                     return NextResponse.redirect(new URL("/dashboard", url));
-                const userBrand = existingUser.brand;
+                const userBrand = { id: brandId };
 
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
@@ -281,7 +287,10 @@ export default clerkMiddleware(async (auth, req) => {
             url.pathname.startsWith("/become-a-seller")
         )
             return NextResponse.redirect(
-                new URL(buildAuthRedirectUrl(`${url.pathname}${url.search}`), url)
+                new URL(
+                    buildAuthRedirectUrl(`${url.pathname}${url.search}`),
+                    url
+                )
             );
 
     return res;

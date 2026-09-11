@@ -1,0 +1,172 @@
+schema_version: "1.0"
+task:
+  id: REN-121
+  title: Script repeatable agent-browser suite for guest journeys
+  source: linear
+  branch: ayanganguly333/ren-121-script-repeatable-agent-browser-suite-for-guest-journeys
+  status: IN_REVIEW
+  linear:
+    url: https://linear.app/renivet/issue/REN-121/script-repeatable-agent-browser-suite-for-guest-journeys
+    priority: Medium
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - External browser execution could navigate to an unsafe origin without an explicit allowlist.
+    - Guest checkout is adjacent to payment, so the suite must remain read-only and stop at login walls.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - Existing agent-browser spike and security runner patterns
+    - Public and protected application route paths
+    - Bun scripts, package scripts, and test conventions
+  excluded_areas:
+    - Production execution
+    - Authentication, account creation, form submission, cart mutation, and payment
+    - Application source and database behavior
+  dependencies: [DEP-001, DEP-002]
+  integrations: [INT-001]
+  security_boundaries: [SEC-001, SEC-002]
+  state_transitions: [manifest, navigation, classification, cleanup]
+dependencies:
+  - id: DEP-001
+    name: agent-browser
+    purpose: Browser automation runtime.
+    description: Existing development dependency invoked through bunx.
+    status: resolved
+  - id: DEP-002
+    name: operator-provided local or staging origin
+    purpose: Safe target for live execution.
+    description: Runtime input is required for live execution but no credential or URL is committed.
+    status: resolved
+integrations:
+  - id: INT-001
+    system: local/staging Renivet application
+    purpose: Serve the guest routes.
+    failure_mode: Navigation or classification failure returns non-zero.
+security_boundaries:
+  - id: SEC-001
+    description: Loopback or exact E2E_ALLOWED_ORIGINS only; production origins are always rejected.
+  - id: SEC-002
+    description: No login, mutation, form submission, payment, credentials, or response-body evidence.
+personas: []
+business_rules: []
+decisions: []
+requirements:
+  - id: REQ-001
+    description: Define ten repeatable guest journeys.
+    type: explicit
+  - id: REQ-002
+    description: Execute journeys through Bun and agent-browser with classification.
+    type: explicit
+  - id: REQ-003
+    description: Reject unsafe target origins before navigation.
+    type: inferred
+  - id: REQ-004
+    description: Keep journeys read-only and stop at login walls.
+    type: explicit
+  - id: REQ-005
+    description: Provide test:e2e and operator documentation.
+    type: explicit
+scenarios:
+  - id: SCN-001
+    description: Manifest exposes ten read-only journeys.
+    requirement_ids: [REQ-001]
+    test_expectation_ids: [TEXP-001]
+  - id: SCN-002
+    description: Unsafe origins are rejected and safe origins accepted.
+    requirement_ids: [REQ-003]
+    test_expectation_ids: [TEXP-002]
+  - id: SCN-003
+    description: Browser journeys classify pages and close the session.
+    requirement_ids: [REQ-002, REQ-004]
+    test_expectation_ids: [TEXP-003]
+  - id: SCN-004
+    description: Operators can invoke the suite using the documented command.
+    requirement_ids: [REQ-005]
+    test_expectation_ids: [TEXP-003]
+invariants:
+  - id: INV-001
+    description: Every journey is read-only.
+  - id: INV-002
+    description: No blocked origin is navigated.
+  - id: INV-003
+    description: Payment actions are never included.
+flows:
+  - id: FLOW-001
+    description: Validate origin -> navigate -> wait -> classify -> close.
+    state_transitions: [manifest, navigation, classification, cleanup]
+test_expectations:
+  - id: TEXP-001
+    category: unit
+    classification: REQUIRED
+    reason: Manifest completeness and payment exclusion are deterministic.
+  - id: TEXP-002
+    category: security
+    classification: REQUIRED
+    reason: Target safety must fail closed.
+  - id: TEXP-003
+    category: e2e
+    classification: REQUIRED
+    reason: Browser execution must be repeatable and cleaned up.
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only review
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings: []
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Contract review on 2026-09-11
+traceability:
+  requirement_to_scenarios:
+    - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+    - { requirement_id: REQ-002, scenario_ids: [SCN-003] }
+    - { requirement_id: REQ-003, scenario_ids: [SCN-002] }
+    - { requirement_id: REQ-004, scenario_ids: [SCN-003] }
+    - { requirement_id: REQ-005, scenario_ids: [SCN-004] }
+  scenario_to_invariants:
+    - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-003] }
+    - { scenario_id: SCN-002, invariant_ids: [INV-002] }
+    - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-003] }
+    - { scenario_id: SCN-004, invariant_ids: [INV-001] }
+  scenario_to_test_expectations:
+    - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+    - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+    - { scenario_id: SCN-003, test_expectation_ids: [TEXP-003] }
+    - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003] }
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: master
+  base_commit: "aff063f6eafacceab0b1970bb60b5f47817bf56f"
+  head_commit: "d4724e226d47a860b27cc627dbbabf20fc7f44e9"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "Run the suite against an operator-approved staging URL and attach redacted evidence."
+  evidence:
+    - "Compared the approved REN-121 contract with the origin/master to HEAD diff."
+    - "Governance validation and focused journey tests passed."
+    - "Unique static routes, final-origin checks, error-page rejection, isolated sessions, and target-domain network restriction were verified in the implementation diff."
+  governance_reentry_required: false

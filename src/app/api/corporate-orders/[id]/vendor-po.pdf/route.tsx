@@ -9,12 +9,15 @@ import {
     brandMembers,
     corporateExtraChargeRules,
     corporatePurchaseOrders,
+    corporateQcSubmissions,
+    corporateShipments,
     corporateVendorPurchaseOrders,
     products,
 } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
+    getCorporateLegalIdentityMissingFields,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -22,6 +25,10 @@ import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import {
+    buildBrandFulfillmentOrderOptionalCopy,
+    buildBrandFulfillmentOrderSections,
+} from "../vendor-po-data";
 
 export const runtime = "nodejs";
 
@@ -86,21 +93,38 @@ export async function GET(
         );
     }
 
-    const [settings, brandDetails, customerPo, product] = await Promise.all([
-        getCorporateDocumentSettings(),
-        db.query.brandConfidentials.findFirst({
-            where: eq(brandConfidentials.id, order.brand.id),
-        }),
-        db.query.corporatePurchaseOrders.findFirst({
-            where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
-            orderBy: [desc(corporatePurchaseOrders.createdAt)],
-        }),
-        order.quote?.productId
-            ? db.query.products.findFirst({
-                  where: eq(products.id, order.quote.productId),
-              })
-            : Promise.resolve(null),
-    ]);
+    const [settings, brandDetails, customerPo, product, qc, shipment] =
+        await Promise.all([
+            getCorporateDocumentSettings(),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, order.brand.id),
+            }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+            order.quote?.productId
+                ? db.query.products.findFirst({
+                      where: eq(products.id, order.quote.productId),
+                  })
+                : Promise.resolve(null),
+            db.query.corporateQcSubmissions.findFirst({
+                where: eq(corporateQcSubmissions.orderId, order.id),
+                orderBy: [desc(corporateQcSubmissions.createdAt)],
+            }),
+            db.query.corporateShipments.findFirst({
+                where: eq(corporateShipments.orderId, order.id),
+                orderBy: [desc(corporateShipments.createdAt)],
+            }),
+        ]);
+
+    const identityMissing = getCorporateLegalIdentityMissingFields(settings);
+    if (identityMissing.length) {
+        return NextResponse.json(
+            { message: `Complete Renivet corporate document settings: ${identityMissing.join(", ")}` },
+            { status: 422 }
+        );
+    }
 
     const productConfig = (order.productConfigSnapshot ?? {}) as Record<
         string,
@@ -144,11 +168,11 @@ export async function GET(
         (vendorPo as any).unitSellPricePaise ||
         (vendorPo as any).unitBuyPricePaise ||
         (order.quote?.unitPricePaise ??
-            (order.unitPricePaise ?? Math.round(order.subtotalPaise / Math.max(1, order.quantity))));
+            order.unitPricePaise ??
+            Math.round(order.subtotalPaise / Math.max(1, order.quantity)));
 
     const baseSubtotalPaise = unitPricePaise * vendorPo.quantity;
-    const totalTaxablePaise =
-        vendorPo.taxableValuePaise ?? baseSubtotalPaise;
+    const totalTaxablePaise = vendorPo.taxableValuePaise ?? baseSubtotalPaise;
     const customizationPaise = Math.max(
         0,
         totalTaxablePaise - baseSubtotalPaise
@@ -203,16 +227,28 @@ export async function GET(
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
-    const itemDetail =
-        specsSummary ||
-        "Manufacture and fulfil as per approved corporate specifications.";
-    const expectedDeliveryDate = (() => {
-        const date = vendorPo.expectedDeliveryDate
-            ? new Date(vendorPo.expectedDeliveryDate)
-            : new Date();
-        if (!vendorPo.expectedDeliveryDate) date.setDate(date.getDate() + 7);
-        return date.toLocaleDateString("en-IN");
-    })();
+    const optionalCopy = buildBrandFulfillmentOrderOptionalCopy({
+        specsSummary,
+        deliveryInstructions: vendorPo.deliveryInstructions,
+        fulfillmentAddress: vendorPo.deliveryAddress,
+        orderDeliveryAddress: order.deliveryAddress,
+    });
+    const operationalSections = buildBrandFulfillmentOrderSections({
+        brand: {
+            name: order.brand.name,
+            address: corporatePartyAddress(brandDetails ?? {}),
+            gstin: brandDetails?.gstin,
+            email: order.brand.email,
+            phone: order.brand.phone,
+        },
+        order,
+        fulfillmentOrder: vendorPo,
+        qc,
+        shipment,
+    });
+    const expectedDeliveryDate = vendorPo.expectedDeliveryDate
+        ? new Date(vendorPo.expectedDeliveryDate).toLocaleDateString("en-IN")
+        : null;
 
     const data: CorporateCommercialDocumentData = {
         title: "Brand Fulfillment Order",
@@ -264,16 +300,11 @@ export async function GET(
             },
             {
                 label: "Deliver to address",
-                value:
-                    vendorPo.deliveryAddress ||
-                    order.deliveryAddress ||
-                    "As specified in delivery instructions",
+                value: optionalCopy.deliverToAddress,
             },
             {
                 label: "Packaging & QC",
-                value:
-                    vendorPo.deliveryInstructions ||
-                    "Standard protective packaging with corporate packing slip",
+                value: optionalCopy.packagingQc,
             },
             {
                 label: "Marketplace billing",
@@ -284,7 +315,7 @@ export async function GET(
             {
                 description:
                     product?.title ?? productType ?? "Corporate merchandise",
-                detail: itemDetail,
+                detail: optionalCopy.itemDetail ?? undefined,
                 sku: product?.sku ?? product?.nativeSku,
                 hsn,
                 quantity: vendorPo.quantity,
@@ -324,17 +355,18 @@ export async function GET(
             totalAmountPaise,
         },
         notes: Array.from(
-            new Set([
-                "Operational instruction — NOT a purchase order. Renivet is NOT buying from the brand.",
-                "Renivet will generate the Tax Invoice on your behalf per our marketplace agreement.",
-                vendorPo.deliveryInstructions
-                    ? `Packaging & Shipping: ${vendorPo.deliveryInstructions}`
-                    : "Packaging & Shipping: Ship to corporate address per the delivery instructions above.",
-            ])
+            new Set(
+                [
+                    "Operational instruction — NOT a purchase order. Renivet is NOT buying from the brand.",
+                    "Renivet will generate the Tax Invoice on your behalf per our marketplace agreement.",
+                    optionalCopy.packagingShippingNote,
+                ].filter((note): note is string => note !== null)
+            )
         ),
         signatoryName: settings.authorizedSignatoryName,
         declarationCompanyName: settings.legalName,
         showSignatureBlock: false,
+        operationalSections,
     };
 
     const stream = await renderToStream(

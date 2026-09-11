@@ -15,7 +15,7 @@ import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { resend } from "@/lib/resend";
 import { buildAdminSupportHref, notifyAdmins } from "@/lib/support/utils";
 import {

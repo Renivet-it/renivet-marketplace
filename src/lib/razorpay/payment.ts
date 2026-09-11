@@ -13,6 +13,7 @@ import { isCompleteMetaPurchaseOrder } from "@/lib/analytics/meta-purchase";
 // If client-side, crypto.randomUUID() is available in modern browsers.
 // If not, I might need a polyfill or just use globalThis.crypto.
 import { fbEvent } from "@/lib/fbpixel";
+import { getPaymentCancellationDestination } from "@/lib/razorpay/payment-cancellation";
 import {
     convertPaiseToRupees,
     formatPriceTag,
@@ -28,6 +29,7 @@ import { wait } from "../utils";
 
 export function createRazorpayPaymentOptions({
     orderId,
+    cancelRedirectUrl,
     deliveryAddress,
     prices,
     user,
@@ -45,6 +47,7 @@ export function createRazorpayPaymentOptions({
     onPurchaseSuccess,
 }: {
     orderId: string;
+    cancelRedirectUrl?: string;
     deliveryAddress: any;
     prices: {
         items: number;
@@ -338,7 +341,8 @@ export function createRazorpayPaymentOptions({
                 setIsProcessingModalOpen(true);
                 await wait(3000);
                 setIsProcessingModalOpen(false);
-                window.location.href = "/mycart";
+                window.location.href =
+                    getPaymentCancellationDestination(cancelRedirectUrl);
             },
         },
     };

@@ -1,0 +1,67 @@
+schema_version: "1.0"
+task:
+    id: REN-216
+    title: "[SEO][P0] Fix /shop Metadata & Page Semantics"
+    source: linear
+    branch: feat/seo-phase-1-foundation
+    status: IN_REVIEW
+    linear: { url: https://linear.app/renivet/issue/REN-216, priority: Urgent, labels: [Bug], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons: [Metadata and semantic markup only; no data, routing, authorization, or business-rule changes.]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-216, shop layout, shop page, Events sibling metadata]
+    excluded_areas: [Shared H1 framework, category URL migration, sitemap, product data]
+    dependencies: [DEP-001]
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+dependencies:
+    - { id: DEP-001, name: Root metadata template, purpose: Appends the Renivet brand suffix, description: Existing root metadata convention, status: resolved }
+integrations: []
+personas: [{ id: PER-001, role: search_visitor, applicability: Uses shop SERP metadata and heading. }]
+security_boundaries: []
+business_rules: [{ id: BR-001, description: Events metadata remains unchanged., source: REN-216 acceptance criteria }]
+decisions:
+    - { id: DEC-001, question: Which shop heading copy?, class: AUTO_DECIDE, status: resolved, recommendation: Use one descriptive sustainable-shopping H1 aligned with metadata., basis: Linear keyword direction, confidence: high, consequence: low, human_confirmation_required: false, confirmation_source: Linear REN-216 }
+requirements:
+    - { id: REQ-001, description: Shop has a descriptive keyworded title under 60 characters without duplicating the root brand suffix., type: explicit }
+    - { id: REQ-002, description: Shop has a unique 150–160 character meta description., type: explicit }
+    - { id: REQ-003, description: Shop renders exactly one H1 and Events metadata remains unchanged., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: /shop view-source exposes corrected title and description., requirement_ids: [REQ-001, REQ-002] }
+    - { id: SCN-002, description: Shop renders one H1 and Events retains its title., requirement_ids: [REQ-003] }
+invariants: [{ id: INV-001, description: Query behavior, filters, catalog rendering, and Events metadata are unchanged. }]
+flows: []
+test_expectations: [{ id: TEXP-001, category: regression, classification: REQUIRED, reason: Source and rendered checks verify metadata lengths, one H1, and Events regression., scenarios: [SCN-001, SCN-002] }]
+critic: { required: false, completed: false, artifact: null, reviewer: null, fresh_context: false, read_only: true, required_categories: [], categories_reviewed: [], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-12 }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-002] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/main
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: PARTIAL, scenarios: PARTIAL, invariants: PARTIAL, architecture: FAIL, security: NOT_APPLICABLE, test_coverage: PARTIAL, scope: FAIL }
+    blocking_findings: ["REV-216-001: The two-file shop fix is bundled in a 683-file PR that fails governance CI."]
+    required_actions: ["Move the SEO commits to a clean current-main branch and add rendered shop/Events verification."]
+    evidence: ["Shop title and 154-character description are present, but PR #658 contains 683 files and workflow run 34649025488 fails governance validation."]
+    governance_reentry_required: true

@@ -30,6 +30,7 @@ export default async function Page({ searchParams }: PageProps) {
                 { label: "Home", href: "/" },
                 { label: "Shop", href: "/shop" },
             ]}
+            pageHeading="Shop Sustainable Fashion & Eco Products"
         />
     );
 }

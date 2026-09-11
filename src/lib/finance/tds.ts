@@ -4,6 +4,10 @@ import { brands } from "@/lib/db/schema";
 import { toCsv } from "@/lib/finance/reporting";
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { eq } from "drizzle-orm";
+import {
+    auditBrandTdsTrackingRows,
+    SECTION_194_O_THRESHOLD_PAISE,
+} from "@/lib/finance/tds-policy";
 
 function getFinancialYearParts(financialYear: string) {
     const match = /^FY(\d{4})-(\d{2})$/.exec(financialYear);
@@ -169,11 +173,13 @@ export async function runTdsFinancialYearRollover(actorId: string) {
                 brandId: brand.id,
                 financialYear,
                 annualCommissionYtdPaise: 0,
+                annualSalesYtdPaise: 0,
                 tdsDeductedYtdPaise: 0,
                 thresholdCrossedAt: null,
                 cumulativeCommissionPaise: 0,
+                cumulativeSalesPaise: 0,
                 cumulativeTdsPaise: 0,
-                thresholdPaise: 3_000_000,
+                thresholdPaise: SECTION_194_O_THRESHOLD_PAISE,
                 tdsRateBps: 100,
                 lastAppliedCycleId: null,
             })
@@ -195,4 +201,11 @@ export async function runTdsFinancialYearRollover(actorId: string) {
         financialYear,
         rowCount: rows.length,
     };
+}
+
+export async function auditBrandTdsThreshold(financialYear?: string) {
+    const rows = await financeComplianceQueries.listBrandTdsTracking(
+        financialYear ?? getCurrentFinancialYear()
+    );
+    return auditBrandTdsTrackingRows(rows);
 }

@@ -1,7 +1,7 @@
-import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { EmailCompletionCard } from "@/components/auth/email-completion-card";
-import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
+import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
+import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
 import { siteConfig } from "@/config/site";
 import {
     blogQueries,
@@ -74,11 +74,6 @@ const EffortlessElegance = dynamic(() =>
 const EventSectionTwoBanner = dynamic(() =>
     import("@/components/home/new-home-page/event-section-two").then((m) => ({
         default: m.EventSectionTwoBanner,
-    }))
-);
-const FestiveSeason = dynamic(() =>
-    import("@/components/home/new-home-page/festive-season").then((m) => ({
-        default: m.FestiveSeason,
     }))
 );
 const LoveThese = dynamic(() =>
@@ -155,6 +150,7 @@ export default async function Page() {
 
     return (
         <>
+            <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
             <Suspense
                 fallback={
@@ -180,13 +176,6 @@ export default async function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <CuratedBannerFetch />
             </Suspense> */}
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <FestiveSeasonFetch userId={userId ?? undefined} />
-            </Suspense>
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
@@ -347,21 +336,6 @@ async function ProductNewArrivalsGridFetch() {
     return (
         <ScrollReveal>
             <ProductGridNewArrivals products={products as any} />
-        </ScrollReveal>
-    );
-}
-
-async function FestiveSeasonFetch({ userId }: { userId?: string }) {
-    const selected = await productQueries.getFestiveSeasonProducts();
-    const products = selected
-        .map((entry: any) => entry.product)
-        .filter(Boolean);
-
-    if (!products.length) return null;
-
-    return (
-        <ScrollReveal>
-            <FestiveSeason products={products as any} userId={userId} />
         </ScrollReveal>
     );
 }

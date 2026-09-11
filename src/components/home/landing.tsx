@@ -44,15 +44,15 @@ export function Landing({ className, banners, ...props }: PageProps) {
         //     link: "https://renivet.com/brands/bamboology/shop",
         // },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2on6lEQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKIsQTDoXWY4M9GmONJv38rnKquVZUx0pjkQE",
             link: "https://renivet.com/brands/bamboology/shop",
         },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSGDBaWVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNHKdd5g0rgXZuWwadPABUqnljV5RbJMFsx1v",
+            link: "https://renivet.com/shop?sortBy=best-sellers&categoryId=08ce51fe-adb8-4086-acfd-759772767ec8",
         },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNB3WOPNEMmRXWJovF8NdOkhyf9q5rlDYPEtKe",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIG3sMyLrApCnKbtW0hkXs6adUVPBQFlvOi2M",
             link: "https://renivet.com/brands/greysome/shop",
         },
     ];

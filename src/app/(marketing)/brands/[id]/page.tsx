@@ -14,6 +14,9 @@ interface PageProps {
     params: Promise<{
         id: string;
     }>;
+    searchParams: Promise<{
+        searchId?: string;
+    }>;
 }
 
 export async function generateMetadata({
@@ -75,24 +78,28 @@ export async function generateMetadata({
     };
 }
 
-export default function Page({ params }: PageProps) {
+export default function Page({ params, searchParams }: PageProps) {
     return (
         <GeneralShell>
             <Suspense>
-                <BrandFetch params={params} />
+                <BrandFetch params={params} searchParams={searchParams} />
             </Suspense>
         </GeneralShell>
     );
 }
 
-async function BrandFetch({ params }: PageProps) {
+async function BrandFetch({ params, searchParams }: PageProps) {
     const { id } = await params;
 
     if (!UUID_PATTERN.test(id)) {
         const brandBySlug = await brandCache.getBySlug(id);
         if (!brandBySlug) notFound();
 
-        redirect(`/brands/${brandBySlug.slug}/shop`);
+        const { searchId } = await searchParams;
+        const searchQuery = searchId
+            ? `?searchId=${encodeURIComponent(searchId)}`
+            : "";
+        redirect(`/brands/${brandBySlug.slug}/shop${searchQuery}`);
     }
 
     const existingBrand = await brandCache.get(id);

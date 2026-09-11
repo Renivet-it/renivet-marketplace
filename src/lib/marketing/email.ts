@@ -7,7 +7,7 @@ import {
     marketingCampaigns,
     newsletterSubscribers,
 } from "@/lib/db/schema";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { mediaCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { BlogDigestEmail, NewArrivalsDigestEmail } from "@/lib/resend/emails";

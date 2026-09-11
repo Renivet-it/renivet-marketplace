@@ -11,7 +11,7 @@ import {
     swapRewardEvents,
     userSwapRewards,
 } from "@/lib/db/schema";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { resend } from "@/lib/resend";
 import {
     SwapRewardRedeemedEmail,

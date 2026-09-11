@@ -39,6 +39,7 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -116,7 +117,7 @@ function NavbarActionButton({
         <Link
             href={href}
             className={cn(
-                "relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary [&_svg]:size-5",
+                "relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary",
                 className
             )}
         >
@@ -149,6 +150,7 @@ export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
     const [isMenuHidden] = useState(false);
+    const isFestivePage = usePathname() === "/festive";
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
@@ -384,7 +386,7 @@ export function NavbarHome({
                 </div>
                 <nav
                     className={cn(
-                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-2 px-2 py-3 sm:gap-4 sm:px-4 md:order-2 md:px-8 xl:px-10",
+                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-1 px-1 py-2 sm:gap-4 sm:px-4 sm:py-3 md:order-2 md:px-8 xl:px-10",
                         isMenuOpen && "border"
                     )}
                 >
@@ -397,16 +399,20 @@ export function NavbarHome({
                         <Icons.Menu className="size-6" />
                     </button>
 
-                    <div className="flex items-center gap-8 xl:gap-12">
+                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-8 xl:gap-12">
                         {customLogo ? (
                             customLogo
                         ) : (
                             <Link
                                 href="/"
                                 title="Home"
-                                className="flex items-center gap-2 text-2xl font-bold transition-opacity duration-200 hover:opacity-85"
+                                className="flex shrink-0 items-center gap-2 text-2xl font-bold transition-opacity duration-200 hover:opacity-85"
                             >
-                                <RenivetFull width={120} height={36} />
+                                <RenivetFull
+                                    width={120}
+                                    height={36}
+                                    className="max-[380px]:h-[31px] max-[380px]:w-[104px]"
+                                />
                             </Link>
                         )}
 
@@ -829,7 +835,13 @@ export function NavbarHome({
                                         }}
                                         className="flex items-center justify-center"
                                     >
-                                        <Icons.ShoppingCart className="size-5" />
+                                        <Icons.ShoppingCart
+                                            className={cn(
+                                                "size-5",
+                                                isFestivePage &&
+                                                    "size-4 text-[#DF2463]"
+                                            )}
+                                        />
                                     </motion.div>
                                     <span className="sr-only">Cart</span>
                                 </NavbarActionButton>
@@ -860,7 +872,13 @@ export function NavbarHome({
                                                 {(availableCart ?? []).length}
                                             </div>
                                         )}
-                                        <Icons.ShoppingCart className="size-6" />
+                                        <Icons.ShoppingCart
+                                            className={cn(
+                                                "size-6",
+                                                isFestivePage &&
+                                                    "size-4 text-[#DF2463]"
+                                            )}
+                                        />
                                     </motion.div>
                                 </Link>
 
@@ -1035,7 +1053,13 @@ export function NavbarHome({
                                             }}
                                             className="flex items-center justify-center"
                                         >
-                                            <Icons.ShoppingCart className="size-5" />
+                                            <Icons.ShoppingCart
+                                                className={cn(
+                                                    "size-5",
+                                                    isFestivePage &&
+                                                        "size-4 text-[#DF2463]"
+                                                )}
+                                            />
                                         </motion.div>
                                         <span className="sr-only">Cart</span>
                                     </NavbarActionButton>
@@ -1060,9 +1084,9 @@ export function NavbarHome({
                                 </Button>
 
                                 <div className="flex items-center md:hidden">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1 sm:gap-2">
                                         <Button
-                                            className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
+                                            className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
                                             size="sm"
                                             asChild
                                         >
@@ -1071,7 +1095,7 @@ export function NavbarHome({
                                             </Link>
                                         </Button>
                                         <Button
-                                            className="h-8 rounded-full bg-[#2f3720] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] sm:px-5"
+                                            className="h-8 rounded-full bg-[#2f3720] px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-white transition-all duration-300 hover:bg-[#252c18] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
                                             size="sm"
                                             asChild
                                         >

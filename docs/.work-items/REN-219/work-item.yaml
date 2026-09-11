@@ -1,0 +1,76 @@
+schema_version: "1.0"
+task:
+    id: REN-219
+    title: "[SEO][P1] Shared H1 + Canonical Framework"
+    source: linear
+    branch: feat/seo-phase-1-foundation
+    status: IN_REVIEW
+    linear: { url: https://linear.app/renivet/issue/REN-219, priority: High, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream B }
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons: [Systemic heading migration plus canonical behavior across three high-traffic templates; incorrect canonical targets can consolidate signals incorrectly.]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-219, six homepage sections, root/home page, shop/product/blog metadata, existing canonical patterns]
+    excluded_areas: [Shop H1 copy already owned by REN-216, category URL migration, ItemList schema, faceted noindex policy, product/blog H1 audit]
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001]
+    security_boundaries: []
+    state_transitions: [section_h1 -> section_h2, query_variant -> clean_canonical]
+dependencies:
+    - { id: DEP-001, name: REN-216 shop metadata, purpose: Avoid duplicate shop H1 work, description: Shop H1 is dedicated to REN-216, status: resolved }
+    - { id: DEP-002, name: Existing canonical templates, purpose: Reuse proven URL pattern, description: Homepage/festive/discover/brand shop conventions, status: resolved }
+integrations: [{ id: INT-001, name: Search crawlers, system: Google Search, purpose: Consume H1 and canonical signals, description: Rendered HTML and crawl validation. }]
+personas: [{ id: PER-001, role: search_visitor, applicability: Receives one primary heading and consolidated canonical results. }]
+security_boundaries: []
+business_rules: [{ id: BR-001, description: Canonicalization must not alter route navigation or filter behavior., source: REN-219 requirements }]
+decisions:
+    - { id: DEC-001, question: Shared component or lint rule?, class: AUTO_DECIDE, status: resolved, recommendation: Use a shared heading component and executable scoped source guard., basis: Existing component conventions and systemic migration requirement, confidence: high, consequence: medium, human_confirmation_required: false, confirmation_source: REN-219 }
+requirements:
+    - { id: REQ-001, description: Homepage renders exactly one H1 and six former section H1 usages become non-root headings through a shared mechanism., type: explicit }
+    - { id: REQ-002, description: Shop, product, and blog templates emit clean param-free canonicals; shop query variants point to the clean base URL., type: explicit }
+    - { id: REQ-003, description: Existing working canonicals, REN-216 shop semantics, and route/filter behavior remain unchanged., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: Homepage rendered HTML contains one H1 and section headings remain visually present as non-root headings., requirement_ids: [REQ-001] }
+    - { id: SCN-002, description: Shop, product, and blog rendered metadata exposes clean canonicals, including filtered shop variants., requirement_ids: [REQ-002] }
+    - { id: SCN-003, description: Existing canonical templates and navigation/filter behavior show no regression., requirement_ids: [REQ-003] }
+invariants:
+    - { id: INV-001, description: Each rendered page has only one document-root H1. }
+    - { id: INV-002, description: Canonicals are deterministic clean URLs and do not change user-visible routing. }
+flows: [{ id: FLOW-001, description: Shared heading/canonical helpers -> page templates and homepage sections -> crawler-visible semantics., state_transitions: [legacy_markup -> shared_semantics] }]
+test_expectations:
+    - { id: TEXP-001, category: accessibility, classification: REQUIRED, reason: Rendered/source checks count H1s and verify section headings remain accessible and visible., scenarios: [SCN-001] }
+    - { id: TEXP-002, category: regression, classification: REQUIRED, reason: Metadata tests cover clean canonicals on shop/product/blog and multiple shop query variants., scenarios: [SCN-002] }
+    - { id: TEXP-003, category: regression, classification: REQUIRED, reason: Existing canonical templates plus shop navigation/filter behavior are checked for no regression., scenarios: [SCN-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: Wegener, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [Homepage H1 ownership, canonical URL matrix, executable regression guard, dynamic failure behavior, public blog visibility, and concrete route tests are explicit in the amended contract.] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-12 after independent critic review }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-003] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/main
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: PARTIAL, scenarios: PARTIAL, invariants: PARTIAL, architecture: PARTIAL, security: NOT_APPLICABLE, test_coverage: PARTIAL, scope: FAIL }
+    blocking_findings: ["REV-219-002: PR #658 contains 683 files and fails governance CI."]
+    required_actions: ["Isolate the SEO changes on current main and add rendered heading, canonical-variant, and navigation regression tests."]
+    evidence: ["The targeted heading/canonical source exists, but tests are source-string checks and PR #658 fails governance validation across an oversized diff."]
+    governance_reentry_required: true

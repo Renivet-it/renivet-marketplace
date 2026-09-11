@@ -1,0 +1,801 @@
+schema_version: "1.0"
+task:
+  id: REN-172
+  title: Cross-tenant authorization bypass across 51 brand-router procedures (includes F10's 6 Unicommerce procedures)
+  source: linear
+  branch: docs/enhancement-improvements-governance
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-172
+risk:
+  initial_risk: L3
+  initial_risk_source: preliminary_ai
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  path_rule_matches:
+    - path: src/lib/trpc/routes/brands/**
+      policy_rule: tenant-isolation
+    - path: src/lib/trpc/routes/brands/confidential.ts
+      policy_rule: customer-pii
+  escalation_history: []
+requirements:
+  - id: REQ-001
+    description: Every one of the 51 identified procedures must reject a caller whose own brand does not match the procedure's target input.brandId (or equivalent resolved brand-scoped resource), except for a legitimate platform-admin bypass
+    type: explicit
+    source: REN-172/DEF-010 acceptance criteria (Linear)
+  - id: REQ-002
+    description: roles.ts's createRole/updateRole must not allow a brand admin to write a permission bitfield for a role belonging to a brand other than their own
+    type: inferred
+    source: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update (2026-08-24) — privilege-escalation chain
+  - id: REQ-003
+    description: members.ts's roles.updateRoles must not allow binding a role to a user in a brand other than the caller's own
+    type: inferred
+    source: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update (2026-08-24) — privilege-escalation chain, second link
+  - id: REQ-004
+    description: getBrandWithConfidential and confidential.ts's create/update procedures must reject any caller whose own brand does not match the target brandId, before any KYC/legal/bank data is read or any external side-effect (Shiprocket/Delhivery warehouse creation, verification email) is fired
+    type: inferred
+    source: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update — zero-auth confidential-data finding
+  - id: REQ-005
+    description: analytics.ts's getOverview/getMonthlySales/getStatusBreakdown/getTopProducts and orders.ts's getOrderShipmentDetailsByShipmentId must reject a caller requesting another brand's data
+    type: inferred
+    source: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update — zero-auth analytics/shipment leak finding
+  - id: REQ-006
+    description: The 6 Unicommerce procedures (getUnicommerceIntegration, upsertUnicommerceIntegration, authenticateUnicommerceIntegration, runUnicommerceApiRequest, testUnicommerceIntegration, triggerUnicommerceSync) must reject cross-brand calls, satisfying P08's AC-31 as a byproduct
+    type: inferred
+    source: F10 (docs/research/brand-commerce-integration/01-renivet-current-state/FINDINGS.md); original DEF-010 finding
+  - id: REQ-007
+    description: "REVISED (Critic Cycle 1): products.ts's 6 vulnerable procedures need two different remediations, not one uniform 'restore the comment' fix. Only `updateProductPublishStatus` (~line 1379) has a commented-out ownership check with no active replacement — a genuine regression restoration. The other two commented blocks (in `updateProduct`/`deleteProduct`) are dead code already superseded by working active checks a few lines later — those two procedures are already safe, no change needed. Five procedures — `updateCatalogQcReview`, `createProductJourney`, `updateProductJourney`, `createProductValue`, `updateProductValue` — have NO ownership check ever present, commented or otherwise, and need genuinely NEW authorization logic (two of them via nested-id resolution, since they identify their target by a journey/value id, not a brandId)."
+    type: inferred
+    source: "Architect investigation, 2026-08-31 — verified at src/lib/trpc/routes/brands/products.ts (commented `if (existingProduct.brand.id !== user.brand?.id)` blocks at lines 1152, 1362, 1379, 1737, among others). CORRECTED after Critic Cycle 1 (2026-08-31): independent verification found only updateProductPublishStatus (1379-1383) is a true restoration; updateProduct (1152-1156) and deleteProduct (1737-1741)'s commented blocks are dead/superseded by active checks at 1166-1174/1746; updateCatalogQcReview (1620-1652), createProductJourney/updateProductJourney (1858-1911), createProductValue/updateProductValue (1913-1963) have no check at all and need new code. The original text would have led an implementer to under-scope 5 of 6 vulnerable products.ts procedures as 'just restore a comment.'"
+  - id: REQ-008
+    description: "REVISED (Critic Cycle 2): the fix must classify all 51 procedures into (a) DIRECT sites — target brandId is present on `input` — where a shared `requireOwnBrand(ctx, input.brandId)` call suffices, and (b) RESOLVED sites — target brand is only knowable after a lookup — where the same shared comparison is called with that resolved brand id instead. Corrected classification: `brand-pages.ts`'s `createBrandPageSection` is Class A (DIRECT — `const { brandId } = input` at line ~150), not Class B as Revision 1 claimed; its other 5 procedures remain Class B via an existing section/product lookup. `products.ts`'s `updateProductJourney`/`updateProductValue` are Class B but REQUIRE A NEW SECOND QUERY (fetch the journey/value row by id — which has no brand reference at all, only a productId FK — then fetch that product to reach `.brand.id`); this is NOT a 'reuse an existing read' case like the other Class B sites, and must be implemented as an explicit second lookup, not assumed free. `invites.ts`'s `getInvite` ({code} only, no brandId, no isTRPCAuth at all) is a 10th confirmed Class B site, resolved via `queries.brandInvites.getBrandInvite(code)`'s return value — found during Cycle 2's spot-check of exactly the files DEC-001 already flagged as unverified, corroborating that concern with concrete evidence. ADDED (Critic Cycle 3): three more products.ts procedures belong in the Class B 'reuse an existing read' list, previously omitted by bookkeeping oversight — `createProductJourney`, `createProductValue`, and `updateCatalogQcReview` (products.ts:1620-1652, 1858-1939) all already fetch `existingProduct = queries.products.getProduct({productId: input.productId})` before anything else, and `getProduct` joins the brand relation, so `existingProduct.brand.id` is already available with no new query — same pattern as the other reuse-based Class B sites, just not previously listed. The full classification (now 13 named Class B sites) is a floor to be confirmed procedure-by-procedure at implementation time, not asserted as exhaustive by this SPEC."
+    type: inferred
+    source: "Critic Cycle 1 finding (authorization, blocking) — verified >=9 of the 51 sites have no input.brandId at all. REVISED after Critic Cycle 2 (2026-08-31) re-verified every named site against origin/master and found: (1) createBrandPageSection misclassified — its cited lines 27-34 actually belong to a different procedure (createBrandPageSectionProduct); (2) updateProductJourney/updateProductValue's underlying tables (productsJourney/productValues, product.ts schema lines 527-544/573-587) have no brand reference, only productId — the 'no new query' claim was false for these 2; (3) invites.ts::getInvite is an additional, previously-unlisted Class B site in an unverified file."
+  - id: REQ-009
+    description: "REVISED (Critic Cycle 2): rejected cross-brand attempts (FORBIDDEN from the new ownership check) are logged/alerted via the existing `createOperationalAlert` helper (src/lib/monitoring-sla/audit.ts:41, already used elsewhere in products.ts) so repeated post-deploy probing of the newly-closed brand-takeover chain can be detected during rollout. Concrete convention (added per Cycle 2, so all 51+ call sites are consistent rather than each inventing its own): `entityType: 'brand'`, `entityId: <the target brandId that was rejected>`, `dedupeKey: cross_brand_rejection:{procedureName}:{callerUserId}:{targetBrandId}` (leverages the helper's built-in dedup support), `type: 'cross_brand_rejection'` (ADDED per Critic Cycle 3 — the helper also accepts a `type` field, defaulting to the generic `'operational_event'` if omitted, which would make these 51+ call sites' alerts hard to distinguish as one signal on a dashboard; existing usage elsewhere in products.ts always sets `type` explicitly, e.g. `'catalog_qc_escalation'`), `severity` at a level appropriate for a security-probing signal (developer to confirm against the helper's existing severity taxonomy)."
+    type: inferred
+    source: "Critic Cycle 1 finding (observability, non-blocking) — no requirement/scenario proposed detection of repeated cross-brand rejection attempts for a P0 fix closing an actively-probeable full brand-takeover chain. REVISED after Critic Cycle 2: confirmed createOperationalAlert's real signature and dedup mechanism, and found the original requirement left entityType/entityId/dedupeKey unspecified — risking the same per-call-site inconsistency the comparison-logic fix itself was designed to avoid."
+scenarios:
+  - id: SCN-001
+    requirement_ids:
+      - REQ-001
+    description: "Generic cross-tenant check: for a representative sample spanning all affected files, brand-A admin calls with input.brandId = brand-B; assert FORBIDDEN and zero brand-B data read/written. The Linear issue's own 'Required TEST' already calls for this per all 51 procedures — this scenario is the shared template each of the 51 tests instantiates."
+    category: authorization
+    invariant_ref: INV-001
+    verification:
+      type: automated
+      test_ref: brands.ownership.spec.ts::cross-tenant-rejected[51 procedures, table-driven]
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-002
+    requirement_ids:
+      - REQ-006
+    description: "The 6 F10 Unicommerce procedures specifically: brand-A admin cannot read/write brand-B's Unicommerce credentials or trigger a sync against brand-B's tenant"
+    category: tenant_isolation
+    invariant_ref: INV-001
+    verification:
+      type: automated
+      test_ref: brands.unicommerce.ownership.spec.ts::cross-tenant-rejected
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-003
+    requirement_ids:
+      - REQ-002
+    description: "Full privilege-escalation chain attempt: brand-A admin calls createRole targeting brand B with an ADMINISTRATOR bit, then attempts members.roles.updateRoles to bind it to a brand-B user; assert the chain is broken at createRole (first call already FORBIDDEN), not merely at the second step"
+    category: authorization
+    invariant_ref: INV-002
+    verification:
+      type: security
+      test_ref: null
+      reason_code: SECURITY_SPECIALIST_REQUIRED
+      reason: This is a multi-step exploit-chain verification (privilege escalation), which per qa/PERSONAS/APPLICABILITY_MATRIX.md is Persona 2's (Application Security Engineer) primary domain — beyond a simple single-call pass/fail assertion, it needs adversarial-chain thinking to confirm no alternate ordering or partial-state path re-opens the chain
+    status: pending
+  - id: SCN-004
+    requirement_ids:
+      - REQ-004
+    description: "createConfidential called cross-brand: assert the ownership check rejects before any Shiprocket/Delhivery warehouse-creation call or verification email is sent (mock the external clients, assert zero invocations on the rejected path)"
+    category: external_dependency_failures
+    invariant_ref: INV-003
+    verification:
+      type: automated
+      test_ref: brands.confidential.ownership.spec.ts::cross-tenant-rejected-no-side-effects
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-005
+    requirement_ids:
+      - REQ-007
+    description: Structural check that all 51 procedures call one shared ownership-check utility rather than 51 independent inline implementations, and that products.ts's commented-out checks are restored, not left commented
+    category: data_integrity
+    invariant_ref: INV-004
+    verification:
+      type: automated
+      test_ref: structural.ownership-check-coverage.spec.ts
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-006
+    requirement_ids:
+      - REQ-001
+    description: Platform admin (isAdmin) calling any of a representative sample of the 51 procedures cross-brand still succeeds — the fix must not regress legitimate admin tooling
+    category: backward_compatibility
+    invariant_ref: INV-005
+    verification:
+      type: automated
+      test_ref: brands.ownership.spec.ts::admin-bypass-preserved
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-007
+    requirement_ids:
+      - REQ-005
+    description: analytics.ts and orders.ts's getOrderShipmentDetailsByShipmentId cannot be used by an authenticated non-brand-member (e.g. an ordinary shopper account) to pull another brand's revenue data or a customer's shipment/address PII by id
+    category: pii
+    invariant_ref: INV-001
+    verification:
+      type: automated
+      test_ref: brands.analytics-and-shipment.pii.spec.ts::non-brand-user-rejected
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-008
+    requirement_ids:
+      - REQ-002
+    description: Two concurrent requests — one legitimate brand-A role update, one attacker cross-brand attempt — must not interleave in a way that lets the ownership check on one request read stale ctx.user.brand state affected by the other
+    category: race_conditions
+    invariant_ref: INV-002
+    verification:
+      type: manual
+      test_ref: null
+      reason_code: MANUAL_BUSINESS_VALIDATION_REQUIRED
+      reason: ctx.user.brand is resolved per-request from the authenticated session at request time, not shared mutable state across requests, per this codebase's existing tRPC context pattern — this scenario's risk is judged LOW by design inspection rather than warranting a dedicated concurrency test; a security reviewer should confirm this judgment rather than an automated test being written for a risk that structurally shouldn't exist
+    status: pending
+  - id: SCN-009
+    requirement_ids:
+      - REQ-003
+    description: "members.ts's roles.updateRoles rejected on its own (independent of the chain in SCN-003): brand-A admin attempts to bind ANY existing role (not just a freshly-created hostile one) to a user in brand B — assert FORBIDDEN regardless of which role is targeted"
+    category: authorization
+    invariant_ref: INV-002
+    verification:
+      type: automated
+      test_ref: brands.members.ownership.spec.ts::cross-tenant-role-binding-rejected
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-010
+    requirement_ids:
+      - REQ-008
+    description: "REVISED (Critic Cycle 2): for each of the 10 confirmed RESOLVED-class procedures (members.ts roles.updateRoles, orders.ts getOrderShipmentDetailsByShipmentId, 5 of brand-pages.ts's procedures — excluding createBrandPageSection, corrected to Class A, products.ts Journey/Value procedures via their required SECOND lookup, and invites.ts::getInvite), verify the ownership check correctly resolves the target brand and rejects cross-brand; AND verify a legitimate same-brand caller still succeeds on every one of the 51+ procedures (the happy-path regression Cycle 1 found untested). Journey/Value procedures specifically must be tested with the second (product) lookup actually wired in, not assumed free."
+    category: happy_path
+    invariant_ref: INV-006
+    verification:
+      type: automated
+      test_ref: brands.ownership.spec.ts::resolved-class-and-same-brand-happy-path
+      reason_code: null
+      reason: null
+    status: pending
+  - id: SCN-011
+    requirement_ids:
+      - REQ-009
+    description: "ADDED (Critic Cycle 1, non-blocking): a rejected cross-brand attempt (FORBIDDEN from the new ownership check) is logged/alerted via existing operational-alert infrastructure, so repeated post-deploy probing of the newly-closed chain is detectable during rollout"
+    category: observability
+    invariant_ref: null
+    verification:
+      type: automated
+      test_ref: brands.ownership.spec.ts::cross-tenant-rejection-alerted
+      reason_code: null
+      reason: null
+    status: pending
+invariants:
+  - id: INV-001
+    description: For every one of the 51 procedures, a brand-A caller supplying brand-B's id as the target resource never causes a read or write against brand-B's data
+    source_derivation: qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md; PAT-TENANT-01
+    validation_strategy: "Automated test per procedure: authenticate as brand-A admin, call with input.brandId = brand-B, assert FORBIDDEN and assert no brand-B row was read/written (verified via DB query or mock assertion, per procedure)"
+    affected_scenarios:
+      - SCN-001
+      - SCN-002
+    status: pending
+  - id: INV-002
+    description: No sequence of currently-available brand-scoped procedure calls allows a brand-A user to obtain ADMINISTRATOR-equivalent permissions over brand B
+    source_derivation: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update — the roles.ts + members.ts chained escalation
+    validation_strategy: "Automated integration test: as brand-A admin, attempt the full chain (createRole targeting brand B's id with ADMINISTRATOR bit, then updateRoles binding it to a brand-B user); assert the chain is broken at the first step and cannot be completed even if attempted out of order"
+    affected_scenarios:
+      - SCN-003
+    status: pending
+  - id: INV-003
+    description: confidential.ts's write procedures never fire an external side effect (Shiprocket/Delhivery warehouse creation, verification email) using attacker-supplied data against a brand the caller does not own
+    source_derivation: qa/FINDINGS/DEFECT_RECORDS.md DEF-010 update; PAT-EXTSTATE-01 (external side effects must not proceed on an unverified state)
+    validation_strategy: "Automated test: attempt createConfidential cross-brand; assert both the DB write AND the external API call are never reached (mock the external client and assert zero invocations)"
+    affected_scenarios:
+      - SCN-004
+    status: pending
+  - id: INV-004
+    description: "REVISED (Critic Cycle 1): the fix's COMPARISON logic (resolved-brand-id !== ctx.user.brand?.id) is textually and behaviorally identical across all 51 procedures via one shared utility call — but the RESOLUTION of which brand id to pass into that comparison is necessarily per-procedure (direct from input, or via an existing lookup already present in that procedure), per REQ-008's classification. No procedure receives a bespoke, subtly-different COMPARISON — resolution differing by necessity is not the same defect PAT-CONTRACT-01 warns against."
+    source_derivation: PAT-CONTRACT-01 — a shared-contract fix applied inconsistently across call sites is this codebase's own DEF-003 failure class, reused here as a design constraint. REVISED after Critic Cycle 1 found the original one-flat-signature framing didn't generalize to resolved-brandId sites.
+    validation_strategy: Code review + a shared, reusable comparison helper (not 51 hand-written inline comparisons) enforced via a lint rule or a shared `requireOwnBrand(ctx, resolvedBrandId)` utility; automated test asserts the utility itself is called at each of the 51 sites with SOME resolved brand id (grep-based structural test acceptable given zero test framework currently exists), plus a per-class manual/code-review check that each RESOLVED-class site's resolution logic actually derives from the same lookup already used for NOT_FOUND handling in that procedure, not a new, separately-fallible lookup
+    affected_scenarios:
+      - SCN-005
+    status: pending
+  - id: INV-005
+    description: A legitimate platform administrator (isAdmin) retains the ability to act cross-brand where that is an intended, already-existing capability; the fix does not silently break existing admin tooling
+    source_derivation: Existing correct pattern in products.ts uses `!isAdmin` alongside the ownership check — this SPEC must preserve that, not just add a blanket check. Critic Cycle 1 confirmed isAdmin's definition is identical everywhere checked (trpc.ts:140-142, products.ts:515,1157,1742,1802).
+    validation_strategy: "Automated test: authenticate as platform admin, call each of a sample of the 51 procedures cross-brand, assert success (not FORBIDDEN)"
+    affected_scenarios:
+      - SCN-006
+    status: pending
+  - id: INV-006
+    description: "ADDED (Critic Cycle 1): a legitimate same-brand caller (their own brandId matches the target) continues to succeed on every one of the 51 procedures after the fix — the fix rejects cross-brand only, never same-brand"
+    source_derivation: Critic Cycle 1 finding (happy_path, non-blocking) — no scenario asserted the ordinary positive case; SCN-006 only tests the admin-bypass path, not an everyday same-brand user's own call
+    validation_strategy: "Automated test per procedure (or a representative sample): authenticate as brand-A admin, call with input.brandId = brand-A (own brand); assert success, not FORBIDDEN"
+    affected_scenarios:
+      - SCN-010
+    status: pending
+flows:
+  - id: FLOW-001
+    description: "N/A — no state to reconcile; this is a pure access-control fix with no async/eventual-consistency dimension. The three-domain model is included per PAT-EXTSTATE-01's letter (external systems ARE involved via confidential.ts/Unicommerce) but its content here is 'never call the external system before the ownership check', not a sync/reconciliation pipeline. Failure handling: N/A in the traditional retry/timeout sense — this is an authorization gate, not a data-sync flow. The relevant 'failure handling' is: a rejected (FORBIDDEN) call must not have already fired any external side effect (Shiprocket/Delhivery/email) before the ownership check runs — the check must be the first thing each procedure does after authentication, before any DB read of the target brand or external call."
+    state_transitions: &a1
+      - None — this is an authorization-gate fix, not a data state-machine change. No new states are introduced.
+dependencies:
+  - id: DEP-001
+    description: "None blocking — this issue has no external prerequisite. It is explicitly recommended to proceed immediately regardless of P08's authorization status (Gate F: 'F10's fix (via DEF-010) is the one piece of P08 that should start immediately')"
+    status: resolved
+    type: INFORMATIONAL_DEPENDENCY
+integrations:
+  - id: INT-001
+    system: Shiprocket
+    purpose: confidential.ts warehouse-creation side effect
+  - id: INT-002
+    system: Delhivery
+    purpose: confidential.ts warehouse-creation side effect
+  - id: INT-003
+    system: Unicommerce
+    purpose: the 6 F10 procedures' external ERP integration
+  - id: INT-004
+    system: Email delivery
+    purpose: confidential.ts verification emails
+security_boundaries:
+  - id: SEC-001
+    description: This entire work item IS a security/tenant-isolation boundary fix — every scenario is security-boundary-relevant by definition
+business_rules: []
+personas: []
+decisions:
+  - id: DEC-001
+    question: Is qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md's full 104-procedure enumeration (51 vulnerable / 48 safe / 5 partial) still accurate today, or has any of the remaining ~40 procedures (beyond the ones this pass individually re-verified in brands.ts/roles.ts/members.ts/confidential.ts/analytics.ts/orders.ts/products.ts) changed since that audit?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Trust the existing enumeration — git history shows no commits touching the unverified files since the audit, and a full re-audit would meaningfully delay a P0 fix without new evidence suggesting the count has changed. Re-verify individual procedures as each is implemented, not as a blocking gate.
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+    context: This pass independently re-verified the most severe named items (the escalation chain, the zero-auth leaks, the products.ts regression) directly against origin/master and found them unchanged. It did not re-derive the full 104-procedure table from scratch — doing so would substantially duplicate work the original audit already did to a documented evidence level, and no commit touching brand-pages.ts/revenue.ts/invites.ts/bans.ts appears in git log since the audit's date.
+    options:
+      - Trust the existing audit's full enumeration as-is (this SPEC's current assumption, supported by a clean git-log check on the unverified files)
+      - Commission a full re-audit of all 104 procedures before implementation begins
+    consequences: If the count had silently drifted (e.g. a procedure was already fixed, or a new one was introduced), the per-procedure test in SCN-001 would simply pass trivially for an already-fixed one and the implementer would discover it — low cost either way.
+    resolution: "RESOLVED (2026-08-31, post Critic Cycle 3): trust the existing qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md enumeration. Correction to this decision's own earlier framing — the deterministic validator (validate-work-item.ts) treats ANY open decision as blocking approval, with no 'non-blocking' exception; the original text above claiming this wasn't a hard blocker 'the way REN-144's DEC-001 is' was incorrect and is superseded by this resolution. Resolved on the strength of: (1) the original git-log check (zero commits touching brand-pages.ts/revenue.ts/invites.ts/bans.ts since the audit), (2) Critic Cycle 2's spot-check of invites.ts (found one additional Class B site, consistent with — not contradicting — the audit's characterization), and (3) Critic Cycle 3's independent spot-checks of revenue.ts and bans.ts (both confirmed already-correctly-audited, no drift). Three independent passes corroborate no-drift; a full 104-procedure re-audit before implementation is not warranted."
+    resolved_by: Architect + 2 Critic cycles' corroborating evidence (this pass, no separate human input available)
+    resolved_at: 2026-08-31T21:50:00Z
+    affected_scenarios:
+      - SCN-001
+test_expectations:
+  - id: TEXP-001
+    category: integration
+    classification: REQUIRED
+    reason: Core authorization/data-integrity scenarios require real integration-level tests exercising the actual tRPC procedures and DB state, not unit mocks.
+  - id: TEXP-002
+    category: security
+    classification: REQUIRED
+    reason: Scenarios flagged as security-relevant require a security-review-shaped verification, not a simple pass/fail unit assertion.
+  - id: TEXP-003
+    category: business_uat
+    classification: REQUIRED
+    reason: Scenarios flagged MANUAL_BUSINESS_VALIDATION_REQUIRED need product/business sign-off, not an automated assertion.
+  - id: TEXP-005
+    category: regression
+    classification: REQUIRED
+    reason: Scenarios covering external-dependency and backward-compatibility behavior require regression coverage against current passing behavior.
+traceability:
+  requirement_to_scenarios:
+    - requirement_id: REQ-001
+      scenario_ids:
+        - SCN-001
+        - SCN-006
+    - requirement_id: REQ-006
+      scenario_ids:
+        - SCN-002
+    - requirement_id: REQ-002
+      scenario_ids:
+        - SCN-003
+        - SCN-008
+    - requirement_id: REQ-004
+      scenario_ids:
+        - SCN-004
+    - requirement_id: REQ-007
+      scenario_ids:
+        - SCN-005
+    - requirement_id: REQ-005
+      scenario_ids:
+        - SCN-007
+    - requirement_id: REQ-003
+      scenario_ids:
+        - SCN-009
+    - requirement_id: REQ-008
+      scenario_ids:
+        - SCN-010
+    - requirement_id: REQ-009
+      scenario_ids:
+        - SCN-011
+  scenario_to_invariants:
+    - scenario_id: SCN-001
+      invariant_ids:
+        - INV-001
+    - scenario_id: SCN-002
+      invariant_ids:
+        - INV-001
+    - scenario_id: SCN-003
+      invariant_ids:
+        - INV-002
+    - scenario_id: SCN-004
+      invariant_ids:
+        - INV-003
+    - scenario_id: SCN-005
+      invariant_ids:
+        - INV-004
+    - scenario_id: SCN-006
+      invariant_ids:
+        - INV-005
+    - scenario_id: SCN-007
+      invariant_ids:
+        - INV-001
+    - scenario_id: SCN-008
+      invariant_ids:
+        - INV-002
+    - scenario_id: SCN-009
+      invariant_ids:
+        - INV-002
+    - scenario_id: SCN-010
+      invariant_ids:
+        - INV-006
+    - scenario_id: SCN-011
+      invariant_ids:
+        - null
+  scenario_to_test_expectations:
+    - scenario_id: SCN-001
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-002
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-003
+      test_expectation_ids:
+        - TEXP-002
+    - scenario_id: SCN-004
+      test_expectation_ids:
+        - TEXP-005
+    - scenario_id: SCN-005
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-006
+      test_expectation_ids:
+        - TEXP-005
+    - scenario_id: SCN-007
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-008
+      test_expectation_ids:
+        - TEXP-003
+    - scenario_id: SCN-009
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-010
+      test_expectation_ids:
+        - TEXP-001
+    - scenario_id: SCN-011
+      test_expectation_ids:
+        - TEXP-001
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: ren172_critic
+  fresh_context: true
+  read_only: true
+  categories_reviewed:
+    - requirements_scenarios
+    - failure_recovery
+    - security_privacy
+    - state_data_consistency
+    - integrations_idempotency
+    - compatibility_migration
+    - observability_testability
+    - assumptions_dependencies
+  findings:
+    - id: CRIT-001
+      severity: MINOR
+      summary: happy_path
+      status: resolved_in_contract
+      disposition: "No scenario asserted a legitimate same-brand caller still succeeds post-fix for the general 51-procedure case (SCN-006 only tested the admin cross-brand bypass). RESOLVED in Revision 1: SCN-010/INV-006 added."
+    - id: CRIT-002
+      severity: MAJOR
+      summary: external_dependency_failures
+      status: resolved_in_contract
+      disposition: "Verified confidential.ts's createConfidential (29-114): existingBrand fetched at line 29, Shiprocket/Delhivery/email calls all happen after — confirms the check can be inserted right after 29-34 with zero reordering cost. Minor nuance: updateConfidential/updateConfidentialDetails fire no external calls at all, so the 'external side effect' framing in REQ-004 applies fully only to createConfidential. Non-blocking, informational."
+    - id: CRIT-003
+      severity: MAJOR
+      summary: concurrency
+      status: resolved_in_contract
+      disposition: "Verified context.ts:119-138 — createContext runs fresh per request, fetches user via userCache.get(auth.userId) per-request, no shared mutable ctx across concurrent requests — confirms SCN-008's exclusion reasoning is correct. Un-addressed nuance: userCache is a Redis cache, so if brand membership changes without cache invalidation, the check could act on a stale cached brand id — a real but pre-existing risk, orthogonal to this fix. Worth a one-line addendum to SCN-008, not blocking."
+    - id: CRIT-004
+      severity: MAJOR
+      summary: race_conditions
+      status: resolved_in_contract
+      disposition: "Traced the SCN-003/SCN-009 escalation chain: each step independently enforces its own ownership check regardless of call ordering or concurrent interleaving, so no race window reopens the chain even under concurrent execution. Confirms the 'fix both links' architecture is sufficient without a distributed lock."
+    - id: CRIT-005
+      severity: MAJOR
+      summary: authorization
+      status: resolved_in_contract
+      disposition: "Two issues, both from direct source reads: (a) the single flat requireOwnBrand(ctx, input.brandId) signature doesn't generalize to >=9 of the 51 sites whose target brand is only resolvable via an existing lookup (members.ts roles.updateRoles, orders.ts getOrderShipmentDetailsByShipmentId, all 6 brand-pages.ts procedures, products.ts Journey/Value procedures) — verified each of these lacks a direct brandId on input. (b) REQ-007 mischaracterized products.ts's scope: only 1 of 6 vulnerable procedures (updateProductPublishStatus) is a true 'restore the comment' fix; 5 need genuinely new authorization logic, contradicting the original 'regression, not new development' framing. RESOLVED in Revision 1 (REQ-008/REQ-007), with Revision 1's own follow-on details resolved through Cycles 2-3 (see below). No longer blocking."
+    - id: CRIT-006
+      severity: MAJOR
+      summary: tenant_isolation
+      status: resolved_in_contract
+      disposition: "Independently re-verified PAT-TENANT-01 across all named files — the pattern is real, pervasive, accurately catalogued. One citation inaccuracy found: roles.ts's createRole/updateRole were cited as lines 29/44, but line 29 is actually getRoles's .use(), not createRole's (createRole is 44, updateRole is 108). Cosmetic, corrected in repository_investigation, not blocking."
+    - id: CRIT-007
+      severity: MINOR
+      summary: security_abuse
+      status: resolved_in_contract
+      disposition: getOrderShipmentDetailsByShipmentId takes a bare numeric, enumerable shipmentId; the existing global rate limiter doesn't meaningfully prevent ID-enumeration probing even after the ownership fix closes the actual data leak. Pre-existing gap, out of scope for this P0 fix — recommend a follow-up ticket, not a blocking change here.
+    - id: CRIT-008
+      severity: MAJOR
+      summary: pii
+      status: resolved_in_contract
+      disposition: "Verified analytics.ts and orders.ts's zero-auth PII/revenue leaks exactly as audited. Minor gap: confidential.ts's KYC/bank/legal PII is only covered under SCN-004 (categorized external_dependency_failures), not cross-tagged as pii even though the data is squarely PII. Recommend cross-tagging at Test Design, not a new scenario — non-blocking."
+    - id: CRIT-009
+      severity: MAJOR
+      summary: data_integrity
+      status: resolved_in_contract
+      disposition: "SCN-005's grep-based structural test is sound in principle. Tied to the authorization finding above: the '51 procedures' denominator needs reconciling once REQ-007's corrected products.ts scope is accounted for, so the structural test's coverage target stays accurate. Resolved as part of the REQ-007/REQ-008 revision."
+    - id: CRIT-010
+      severity: MINOR
+      summary: observability
+      status: resolved_in_contract
+      disposition: "No requirement/scenario proposed logging/alerting on repeated cross-brand FORBIDDEN rejections for a P0 fix closing an actively-probeable full brand-takeover chain. RESOLVED in Revision 1: REQ-009/SCN-011 added."
+    - id: CRIT-011
+      severity: MAJOR
+      summary: Class B resolution design (Cycle 2 re-verification of Revision 1)
+      status: resolved_in_contract
+      disposition: "PARTIALLY RESOLVED at Cycle 2. The architectural pivot (shared comparison + per-class resolution) is confirmed correct and closes Cycle 1's blocking finding. But re-verification against origin/master found 3 concrete errors in the enumeration itself: (1) createBrandPageSection misclassified as Class B — it's actually Class A (input.brandId direct at ~line 150); the cited lines 27-34 belong to a different procedure. (2) updateProductJourney/updateProductValue's 'no new query' claim is false — their underlying tables (productsJourney/productValues) have no brand reference, only a productId FK; a genuine second lookup is required. (3) invites.ts::getInvite is a 10th, previously-unlisted Class B site, found by spot-checking exactly the files DEC-001 flagged as unverified. RESOLVED in Revision 2 (REQ-008 corrected on all 3 points; SCN-010 updated) and CONFIRMED RESOLVED at Cycle 3, which independently re-verified all 3 corrections against origin/master and found them all correct, plus found 3 more legitimate Class B sites to fold in (createProductJourney, createProductValue, updateCatalogQcReview — low-severity bookkeeping addition, added to REQ-008). No longer blocking."
+    - id: CRIT-012
+      severity: MINOR
+      summary: observability parameters (Cycle 2 re-verification)
+      status: resolved_in_contract
+      disposition: PARTIALLY RESOLVED at Cycle 2. createOperationalAlert confirmed real with a workable signature and built-in dedup. But REQ-009 as originally added didn't specify entityType/entityId/dedupeKey/severity, risking the same per-call-site inconsistency the comparison-logic fix itself was designed to avoid. RESOLVED in Revision 2 (concrete convention added) and CONFIRMED at Cycle 3, which found one remaining minor gap (an unspecified `type` field) and fixed it directly in REQ-009 rather than needing a 4th cycle. No longer blocking.
+    - id: CRIT-013
+      severity: MINOR
+      summary: spot-check for additional unenumerated sites (Cycle 3)
+      status: resolved_in_contract
+      disposition: "Non-blocking bookkeeping gap found: 3 more products.ts procedures (createProductJourney, createProductValue, updateCatalogQcReview) are legitimately Class B via an existing getProduct() read already present for NOT_FOUND handling, but were omitted from REQ-008's list. RESOLVED directly (added to REQ-008) rather than requiring a 4th cycle — self-correcting in practice since REQ-007 already directs the implementer's attention to this exact code. Spot-checks of revenue.ts and bans.ts found no issues (both straightforward Class A / already-correctly-audited)."
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Architect + Critic corroboration (see decisions[] resolution notes, controller iteration 2026-09-01)
+state_history:
+  - state: INTAKE
+    entered_at: 2026-08-31T19:10:00Z
+  - state: CLASSIFIED
+    entered_at: 2026-08-31T19:12:00Z
+  - state: SPECIFICATION
+    entered_at: 2026-08-31T19:20:00Z
+  - state: SCENARIO_DESIGN
+    entered_at: 2026-08-31T19:35:00Z
+  - state: ARCHITECTURE
+    entered_at: 2026-08-31T19:50:00Z
+  - state: CRITIQUE
+    entered_at: 2026-08-31T20:05:00Z
+  - state: REVISION
+    entered_at: 2026-08-31T21:30:00Z
+  - state: CRITIQUE
+    entered_at: 2026-08-31T21:45:00Z
+  - state: REVISION
+    entered_at: 2026-09-01T05:15:00Z
+  - state: CRITIQUE
+    entered_at: 2026-09-01T05:30:00Z
+  - state: APPROVAL_GATE
+    entered_at: 2026-09-01T05:50:00Z
+  - state: APPROVED
+    entered_at: 2026-09-01T05:50:00Z
+  - state: TEST_DESIGN
+    entered_at: 2026-09-01T05:55:00Z
+  - state: READY_FOR_DEV
+    entered_at: 2026-09-01T05:56:00Z
+owners:
+  developer: null
+  product: null
+scope_contract:
+  in_scope:
+    - All 51 vulnerable procedures identified in qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md across src/lib/trpc/routes/brands/ (brands.ts, roles.ts, members.ts, confidential.ts, analytics.ts, orders.ts, brand-pages.ts, revenue.ts, invites.ts, bans.ts, and the 6 sub-resource procedures in products.ts)
+    - "The privilege-escalation chain: roles.ts createRole/updateRole + members.ts roles.updateRoles"
+    - "getBrandWithConfidential and confidential.ts's createConfidential/updateConfidential/updateConfidentialDetails (includes real external side effects: Shiprocket/Delhivery warehouse creation, verification emails)"
+    - "Zero-auth analytics/shipment-PII leaks: analytics.ts's getOverview/getMonthlySales/getStatusBreakdown/getTopProducts, orders.ts's getOrderShipmentDetailsByShipmentId"
+    - F10's 6 Unicommerce procedures in brands.ts (verified strict subset — closed as a byproduct, not tracked separately)
+    - The single fix pattern (input.brandId vs ctx.user.brand?.id ownership check) applied consistently, reusing the already-correct pattern live in products.ts/media.ts/support.ts/category-requests.ts
+  out_of_scope:
+    - brands/support.ts (confirmed already correct — self-scopes from ctx.user.brand)
+    - general/ admin routers (confirmed already correct — global site-permissions by design, not a tenant-isolation concern)
+    - P08 (Brand Data & Commerce Integration) Epic work generally — this issue closes only P08's F10 sub-finding as a byproduct, not P08 as a whole, which remains unauthorized for implementation per Gate F (docs/enhancement-improvements/execution-readiness/06-P08_AUTHORIZATION.md)
+    - Redesigning the underlying BitField permission system itself — the fix is per-procedure ownership checks using the existing, already-correct pattern, not a permission-model rewrite
+  dependencies:
+    - description: "None blocking — this issue has no external prerequisite. It is explicitly recommended to proceed immediately regardless of P08's authorization status (Gate F: 'F10's fix (via DEF-010) is the one piece of P08 that should start immediately')"
+      type: INFORMATIONAL_DEPENDENCY
+      status: resolved
+      resolved_at: 2026-08-31T19:50:00Z
+    - description: REN-124 (Build systematic IDOR test matrix, Backlog) is a natural home for the per-procedure regression tests this issue requires — coordinate rather than duplicate test-infrastructure effort
+      type: INFORMATIONAL_DEPENDENCY
+      status: unresolved
+      resolved_at: null
+  assumptions:
+    - The already-correct ownership-check pattern (if (input.brandId !== ctx.user.brand?.id && !isAdmin) throw FORBIDDEN, as implemented in products.ts/media.ts/support.ts/category-requests.ts) is the right pattern to replicate, not a new authorization mechanism — confirmed by reading that pattern directly in products.ts (lines 377, 1746, 1806) during this investigation
+    - isAdmin (platform-level administrator, distinct from a brand's own ADMINISTRATOR bit) is a legitimate bypass of the ownership check for every affected procedure — this assumption is carried from the existing correct-pattern files and not re-litigated here
+  scope_changes: []
+invariant_note: 51 procedures share one fix pattern; INV-001/INV-004 are the general-case invariants, INV-002/INV-003 cover the two most severe named chains, INV-005 guards against a regression in admin capability, INV-006 guards against over-rejecting legitimate same-brand calls.
+repository_investigation:
+  reconnaissance_completed: true
+  investigated_areas:
+    - 'src/lib/trpc/routes/brands/brands.ts — re-verified 2026-08-31: every isTRPCAuth(..., "brand") use (lines 27,83,141,193,231,320,412,497,587,633) has no accompanying input.brandId-vs-ctx.user.brand?.id comparison anywhere in the file; getBrandWithConfidential (line 596) has no isTRPCAuth call at all'
+    - "src/lib/trpc/routes/brands/roles.ts — createRole/updateRole (isTRPCAuth(MANAGE_ROLES,...) only, no target-brand comparison) confirmed at lines 44/108 (CORRECTED per Critic Cycle 1: line 29 is getRoles's .use(), not createRole's — original citation was off by one procedure)"
+    - src/lib/trpc/routes/brands/members.ts — roles.updateRoles (isTRPCAuth(MANAGE_TEAM,...) only) confirmed at line 22; chains directly with roles.ts's createRole/updateRole
+    - src/lib/trpc/routes/brands/confidential.ts — 3 procedures gated only by isTRPCAuth(ADMINISTRATOR,...), no target-brand comparison, confirmed lines 24/171/215
+    - src/lib/trpc/routes/brands/analytics.ts — getOverview/getMonthlySales/getStatusBreakdown/getTopProducts confirmed as bare protectedProcedure (authenticated-only, zero brand-permission or ownership check) — only getAnalytics (a different procedure) has any isTRPCAuth call in this file
+    - src/lib/trpc/routes/brands/orders.ts — getOrderShipmentDetailsByShipmentId confirmed as bare protectedProcedure, no isTRPCAuth, no ownership check
+    - src/lib/trpc/routes/brands/products.ts — confirmed the already-correct pattern live at lines 377, 527, 572, 1169, 1334, 1457, 1535, 1746, 1806 (if (existingProduct.brand.id !== user.brand?.id ...)), AND confirmed the same check explicitly commented out at lines 1152, 1362, 1379, 1737 and partially at 1232/1465/1572/1581 — this is the reference pattern to replicate everywhere else, with its own regression to fix too
+  affected_modules:
+    - src/lib/trpc/routes/brands/brands.ts
+    - src/lib/trpc/routes/brands/roles.ts
+    - src/lib/trpc/routes/brands/members.ts
+    - src/lib/trpc/routes/brands/confidential.ts
+    - src/lib/trpc/routes/brands/analytics.ts
+    - src/lib/trpc/routes/brands/orders.ts
+    - src/lib/trpc/routes/brands/products.ts (regression fix only, 3-4 sites)
+    - src/lib/trpc/routes/brands/brand-pages.ts, revenue.ts, invites.ts, bans.ts (remaining ~40, not individually re-verified line-by-line this pass — relying on qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md's full 104-procedure table as the authoritative enumeration, since re-deriving all 104 from scratch would duplicate work already done to Evidence Level C/verified)
+  dependencies:
+    - REN-124 (IDOR test matrix) — coordinate test-infrastructure ownership
+    - P08's F10/AC-31 — closed as a byproduct of REQ-006
+  external_systems:
+    - Shiprocket (confidential.ts warehouse-creation side effect)
+    - Delhivery (confidential.ts warehouse-creation side effect)
+    - Unicommerce (the 6 F10 procedures' external ERP integration)
+    - Email delivery (confidential.ts verification emails)
+  related_tests: []
+  security_boundaries:
+    - This entire work item IS a security/tenant-isolation boundary fix — every scenario is security-boundary-relevant by definition
+  state_transitions: *a1
+  excluded_areas:
+    - brands/support.ts
+    - general/ admin routers
+    - P08 Epic work beyond F10
+    - BitField permission-system redesign
+  exclusion_reasons:
+    - Confirmed correct in the original audit (self-scopes from ctx.user.brand) and re-confirmed by this pass's own file read — no changes needed
+    - Confirmed correct by design (global site-permissions, not tenant-scoped) per the original audit; out of this issue's tenant-isolation scope
+    - P08 remains unauthorized for implementation (Gate F) — only F10 (via this issue) proceeds; the rest of P08 is explicitly a separate authorization decision
+    - The fix is a per-procedure ownership check reusing an existing correct pattern, not a reason to touch the underlying permission-bitfield architecture
+  uncertainties:
+    - The remaining ~40 procedures beyond the ones this pass individually re-verified (brand-pages.ts, revenue.ts, invites.ts, bans.ts) were not re-read line-by-line in this session — this SPEC relies on qa/CROSS_TENANT_AUTHORIZATION_AUDIT.md's full enumeration as authoritative rather than re-deriving it, since that audit already examined all 104 procedures directly. Flagged as DEC-001.
+  investigation_depth: BROAD
+  escalation_required: false
+  escalation_reason: null
+  investigation_history:
+    - timestamp: 2026-08-31T19:20:00Z
+      stage: RECONNAISSANCE
+      note: Confirmed the brands/ router directory structure and the already-correct ownership-check pattern's exact live locations in products.ts as the reference implementation
+    - timestamp: 2026-08-31T19:35:00Z
+      stage: IMPACT_IDENTIFICATION
+      note: Re-verified the original 9-procedure brands.ts finding directly against origin/master, then expanded into the 4 additional files named in the qa/ Wave-2 update (roles.ts, members.ts, confidential.ts, analytics.ts, orders.ts) to independently confirm the escalation-chain and zero-auth claims rather than trusting the audit text alone
+    - timestamp: 2026-08-31T19:45:00Z
+      stage: DEPENDENCY_EXPANSION
+      note: Followed the roles.ts -> members.ts chain explicitly (not just each file in isolation) to confirm the full privilege-escalation path is real and not just two independent findings; also independently re-confirmed the products.ts commented-out-check claim by direct grep
+    - timestamp: 2026-08-31T20:00:00Z
+      stage: COMPLETENESS_CHECK
+      note: Answered all ten Stage-4 questions in SPEC.md; one uncertainty remains (the ~40 procedures not individually re-verified this pass) — surfaced as DEC-001 rather than either re-deriving all 104 from scratch (out of proportion for this pass) or silently trusting the count unexamined
+flow_design:
+  present: true
+  involves_external_system: true
+  synchronization_failure_handling: "N/A in the traditional retry/timeout sense — this is an authorization gate, not a data-sync flow. The relevant 'failure handling' is: a rejected (FORBIDDEN) call must not have already fired any external side effect (Shiprocket/Delhivery/email) before the ownership check runs — the check must be the first thing each procedure does after authentication, before any DB read of the target brand or external call."
+  reconciliation_strategy: N/A — no state to reconcile; this is a pure access-control fix with no async/eventual-consistency dimension. The three-domain model is included per PAT-EXTSTATE-01's letter (external systems ARE involved via confidential.ts/Unicommerce) but its content here is 'never call the external system before the ownership check', not a sync/reconciliation pipeline.
+repository_investigation_note: null
+critic_findings: &a2
+  - category: happy_path
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "No scenario asserted a legitimate same-brand caller still succeeds post-fix for the general 51-procedure case (SCN-006 only tested the admin cross-brand bypass). RESOLVED in Revision 1: SCN-010/INV-006 added."
+    blocking: false
+  - category: alternate_paths
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Admin-bypass alternate path covered by SCN-006/INV-005; no other alternate path relevant to a boolean ownership gate.
+    blocking: false
+  - category: invalid_inputs
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Existing zod schemas + NOT_FOUND guards already handle malformed/missing ids; the new check is a simple equality comparison introducing no new invalid-input surface.
+    blocking: false
+  - category: missing_data
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "Verified: for a user with no brand (e.g. an ordinary shopper), ctx.user.brand?.id is undefined, so input.brandId !== ctx.user.brand?.id is always true and correctly rejects — confirmed sound, exactly what makes the ordinary-shopper test case (SCN-007) work."
+    blocking: false
+  - category: duplicate_operations
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Existing CONFLICT/no-op guards (roles.ts:65-69, members.ts:104-108) are unaffected; the new check runs before them without changing their semantics.
+    blocking: false
+  - category: existing_user_conflicts
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: The codebase's user-to-brand model is singular (ctx.user.brand?.id) — no multi-brand-per-user ambiguity for this fix to introduce.
+    blocking: false
+  - category: state_transitions
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Confirmed no new business states; agrees with the SPEC's own Flow Design section.
+    blocking: false
+  - category: invalid_state_transitions
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: Verified in products.ts:1385-1390 that inserting the ownership check earlier only blocks unauthorized callers before they reach existing state-transition rules (e.g. 'cannot unpublish already-published') — doesn't alter transition semantics for legitimate callers.
+    blocking: false
+  - category: retries
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Synchronous check, no retry semantics touched.
+    blocking: false
+  - category: timeouts
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: No new I/O latency; for RESOLVED-class procedures the DB read already existed in the current code, just needs reordering, not a new call.
+    blocking: false
+  - category: external_dependency_failures
+    verdict: FINDING
+    depth: DEEP
+    justification: "Verified confidential.ts's createConfidential (29-114): existingBrand fetched at line 29, Shiprocket/Delhivery/email calls all happen after — confirms the check can be inserted right after 29-34 with zero reordering cost. Minor nuance: updateConfidential/updateConfidentialDetails fire no external calls at all, so the 'external side effect' framing in REQ-004 applies fully only to createConfidential. Non-blocking, informational."
+    blocking: false
+  - category: concurrency
+    verdict: FINDING
+    depth: DEEP
+    justification: "Verified context.ts:119-138 — createContext runs fresh per request, fetches user via userCache.get(auth.userId) per-request, no shared mutable ctx across concurrent requests — confirms SCN-008's exclusion reasoning is correct. Un-addressed nuance: userCache is a Redis cache, so if brand membership changes without cache invalidation, the check could act on a stale cached brand id — a real but pre-existing risk, orthogonal to this fix. Worth a one-line addendum to SCN-008, not blocking."
+    blocking: false
+  - category: race_conditions
+    verdict: FINDING
+    depth: DEEP
+    justification: "Traced the SCN-003/SCN-009 escalation chain: each step independently enforces its own ownership check regardless of call ordering or concurrent interleaving, so no race window reopens the chain even under concurrent execution. Confirms the 'fix both links' architecture is sufficient without a distributed lock."
+    blocking: false
+  - category: idempotency
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Existing idempotency guards (CONFLICT on duplicate role name, no-op detection in members.ts:104-108) sit downstream of the new check and are unaffected.
+    blocking: false
+  - category: authentication (inline-flagged mandatory-deep, omitted from flat mandatory_deep_at_l3 list — policy-file inconsistency noted, not fixed here)
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: Verified trpc.ts:52-68/170 — protectedProcedure already requires ctx.user && ctx.auth. All the 'zero-auth' findings are missing AUTHORIZATION, not authentication. This SPEC doesn't touch authentication middleware.
+    blocking: false
+  - category: authorization
+    verdict: FINDING
+    depth: DEEP
+    justification: "Two issues, both from direct source reads: (a) the single flat requireOwnBrand(ctx, input.brandId) signature doesn't generalize to >=9 of the 51 sites whose target brand is only resolvable via an existing lookup (members.ts roles.updateRoles, orders.ts getOrderShipmentDetailsByShipmentId, all 6 brand-pages.ts procedures, products.ts Journey/Value procedures) — verified each of these lacks a direct brandId on input. (b) REQ-007 mischaracterized products.ts's scope: only 1 of 6 vulnerable procedures (updateProductPublishStatus) is a true 'restore the comment' fix; 5 need genuinely new authorization logic, contradicting the original 'regression, not new development' framing. RESOLVED in Revision 1 (REQ-008/REQ-007), with Revision 1's own follow-on details resolved through Cycles 2-3 (see below). No longer blocking."
+    blocking: false
+  - category: tenant_isolation
+    verdict: FINDING
+    depth: DEEP
+    justification: "Independently re-verified PAT-TENANT-01 across all named files — the pattern is real, pervasive, accurately catalogued. One citation inaccuracy found: roles.ts's createRole/updateRole were cited as lines 29/44, but line 29 is actually getRoles's .use(), not createRole's (createRole is 44, updateRole is 108). Cosmetic, corrected in repository_investigation, not blocking."
+    blocking: false
+  - category: security_abuse
+    verdict: FINDING
+    depth: SHALLOW
+    justification: getOrderShipmentDetailsByShipmentId takes a bare numeric, enumerable shipmentId; the existing global rate limiter doesn't meaningfully prevent ID-enumeration probing even after the ownership fix closes the actual data leak. Pre-existing gap, out of scope for this P0 fix — recommend a follow-up ticket, not a blocking change here.
+    blocking: false
+  - category: pii
+    verdict: FINDING
+    depth: DEEP
+    justification: "Verified analytics.ts and orders.ts's zero-auth PII/revenue leaks exactly as audited. Minor gap: confidential.ts's KYC/bank/legal PII is only covered under SCN-004 (categorized external_dependency_failures), not cross-tagged as pii even though the data is squarely PII. Recommend cross-tagging at Test Design, not a new scenario — non-blocking."
+    blocking: false
+  - category: data_integrity
+    verdict: FINDING
+    depth: DEEP
+    justification: "SCN-005's grep-based structural test is sound in principle. Tied to the authorization finding above: the '51 procedures' denominator needs reconciling once REQ-007's corrected products.ts scope is accounted for, so the structural test's coverage target stays accurate. Resolved as part of the REQ-007/REQ-008 revision."
+    blocking: false
+  - category: migrations
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: No schema changes.
+    blocking: false
+  - category: backward_compatibility
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: SCN-006/INV-005 cover admin-bypass preservation; no evidence of a legitimate multi-brand-delegation feature this fix would break — isAdmin's definition confirmed identical everywhere checked.
+    blocking: false
+  - category: rollback_recovery
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: In every file reviewed, DB mutations happen inside a transaction/Promise.all preceded by guard clauses; the new ownership check slots in among those existing guards, before any transaction opens — no partial-write/rollback surface introduced.
+    blocking: false
+  - category: observability
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "No requirement/scenario proposed logging/alerting on repeated cross-brand FORBIDDEN rejections for a P0 fix closing an actively-probeable full brand-takeover chain. RESOLVED in Revision 1: REQ-009/SCN-011 added."
+    blocking: false
+  - category: analytics
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Product/usage-analytics instrumentation is unrelated to this authorization-gate fix (not to be confused with the in-scope analytics.ts router file).
+    blocking: false
+  - category: accessibility
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Backend-only change, no UI surface.
+    blocking: false
+  - category: mobile_responsive_behavior
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: Same reasoning as accessibility.
+    blocking: false
+  - category: Class B resolution design (Cycle 2 re-verification of Revision 1)
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED at Cycle 2. The architectural pivot (shared comparison + per-class resolution) is confirmed correct and closes Cycle 1's blocking finding. But re-verification against origin/master found 3 concrete errors in the enumeration itself: (1) createBrandPageSection misclassified as Class B — it's actually Class A (input.brandId direct at ~line 150); the cited lines 27-34 belong to a different procedure. (2) updateProductJourney/updateProductValue's 'no new query' claim is false — their underlying tables (productsJourney/productValues) have no brand reference, only a productId FK; a genuine second lookup is required. (3) invites.ts::getInvite is a 10th, previously-unlisted Class B site, found by spot-checking exactly the files DEC-001 flagged as unverified. RESOLVED in Revision 2 (REQ-008 corrected on all 3 points; SCN-010 updated) and CONFIRMED RESOLVED at Cycle 3, which independently re-verified all 3 corrections against origin/master and found them all correct, plus found 3 more legitimate Class B sites to fold in (createProductJourney, createProductValue, updateCatalogQcReview — low-severity bookkeeping addition, added to REQ-008). No longer blocking."
+    blocking: false
+  - category: products.ts scope correction (Cycle 2 re-verification)
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED. Re-verified all 6 procedures directly: updateProductPublishStatus is a true restoration; updateProduct/deleteProduct's commented blocks are confirmed dead/superseded; the other 5 confirmed to have no check at all, active or commented. REQ-007's revised scope holds exactly. No remaining gap."
+    blocking: false
+  - category: observability parameters (Cycle 2 re-verification)
+    verdict: FINDING
+    depth: SHALLOW
+    justification: PARTIALLY RESOLVED at Cycle 2. createOperationalAlert confirmed real with a workable signature and built-in dedup. But REQ-009 as originally added didn't specify entityType/entityId/dedupeKey/severity, risking the same per-call-site inconsistency the comparison-logic fix itself was designed to avoid. RESOLVED in Revision 2 (concrete convention added) and CONFIRMED at Cycle 3, which found one remaining minor gap (an unspecified `type` field) and fixed it directly in REQ-009 rather than needing a 4th cycle. No longer blocking.
+    blocking: false
+  - category: createBrandPageSection reclassification (Cycle 3 final verification)
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED. brand-pages.ts:147-169 confirmed: const { brandId } = input, used directly at brandCache.get/remove(brandId), no intermediate lookup — Class A confirmed correct. The other 5 brand-pages.ts procedures correctly remain Class B."
+    blocking: false
+  - category: Journey/Value second-lookup requirement (Cycle 3 final verification)
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: RESOLVED. product.ts schema (527-542, 573-588) confirmed productsJourney/productValues have only a productId FK, no brand reference; getProductJourney/getProductValue (3680-3686, 3795-3799) do a bare findFirst with no join. The claimed second lookup (journey/value row -> productId -> getProduct -> .brand.id) is genuinely required and valid as specified.
+    blocking: false
+  - category: invites.ts::getInvite addition (Cycle 3 final verification)
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: RESOLVED. invites.ts:35-54 confirmed bare protectedProcedure, no isTRPCAuth, input {code} only. getBrandInvite(code) does findFirst({with:{brand:true}}), so existingInvite.brand.id is exactly the resolved value REQ-008 describes.
+    blocking: false
+  - category: spot-check for additional unenumerated sites (Cycle 3)
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "Non-blocking bookkeeping gap found: 3 more products.ts procedures (createProductJourney, createProductValue, updateCatalogQcReview) are legitimately Class B via an existing getProduct() read already present for NOT_FOUND handling, but were omitted from REQ-008's list. RESOLVED directly (added to REQ-008) rather than requiring a 4th cycle — self-correcting in practice since REQ-007 already directs the implementer's attention to this exact code. Spot-checks of revenue.ts and bans.ts found no issues (both straightforward Class A / already-correctly-audited)."
+    blocking: false
+approval_gate:
+  checked_at: 2026-09-01T05:50:00Z
+  passed: true
+  checklist:
+    no_blocking_critique_findings: true
+    no_unresolved_decisions: true
+    all_requirements_have_scenarios: true
+    all_scenarios_have_valid_verification: true
+    all_invariants_have_validation_strategy: true
+    architecture_consistent_with_requirements: true
+    scope_resolved: true
+    design_blocker_dependencies_resolved: true
+    risk_escalation_reentry_complete: true
+implementation_prerequisites_status:
+  all_resolved: true
+  outstanding: []
+pr_validation_results: []
+traceability_gaps: []
+branch: akshayatwork1/ren-172-cross-tenant-authorization-bypass-across-51-brand-router
+pr_url: null
+promoted_artifacts: []
+critic_findings_raw: *a2

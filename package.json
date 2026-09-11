@@ -19,6 +19,10 @@
         "embeddings:brands": "bun run generateBrandEmbeddings.ts",
         "swap-rewards:backfill": "bun run src/scripts/backfill-swap-rewards.ts",
         "agent-browser:network-blocking-spike": "bun run scripts/ren-122-network-blocking-spike.ts",
+        "test:e2e": "bun run scripts/e2e/guest-journeys.ts",
+        "security:idor:api": "bun run scripts/security/run-idor-api-matrix.ts",
+        "security:idor:browser": "bun run scripts/security/run-idor-browser-matrix.ts",
+        "seo:validate-headings": "bun run scripts/seo/validate-heading-usage.ts",
         "governance:validate": "bun run scripts/governance/validate-work-item.ts"
     },
     "dependencies": {

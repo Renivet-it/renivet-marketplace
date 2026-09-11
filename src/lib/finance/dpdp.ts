@@ -13,7 +13,7 @@ import {
 } from "@/lib/db/schema";
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { resend } from "@/lib/resend";
 import { eq } from "drizzle-orm";
 import { createHash, randomUUID } from "crypto";

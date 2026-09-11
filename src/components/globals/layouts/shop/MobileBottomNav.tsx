@@ -77,6 +77,7 @@ export function MobileBottomNav() {
     }, [pathname]);
 
     if (
+        pathname.startsWith("/festive") ||
         pathname.startsWith("/auth") ||
         pathname.startsWith("/sign-in") ||
         pathname.startsWith("/sign-up")

@@ -9,8 +9,15 @@ import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
 import {
+    appendCancellationEvidence,
+    extractDelhiveryShipmentStatus,
+    isExplicitCancellationSuccess,
+    isTerminalCancellationStatus,
+} from "@/lib/delhivery/cancellation";
+import {
     cancelOrder as cancelDelhiveryOrder,
     createOrder as createDelhiveryOrder,
+    getCancellationTracking,
     getShippingCharge,
 } from "@/lib/delhivery/orders";
 import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
@@ -20,7 +27,7 @@ import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { razorpay } from "@/lib/razorpay";
 import {
     analytics,
@@ -1885,18 +1892,49 @@ export const ordersRouter = createTRPCRouter({
                             try {
                                 const cancelResponse =
                                     await cancelDelhiveryOrder(trackingId);
-                                const statusText = String(
-                                    cancelResponse?.status ??
-                                        cancelResponse?.Status ??
-                                        ""
-                                ).toLowerCase();
-                                const isFailure =
-                                    statusText.includes("fail") ||
-                                    statusText.includes("error");
-
-                                if (!isFailure) {
-                                    isCancelledInDelhivery = true;
-                                    break;
+                                const attemptId = `${shipment.id}:${trackingId}`;
+                                let evidence = appendCancellationEvidence(
+                                    shipment.delhiveryTrackingJson,
+                                    {
+                                        attemptId,
+                                        phase: "request",
+                                        recordedAt: new Date().toISOString(),
+                                        response: cancelResponse,
+                                    }
+                                );
+                                await db
+                                    .update(schemas.orderShipments)
+                                    .set({
+                                        delhiveryTrackingJson: evidence,
+                                        updatedAt: new Date(),
+                                    })
+                                    .where(eq(schemas.orderShipments.id, shipment.id));
+                                if (isExplicitCancellationSuccess(cancelResponse)) {
+                                    const trackingResponse =
+                                        await getCancellationTracking(trackingId);
+                                    evidence = appendCancellationEvidence(evidence, {
+                                        attemptId,
+                                        phase: "verification",
+                                        recordedAt: new Date().toISOString(),
+                                        response: trackingResponse,
+                                    });
+                                    await db
+                                        .update(schemas.orderShipments)
+                                        .set({
+                                            delhiveryTrackingJson: evidence,
+                                            updatedAt: new Date(),
+                                        })
+                                        .where(eq(schemas.orderShipments.id, shipment.id));
+                                    if (
+                                        isTerminalCancellationStatus(
+                                            extractDelhiveryShipmentStatus(
+                                                trackingResponse
+                                            )
+                                        )
+                                    ) {
+                                        isCancelledInDelhivery = true;
+                                        break;
+                                    }
                                 }
 
                                 lastDelhiveryError = cancelResponse;
@@ -1931,8 +1969,17 @@ export const ordersRouter = createTRPCRouter({
                             updatedAt: new Date(),
                         })
                         .where(eq(schemas.orderShipments.id, shipment.id));
-                } catch (error) {
-                    console.error("Shipment cancellation error:", error);
+                } catch {
+                    await createOperationalAlert({
+                        entityType: "order",
+                        entityId: existingOrder.id,
+                        type: "shipment_cancellation_divergence",
+                        severity: "critical",
+                        ownerRole: "order_manager",
+                        title: "Delhivery cancellation requires reconciliation",
+                        message: `Order ${existingOrder.id} has a shipment without a verified terminal carrier cancellation state.`,
+                        dedupeKey: `delhivery:cancellation:${existingOrder.id}`,
+                    });
                     throw new TRPCError({
                         code: "INTERNAL_SERVER_ERROR",
                         message: "Failed to cancel shipment",
@@ -1942,13 +1989,10 @@ export const ordersRouter = createTRPCRouter({
 
             // Restore product stock
             const updateProductStockData = existingOrder.items.map((item) => {
-                const quantity = item.quantity;
-                const currentStock =
-                    item.variant?.quantity ?? item.product.quantity ?? 0;
                 return {
                     productId: item.product.id,
                     variantId: item.variant?.id,
-                    quantity: currentStock + quantity,
+                    quantity: item.quantity,
                 };
             });
 

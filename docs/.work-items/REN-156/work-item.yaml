@@ -1,0 +1,184 @@
+schema_version: "1.0"
+task:
+    id: REN-156
+    title: Remove dead ai-suggestion.ts client; reduce redundant calls to the external RAG endpoint per search action
+    source: linear
+    branch: ayanganguly333/ren-156-remove-dead-ai-suggestionts-client-reduce-redundant-calls-to
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-156/remove-dead-ai-suggestionts-client-reduce-redundant-calls-to-the
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - The task removes one confirmed-unused application module.
+        - No active caller, database schema, customer data, authentication, payment, or provider contract is changed.
+        - The change is reversible through a standard Git revert.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, description, comments, and relations
+        - Full target module and repository-wide references to its exports
+        - Live search-suggestions route and adjacent ML/RAG consumers
+        - Existing audit evidence and project verification scripts
+    excluded_areas:
+        - Live external RAG call consolidation
+        - REN-146 timeout and endpoint configuration
+        - Database schemas, migrations, production configuration, and production data
+        - New runtime behavior or observability
+    dependencies: []
+    integrations: []
+    security_boundaries: []
+    state_transitions:
+        - module_present_and_unreferenced -> zero_reference_confirmed
+        - zero_reference_confirmed -> module_removed
+        - module_removed -> verification_complete
+    related_tests: [TEXP-156-001, TEXP-156-002]
+    uncertainties:
+        - Generated artifacts must not be mistaken for active consumers; final reference checks will exclude dependency caches and build output.
+requirements:
+    - id: REQ-156-001
+      description: Confirm that the target module and its exports have no active repository consumers before deletion.
+      type: explicit
+    - id: REQ-156-002
+      description: Remove src/lib/python/ai-suggestion.ts and its dead fetchSuggestions and fetchSearchProducts implementation.
+      type: explicit
+    - id: REQ-156-003
+      description: Preserve behavior of all active search, suggestions, recommendation, and catalog consumers.
+      type: explicit
+    - id: REQ-156-004
+      description: Verify the cleanup with build/typecheck checks and report unrelated existing failures separately.
+      type: explicit
+scenarios:
+    - id: SCN-156-001
+      requirement_ids: [REQ-156-001]
+      description: A final reference audit finds no active import, export, path, or runtime use of the target module or dead exports.
+    - id: SCN-156-002
+      requirement_ids: [REQ-156-002]
+      description: The target module is absent and no replacement implementation is added.
+    - id: SCN-156-003
+      requirement_ids: [REQ-156-003]
+      description: Live search and ML/RAG consumers remain unchanged after deletion.
+    - id: SCN-156-004
+      requirement_ids: [REQ-156-004]
+      description: Verification completes, or failures are demonstrated to be unrelated to REN-156.
+invariants:
+    - id: INV-156-001
+      description: No active application consumer depends on the removed module.
+    - id: INV-156-002
+      description: REN-156 does not modify any live external ML/RAG request or response behavior.
+    - id: INV-156-003
+      description: The deletion introduces no TypeScript module-resolution or build error.
+flows:
+    - id: FLOW-156-001
+      description: Audit references, delete the confirmed-dead module, audit again, and verify the repository.
+      state_transitions: [module_present_and_unreferenced, zero_reference_confirmed, module_removed, verification_complete]
+dependencies: []
+integrations: []
+personas:
+    - id: PER-156-001
+      role: maintainer
+      applicability: Maintains a smaller and more accurate ML/search code surface.
+security_boundaries: []
+business_rules: []
+decisions:
+    - id: DEC-156-001
+      question: Should live external RAG calls be consolidated in this task?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: No. Limit the change to the confirmed-dead module; live-call work is explicitly out of scope.
+      basis: Linear acceptance criteria and repository evidence establish zero callers; related performance work is tracked separately.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-156-001
+      category: regression
+      classification: REQUIRED
+      reason: Confirms no active repository reference requires the removed module or exports.
+      scenarios: [SCN-156-001, SCN-156-002]
+    - id: TEXP-156-002
+      category: integration
+      classification: REQUIRED
+      reason: Confirms module resolution and active search consumers remain valid after deletion.
+      scenarios: [SCN-156-003, SCN-156-004]
+    - id: TEXP-156-003
+      category: unit
+      classification: NOT_APPLICABLE
+      reason: No behavior is added and the removed module has no callers.
+      scenarios: [SCN-156-002]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-156-001
+          scenario_ids: [SCN-156-001]
+        - requirement_id: REQ-156-002
+          scenario_ids: [SCN-156-002]
+        - requirement_id: REQ-156-003
+          scenario_ids: [SCN-156-003]
+        - requirement_id: REQ-156-004
+          scenario_ids: [SCN-156-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-156-001
+          invariant_ids: [INV-156-001]
+        - scenario_id: SCN-156-002
+          invariant_ids: [INV-156-001, INV-156-002]
+        - scenario_id: SCN-156-003
+          invariant_ids: [INV-156-002, INV-156-003]
+        - scenario_id: SCN-156-004
+          invariant_ids: [INV-156-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-156-001
+          test_expectation_ids: [TEXP-156-001]
+        - scenario_id: SCN-156-002
+          test_expectation_ids: [TEXP-156-001, TEXP-156-003]
+        - scenario_id: SCN-156-003
+          test_expectation_ids: [TEXP-156-002]
+        - scenario_id: SCN-156-004
+          test_expectation_ids: [TEXP-156-002]
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    required_categories: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit implementation approval)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "3faa6b20d0452387db0b48a213479e054f6e276b"
+    head_commit: "5e7cb931a199cd898f4d5b3e27451d837eb69657"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: NOT_APPLICABLE
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-156-001: Rerun TypeScript verification in CI or a longer local session before merge."
+    evidence:
+        - "Compared origin/master commit 3faa6b20d0452387db0b48a213479e054f6e276b with implementation commit 5e7cb931a199cd898f4d5b3e27451d837eb69657."
+        - "The base-to-head diff deletes only src/lib/python/ai-suggestion.ts and adds REN-156 governance artifacts; active search consumers are unchanged."
+        - "Source reference audit found no active references after deletion, and governance validation passed."
+        - "Full Bun verification retained unrelated baseline failures; TypeScript verification timed out."
+    governance_reentry_required: false

@@ -1,5 +1,6 @@
 // src/lib/delhivery/orders.ts
 import qs from "qs";
+import { buildCancellationPayload } from "@/lib/delhivery/cancellation";
 import { delhiveryClient } from "./client";
 
 /**
@@ -170,8 +171,15 @@ export const createOrder = async (payload: DelhiveryOrderPayload) => {
  * Cancel shipment
  */
 export const cancelOrder = async (waybill: string) => {
-  const body = { waybill, action: "cancel" };
+  const body = buildCancellationPayload(waybill);
   const res = await delhiveryClient.post("/api/p/edit", body, {
+  });
+  return res.data;
+};
+
+export const getCancellationTracking = async (waybill: string) => {
+  const res = await delhiveryClient.get("/api/v1/packages/json", {
+    params: { waybill },
   });
   return res.data;
 };

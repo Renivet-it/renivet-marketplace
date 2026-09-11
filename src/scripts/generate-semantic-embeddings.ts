@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema";
-import { getEmbedding } from "@/lib/python/sematic-search";
+import { getEmbedding768 } from "@/lib/python/sematic-search";
 import { eq, isNull } from "drizzle-orm";
 
 async function main() {
@@ -51,7 +51,7 @@ async function main() {
             console.log(`Processing product: ${product.title}`);
 
             // 3. Generate embedding
-            const embedding = await getEmbedding(embeddingText);
+            const embedding = await getEmbedding768(embeddingText);
 
             // 4. Update the product in the database
             await db

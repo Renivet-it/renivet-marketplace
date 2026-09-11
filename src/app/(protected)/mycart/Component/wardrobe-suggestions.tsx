@@ -42,8 +42,7 @@ export default function WardrobeSuggestions({
                     Complete Your Conscious Wardrobe
                 </h2>
                 <p className="mt-1 text-xs text-gray-500 md:text-sm">
-                    Thoughtfully curated pieces that pair beautifully with your
-                    selections
+                    Suggestions based on product similarity and your selections
                 </p>
             </div>
 
@@ -55,7 +54,7 @@ export default function WardrobeSuggestions({
                 <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:gap-2">
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
-                        <span>Pairs with items in your cart</span>
+                        <span>Similar to items in your cart</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
@@ -63,7 +62,7 @@ export default function WardrobeSuggestions({
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
-                        <span>Complements your style choices</span>
+                        <span>Reflects your style preferences</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
@@ -110,7 +109,12 @@ function SuggestionCard({
     userId: string;
     index: number;
 }) {
-    const LABELS = ["Pairs well", "Complements", "Style match", "Great fit"];
+    const LABELS = [
+        "You might also like",
+        "Similar style",
+        "Style match",
+        "Great fit",
+    ];
     const label = LABELS[index % LABELS.length];
     const [addedToBag, setAddedToBag] = useState(false);
     const utils = trpc.useUtils();
@@ -191,7 +195,7 @@ function SuggestionCard({
                 <div className="mt-auto pt-3">
                     <div className="mb-2 flex items-center gap-1 text-[10px] text-gray-500">
                         <Check className="size-3 text-green-600" />
-                        <span>Complements your cart</span>
+                        <span>You might also like</span>
                     </div>
 
                     {/* Add to bag button */}

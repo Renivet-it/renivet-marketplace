@@ -11,10 +11,15 @@ import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { buildMetaPurchaseTrackingEvent } from "@/lib/analytics/meta-purchase";
-import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
+import { trackMetaPurchase } from "@/lib/analytics/meta-purchase";
+import {
+    assembleOrderDetailsByBrand,
+    filterAvailableCheckoutItems,
+    toCheckoutPriceItems,
+} from "@/lib/checkout/shared";
 // import { orderQueries } from "@/lib/db/queries"; // No longer needed directly for client-side intent creation
 import { fbEvent } from "@/lib/fbpixel";
+import { useCustomerOrderGuard } from "@/lib/hooks/use-customer-order-guard";
 import {
     createRazorpayPaymentOptions,
     initializeRazorpayPayment,
@@ -67,7 +72,7 @@ export function OrderPage({
         "online" | "cod"
     >("online");
     const posthog = usePostHog();
-    const isAdmin = !canPlaceCustomerOrder(user);
+    const { isBlocked: isAdmin } = useCustomerOrderGuard(user);
 
     const swapRewardStatusQuery =
         trpc.general.swapRewards.getSwapRewardStatus.useQuery();
@@ -143,27 +148,11 @@ export function OrderPage({
     }, [activeRewardCartItem]);
 
     const availableItems = useMemo(
-        () =>
-            userCart?.filter(
-                (item) =>
-                    item.product.isPublished &&
-                    item.product.verificationStatus === "approved" &&
-                    !item.product.isDeleted &&
-                    item.product.isAvailable &&
-                    (!!item.product.quantity
-                        ? item.product.quantity > 0
-                        : true) &&
-                    item.product.isActive &&
-                    (!item.variant ||
-                        (item.variant &&
-                            !item.variant.isDeleted &&
-                            item.variant.quantity > 0)) &&
-                    item.status
-            ) || [],
+        () => filterAvailableCheckoutItems(userCart),
         [userCart]
     );
 
-    const allAvailableItems = useMemo(() => {
+    const allAvailableItems = useMemo<any[]>(() => {
         const items = [...availableItems];
         if (rewardCartItem) {
             items.push(rewardCartItem as any);
@@ -184,34 +173,7 @@ export function OrderPage({
     );
 
     const priceList = useMemo(() => {
-        const items = allAvailableItems.map((item) => {
-            const itemPrice = item.isSwapRewardItem
-                ? 0
-                : item.variantId
-                  ? (item.product.variants?.find((v) => v.id === item.variantId)
-                        ?.price ??
-                    item.product.price ??
-                    0)
-                  : (item.product.price ?? 0);
-
-            const compareAtPrice = item.isSwapRewardItem
-                ? (item.rewardValue ?? 0)
-                : item.variantId
-                  ? (item.product.variants?.find((v) => v.id === item.variantId)
-                        ?.compareAtPrice ??
-                    item.product.compareAtPrice ??
-                    itemPrice)
-                  : (item.product.compareAtPrice ?? itemPrice);
-
-            return {
-                price: itemPrice,
-                compareAtPrice: compareAtPrice,
-                quantity: item.quantity,
-                categoryId: item.product.categoryId,
-                subCategoryId: item.product.subcategoryId,
-                productTypeId: item.product.productTypeId,
-            };
-        });
+        const items = toCheckoutPriceItems(allAvailableItems);
 
         const priceDetails = calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
@@ -321,37 +283,34 @@ export function OrderPage({
             },
         });
 
-    const trackMetaPurchase = (completedOrderIds: string[]) => {
-        if (completedOrderIds.length === 0) {
-            console.error("Skipping Meta Purchase without completed order IDs");
-            return;
-        }
-
-        const { eventId, purchasePayload } = buildMetaPurchaseTrackingEvent({
-            completedOrderIds,
-            totalAmountPaise: payableTotalPaise,
-            items: allAvailableItems.map((item) => ({
-                productId: item.product.id,
-                quantity: item.quantity,
-            })),
-        });
-
-        fbEvent("Purchase", purchasePayload, { eventId });
-        trackPurchaseCapi(
-            eventId,
+    const trackCompletedPurchase = (completedOrderIds: string[]) => {
+        trackMetaPurchase(
             {
-                em: user?.email,
-                ph: selectedShippingAddress?.phone,
-                fn: user?.firstName ?? undefined,
-                ln: user?.lastName ?? undefined,
-                ct: selectedShippingAddress?.city,
-                st: selectedShippingAddress?.state,
-                zp: selectedShippingAddress?.zip,
-                external_id: user?.id,
+                completedOrderIds,
+                totalAmountPaise: payableTotalPaise,
+                items: allAvailableItems.map((item) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                })),
+                userData: {
+                    em: user?.email,
+                    ph: selectedShippingAddress?.phone,
+                    fn: user?.firstName ?? undefined,
+                    ln: user?.lastName ?? undefined,
+                    ct: selectedShippingAddress?.city,
+                    st: selectedShippingAddress?.state,
+                    zp: selectedShippingAddress?.zip,
+                    external_id: user?.id,
+                },
+                sourceUrl: getAbsoluteURL(window.location.href),
             },
-            purchasePayload,
-            getAbsoluteURL(window.location.href)
-        ).catch((err) => console.error("CAPI Purchase Error:", err));
+            {
+                sendPixel: fbEvent,
+                sendCapi: trackPurchaseCapi,
+                reportError: (message, error) =>
+                    console.error(`${message}:`, error),
+            }
+        );
     };
 
     const buildOrderDetailsByBrand = ({
@@ -365,94 +324,21 @@ export function OrderPage({
     }) => {
         if (!selectedShippingAddress) return [];
 
-        const itemsByBrand = allAvailableItems.reduce(
-            (acc, item) => {
-                const brandId = item.product.brandId;
-                if (!acc[brandId]) {
-                    acc[brandId] = [];
-                }
-                acc[brandId].push(item);
-                return acc;
-            },
-            {} as Record<string, typeof allAvailableItems>
-        );
-
-        return Object.entries(itemsByBrand).map(([, brandItems]) => {
-            const brandTotal = brandItems.reduce((acc, item) => {
-                const price = item.isSwapRewardItem
-                    ? 0
-                    : item.variantId
-                      ? (item.product.variants?.find(
-                            (v) => v.id === item.variantId
-                        )?.price ??
-                        item.product.price ??
-                        0)
-                      : (item.product.price ?? 0);
-                return acc + price * item.quantity;
-            }, 0);
-            const brandCouponDiscount = Number(
-                (
-                    (priceList.couponDiscount ?? 0) *
-                    (brandTotal /
-                        Math.max(
-                            priceList.items - (priceList.productDiscount ?? 0),
-                            1
-                        ))
-                ).toFixed(2)
-            );
-            const brandTaxAmount = brandItems.reduce(
-                (sum, item) =>
-                    sum + (taxLinesById.get(String(item.id))?.taxPaise ?? 0),
-                0
-            );
-
-            return {
-                userId: user.id,
-                coupon: appliedCoupon?.code,
-                addressId: selectedShippingAddress.id,
-                deliveryAmount: priceList.delivery,
-                taxAmount: brandTaxAmount,
-                totalAmount: Math.max(
-                    0,
-                    Number((brandTotal - brandCouponDiscount).toFixed(2))
-                ),
-                // Product discounts are already reflected in brandTotal.
-                // Persist coupon savings separately from discount_amount.
-                discountAmount: 0,
-                couponDiscountAmount: brandCouponDiscount,
-                paymentMethod,
-                totalItems: brandItems.reduce(
-                    (acc, item) => acc + item.quantity,
-                    0
-                ),
-                shiprocketOrderId: null,
-                shiprocketShipmentId: null,
-                items: brandItems.map((item) => ({
-                    price: item.isSwapRewardItem
-                        ? 0
-                        : item.variantId
-                          ? (item.product.variants.find(
-                                (v) => v.id === item.variantId
-                            )?.price ??
-                            item.product.price ??
-                            0)
-                          : (item.product.price ?? 0),
-                    brandId: item.product.brandId,
-                    productId: item.product.id,
-                    variantId: item.variantId,
-                    sku:
-                        item.variant?.nativeSku ??
-                        item.product.nativeSku ??
-                        `sku-${item.product.id}`,
-                    quantity: item.quantity,
-                    customizationRequest: item.customizationRequest ?? null,
-                    categoryId: item.product.categoryId,
-                    isSwapRewardItem: item.isSwapRewardItem,
-                    swapRewardRedemptionId: item.swapRewardRedemptionId,
-                })),
-                razorpayOrderId,
-                ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
-            };
+        return assembleOrderDetailsByBrand({
+            items: allAvailableItems,
+            userId: user.id,
+            addressId: selectedShippingAddress.id,
+            couponCode: appliedCoupon?.code,
+            deliveryAmount: priceList.delivery,
+            couponDiscount: priceList.couponDiscount ?? 0,
+            productDiscount: priceList.productDiscount ?? 0,
+            itemsSubtotal: priceList.items,
+            paymentMethod,
+            paymentOrderId: razorpayOrderId,
+            paymentId: razorpayPaymentId,
+            taxForItem: (id) => taxLinesById.get(id)?.taxPaise ?? 0,
+            customizationForItem: (item: any) =>
+                item.customizationRequest ?? null,
         });
     };
 
@@ -502,7 +388,7 @@ export function OrderPage({
                         ? 0
                         : item.variantId
                           ? (item.product.variants?.find(
-                                (v) => v.id === item.variantId
+                                (v: any) => v.id === item.variantId
                             )?.price ??
                             item.product.price ??
                             0)
@@ -593,7 +479,7 @@ export function OrderPage({
                     deleteItemFromCart,
                     orderIntentId: orderIntent.id,
                     onOrderSuccess: playSwapStampCelebration,
-                    onPurchaseSuccess: trackMetaPurchase,
+                    onPurchaseSuccess: trackCompletedPurchase,
                 });
 
                 initializeRazorpayPayment(options);
@@ -659,7 +545,7 @@ export function OrderPage({
                 );
             }
 
-            trackMetaPurchase(completedOrderIds);
+            trackCompletedPurchase(completedOrderIds);
 
             setProcessingModalTitle("Order Placed Successfully");
             setProcessingModalDescription(
@@ -726,7 +612,7 @@ export function OrderPage({
                             ? 0
                             : item.variantId
                               ? (item.product.variants?.find(
-                                    (v) => v.id === item.variantId
+                                    (v: any) => v.id === item.variantId
                                 )?.price ??
                                 item.product.price ??
                                 0)

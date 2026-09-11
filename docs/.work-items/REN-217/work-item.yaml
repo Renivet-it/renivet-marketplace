@@ -1,0 +1,81 @@
+schema_version: "1.0"
+task:
+    id: REN-217
+    title: "[SEO][P0] Build Database-Driven Dynamic Sitemap"
+    source: linear
+    branch: feat/seo-phase-1-foundation
+    status: IN_REVIEW
+    linear: { url: https://linear.app/renivet/issue/REN-217, priority: Urgent, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream A }
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons: [Broad indexation surface and database reads; incorrect live-state filtering could expose drafts or omit commercial pages.]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-217, sitemap route, existing Drizzle query patterns, product/category/blog/brand URL builders]
+    excluded_areas: [Category URL migration, GSC submission, future content types, schema changes]
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001]
+    security_boundaries: [SEC-001]
+    state_transitions: [draft_or_unpublished -> excluded, published_or_live -> included]
+dependencies:
+    - { id: DEP-001, name: Existing query layer, purpose: Read authoritative live records, description: Reuse existing Drizzle query patterns, status: resolved }
+    - { id: DEP-002, name: URL builders, purpose: Keep sitemap URLs consistent with current routes, description: Existing route conventions remain authoritative, status: resolved }
+integrations: [{ id: INT-001, name: Search crawlers, system: Google Search, purpose: Consume sitemap.xml, description: XML sitemap consumers and search engines. }]
+personas: [{ id: PER-001, role: search_engine, applicability: Discovers live catalogue and content URLs. }]
+security_boundaries: [{ id: SEC-001, description: Draft, deleted, unpublished, and private records must never enter the public sitemap. }]
+business_rules: [{ id: BR-001, description: Use live/published state and authoritative updated timestamps; do not invent URLs or dates., source: REN-217 requirements }]
+decisions:
+    - { id: DEC-001, question: Use sitemap sharding?, class: AUTO_DECIDE, status: resolved, recommendation: Count all live URLs first; use 10,000-entry shards only when the result exceeds 50,000 URLs; 50,000 is single output and 50,001 is sharded., basis: Linear threshold requirement and bounded XML responses, confidence: high, consequence: medium, human_confirmation_required: false, confirmation_source: REN-217 }
+requirements:
+    - { id: REQ-001, description: Sitemap is generated from live database-backed products, collections, blogs, brands, static pages, and required fixed URLs., type: explicit }
+    - { id: REQ-002, description: Draft, deleted, unpublished, and otherwise non-live records are excluded., type: explicit }
+    - { id: REQ-003, description: Entries contain appropriate authoritative lastModified, changeFrequency, and priority values and update automatically., type: explicit }
+    - { id: REQ-004, description: URL count is checked and sharding is used only when required; current category URL format is preserved., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: Sitemap output includes every required live content class and fixed URL., requirement_ids: [REQ-001] }
+    - { id: SCN-002, description: Non-live fixtures are absent from sitemap output., requirement_ids: [REQ-002] }
+    - { id: SCN-003, description: Updated records produce updated sitemap timestamps without manual regeneration., requirement_ids: [REQ-003] }
+    - { id: SCN-004, description: Large catalogs use correct shard behavior and ordinary catalogs remain valid single output; category links match current routes., requirement_ids: [REQ-004] }
+invariants:
+    - { id: INV-001, description: Public sitemap never exposes non-live records. }
+    - { id: INV-002, description: Sitemap URLs are deterministic and use existing route formats. }
+flows: [{ id: FLOW-001, description: Live DB records -> URL mapping/shard decision -> sitemap XML response., state_transitions: [records -> sitemap_entries] }]
+test_expectations:
+    - { id: TEXP-001, category: integration, classification: REQUIRED, reason: Sitemap output tests cover each content class, live-state filtering, timestamps, and fixed URLs., scenarios: [SCN-001, SCN-002, SCN-003] }
+    - { id: TEXP-002, category: performance, classification: REQUIRED, reason: Count/threshold test verifies shard selection and bounded query behavior., scenarios: [SCN-004] }
+    - { id: TEXP-003, category: regression, classification: REQUIRED, reason: Existing category URL format and XML validity are preserved., scenarios: [SCN-004] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: Ptolemy, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [Live predicates, URL ownership, bounded sharding, failure behavior, deterministic ordering, timestamps, observability, and duplicate sitemap ownership are explicit in the amended contract.] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-12 after independent critic review }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002, TEXP-003] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/main
+    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
+    head_commit: "029d7dc55c82e2cfb55443bc39a95d157ea82bf0"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
+    material_drift: MATERIAL_DRIFT
+    reconciliation: { requirements: FAIL, scenarios: FAIL, invariants: FAIL, architecture: FAIL, security: PARTIAL, test_coverage: FAIL, scope: FAIL }
+    blocking_findings: ["REV-217-001: Required count-based bounded query and sitemap sharding are absent.", "REV-217-002: Category sitemap URLs conflict with the shop canonical.", "REV-217-003: PR #658 contains 683 files and fails governance CI."]
+    required_actions: ["Implement bounded threshold-based sharding and canonical-consistent category URLs on a clean current-main branch."]
+    evidence: ["src/app/sitemap.ts has unrestricted findMany queries, no generateSitemaps, and emits category query URLs canonicalized to /shop.", "Workflow run 34649025488 fails governance validation for the oversized PR."]
+    governance_reentry_required: true

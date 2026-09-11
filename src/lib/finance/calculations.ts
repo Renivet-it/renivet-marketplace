@@ -38,20 +38,24 @@ export type BrandEntityType =
     | "individual"
     | "huf";
 
+import { SECTION_194_O_THRESHOLD_PAISE } from "./tds-policy";
+
 export function computeTdsDeduction(params: {
-    cumulativeCommissionPaise: number;
-    cycleCommissionPaise: number;
+    cumulativeSalesPaise: number;
+    cycleSalesPaise: number;
     thresholdPaise?: number;
     rateBps?: number;
     entityType?: BrandEntityType | string | null;
 }): TdsComputation {
     const isIndividualOrHuf =
         params.entityType === "individual" || params.entityType === "huf";
-    const defaultThreshold = isIndividualOrHuf ? 50_000_000 : 0;
+    const defaultThreshold = isIndividualOrHuf
+        ? SECTION_194_O_THRESHOLD_PAISE
+        : 0;
     const thresholdPaise = params.thresholdPaise ?? defaultThreshold;
     const rateBps = params.rateBps ?? 10;
-    const current = params.cumulativeCommissionPaise;
-    const cycle = params.cycleCommissionPaise;
+    const current = params.cumulativeSalesPaise;
+    const cycle = params.cycleSalesPaise;
     const post = current + cycle;
     const rate = rateBps / 10_000;
 
@@ -60,7 +64,7 @@ export function computeTdsDeduction(params: {
             deductiblePaise: Math.round(cycle * rate),
             postCycleCumulativePaise: post,
             thresholdCrossed: false,
-            note: `TDS (0.1% u/s 194-O) applied on full cycle commission${thresholdPaise > 0 ? " because the annual threshold is already crossed." : "."}`,
+            note: `TDS (0.1% u/s 194-O) applied on gross sales/services${thresholdPaise > 0 ? " because the annual threshold is already crossed." : "."}`,
         };
     }
 
@@ -78,7 +82,7 @@ export function computeTdsDeduction(params: {
         deductiblePaise: Math.round(eligiblePaise * rate),
         postCycleCumulativePaise: post,
         thresholdCrossed: current < thresholdPaise,
-        note: `Threshold crossed in this cycle; TDS applied only on the commission above Rs. ${(thresholdPaise / 100).toFixed(2)}.`,
+        note: `Threshold crossed in this cycle; TDS applied only on gross sales/services above Rs. ${(thresholdPaise / 100).toFixed(2)}.`,
     };
 }
 

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog-general";
 import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
+import { sendProductClickEvent } from "@/lib/analytics/product-click";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -437,7 +438,15 @@ export function ProductCard({
                 className
             )}
         >
-            <AnimatedProductLink href={productUrl} className="block">
+            <AnimatedProductLink
+                href={productUrl}
+                className="block"
+                onClick={() => {
+                    if (product.brandId) {
+                        sendProductClickEvent(product.id, product.brandId);
+                    }
+                }}
+            >
                 <div className="product-card-media relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
                     <Image
                         src={imageUrl}

@@ -1,0 +1,10 @@
+# Feasibility Critique — P05 Customer Journey & UX
+
+## REN-95's effort estimate deserves scrutiny, not just acceptance
+"Largest single-effort item in the portfolio" is carried forward from the prior pass and is consistent with what this pass confirmed (three independent layers). But the actual code changes at each layer are individually small (a redirect condition, a procedure's auth check, a schema constraint). The size is almost entirely in decision-making and migration risk (the NOT NULL constraint, per `08-reliability/RECOVERY_ROLLBACK.md`), not implementation complexity. This package recommends against treating REN-95 as "L eng-weeks of coding" in planning — it is closer to "S eng-days of coding, blocked on decisions that could take much longer to resolve than the code itself." Mis-sizing this as a coding-heavy effort risks the wrong team composition being staffed against it.
+
+## REN-144's fix should not be scoped as "just add a transaction"
+The opposite risk: REN-144 could be under-scoped if treated as a one-line `db.transaction()` wrap. The critique in `11-critique/ARCHITECTURE_CRITIQUE.md` (client-disappears-mid-callback gap) means the fully-adequate V1 fix requires the reconciliation record and detection job (FR-1.3/1.4), not just the transaction. Scoping V1.1 as "add a transaction" and calling it done would leave the single most severe portfolio risk only partially addressed.
+
+## The AI/MCP NOT APPLICABLE finding should not be treated as a formality
+It would be easy for a future planning pass to ask "could we use AI to detect anomalous orders" as a REN-144 mitigation. This package's position: a deterministic reconciliation check (`createdOrders.length === expectedCount`) is strictly better than a probabilistic anomaly-detection model for this specific problem — the "correct" answer is computable exactly, so introducing a model would add cost, latency, and false-negative risk to a problem that doesn't need probabilistic inference. This is worth stating explicitly so it isn't re-litigated later as if the AI option were simply unconsidered.

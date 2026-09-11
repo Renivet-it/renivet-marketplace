@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog-general";
 import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
+import { sendProductClickEvent } from "@/lib/analytics/product-click";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -385,7 +386,12 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <AnimatedProductLink href={productUrl}>
+            <AnimatedProductLink
+                href={productUrl}
+                onClick={() =>
+                    sendProductClickEvent(product.id, product.brandId)
+                }
+            >
                 <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-[#F5F5F5] md:h-[400px] md:w-full">
                     {mediaUrls.length === 0 && (
                         <Image
@@ -836,6 +842,9 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             <AnimatedProductLink
                 href={productUrl}
                 className="mt-4 block min-h-[36px] px-2 text-center"
+                onClick={() =>
+                    sendProductClickEvent(product.id, product.brandId)
+                }
             >
                 <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[13px]">
                     {product.title}
@@ -846,6 +855,9 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             <AnimatedProductLink
                 href={productUrl}
                 className="mt-1 flex flex-wrap items-center justify-center px-2 pb-3"
+                onClick={() =>
+                    sendProductClickEvent(product.id, product.brandId)
+                }
             >
                 <span className="text-[13px] font-semibold text-gray-900 sm:text-[14px]">
                     {formatINR(price, { input: "rupees" })}
