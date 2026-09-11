@@ -1,5 +1,7 @@
 import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
 import { siteConfig } from "@/config/site";
+import { productQueries } from "@/lib/db/queries";
+import { buildProductItemListJsonLd } from "@/lib/seo/structured-data";
 import { getAbsoluteURL } from "@/lib/utils";
 import Image from "next/image";
 import type { Metadata } from "next";
@@ -40,8 +42,28 @@ export default async function FestivePage({
 }: {
     searchParams: Promise<StorefrontSearchParams>;
 }) {
+    const selected = await productQueries.getFestiveSeasonProducts();
+    const products = selected.map(({ product }) => product);
+    const productItemListJsonLd = buildProductItemListJsonLd({
+        name: "Festive Collection",
+        url: getAbsoluteURL("/festive"),
+        products,
+        productUrl: (slug) => getAbsoluteURL(`/products/${slug}`),
+    });
+
     return (
         <div className="min-h-screen bg-[#F0EBE2]">
+            {productItemListJsonLd ? (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(productItemListJsonLd).replace(
+                            /</g,
+                            "\\u003c"
+                        ),
+                    }}
+                />
+            ) : null}
             <StorefrontCatalogPage
                 searchParams={searchParams}
                 basePath="/festive"

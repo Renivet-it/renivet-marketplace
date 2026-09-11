@@ -7,6 +7,7 @@ import { POSTHOG_EVENTS } from "@/config/posthog";
 import { siteConfig } from "@/config/site";
 import { blogQueries } from "@/lib/db/queries";
 import { posthog } from "@/lib/posthog/server";
+import { buildBlogPostingJsonLd } from "@/lib/seo/structured-data";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
@@ -118,6 +119,10 @@ async function BlogFetch({ params }: PageProps) {
     });
 
     const parsed = blogWithAuthorAndTagSchema.parse(existingBlog);
+    const blogPostingJsonLd = buildBlogPostingJsonLd({
+        blog: parsed,
+        url: getAbsoluteURL(`/blogs/${parsed.slug}`),
+    });
 
     posthog.capture({
         event: POSTHOG_EVENTS.BLOG.VIEWED,
@@ -130,6 +135,17 @@ async function BlogFetch({ params }: PageProps) {
 
     return (
         <div className="grid grid-cols-1 gap-y-10 md:gap-10 lg:grid-cols-3">
+            {blogPostingJsonLd ? (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(blogPostingJsonLd).replace(
+                            /</g,
+                            "\\u003c"
+                        ),
+                    }}
+                />
+            ) : null}
             <BlogPage blog={parsed} className="col-span-2" />
 
             <div className="flex h-full gap-10 md:col-span-1">
