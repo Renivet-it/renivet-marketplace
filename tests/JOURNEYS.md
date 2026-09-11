@@ -6,8 +6,8 @@ They intentionally stop before authentication, form submission, cart mutation, o
 1. Homepage renders
 2. Shop catalog renders
 3. Search results route renders
-4. Product detail renders
-5. Brand shop renders (using the configured public path)
+4. About page renders
+5. Contact page renders
 6. New arrivals renders
 7. Blog index renders
 8. Sign-in wall is reached from a protected profile route
