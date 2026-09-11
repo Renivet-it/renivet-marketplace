@@ -8,6 +8,7 @@ import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
+import { isExplicitCancellationSuccess } from "@/lib/delhivery/cancellation";
 import {
     cancelOrder as cancelDelhiveryOrder,
     createOrder as createDelhiveryOrder,
@@ -1885,16 +1886,7 @@ export const ordersRouter = createTRPCRouter({
                             try {
                                 const cancelResponse =
                                     await cancelDelhiveryOrder(trackingId);
-                                const statusText = String(
-                                    cancelResponse?.status ??
-                                        cancelResponse?.Status ??
-                                        ""
-                                ).toLowerCase();
-                                const isFailure =
-                                    statusText.includes("fail") ||
-                                    statusText.includes("error");
-
-                                if (!isFailure) {
+                                if (isExplicitCancellationSuccess(cancelResponse)) {
                                     isCancelledInDelhivery = true;
                                     break;
                                 }
