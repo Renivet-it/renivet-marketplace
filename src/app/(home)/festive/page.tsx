@@ -1,8 +1,11 @@
-import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
+import {
+    StorefrontCatalogPage,
+    type StorefrontSearchParams,
+} from "@/components/shop/storefront-catalog-page";
 import { siteConfig } from "@/config/site";
 import { getAbsoluteURL } from "@/lib/utils";
-import Image from "next/image";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +24,11 @@ export const metadata: Metadata = {
         type: "website",
         images: [
             {
-                ...siteConfig.og,
+                url: getAbsoluteURL(
+                    "/assets/festive-season/festive-banner.png"
+                ),
+                width: 960,
+                height: 516,
                 alt: "Renivet Festive Collection",
             },
         ],
@@ -51,6 +58,7 @@ export default async function FestivePage({
                 ]}
                 catalogContext="festive"
                 theme="festive"
+                pageHeading="Celebrate Consciously with Sustainable Festive Picks"
                 defaultSortBy="recommended"
                 defaultSortOrder="desc"
                 hero={
@@ -60,7 +68,7 @@ export default async function FestivePage({
                             alt="Celebrate consciously — sustainable festive picks"
                             width={2048}
                             height={865}
-                            priority
+                            loading="lazy"
                             unoptimized
                             className="hidden h-auto w-full md:block"
                         />

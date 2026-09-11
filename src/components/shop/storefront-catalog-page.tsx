@@ -20,6 +20,7 @@ import {
     isSearchAnalyticsId,
     logSearchResultCount,
 } from "@/lib/search/search-engine";
+import { getAbsoluteURL } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
@@ -72,6 +73,7 @@ interface StorefrontCatalogPageProps {
     hideRecommendationSorts?: boolean;
     catalogContext?: "festive";
     theme?: "festive";
+    pageHeading?: ReactNode;
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -89,6 +91,7 @@ export async function StorefrontCatalogPage({
     hideRecommendationSorts = false,
     catalogContext,
     theme,
+    pageHeading,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -150,6 +153,7 @@ export async function StorefrontCatalogPage({
 
     return (
         <GeneralShell>
+            {pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}
             <div className="space-y-4 md:space-y-6">
                 <StorefrontBreadcrumbs items={breadcrumbItems} />
                 {hero}
@@ -188,7 +192,10 @@ export async function StorefrontCatalogPage({
                                 <ProductSearch
                                     searchBasePath={basePath}
                                     inlineResults
-                                    className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                                    classNames={{
+                                        wrapper:
+                                            "[&>div]:h-14 [&>div]:rounded-[22px] [&>div]:border-[#e3d6c3] [&>div]:bg-[#fffdf8] [&>div]:px-5 [&>div]:text-base [&>div]:shadow-[0_14px_34px_rgba(64,54,36,0.09)]",
+                                    }}
                                 />
                             </FestiveMobileSearch>
                         </div>
@@ -196,7 +203,10 @@ export async function StorefrontCatalogPage({
                         <div className="md:hidden">
                             <ProductSearch
                                 searchBasePath={basePath}
-                                className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                                classNames={{
+                                    wrapper:
+                                        "[&>div]:h-14 [&>div]:rounded-[22px] [&>div]:border-[#e3d6c3] [&>div]:bg-[#fffdf8] [&>div]:px-5 [&>div]:text-base [&>div]:shadow-[0_14px_34px_rgba(64,54,36,0.09)]",
+                                }}
                             />
                         </div>
                     )}
@@ -885,9 +895,62 @@ async function StorefrontProductsFetch({
     }
 
     const productTypesForPills = Array.from(productTypesForPillsMap.values());
+    const festiveItemListJsonLd =
+        theme === "festive"
+            ? {
+                  "@context": "https://schema.org",
+                  "@type": "ItemList",
+                  itemListElement: (finalData?.data ?? [])
+                      .filter((product: any) => product?.slug && product?.title)
+                      .map((product: any, index: number) => {
+                          const price =
+                              product.costPerItem ??
+                              product.variants?.[0]?.price;
+                          const image = product.media?.find(
+                              (media: any) => media?.url
+                          )?.url;
+                          return {
+                              "@type": "ListItem",
+                              position: index + 1,
+                              item: {
+                                  "@type": "Product",
+                                  name: product.title,
+                                  url: getAbsoluteURL(
+                                      `/products/${product.slug}`
+                                  ),
+                                  ...(image ? { image } : {}),
+                                  ...(price != null
+                                      ? {
+                                            offers: {
+                                                "@type": "Offer",
+                                                price: Number(price) / 100,
+                                                priceCurrency: "INR",
+                                                availability:
+                                                    product.isAvailable
+                                                        ? "https://schema.org/InStock"
+                                                        : "https://schema.org/OutOfStock",
+                                                url: getAbsoluteURL(
+                                                    `/products/${product.slug}`
+                                                ),
+                                            },
+                                        }
+                                      : {}),
+                              },
+                          };
+                      }),
+              }
+            : null;
 
     return (
         <div className="space-y-4 md:space-y-3">
+            {festiveItemListJsonLd ? (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(festiveItemListJsonLd),
+                    }}
+                />
+            ) : null}
             <FestiveMobileCatalogHeader
                 enabled={theme === "festive"}
                 topClass="top-[102px]"

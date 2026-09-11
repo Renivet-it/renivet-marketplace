@@ -1,7 +1,7 @@
-import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { EmailCompletionCard } from "@/components/auth/email-completion-card";
-import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
+import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
+import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
 import { siteConfig } from "@/config/site";
 import {
     blogQueries,
@@ -150,6 +150,7 @@ export default async function Page() {
 
     return (
         <>
+            <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
             <Suspense
                 fallback={

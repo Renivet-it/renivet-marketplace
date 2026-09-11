@@ -1,0 +1,62 @@
+schema_version: "1.0"
+task:
+    id: REN-220
+    title: "[SEO][P2] Complete Missing Structured Data (Organization/WebSite/BlogPosting)"
+    source: linear
+    branch: feat/seo-phase-1-foundation
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-220, priority: Medium, labels: [Improvement], status: Backlog, assignee: Ayan Ganguly, project: Renivet — SEO & Organic Growth Program, milestone: Workstream B }
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons: [Additive server-rendered metadata with no data mutation or existing schema rewrite.]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-220, root layout, site config, blog slug page, Product schema, Breadcrumb schema]
+    excluded_areas: [Product schema, Breadcrumb schema, ItemList schema, ratings/reviews, SearchAction without verified URL support]
+    dependencies: [DEP-001, DEP-002]
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+dependencies:
+    - { id: DEP-001, name: Site configuration, purpose: Authoritative company URL and logo, description: Existing siteConfig values, status: resolved }
+    - { id: DEP-002, name: Blog post model, purpose: Authoritative post fields, description: Existing blog loader, status: resolved }
+integrations: []
+personas: [{ id: PER-001, role: search_engine, applicability: Consumes structured data. }]
+security_boundaries: []
+business_rules: [{ id: BR-001, description: Do not fabricate ratings, reviews, authorship, dates, or social profiles., source: REN-220 approved requirements }]
+decisions:
+    - { id: DEC-001, question: Include WebSite SearchAction?, class: AUTO_DECIDE, status: resolved, recommendation: Omit unless the existing search URL contract is verified., basis: Linear explicitly requires verification, confidence: high, consequence: low, human_confirmation_required: false, confirmation_source: REN-220 }
+requirements:
+    - { id: REQ-001, description: Root layout emits one truthful Organization and WebSite JSON-LD block., type: explicit }
+    - { id: REQ-002, description: Blog slug pages emit truthful server-rendered BlogPosting JSON-LD., type: explicit }
+    - { id: REQ-003, description: Existing Product and Breadcrumb schema remains unchanged and unsupported fields are absent., type: compatibility }
+scenarios:
+    - { id: SCN-001, description: Homepage source contains Organization and WebSite schema with configured identity values., requirement_ids: [REQ-001] }
+    - { id: SCN-002, description: A published blog post source contains BlogPosting schema from stored fields., requirement_ids: [REQ-002] }
+    - { id: SCN-003, description: Existing schemas remain unchanged and unsupported SearchAction/ratings/reviews are absent., requirement_ids: [REQ-003] }
+invariants:
+    - { id: INV-001, description: JSON-LD is server-rendered and uses only authoritative data. }
+    - { id: INV-002, description: Product and Breadcrumb schema behavior is preserved. }
+flows: [{ id: FLOW-001, description: Site/blog data -> JSON-LD script -> crawler-visible schema., state_transitions: [source_data -> server_rendered_schema] }]
+test_expectations:
+    - { id: TEXP-001, category: external_integration, classification: REQUIRED, reason: Rich Results Test validates homepage and blog structured data., scenarios: [SCN-001, SCN-002] }
+    - { id: TEXP-002, category: regression, classification: REQUIRED, reason: Source/diff checks prevent existing schema changes and fabricated fields., scenarios: [SCN-003] }
+critic: { required: false, completed: false, artifact: null, reviewer: null, fresh_context: false, read_only: true, required_categories: [], categories_reviewed: [], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-12 }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-003] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-002] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
