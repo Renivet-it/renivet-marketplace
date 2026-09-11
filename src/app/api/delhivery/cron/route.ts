@@ -7,6 +7,8 @@ import { swapRewardService } from "@/lib/services/swap-reward";
 import { requireCronSecret } from "@/lib/auth/cron-access";
 import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
+import { isTerminalCancellationStatus } from "@/lib/delhivery/cancellation";
+import { createOperationalAlert } from "@/lib/monitoring-sla/audit";
 
 const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN!;
 
@@ -106,7 +108,6 @@ export async function GET(req: NextRequest) {
 
             // Print raw response for debugging
             console.log("🔍 RAW RESPONSE (first 400 chars) ↓");
-            console.log(raw.substring(0, 400));
 
             let data;
             try {
@@ -150,14 +151,38 @@ export async function GET(req: NextRequest) {
             console.log(`🔁 Mapped Status: ${mappedStatus}`);
             console.log(`🟦 Previous Status: ${ship.status}`);
 
-            // Always update latest JSON
+            const previousEvidence =
+                ship.delhiveryTrackingJson &&
+                typeof ship.delhiveryTrackingJson === "object"
+                    ? (ship.delhiveryTrackingJson as Record<string, unknown>)
+                    : {};
+            const hasCancellationAttempt =
+                previousEvidence.cancellationReconciliation !== undefined;
+
+            // Preserve cancellation evidence while recording latest tracking.
             await db
                 .update(orderShipments)
                 .set({
-                    delhiveryTrackingJson: data,
+                    delhiveryTrackingJson: {
+                        ...previousEvidence,
+                        latestTracking: data,
+                    },
                     updatedAt: new Date(),
                 })
                 .where(eq(orderShipments.id, ship.id));
+
+            if (hasCancellationAttempt && !isTerminalCancellationStatus(delhiveryStatus)) {
+                await createOperationalAlert({
+                    entityType: "order_shipment",
+                    entityId: ship.id,
+                    type: "shipment_cancellation_divergence",
+                    severity: "critical",
+                    ownerRole: "order_manager",
+                    title: "Delhivery cancellation remains unresolved",
+                    message: `Shipment ${ship.id} remains non-terminal at the carrier.`,
+                    dedupeKey: `delhivery:cancellation:${ship.id}`,
+                });
+            }
 
             if (mappedStatus === ship.status) {
                 console.log("⏭ No status change. Skipping status update.");
@@ -237,8 +262,11 @@ export async function GET(req: NextRequest) {
         console.log("✅ POLLING COMPLETED");
         return NextResponse.json({ ok: true });
 
-    } catch (err) {
-        console.error("❌ POLLING ERROR", err);
-        return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    } catch {
+        console.error("Delhivery reconciliation failed");
+        return NextResponse.json(
+            { ok: false, error: "Delhivery reconciliation failed" },
+            { status: 500 }
+        );
     }
 }
