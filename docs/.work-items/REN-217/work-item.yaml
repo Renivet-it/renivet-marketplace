@@ -72,7 +72,7 @@ implementation_review:
     base_branch: origin/main
     base_commit: "94748ff793dd06c0aadbc6c7a092223154417cb7"
     head_commit: "b51707218e5ce80fda6444cabea1f9c9c643a7d5"
-    pr_url: null
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/658
     material_drift: MINOR_DRIFT
     reconciliation: { requirements: PASS, scenarios: PARTIAL, invariants: PARTIAL, architecture: PASS, security: PASS, test_coverage: PARTIAL, scope: PASS }
     blocking_findings: []
