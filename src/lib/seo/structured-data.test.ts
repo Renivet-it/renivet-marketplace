@@ -3,6 +3,7 @@ import {
     buildBlogPostingJsonLd,
     buildProductItemListJsonLd,
     buildSiteIdentityJsonLd,
+    serializeJsonLd,
 } from "./structured-data";
 
 describe("buildSiteIdentityJsonLd", () => {
@@ -263,5 +264,40 @@ describe("buildProductItemListJsonLd", () => {
 
         expect(jsonLd?.itemListElement).toHaveLength(1);
         expect(jsonLd?.itemListElement[0]?.position).toBe(1);
+    });
+});
+
+describe("serializeJsonLd", () => {
+    test("escapes product data that could close a JSON-LD script tag", () => {
+        const jsonLd = buildProductItemListJsonLd({
+            name: "Rakhi Collection",
+            url: "https://www.renivet.com/festive",
+            products: [
+                {
+                    id: "malicious-product",
+                    title: "Rakhi </script><script>alert(1)</script>",
+                    slug: "malicious-product",
+                    price: 2500,
+                    isAvailable: true,
+                    media: [
+                        {
+                            mediaItem: {
+                                url: "https://cdn.renivet.com/</script><script>alert(1)</script>.jpg",
+                            },
+                        },
+                    ],
+                },
+            ],
+            productUrl: (slug) => `https://www.renivet.com/products/${slug}`,
+        });
+
+        if (!jsonLd) {
+            throw new Error("Expected a product ItemList JSON-LD payload");
+        }
+
+        const serialized = serializeJsonLd(jsonLd);
+
+        expect(serialized).not.toContain("</script>");
+        expect(serialized).toContain("\\u003c/script>");
     });
 });

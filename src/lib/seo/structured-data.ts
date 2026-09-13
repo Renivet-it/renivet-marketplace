@@ -2,6 +2,10 @@ const SCHEMA_CONTEXT = "https://schema.org" as const;
 const IN_STOCK = "https://schema.org/InStock" as const;
 const OUT_OF_STOCK = "https://schema.org/OutOfStock" as const;
 
+export function serializeJsonLd(value: object): string {
+    return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
 export interface SiteIdentityJsonLdInput {
     name: string;
     description: string;

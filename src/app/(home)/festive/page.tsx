@@ -1,7 +1,10 @@
 import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
 import { siteConfig } from "@/config/site";
 import { productQueries } from "@/lib/db/queries";
-import { buildProductItemListJsonLd } from "@/lib/seo/structured-data";
+import {
+    buildProductItemListJsonLd,
+    serializeJsonLd,
+} from "@/lib/seo/structured-data";
 import { getAbsoluteURL } from "@/lib/utils";
 import Image from "next/image";
 import type { Metadata } from "next";
@@ -57,10 +60,7 @@ export default async function FestivePage({
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{
-                        __html: JSON.stringify(productItemListJsonLd).replace(
-                            /</g,
-                            "\\u003c"
-                        ),
+                        __html: serializeJsonLd(productItemListJsonLd),
                     }}
                 />
             ) : null}
