@@ -1,6 +1,6 @@
 import { ClientProvider, ServerProvider } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
-import { siteConfig } from "@/config/site";
+import { siteConfig, siteSocialProfileUrls } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import { inter, nunito_sans } from "./fonts";
@@ -122,6 +122,7 @@ export default function RootLayout({ children }: LayoutProps) {
         name: siteConfig.name,
         description: siteConfig.description,
         url: getAbsoluteURL(),
+        socialProfileUrls: siteSocialProfileUrls,
     });
 
     return (

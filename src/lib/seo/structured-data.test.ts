@@ -12,6 +12,11 @@ describe("buildSiteIdentityJsonLd", () => {
             name: "Renivet",
             description: "A marketplace for conscious consumers.",
             url: "https://www.renivet.com",
+            socialProfileUrls: [
+                "https://www.instagram.com/shop.renivet?igsh=NGNzamtsZ25qaDU1",
+                "https://www.linkedin.com/company/renivet/",
+                "https://www.youtube.com/@Renivet",
+            ],
         });
 
         expect(jsonLd).toEqual({
@@ -22,6 +27,11 @@ describe("buildSiteIdentityJsonLd", () => {
                     name: "Renivet",
                     description: "A marketplace for conscious consumers.",
                     url: "https://www.renivet.com",
+                    sameAs: [
+                        "https://www.instagram.com/shop.renivet?igsh=NGNzamtsZ25qaDU1",
+                        "https://www.linkedin.com/company/renivet/",
+                        "https://www.youtube.com/@Renivet",
+                    ],
                 },
                 {
                     "@type": "WebSite",
@@ -31,7 +41,7 @@ describe("buildSiteIdentityJsonLd", () => {
             ],
         });
         expect(JSON.stringify(jsonLd)).not.toContain("SearchAction");
-        expect(JSON.stringify(jsonLd)).not.toContain("sameAs");
+        expect(JSON.stringify(jsonLd)).not.toContain('"#"');
     });
 });
 

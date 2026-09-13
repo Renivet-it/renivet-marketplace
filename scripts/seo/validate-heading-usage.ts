@@ -15,7 +15,17 @@ const footer = "src/components/globals/layouts/footer/footer.tsx";
 const routeCompositions: RouteComposition[] = [
     {
         route: "/",
-        files: ["src/app/(home)/page.tsx", "src/app/(home)/layout.tsx", footer],
+        files: [
+            "src/app/(home)/page.tsx",
+            "src/app/(home)/layout.tsx",
+            footer,
+            "src/components/home/new-home-page/discount-section.tsx",
+            "src/components/home/new-home-page/everyday-essential.tsx",
+            "src/components/home/shop-slow.tsx",
+            "src/components/home/women/top-collection.tsx",
+            "src/components/home/men/new-collection.tsx",
+            "src/components/home/beauty-personal/product-new-arrival.tsx",
+        ],
     },
     {
         route: "/shop",

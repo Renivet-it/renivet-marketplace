@@ -10,6 +10,7 @@ export interface SiteIdentityJsonLdInput {
     name: string;
     description: string;
     url: string;
+    socialProfileUrls: ReadonlyArray<string>;
 }
 
 export interface SiteIdentityJsonLd {
@@ -20,6 +21,7 @@ export interface SiteIdentityJsonLd {
             name: string;
             description: string;
             url: string;
+            sameAs: ReadonlyArray<string>;
         },
         {
             "@type": "WebSite";
@@ -109,6 +111,7 @@ export function buildSiteIdentityJsonLd({
     name,
     description,
     url,
+    socialProfileUrls,
 }: SiteIdentityJsonLdInput): SiteIdentityJsonLd {
     return {
         "@context": SCHEMA_CONTEXT,
@@ -118,6 +121,7 @@ export function buildSiteIdentityJsonLd({
                 name,
                 description,
                 url,
+                sameAs: socialProfileUrls,
             },
             {
                 "@type": "WebSite",

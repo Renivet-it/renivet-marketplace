@@ -154,6 +154,12 @@ export const siteConfig: SiteConfig = {
     },
 };
 
+export const siteSocialProfileUrls =
+    siteConfig.footer.menu
+        .find((section) => section.name === "Socials")
+        ?.items.map(({ href }) => href)
+        .filter((href) => href.startsWith("https://")) ?? [];
+
 export const generalSidebarConfig: GeneralSidebarConfig[] = [
     {
         title: "Content",

@@ -85,6 +85,7 @@ test("composed home, shop, and festive documents each own exactly one H1", async
         festive,
         footer,
         headingGuard,
+        ...homepageSections
     ] = await Promise.all([
         readFile("src/app/(home)/page.tsx", "utf8"),
         readFile("src/app/(home)/layout.tsx", "utf8"),
@@ -94,12 +95,15 @@ test("composed home, shop, and festive documents each own exactly one H1", async
         readFile("src/app/(home)/festive/page.tsx", "utf8"),
         readFile("src/components/globals/layouts/footer/footer.tsx", "utf8"),
         readFile("scripts/seo/validate-heading-usage.ts", "utf8"),
+        ...homepageSectionFiles.map((file) => readFile(file, "utf8")),
     ]);
 
     const countLiteralH1s = (source: string) =>
         (source.match(/<h1\b/g) ?? []).length;
 
-    expect(countLiteralH1s([home, homeLayout, footer].join("\n"))).toBe(1);
+    expect(
+        countLiteralH1s([home, homeLayout, footer, ...homepageSections].join("\n"))
+    ).toBe(1);
     expect(
         countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))
     ).toBe(1);
