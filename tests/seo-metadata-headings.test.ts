@@ -4,12 +4,6 @@ import { expect, test } from "bun:test";
 const SHOP_TITLE = "Shop Sustainable Fashion & Eco Products";
 const SHOP_DESCRIPTION =
     "Shop sustainable fashion and eco products from verified brands on Renivet. Discover conscious clothing, accessories, home goods, and lifestyle essentials.";
-const FESTIVE_TITLE = "Festive Collection";
-const FESTIVE_DESCRIPTION =
-    "Discover Renivet's curated festive collection, selected for conscious celebrations and thoughtful gifting.";
-const FESTIVE_HEADING =
-    "Celebrate Consciously with Sustainable Festive Picks";
-
 const homepageSectionFiles = [
     "src/components/home/new-home-page/discount-section.tsx",
     "src/components/home/new-home-page/everyday-essential.tsx",
@@ -75,7 +69,7 @@ test("shop and festive routes each have one explicit H1 owner", async () => {
     expect(storefront).toContain(
         '{pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}'
     );
-    expect(festive).toContain(`heading="${FESTIVE_HEADING}"`);
+    expect(festive).toContain("heading={FESTIVE_CAMPAIGN.heading}");
     expect(festive).toContain('headingLevel="h1"');
     expect(festiveSeason).toContain("const Heading = headingLevel;");
     expect(festiveSeason).toContain("<Heading>{heading}</Heading>");
@@ -106,12 +100,12 @@ test("composed home, shop, and festive documents each own exactly one H1", async
         (source.match(/<h1\b/g) ?? []).length;
 
     expect(countLiteralH1s([home, homeLayout, footer].join("\n"))).toBe(1);
-    expect(countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))).toBe(
-        1
-    );
+    expect(
+        countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))
+    ).toBe(1);
     expect(countLiteralH1s([festive, footer].join("\n"))).toBe(0);
     expect(footer).not.toMatch(/<h1\b/);
-    expect(footer).toContain("<p className=\"text-4xl font-bold\">");
+    expect(footer).toContain('<p className="text-4xl font-bold">');
     expect(headingGuard).toContain('route: "/"');
     expect(headingGuard).toContain('route: "/shop"');
     expect(headingGuard).toContain('route: "/festive"');
@@ -127,12 +121,12 @@ test("festive keeps its meaningful H1 and an empty state when no products are se
 
     expect(festiveSeason).not.toContain("if (!products.length) return null;");
     expect(festiveSeason).toContain("const hasProducts = products.length > 0;");
-    expect(festiveSeason).toContain(
-        "Festive products are being curated. Please check back soon."
+    expect(festiveSeason).toMatch(
+        /Festive products are being curated\. Please check\s+back soon\./
     );
 });
 
-test("festive metadata and image loading preserve the current route architecture", async () => {
+test("festive campaign configuration is the single source for crawler-facing copy and art", async () => {
     const [festive, festiveSeason] = await Promise.all([
         readFile("src/app/(home)/festive/page.tsx", "utf8"),
         readFile(
@@ -142,23 +136,35 @@ test("festive metadata and image loading preserve the current route architecture
     ]);
 
     expect(festive).toContain('export const dynamic = "force-dynamic"');
-    expect(festive).toContain(`title: "${FESTIVE_TITLE}"`);
-    expect(festive).toContain(`"${FESTIVE_DESCRIPTION}"`);
+    expect(festive).toContain(
+        'import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign"'
+    );
+    expect(festiveSeason).toContain(
+        'import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign"'
+    );
+    expect(festive).toContain("title: FESTIVE_CAMPAIGN.name");
+    expect(festive).toContain("description: FESTIVE_CAMPAIGN.description");
+    expect(festive).toContain("title: FESTIVE_CAMPAIGN.social.title");
+    expect(festive).toContain(
+        "description: FESTIVE_CAMPAIGN.social.description"
+    );
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.src");
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.width");
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.height");
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.alt");
+    expect(festive).toContain("name: FESTIVE_CAMPAIGN.name");
+    expect(festive).toContain("heading={FESTIVE_CAMPAIGN.heading}");
     expect(festive).toContain('canonical: getAbsoluteURL("/festive")');
-    expect(festive).toContain('"/assets/festive-season/rakhi.png"');
     expect(festive).toContain("buildProductItemListJsonLd");
     expect(festive).toContain("<FestiveSeason");
     expect(festive).toContain("prioritizeMobileHero");
-    expect(festiveSeason).toContain('rel="preload"');
-    expect(festiveSeason).toContain('media="(max-width: 767px)"');
-    expect(festiveSeason).toContain('fetchPriority="high"');
-    expect(festiveSeason.match(/rel="preload"/g)).toHaveLength(1);
-    expect(festiveSeason).not.toContain("priority={prioritizeMobileHero}");
+    expect(festiveSeason).toContain("FESTIVE_CAMPAIGN.art.mobileHero.src");
+    expect(festiveSeason).toContain("FESTIVE_CAMPAIGN.art.desktopHero.src");
+    expect(festiveSeason).toContain("priority={prioritizeMobileHero}");
+    expect(
+        festiveSeason.match(/priority=\{prioritizeMobileHero\}/g)
+    ).toHaveLength(1);
+    expect(festiveSeason).not.toContain('rel="preload"');
     expect(festiveSeason).toContain('loading="lazy"');
-    expect(festiveSeason).toContain('fetchPriority="auto"');
-    expect(festiveSeason).toContain("<picture>");
-    expect(festiveSeason).toContain('media="(max-width: 767px)"');
-    expect(festiveSeason).toContain('srcSet="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"');
-    expect(festiveSeason).toContain('src="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"');
-    expect(festiveSeason.match(/fetchPriority="high"/g)).toHaveLength(1);
+    expect(festiveSeason).not.toContain('fetchPriority="high"');
 });
