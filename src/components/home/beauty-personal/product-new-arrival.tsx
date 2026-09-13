@@ -48,9 +48,9 @@ export function ProductGridNewArrivals({
             <div className="mx-auto max-w-[1360px]">
                 {/* Header with View All link */}
                 <div className="mb-6 flex items-center justify-between px-2">
-                    <h1 className="text-2xl font-bold uppercase tracking-wider">
+                    <h2 className="text-2xl font-bold uppercase tracking-wider">
                         {title}
-                    </h1>
+                    </h2>
                     <Link
                         href="#"
                         className="text-sm font-medium underline hover:text-gray-600"

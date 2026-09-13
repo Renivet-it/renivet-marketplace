@@ -91,6 +91,7 @@ export async function generateMetadata({
         description: !!existingProduct.metaDescription?.length
             ? existingProduct.metaDescription
             : existingProduct.description,
+        alternates: { canonical: url },
         authors: [
             {
                 name: existingProduct.brand.name,

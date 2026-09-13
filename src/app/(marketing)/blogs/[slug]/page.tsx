@@ -39,6 +39,7 @@ export async function generateMetadata({
             `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
         description:
             existingBlog.metaDescription?.trim() || existingBlog.description,
+        alternates: { canonical: getAbsoluteURL(`/blogs/${slug}`) },
         keywords: existingBlog.targetKeyword
             ? [existingBlog.targetKeyword]
             : undefined,
