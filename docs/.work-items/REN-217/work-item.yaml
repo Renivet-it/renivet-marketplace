@@ -54,8 +54,8 @@ implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: main
-    base_commit: "0cbf02a024d90db0461683906dc0a098a0c209b3"
-    head_commit: "4507015b054d6f7882af27555dba1c02924f324e"
+    base_commit: "342b7091274b06fcd7ec1da14f87807be90e7d66"
+    head_commit: "aa85e96ed995d4cc02c0a75ea479d377762c8251"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -68,10 +68,11 @@ implementation_review:
         scope: PASS
     blocking_findings: []
     required_actions:
-        - "REV-001: Add an isolated database integration or deployment smoke check before SEO Phase One release review."
+        - "REV-001: Add an isolated database integration or deployment smoke check before SEO Phase One release verification."
     evidence:
-        - "Compared the approved contract and approved recovery design with the recorded base-to-head Git diff and the uncommitted sitemap implementation."
-        - "Linear REN-217 identity matched the requested ID and local READY_FOR_DEV contract."
+        - "Retrieved Linear REN-217 and confirmed the local READY_FOR_DEV, APPROVED contract identity before review output was written."
+        - "Compared the user-specified main-base range 342b7091274b06fcd7ec1da14f87807be90e7d66..aa85e96ed995d4cc02c0a75ea479d377762c8251."
+        - "The approved canonical-safe collection decision and static sitemap implementation consistently emit /shop once while excluding noncanonical category filter variants."
     governance_reentry_required: false
 traceability:
     requirement_to_scenarios:
