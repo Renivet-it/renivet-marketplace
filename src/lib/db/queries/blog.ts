@@ -187,6 +187,26 @@ class BlogQuery {
         return parsed;
     }
 
+    async getPublishedBlog({ slug }: { slug: string }) {
+        const data = await db.query.blogs.findFirst({
+            where: and(eq(blogs.slug, slug), eq(blogs.isPublished, true)),
+            with: {
+                author: true,
+                tags: {
+                    with: {
+                        tag: true,
+                    },
+                },
+            },
+        });
+        if (!data) return null;
+
+        return blogWithAuthorAndTagSchema.parse({
+            ...data,
+            tags: data.tags.map((tag) => tag.tag),
+        });
+    }
+
     async updateBlog(
         id: string,
         values: UpdateBlog & {

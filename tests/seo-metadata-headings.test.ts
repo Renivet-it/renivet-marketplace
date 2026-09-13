@@ -81,6 +81,57 @@ test("shop and festive routes each have one explicit H1 owner", async () => {
     expect(festiveSeason).toContain("<Heading>{heading}</Heading>");
 });
 
+test("composed home, shop, and festive documents each own exactly one H1", async () => {
+    const [
+        home,
+        homeLayout,
+        shop,
+        shopLayout,
+        storefront,
+        festive,
+        footer,
+        headingGuard,
+    ] = await Promise.all([
+        readFile("src/app/(home)/page.tsx", "utf8"),
+        readFile("src/app/(home)/layout.tsx", "utf8"),
+        readFile("src/app/(marketing)/shop/page.tsx", "utf8"),
+        readFile("src/app/(marketing)/shop/layout.tsx", "utf8"),
+        readFile("src/components/shop/storefront-catalog-page.tsx", "utf8"),
+        readFile("src/app/(home)/festive/page.tsx", "utf8"),
+        readFile("src/components/globals/layouts/footer/footer.tsx", "utf8"),
+        readFile("scripts/seo/validate-heading-usage.ts", "utf8"),
+    ]);
+
+    const countLiteralH1s = (source: string) =>
+        (source.match(/<h1\b/g) ?? []).length;
+
+    expect(countLiteralH1s([home, homeLayout, footer].join("\n"))).toBe(1);
+    expect(countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))).toBe(
+        1
+    );
+    expect(countLiteralH1s([festive, footer].join("\n"))).toBe(0);
+    expect(footer).not.toMatch(/<h1\b/);
+    expect(footer).toContain("<p className=\"text-4xl font-bold\">");
+    expect(headingGuard).toContain('route: "/"');
+    expect(headingGuard).toContain('route: "/shop"');
+    expect(headingGuard).toContain('route: "/festive"');
+    expect(headingGuard).toContain("const Heading = headingLevel;");
+    expect(headingGuard).toContain("<Heading>{heading}</Heading>");
+});
+
+test("festive keeps its meaningful H1 and an empty state when no products are selected", async () => {
+    const festiveSeason = await readFile(
+        "src/components/home/new-home-page/festive-season.tsx",
+        "utf8"
+    );
+
+    expect(festiveSeason).not.toContain("if (!products.length) return null;");
+    expect(festiveSeason).toContain("const hasProducts = products.length > 0;");
+    expect(festiveSeason).toContain(
+        "Festive products are being curated. Please check back soon."
+    );
+});
+
 test("festive metadata and image loading preserve the current route architecture", async () => {
     const [festive, festiveSeason] = await Promise.all([
         readFile("src/app/(home)/festive/page.tsx", "utf8"),
@@ -98,8 +149,16 @@ test("festive metadata and image loading preserve the current route architecture
     expect(festive).toContain("buildProductItemListJsonLd");
     expect(festive).toContain("<FestiveSeason");
     expect(festive).toContain("prioritizeMobileHero");
-    expect(festiveSeason.match(/priority=\{prioritizeMobileHero\}/g)).toHaveLength(
-        1
-    );
+    expect(festiveSeason).toContain('rel="preload"');
+    expect(festiveSeason).toContain('media="(max-width: 767px)"');
+    expect(festiveSeason).toContain('fetchPriority="high"');
+    expect(festiveSeason.match(/rel="preload"/g)).toHaveLength(1);
+    expect(festiveSeason).not.toContain("priority={prioritizeMobileHero}");
     expect(festiveSeason).toContain('loading="lazy"');
+    expect(festiveSeason).toContain('fetchPriority="auto"');
+    expect(festiveSeason).toContain("<picture>");
+    expect(festiveSeason).toContain('media="(max-width: 767px)"');
+    expect(festiveSeason).toContain('srcSet="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"');
+    expect(festiveSeason).toContain('src="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"');
+    expect(festiveSeason.match(/fetchPriority="high"/g)).toHaveLength(1);
 });

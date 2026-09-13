@@ -26,7 +26,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { slug } = await params;
 
-    const existingBlog = await blogQueries.getBlog({ slug });
+    const existingBlog = await blogQueries.getPublishedBlog({ slug });
     if (!existingBlog)
         return {
             title: "Blog not found",
@@ -110,7 +110,7 @@ async function BlogFetch({ params }: PageProps) {
 
     const { userId } = await auth();
 
-    const existingBlog = await blogQueries.getBlog({ slug });
+    const existingBlog = await blogQueries.getPublishedBlog({ slug });
     if (!existingBlog) notFound();
 
     const recentBlogs = await blogQueries.getBlogs({
