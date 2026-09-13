@@ -3,15 +3,11 @@ import { blogs, brands, products } from "@/lib/db/schema";
 import {
     buildSitemapEntries,
     getSitemapPageCount,
-    loadSitemapShard,
     type SitemapDataSource,
 } from "@/lib/seo/sitemap";
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { MetadataRoute } from "next";
 
-export const dynamic = "force-dynamic";
-
-const SITEMAP_BASE_URL = "https://www.renivet.com";
+export const SITEMAP_BASE_URL = "https://www.renivet.com";
 
 const publicProductPredicate = and(
     eq(products.isActive, true),
@@ -27,7 +23,7 @@ const publicProductPredicate = and(
     )`
 );
 
-const sitemapDataSource: SitemapDataSource = {
+export const sitemapDataSource: SitemapDataSource = {
     countProducts: () => db.$count(products, publicProductPredicate),
     countBlogs: () => db.$count(blogs, eq(blogs.isPublished, true)),
     countBrands: () => db.$count(brands, eq(brands.isActive, true)),
@@ -78,7 +74,7 @@ const sitemapDataSource: SitemapDataSource = {
             .offset(offset),
 };
 
-async function getSitemapPageCountFromDatabase() {
+export async function getSitemapPageCountFromDatabase() {
     const [productCount, blogCount, brandCount] = await Promise.all([
         sitemapDataSource.countProducts(),
         sitemapDataSource.countBlogs(),
@@ -91,32 +87,4 @@ async function getSitemapPageCountFromDatabase() {
     return getSitemapPageCount(
         staticEntryCount + productCount + blogCount + brandCount
     );
-}
-
-export async function generateSitemaps() {
-    const pageCount = await getSitemapPageCountFromDatabase();
-
-    return pageCount > 1
-        ? Array.from({ length: pageCount }, (_, id) => ({ id }))
-        : [];
-}
-
-export default async function sitemap({
-    id,
-}: {
-    id?: string;
-} = {}): Promise<MetadataRoute.Sitemap> {
-    const pageId = id === undefined ? 0 : Number(id);
-
-    if (!Number.isSafeInteger(pageId) || pageId < 0) {
-        throw new RangeError(
-            "Sitemap shard id must be a non-negative integer."
-        );
-    }
-
-    return loadSitemapShard({
-        baseUrl: SITEMAP_BASE_URL,
-        pageId,
-        source: sitemapDataSource,
-    });
 }

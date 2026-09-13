@@ -4,6 +4,8 @@ import {
     getSitemapPageCount,
     getSitemapQueryWindows,
     loadSitemapShard,
+    renderSitemapIndexXml,
+    renderSitemapXml,
     SITEMAP_PAGE_SIZE,
     type SitemapDataSource,
 } from "./sitemap";
@@ -269,6 +271,60 @@ describe("sitemap shard helpers", () => {
             brands: { offset: 0, limit: 1 },
             static: { offset: 4, limit: 0 },
         });
+    });
+});
+
+describe("sitemap XML renderers", () => {
+    test("renders a sitemap index that advertises the sole shard", () => {
+        expect(
+            renderSitemapIndexXml({
+                baseUrl: BASE_URL,
+                pageCount: 1,
+            })
+        ).toBe(`<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemap>
+<loc>https://www.renivet.com/sitemap/0.xml</loc>
+</sitemap>
+</sitemapindex>
+`);
+    });
+
+    test("advertises every shard when the sitemap is split", () => {
+        const xml = renderSitemapIndexXml({
+            baseUrl: `${BASE_URL}/`,
+            pageCount: 2,
+        });
+
+        expect(xml.match(/<loc>/g)).toHaveLength(2);
+        expect(xml).toContain(
+            "<loc>https://www.renivet.com/sitemap/0.xml</loc>"
+        );
+        expect(xml).toContain(
+            "<loc>https://www.renivet.com/sitemap/1.xml</loc>"
+        );
+    });
+
+    test("renders shard entries as escaped sitemap XML", () => {
+        expect(
+            renderSitemapXml([
+                {
+                    url: "https://www.renivet.com/products/red&blue",
+                    lastModified: UPDATED_AT,
+                    changeFrequency: "weekly",
+                    priority: 0.8,
+                },
+            ])
+        ).toBe(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://www.renivet.com/products/red&amp;blue</loc>
+<lastmod>2026-09-12T10:00:00.000Z</lastmod>
+<changefreq>weekly</changefreq>
+<priority>0.8</priority>
+</url>
+</urlset>
+`);
     });
 });
 

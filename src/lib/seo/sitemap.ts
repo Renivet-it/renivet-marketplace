@@ -136,6 +136,81 @@ function isCanonicalStaticEntry(entry: SitemapEntry, baseUrl: string) {
     );
 }
 
+function escapeXml(value: string) {
+    return value.replace(
+        /[<>&'\"]/g,
+        (character) =>
+            ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&apos;",
+            })[character] ?? character
+    );
+}
+
+function serializeLastModified(value: string | Date) {
+    return value instanceof Date ? value.toISOString() : value;
+}
+
+export function renderSitemapIndexXml({
+    baseUrl,
+    pageCount,
+}: {
+    baseUrl: string;
+    pageCount: number;
+}) {
+    const canonicalBaseUrl = normalizeCanonicalBaseUrl(baseUrl);
+    assertNonNegativeInteger(pageCount, "pageCount");
+
+    if (pageCount === 0) {
+        throw new RangeError("pageCount must be at least 1.");
+    }
+
+    const sitemapUrls = Array.from(
+        { length: pageCount },
+        (_, pageId) => `${canonicalBaseUrl}/sitemap/${pageId}.xml`
+    );
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapUrls
+    .map((url) => `<sitemap>\n<loc>${escapeXml(url)}</loc>\n</sitemap>`)
+    .join("\n")}
+</sitemapindex>
+`;
+}
+
+export function renderSitemapXml(entries: MetadataRoute.Sitemap) {
+    const content = entries
+        .map((entry) => {
+            const lines = ["<url>", `<loc>${escapeXml(entry.url)}</loc>`];
+
+            if (entry.lastModified) {
+                lines.push(
+                    `<lastmod>${escapeXml(serializeLastModified(entry.lastModified))}</lastmod>`
+                );
+            }
+            if (entry.changeFrequency) {
+                lines.push(`<changefreq>${entry.changeFrequency}</changefreq>`);
+            }
+            if (typeof entry.priority === "number") {
+                lines.push(`<priority>${entry.priority}</priority>`);
+            }
+
+            lines.push("</url>");
+            return lines.join("\n");
+        })
+        .join("\n");
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${content}
+</urlset>
+`;
+}
+
 function intersectWindow({
     start,
     end,
