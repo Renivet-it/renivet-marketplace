@@ -303,6 +303,7 @@ test("festive home loads active brands and links them to their public shops", as
     expect(source).toContain("<FestiveBrandShowcase");
     expect(showcase).toContain("/brands/${brand.slug}/shop");
     expect(showcase).toContain("brand.logoUrl");
+    expect(showcase).toContain('data-festive-brand-name="true"');
 });
 
 test("festive brand showcase opens an alphabetical responsive all-brands dialog", async () => {

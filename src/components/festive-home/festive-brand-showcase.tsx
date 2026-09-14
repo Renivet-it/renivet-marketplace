@@ -23,11 +23,7 @@ function BrandLogo({ brand }: { brand: FestiveBrand }) {
     const [failed, setFailed] = useState(false);
 
     if (!brand.logoUrl || failed) {
-        return (
-            <span className="text-center text-[10px] font-medium uppercase tracking-[0.2em] text-[#5b4035]">
-                {brand.name}
-            </span>
-        );
+        return null;
     }
 
     return (
@@ -53,11 +49,17 @@ function BrandCard({
     return (
         <Link
             href={`/brands/${brand.slug}/shop`}
-            className={`group flex items-center justify-center border border-[#dfccb0] bg-[#fffaf0] px-3 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7b2631] ${
-                modal ? "h-24" : "h-16 md:h-[72px]"
+            className={`group flex flex-col items-center justify-center gap-2 border border-[#dfccb0] bg-[#fffaf0] px-3 py-3 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7b2631] ${
+                modal ? "min-h-28" : "min-h-20 md:min-h-24"
             }`}
         >
             <BrandLogo brand={brand} />
+            <span
+                data-festive-brand-name="true"
+                className="text-center text-[9px] font-medium uppercase leading-tight tracking-[0.16em] text-[#5b4035]"
+            >
+                {brand.name}
+            </span>
         </Link>
     );
 }
