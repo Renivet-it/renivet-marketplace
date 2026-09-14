@@ -1,4 +1,9 @@
+import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
+import { productQueries } from "@/lib/db/queries";
+import { userWishlistCache } from "@/lib/redis/methods";
+import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -10,6 +15,23 @@ export const metadata: Metadata = {
 };
 
 const assetRoot = "/assets/festive-home";
+
+const getFestiveEditProducts = unstable_cache(
+    () =>
+        productQueries.getProducts({
+            page: 1,
+            limit: 12,
+            isAvailable: true,
+            isActive: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            prioritizeBestSellers: true,
+            requireMedia: true,
+        }),
+    ["festive-home-edit-products-v1"],
+    { revalidate: 300 }
+);
 
 const editorialCards = [
     {
@@ -38,22 +60,6 @@ const editorialCards = [
         tone: "from-[#3d1714] to-[#7d463d]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
         objectPosition: "center 55%",
-    },
-];
-
-const editItems = [
-    { brand: "SUI", name: "Handwoven Silk Saree", price: "₹2,500" },
-    { brand: "MÈLI", name: "Brass Moon Earrings", price: "₹2,800" },
-    { brand: "RASA", name: "Natural Soy Candle", price: "₹1,799" },
-    {
-        brand: "BARE NECESSITIES",
-        name: "Restorative Face Oil",
-        price: "₹1,850",
-    },
-    {
-        brand: "THE INDIAN EARTH",
-        name: "Handblock Cushion Cover",
-        price: "₹1,250",
     },
 ];
 
@@ -105,7 +111,14 @@ function MiniLink({ children }: { children: React.ReactNode }) {
     );
 }
 
-export default function FestiveHomePage() {
+export default async function FestiveHomePage() {
+    const festiveProductsPromise = getFestiveEditProducts();
+    const { userId } = await auth();
+    const [festiveProducts, wishlist] = await Promise.all([
+        festiveProductsPromise,
+        userId ? userWishlistCache.get(userId).catch(() => []) : [],
+    ]);
+
     return (
         <div className="overflow-hidden bg-[#fbf4e7] text-[#3e2b24]">
             <main className="mx-auto w-full max-w-[1600px] bg-[#fbf4e7]">
@@ -262,57 +275,11 @@ export default function FestiveHomePage() {
                     ))}
                 </section>
 
-                <section
-                    data-festive-section="festive-edit"
-                    className="bg-[#f4dcd5] px-8 py-9"
-                >
-                    <div className="grid gap-5 lg:grid-cols-6">
-                        <article className="relative min-h-[390px] overflow-hidden bg-[#691e29] p-8 text-[#fff3df]">
-                            <Image
-                                src={`${assetRoot}/maroon-arch.png`}
-                                alt=""
-                                fill
-                                className="object-cover opacity-70"
-                            />
-                            <div className="relative flex h-full min-h-[326px] flex-col justify-between">
-                                <div>
-                                    <p className="text-[8px] uppercase tracking-[0.3em]">
-                                        Curation
-                                    </p>
-                                    <h2 className="mt-10 font-serif text-[38px] leading-[0.96]">
-                                        The
-                                        <br />
-                                        Festive Edit
-                                    </h2>
-                                    <p className="mt-6 text-[10px] leading-4 text-white/75">
-                                        A curated selection from conscious
-                                        brands, across fashion, home, beauty and
-                                        more.
-                                    </p>
-                                </div>
-                                <MiniLink>View all</MiniLink>
-                            </div>
-                        </article>
-                        {editItems.map((item, index) => (
-                            <article key={item.name} className="min-w-0">
-                                <ImagePlaceholder
-                                    label={`Product ${index + 1}`}
-                                    hideLabel
-                                    className="aspect-[0.72] w-full bg-[#dfc6b5]"
-                                />
-                                <p className="mt-3 text-[8px] font-bold uppercase tracking-[0.13em]">
-                                    {item.brand}
-                                </p>
-                                <h3 className="mt-1 truncate text-[10px] text-[#604e43]">
-                                    {item.name}
-                                </h3>
-                                <p className="mt-1 text-[10px] font-semibold">
-                                    {item.price}
-                                </p>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                <FestiveProductCarousel
+                    products={festiveProducts.data}
+                    wishlist={wishlist}
+                    userId={userId ?? undefined}
+                />
 
                 <section
                     data-festive-section="brand-story"
