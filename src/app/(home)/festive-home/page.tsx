@@ -246,14 +246,14 @@ export default async function FestiveHomePage() {
                         alt=""
                         width={180}
                         height={100}
-                        className="absolute bottom-0 left-0 w-[170px]"
+                        className="absolute bottom-0 left-0 w-[170px] -scale-x-100"
                     />
                     <Image
                         src={`${assetRoot}/sandstone-arch.png`}
                         alt=""
                         width={180}
                         height={100}
-                        className="absolute bottom-0 right-0 w-[170px] -scale-x-100"
+                        className="absolute bottom-0 right-0 w-[170px]"
                     />
                 </div>
 
