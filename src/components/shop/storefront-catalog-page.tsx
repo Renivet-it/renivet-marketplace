@@ -72,6 +72,7 @@ interface StorefrontCatalogPageProps {
     hideRecommendationSorts?: boolean;
     catalogContext?: "festive";
     theme?: "festive";
+    pageHeading?: ReactNode;
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -89,6 +90,7 @@ export async function StorefrontCatalogPage({
     hideRecommendationSorts = false,
     catalogContext,
     theme,
+    pageHeading,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -151,6 +153,7 @@ export async function StorefrontCatalogPage({
     return (
         <GeneralShell>
             <div className="space-y-4 md:space-y-6">
+                {pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}
                 <StorefrontBreadcrumbs items={breadcrumbItems} />
                 {hero}
             </div>

@@ -1,6 +1,6 @@
 import { ClientProvider, ServerProvider } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
-import { siteConfig } from "@/config/site";
+import { siteConfig, siteSocialProfileUrls } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import { inter, nunito_sans } from "./fonts";
@@ -18,6 +18,7 @@ import { GuestAddToCartPopup } from "@/components/globals/modals/guest-add-to-ca
 import { WelcomePopupTrigger } from "@/components/globals/modals/welcome-popup-trigger";
 import { SwapProgressFloat } from "@/components/globals/swap-progress-float";
 import { FB_PIXEL_ID } from "@/lib/fbpixel";
+import { buildSiteIdentityJsonLd } from "@/lib/seo/structured-data";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
@@ -117,6 +118,13 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps) {
+    const siteIdentityJsonLd = buildSiteIdentityJsonLd({
+        name: siteConfig.name,
+        description: siteConfig.description,
+        url: getAbsoluteURL(),
+        socialProfileUrls: siteSocialProfileUrls,
+    });
+
     return (
         <html
             lang="en"
@@ -125,6 +133,12 @@ export default function RootLayout({ children }: LayoutProps) {
         >
             <head>
                 <meta charSet="utf-8" />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(siteIdentityJsonLd),
+                    }}
+                />
                 {/* Preload the mobile banner LCP image to eliminate resource load delay.
                     Without this, the browser waits for the Suspense boundary to resolve
                     before discovering the image (~2.5s delay). */}

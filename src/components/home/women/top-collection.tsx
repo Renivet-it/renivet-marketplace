@@ -40,9 +40,9 @@ export function TopCollection({
             style={{ backgroundColor: "#FCFBF4" }}
         >
             <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
-                <h1 className="mb-8 text-left text-2xl font-bold text-gray-900 md:mb-12 md:text-3xl lg:text-4xl">
+                <h2 className="mb-8 text-left text-2xl font-bold text-gray-900 md:mb-12 md:text-3xl lg:text-4xl">
                     {title}
-                </h1>
+                </h2>
                 <Carousel
                     opts={{
                         align: "start",

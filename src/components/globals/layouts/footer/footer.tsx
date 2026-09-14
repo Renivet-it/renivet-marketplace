@@ -35,9 +35,9 @@ export function Footer({ className, legal, ...props }: FooterProps) {
                         <Link href="/" className="flex items-center gap-2">
                             <Renivet className="size-8" isNegative />
 
-                            <h1 className="text-4xl font-bold">
+                            <p className="text-4xl font-bold">
                                 {siteConfig.name}
-                            </h1>
+                            </p>
                         </Link>
 
                         <p className="text-center text-primary-foreground/80 lg:text-start">

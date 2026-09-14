@@ -7,9 +7,9 @@ const SustainableBadges = () => {
     <div className="bg-white">
       {/* Header Section */}
       <div className="text-center py-8 md:py-12 bg-white">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-gray-800 mb-4 md:mb-6 tracking-tight">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-gray-800 mb-4 md:mb-6 tracking-tight">
           Conscious. Effortless. Everyday.
-        </h1>
+        </h2>
         <div className="text-sm md:text-base text-gray-600 max-w-sm mx-auto leading-relaxed">
           <p>explore fashion and living essentials that feel as good as they look</p>
         </div>

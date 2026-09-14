@@ -150,6 +150,7 @@ export default async function Page() {
 
     return (
         <>
+            <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
             <Suspense
                 fallback={
