@@ -464,7 +464,7 @@ export function ProductCard({
                 <div className="relative aspect-[0.93] w-full overflow-hidden bg-[#ece7df]">
                     <AnimatedProductLink
                         href={`/products/${product.slug}`}
-                        className="block h-full w-full"
+                        className="absolute inset-0 block"
                     >
                         <Image
                             src={activeCardImage}
