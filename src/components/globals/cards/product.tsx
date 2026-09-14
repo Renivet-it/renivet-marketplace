@@ -465,6 +465,7 @@ export function ProductCard({
                     <AnimatedProductLink
                         href={`/products/${product.slug}`}
                         className="absolute inset-0 block"
+                        contentClassName="h-full"
                     >
                         <Image
                             src={activeCardImage}

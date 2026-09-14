@@ -132,8 +132,17 @@ test("festive product images fill a positioned wrapper instead of a zero-height 
     const productCard = await Bun.file(
         "src/components/globals/cards/product.tsx"
     ).text();
+    const animatedLink = await Bun.file(
+        "src/components/home/new-home-page/animated-product-link.tsx"
+    ).text();
     expect(productCard).toContain('className="absolute inset-0 block"');
+    expect(productCard).toContain('contentClassName="h-full"');
     expect(productCard).not.toContain('className="block h-full w-full"');
+    expect(animatedLink).toContain("contentClassName?: string");
+    expect(animatedLink).toContain(
+        '"relative z-[1] block transition duration-200"'
+    );
+    expect(animatedLink).toContain("contentClassName");
 });
 
 test("festive carousel product images load immediately when the row is visible", async () => {
