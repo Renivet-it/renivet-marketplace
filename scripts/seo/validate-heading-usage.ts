@@ -41,15 +41,9 @@ const routeCompositions: RouteComposition[] = [
         files: [
             "src/app/(home)/festive/page.tsx",
             "src/app/(home)/layout.tsx",
-            "src/components/home/new-home-page/festive-season.tsx",
+            "src/components/shop/storefront-catalog-page.tsx",
             footer,
         ],
-        dynamicHeading: {
-            component: "src/components/home/new-home-page/festive-season.tsx",
-            declaration: "const Heading = headingLevel;",
-            render: "<Heading>{heading}</Heading>",
-            h1Invocation: 'headingLevel="h1"',
-        },
     },
 ];
 

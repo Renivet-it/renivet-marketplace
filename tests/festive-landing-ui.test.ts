@@ -10,8 +10,8 @@ describe("festive landing UI", () => {
         const source = await Bun.file(sourcePath).text();
 
         expect(source).toContain("Celebrate consciously");
-        expect(source).toContain("/assets/festive-season/festive-banner.png");
-        expect(source).toContain("/assets/festive-season/festive-banner-desktop.png");
+        expect(source).toContain("FESTIVE_CAMPAIGN.art.mobileHero.src");
+        expect(source).toContain("FESTIVE_CAMPAIGN.art.desktopHero.src");
         expect(source).toContain("StorefrontCatalogPage");
         expect(source).toContain("basePath=\"/festive\"");
         expect(source).toContain("catalogContext=\"festive\"");

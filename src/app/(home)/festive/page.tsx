@@ -1,42 +1,41 @@
 import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
-import { siteConfig } from "@/config/site";
 import { productQueries } from "@/lib/db/queries";
 import {
     buildProductItemListJsonLd,
     serializeJsonLd,
 } from "@/lib/seo/structured-data";
 import { getAbsoluteURL } from "@/lib/utils";
+import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign";
 import Image from "next/image";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Festive Collection",
-    description:
-        "Discover Renivet's curated festive collection, selected for conscious celebrations and thoughtful gifting.",
+    title: FESTIVE_CAMPAIGN.name,
+    description: FESTIVE_CAMPAIGN.description,
     alternates: {
         canonical: getAbsoluteURL("/festive"),
     },
     openGraph: {
-        title: "Festive Collection | Renivet",
-        description:
-            "Shop Renivet's curated festive collection for thoughtful gifting.",
+        title: FESTIVE_CAMPAIGN.social.title,
+        description: FESTIVE_CAMPAIGN.social.description,
         url: getAbsoluteURL("/festive"),
         type: "website",
         images: [
             {
-                ...siteConfig.og,
-                alt: "Renivet Festive Collection",
+                url: FESTIVE_CAMPAIGN.art.openGraph.src,
+                width: FESTIVE_CAMPAIGN.art.openGraph.width,
+                height: FESTIVE_CAMPAIGN.art.openGraph.height,
+                alt: FESTIVE_CAMPAIGN.art.openGraph.alt,
             },
         ],
     },
     twitter: {
         card: "summary_large_image",
-        title: "Festive Collection | Renivet",
-        description:
-            "Shop Renivet's curated festive collection for thoughtful gifting.",
-        images: [siteConfig.og.url],
+        title: FESTIVE_CAMPAIGN.social.title,
+        description: FESTIVE_CAMPAIGN.social.description,
+        images: [FESTIVE_CAMPAIGN.art.openGraph.src],
     },
 };
 
@@ -48,7 +47,7 @@ export default async function FestivePage({
     const selected = await productQueries.getFestiveSeasonProducts();
     const products = selected.map(({ product }) => product);
     const productItemListJsonLd = buildProductItemListJsonLd({
-        name: "Festive Collection",
+        name: FESTIVE_CAMPAIGN.name,
         url: getAbsoluteURL("/festive"),
         products,
         productUrl: (slug) => getAbsoluteURL(`/products/${slug}`),
@@ -73,21 +72,21 @@ export default async function FestivePage({
                 ]}
                 catalogContext="festive"
                 theme="festive"
+                pageHeading={FESTIVE_CAMPAIGN.heading}
                 defaultSortBy="recommended"
                 defaultSortOrder="desc"
                 hero={
                     <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
                         <Image
-                            src="/assets/festive-season/festive-banner-desktop.png"
+                            src={FESTIVE_CAMPAIGN.art.desktopHero.src}
                             alt="Celebrate consciously — sustainable festive picks"
                             width={2048}
                             height={865}
-                            priority
                             unoptimized
                             className="hidden h-auto w-full md:block"
                         />
                         <Image
-                            src="/assets/festive-season/festive-banner.png"
+                            src={FESTIVE_CAMPAIGN.art.mobileHero.src}
                             alt="Celebrate consciously — sustainable festive picks"
                             width={960}
                             height={516}

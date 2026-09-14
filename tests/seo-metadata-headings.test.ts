@@ -55,24 +55,18 @@ test("homepage retains one root H1 while its six sections use non-root headings"
 });
 
 test("shop and festive routes each have one explicit H1 owner", async () => {
-    const [shop, storefront, festive, festiveSeason] = await Promise.all([
+    const [shop, storefront, festive] = await Promise.all([
         readFile("src/app/(marketing)/shop/page.tsx", "utf8"),
         readFile("src/components/shop/storefront-catalog-page.tsx", "utf8"),
         readFile("src/app/(home)/festive/page.tsx", "utf8"),
-        readFile(
-            "src/components/home/new-home-page/festive-season.tsx",
-            "utf8"
-        ),
     ]);
 
     expect(shop).toContain(`pageHeading="${SHOP_TITLE}"`);
     expect(storefront).toContain(
         '{pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}'
     );
-    expect(festive).toContain("heading={FESTIVE_CAMPAIGN.heading}");
-    expect(festive).toContain('headingLevel="h1"');
-    expect(festiveSeason).toContain("const Heading = headingLevel;");
-    expect(festiveSeason).toContain("<Heading>{heading}</Heading>");
+    expect(festive).toContain("pageHeading={FESTIVE_CAMPAIGN.heading}");
+    expect(festive).toContain("<StorefrontCatalogPage");
 });
 
 test("composed home, shop, and festive documents each own exactly one H1", async () => {
@@ -107,43 +101,30 @@ test("composed home, shop, and festive documents each own exactly one H1", async
     expect(
         countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))
     ).toBe(1);
-    expect(countLiteralH1s([festive, footer].join("\n"))).toBe(0);
+    expect(countLiteralH1s([festive, storefront, footer].join("\n"))).toBe(1);
     expect(footer).not.toMatch(/<h1\b/);
     expect(footer).toContain('<p className="text-4xl font-bold">');
     expect(headingGuard).toContain('route: "/"');
     expect(headingGuard).toContain('route: "/shop"');
     expect(headingGuard).toContain('route: "/festive"');
-    expect(headingGuard).toContain("const Heading = headingLevel;");
-    expect(headingGuard).toContain("<Heading>{heading}</Heading>");
+    expect(headingGuard).toContain("src/components/shop/storefront-catalog-page.tsx");
 });
 
-test("festive keeps its meaningful H1 and an empty state when no products are selected", async () => {
-    const festiveSeason = await readFile(
-        "src/components/home/new-home-page/festive-season.tsx",
-        "utf8"
-    );
+test("festive keeps its meaningful H1 through the shared storefront owner", async () => {
+    const festive = await readFile("src/app/(home)/festive/page.tsx", "utf8");
 
-    expect(festiveSeason).not.toContain("if (!products.length) return null;");
-    expect(festiveSeason).toContain("const hasProducts = products.length > 0;");
-    expect(festiveSeason).toMatch(
-        /Festive products are being curated\. Please check\s+back soon\./
-    );
+    expect(festive).toContain("pageHeading={FESTIVE_CAMPAIGN.heading}");
+    expect(festive).toContain("<StorefrontCatalogPage");
 });
 
 test("festive campaign configuration is the single source for crawler-facing copy and art", async () => {
-    const [festive, festiveSeason] = await Promise.all([
-        readFile("src/app/(home)/festive/page.tsx", "utf8"),
-        readFile(
-            "src/components/home/new-home-page/festive-season.tsx",
-            "utf8"
-        ),
-    ]);
+    const festive = await readFile(
+        "src/app/(home)/festive/page.tsx",
+        "utf8"
+    );
 
     expect(festive).toContain('export const dynamic = "force-dynamic"');
     expect(festive).toContain(
-        'import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign"'
-    );
-    expect(festiveSeason).toContain(
         'import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign"'
     );
     expect(festive).toContain("title: FESTIVE_CAMPAIGN.name");
@@ -157,18 +138,11 @@ test("festive campaign configuration is the single source for crawler-facing cop
     expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.height");
     expect(festive).toContain("FESTIVE_CAMPAIGN.art.openGraph.alt");
     expect(festive).toContain("name: FESTIVE_CAMPAIGN.name");
-    expect(festive).toContain("heading={FESTIVE_CAMPAIGN.heading}");
+    expect(festive).toContain("pageHeading={FESTIVE_CAMPAIGN.heading}");
     expect(festive).toContain('canonical: getAbsoluteURL("/festive")');
     expect(festive).toContain("buildProductItemListJsonLd");
-    expect(festive).toContain("<FestiveSeason");
-    expect(festive).toContain("prioritizeMobileHero");
-    expect(festiveSeason).toContain("FESTIVE_CAMPAIGN.art.mobileHero.src");
-    expect(festiveSeason).toContain("FESTIVE_CAMPAIGN.art.desktopHero.src");
-    expect(festiveSeason).toContain("priority={prioritizeMobileHero}");
-    expect(
-        festiveSeason.match(/priority=\{prioritizeMobileHero\}/g)
-    ).toHaveLength(1);
-    expect(festiveSeason).not.toContain('rel="preload"');
-    expect(festiveSeason).toContain('loading="lazy"');
-    expect(festiveSeason).not.toContain('fetchPriority="high"');
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.mobileHero.src");
+    expect(festive).toContain("FESTIVE_CAMPAIGN.art.desktopHero.src");
+    expect(festive).toContain("priority");
+    expect(festive.match(/priority/g)?.length).toBe(1);
 });
