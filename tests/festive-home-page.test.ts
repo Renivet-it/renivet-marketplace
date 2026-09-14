@@ -104,6 +104,21 @@ test("festive home maps the desktop editorial images to the referenced cards", a
     );
 });
 
+test("festive editorial cards link to their curated catalogue filters", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain(
+        'href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1"'
+    );
+    expect(source).toContain(
+        'href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b"'
+    );
+    expect(source).toContain(
+        'href: "/festive?subCategoryId=cd98e50e-02d6-4bc4-bc1e-7b0ba5b6dd0e"'
+    );
+    expect(source).toContain("href={card.href}");
+});
+
 test("festive home leaves breathing room above the editorial corner artwork", async () => {
     const source = await Bun.file(pagePath).text();
 
