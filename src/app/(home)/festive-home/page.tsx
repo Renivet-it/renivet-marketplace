@@ -80,12 +80,32 @@ const editorialCards = [
 ] as const;
 
 const giftItems = [
-    { label: "For her", image: "gift-for-her.png" },
-    { label: "For him", image: "gift-for-him.png" },
-    { label: "For home", image: "gift-for-home.png" },
-    { label: "Under ₹2,000", image: "gift-under-2000.png" },
-    { label: "Host gifts", image: "gift-host.png" },
-];
+    {
+        label: "For her",
+        image: "gift-for-her.png",
+        href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
+    },
+    {
+        label: "For him",
+        image: "gift-for-him.png",
+        href: "/festive?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02",
+    },
+    {
+        label: "For home",
+        image: "gift-for-home.png",
+        href: "/festive?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+    },
+    {
+        label: "Under ₹2,000",
+        image: "gift-under-2000.png",
+        href: "/festive?maxPrice=2000",
+    },
+    {
+        label: "Host gifts",
+        image: "gift-host.png",
+        href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
+    },
+] as const;
 
 function ImagePlaceholder({
     label,
@@ -400,7 +420,7 @@ export default async function FestiveHomePage() {
                     >
                         {giftItems.map((gift) => (
                             <Link
-                                href="/shop"
+                                href={gift.href}
                                 key={gift.label}
                                 className="group min-w-0 last:col-span-2 lg:last:col-span-1"
                             >
