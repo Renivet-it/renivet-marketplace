@@ -128,6 +128,14 @@ test("festive edit keeps its curation panel beside the swipeable products on mob
     expect(carousel).toContain("bg-[#eef0d6]");
 });
 
+test("festive product images fill a positioned wrapper instead of a zero-height link", async () => {
+    const productCard = await Bun.file(
+        "src/components/globals/cards/product.tsx"
+    ).text();
+    expect(productCard).toContain('className="absolute inset-0 block"');
+    expect(productCard).not.toContain('className="block h-full w-full"');
+});
+
 test("festive product admin changes revalidate the festive home collection", async () => {
     const actions = await Bun.file("src/actions/product-action.ts").text();
     const toggleAction = actions.slice(
