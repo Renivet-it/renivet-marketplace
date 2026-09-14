@@ -49,6 +49,7 @@ const editorialCards = [
         titleLines: ["Festive", "dressing"],
         copy: "Thoughtfully chosen festive wear.",
         action: "Shop apparel",
+        href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
         tone: "from-[#572c2a] to-[#b47d6d]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
         objectPosition: "center 30%",
@@ -59,6 +60,7 @@ const editorialCards = [
         titleLines: ["Gifts", "with a story"],
         copy: "Made with care, meant to be remembered.",
         action: "Explore gifts",
+        href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
         tone: "from-[#53624d] to-[#9e8b70]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
         objectPosition: "center 45%",
@@ -69,12 +71,13 @@ const editorialCards = [
         titleLines: ["Home", "for the season"],
         copy: "Create warmth around every ritual.",
         action: "Shop home",
+        href: "/festive?subCategoryId=cd98e50e-02d6-4bc4-bc1e-7b0ba5b6dd0e",
         tone: "from-[#3d1714] to-[#7d463d]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
         objectPosition: "center 55%",
         overlay: "from-black/50 via-black/10 to-transparent",
     },
-];
+] as const;
 
 const giftItems = [
     { label: "For her", image: "gift-for-her.png" },
@@ -268,7 +271,7 @@ export default async function FestiveHomePage() {
                 >
                     {editorialCards.map((card) => (
                         <Link
-                            href="/shop"
+                            href={card.href}
                             key={card.title}
                             className="group relative aspect-[0.94] overflow-hidden md:aspect-[1.75]"
                         >
