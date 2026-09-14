@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 
 export const metadata: Metadata = {
     title: "A More Conscious Festive Season",
@@ -10,113 +11,302 @@ export const metadata: Metadata = {
 
 const assetRoot = "/assets/festive-home";
 
-function ImagePlaceholder({
-    label,
-    className = "",
-}: {
-    label: string;
-    className?: string;
-}) {
-    return (
-        <div
-            aria-label={`${label} image placeholder`}
-            className={`flex min-h-48 items-center justify-center bg-[#ded0bd] text-center text-xs uppercase tracking-[0.2em] text-[#6b5746] ${className}`}
-        >
-            {label} image placeholder
-        </div>
-    );
-}
-
-const editItems = [
-    { name: "Sunshine silk saree", price: "₹2,500" },
-    { name: "Brass lotus earrings", price: "₹2,800" },
-    { name: "Natural soy candle", price: "₹1,799" },
-    { name: "Rose essential oil", price: "₹1,850" },
-    { name: "Handwoven cushion cover", price: "₹1,250" },
+const editorialCards = [
+    {
+        title: "Festive dressing",
+        copy: "Thoughtfully chosen festive wear.",
+        action: "Shop apparel",
+        tone: "from-[#572c2a] to-[#b47d6d]",
+    },
+    {
+        title: "Gifts with a story",
+        copy: "Made with care, meant to be remembered.",
+        action: "Explore gifts",
+        tone: "from-[#53624d] to-[#9e8b70]",
+    },
+    {
+        title: "Home for the season",
+        copy: "Create warmth around every ritual.",
+        action: "Shop home",
+        tone: "from-[#3d1714] to-[#7d463d]",
+    },
 ];
 
+const editItems = [
+    { brand: "SUI", name: "Handwoven Silk Saree", price: "₹2,500" },
+    { brand: "MÈLI", name: "Brass Moon Earrings", price: "₹2,800" },
+    { brand: "RASA", name: "Natural Soy Candle", price: "₹1,799" },
+    {
+        brand: "BARE NECESSITIES",
+        name: "Restorative Face Oil",
+        price: "₹1,850",
+    },
+    {
+        brand: "THE INDIAN EARTH",
+        name: "Handblock Cushion Cover",
+        price: "₹1,250",
+    },
+];
+
+const brands = [
+    "Rasa",
+    "Sui",
+    "Bare Necessities",
+    "The Indian Earth",
+    "Mèli",
+    "My Mithila",
+];
 const giftItems = [
-    "Golden hour dressing",
-    "Soft knits for home",
-    "A quiet candlelight",
+    "For her",
+    "For him",
+    "For home",
     "Under ₹2,000",
     "Host gifts",
 ];
 
-function SectionHeading({
-    eyebrow,
-    title,
+function ImagePlaceholder({
+    label,
+    className = "",
+    hideLabel = false,
 }: {
-    eyebrow?: string;
-    title: string;
+    label: string;
+    className?: string;
+    hideLabel?: boolean;
 }) {
     return (
-        <div className="mb-8 flex items-end justify-between border-b border-[#d8c2a0] pb-4">
-            <div>
-                {eyebrow ? (
-                    <p className="mb-2 text-[10px] uppercase tracking-[0.32em] text-[#94734d]">
-                        {eyebrow}
-                    </p>
-                ) : null}
-                <h2 className="font-serif text-4xl text-[#3e2b24]">{title}</h2>
-            </div>
-            <a
-                href="/shop"
-                className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#63302b] underline-offset-4 hover:underline"
-            >
-                View all
-            </a>
+        <div
+            aria-label={`${label} image placeholder`}
+            className={`relative flex items-center justify-center overflow-hidden bg-[#c9b39a] ${className}`}
+        >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,246,220,0.45),transparent_42%),linear-gradient(145deg,rgba(83,48,37,0.2),rgba(255,255,255,0.08))]" />
+            {hideLabel ? null : (
+                <span className="relative rounded-full border border-white/45 bg-[#4f3328]/20 px-4 py-2 text-[9px] uppercase tracking-[0.2em] text-white/80">
+                    {label} image placeholder
+                </span>
+            )}
         </div>
+    );
+}
+
+function MiniLink({ children }: { children: React.ReactNode }) {
+    return (
+        <span className="mt-4 inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em]">
+            {children} <span aria-hidden>→</span>
+        </span>
     );
 }
 
 export default function FestiveHomePage() {
     return (
-        <div className="overflow-hidden bg-[#fbf3e4] text-[#3e2b24]">
-            <main>
-                <section className="mx-auto grid max-w-[1440px] grid-cols-[42%_58%] bg-[#eadbc7]">
-                    <div className="relative flex min-h-[590px] items-center justify-center overflow-hidden bg-[#f7eddb] px-20 py-16">
-                        <Image
-                            src={`${assetRoot}/maroon-arch.png`}
-                            alt=""
-                            fill
-                            className="object-cover opacity-95"
-                            priority
-                        />
-                        <div className="relative z-10 max-w-[360px] text-center">
-                            <p className="mb-5 text-[11px] uppercase tracking-[0.4em] text-[#8d6544]">
-                                A seasonal edit by Renivet
-                            </p>
-                            <h1 className="font-serif text-6xl leading-[0.98] text-[#45352c]">
+        <div className="overflow-hidden bg-[#fbf4e7] text-[#3e2b24]">
+            <main className="mx-auto w-full max-w-[1600px] bg-[#fbf4e7]">
+                <section
+                    data-festive-section="hero"
+                    className="grid min-h-[660px] lg:grid-cols-2"
+                >
+                    <div className="relative flex items-end overflow-hidden bg-[#5b2818] px-[8%] pt-12">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_25%,rgba(241,190,126,0.34),transparent_37%),linear-gradient(120deg,#3f170d,#7d3c1f)]" />
+                        <div className="relative z-10 mx-auto flex h-[610px] w-full max-w-[520px] flex-col items-center rounded-t-[46%] border-[5px] border-[#d47831] bg-[#fff8e9] px-12 pb-10 pt-24 text-center shadow-[0_0_0_2px_#592616]">
+                            <h1 className="font-serif text-[66px] font-normal leading-[0.92] tracking-[-0.03em] text-[#30221c]">
                                 A more
                                 <br />
-                                conscious
+                                <em>conscious</em>
                                 <br />
                                 festive season
                             </h1>
-                            <p className="mx-auto mt-8 max-w-[245px] text-sm leading-6 text-[#6d5849]">
+                            <p className="mt-10 max-w-[310px] text-[12px] leading-5 text-[#75675d]">
                                 Thoughtfully chosen fashion, home &amp; beauty
                                 for every celebration.
                             </p>
-                            <a
+                            <Link
                                 href="/shop"
-                                className="mt-8 inline-flex border border-[#4b382e] px-7 py-3 text-[10px] font-bold uppercase tracking-[0.22em] transition hover:bg-[#4b382e] hover:text-[#fbf3e4]"
+                                className="mt-6 bg-[#26321c] px-7 py-3 text-[9px] font-semibold uppercase tracking-[0.18em] text-white"
                             >
-                                Shop the edit <span className="ml-4">→</span>
-                            </a>
+                                Shop the edit&nbsp; →
+                            </Link>
+                            <p className="mt-9 text-[8px] uppercase tracking-[0.45em] text-[#6f6258]">
+                                People&nbsp; | &nbsp;Planet&nbsp; |
+                                &nbsp;Sustainability
+                            </p>
+                            <Image
+                                src={`${assetRoot}/pond-peacock.png`}
+                                alt=""
+                                width={280}
+                                height={100}
+                                className="absolute bottom-0 right-[-55px] w-[210px]"
+                            />
                         </div>
-                        <Image
-                            src={`${assetRoot}/sandstone-arch.png`}
-                            alt=""
-                            width={170}
-                            height={145}
-                            className="absolute bottom-0 left-5 z-10 w-36"
-                        />
                     </div>
                     <ImagePlaceholder
-                        label="Hero campaign"
-                        className="min-h-[590px] bg-[#bba48b] text-[#f8ecd9]"
+                        label="Main campaign portrait"
+                        hideLabel
+                        className="min-h-[660px] bg-[#b88159]"
                     />
+                </section>
+
+                <div className="relative h-[82px] bg-[#fff9eb]">
+                    <Image
+                        src={`${assetRoot}/sandstone-arch.png`}
+                        alt=""
+                        width={180}
+                        height={100}
+                        className="absolute bottom-0 left-0 w-[170px]"
+                    />
+                    <Image
+                        src={`${assetRoot}/sandstone-arch.png`}
+                        alt=""
+                        width={180}
+                        height={100}
+                        className="absolute bottom-0 right-0 w-[170px] -scale-x-100"
+                    />
+                </div>
+
+                <section
+                    data-festive-section="editorial-cards"
+                    className="grid gap-6 px-8 pb-10 lg:grid-cols-3"
+                >
+                    {editorialCards.map((card, index) => (
+                        <Link
+                            href="/shop"
+                            key={card.title}
+                            className="group relative min-h-[250px] overflow-hidden"
+                        >
+                            <ImagePlaceholder
+                                label={`Editorial ${index + 1}`}
+                                hideLabel
+                                className="absolute inset-0 h-full"
+                            />
+                            <div
+                                className={`absolute inset-0 bg-gradient-to-r ${card.tone} opacity-70`}
+                            />
+                            <div className="relative flex min-h-[250px] flex-col justify-center p-9 text-[#fff8ec]">
+                                <h2 className="font-serif text-[36px] leading-none">
+                                    {card.title}
+                                </h2>
+                                <p className="mt-4 text-[11px] text-white/80">
+                                    {card.copy}
+                                </p>
+                                <MiniLink>{card.action}</MiniLink>
+                            </div>
+                        </Link>
+                    ))}
+                </section>
+
+                <section
+                    data-festive-section="festive-edit"
+                    className="bg-[#f4dcd5] px-8 py-9"
+                >
+                    <div className="grid gap-5 lg:grid-cols-6">
+                        <article className="relative min-h-[390px] overflow-hidden bg-[#691e29] p-8 text-[#fff3df]">
+                            <Image
+                                src={`${assetRoot}/maroon-arch.png`}
+                                alt=""
+                                fill
+                                className="object-cover opacity-70"
+                            />
+                            <div className="relative flex h-full min-h-[326px] flex-col justify-between">
+                                <div>
+                                    <p className="text-[8px] uppercase tracking-[0.3em]">
+                                        Curation
+                                    </p>
+                                    <h2 className="mt-10 font-serif text-[38px] leading-[0.96]">
+                                        The
+                                        <br />
+                                        Festive Edit
+                                    </h2>
+                                    <p className="mt-6 text-[10px] leading-4 text-white/75">
+                                        A curated selection from conscious
+                                        brands, across fashion, home, beauty and
+                                        more.
+                                    </p>
+                                </div>
+                                <MiniLink>View all</MiniLink>
+                            </div>
+                        </article>
+                        {editItems.map((item, index) => (
+                            <article key={item.name} className="min-w-0">
+                                <ImagePlaceholder
+                                    label={`Product ${index + 1}`}
+                                    hideLabel
+                                    className="aspect-[0.72] w-full bg-[#dfc6b5]"
+                                />
+                                <p className="mt-3 text-[8px] font-bold uppercase tracking-[0.13em]">
+                                    {item.brand}
+                                </p>
+                                <h3 className="mt-1 truncate text-[10px] text-[#604e43]">
+                                    {item.name}
+                                </h3>
+                                <p className="mt-1 text-[10px] font-semibold">
+                                    {item.price}
+                                </p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+
+                <section
+                    data-festive-section="brand-story"
+                    className="grid min-h-[390px] lg:grid-cols-3"
+                >
+                    <ImagePlaceholder
+                        label="Story campaign"
+                        hideLabel
+                        className="min-h-[390px] bg-[#c48d79]"
+                    />
+                    <div className="flex min-h-[390px] flex-col items-center justify-center bg-[#741f2a] px-12 text-center text-[#fff1dc]">
+                        <h2 className="font-serif text-[42px] leading-[0.98]">
+                            Celebrate beautifully.
+                            <br />
+                            <em>Choose thoughtfully.</em>
+                        </h2>
+                        <p className="mt-6 max-w-[370px] text-[11px] leading-5 text-white/70">
+                            At Renivet, we bring you a curated selection of
+                            homegrown brands that care—for people, for the
+                            planet, and for a brighter tomorrow.
+                        </p>
+                        <Link
+                            href="/about"
+                            className="mt-7 border border-white/55 px-7 py-3 text-[9px] uppercase tracking-[0.18em]"
+                        >
+                            Our story&nbsp; →
+                        </Link>
+                    </div>
+                    <ImagePlaceholder
+                        label="Artisan campaign"
+                        hideLabel
+                        className="min-h-[390px] bg-[#6e645d] grayscale"
+                    />
+                </section>
+
+                <section data-festive-section="brands" className="px-8 py-9">
+                    <div className="mb-7 flex items-end justify-between">
+                        <div>
+                            <h2 className="font-serif text-[34px] leading-none">
+                                Brands worth discovering
+                            </h2>
+                            <p className="mt-3 text-[10px] text-[#806f60]">
+                                Independent brands. Meaningful stories. A kinder
+                                tomorrow.
+                            </p>
+                        </div>
+                        <Link
+                            href="/brands"
+                            className="text-[8px] font-semibold uppercase tracking-[0.16em]"
+                        >
+                            View all brands&nbsp; →
+                        </Link>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-6">
+                        {brands.map((brand) => (
+                            <Link
+                                href="/brands"
+                                key={brand}
+                                className="flex h-[72px] items-center justify-center border border-[#dfccb0] bg-[#fffaf0] px-3 text-center text-[10px] uppercase tracking-[0.22em]"
+                            >
+                                {brand}
+                            </Link>
+                        ))}
+                    </div>
                 </section>
 
                 <Image
@@ -124,197 +314,61 @@ export default function FestiveHomePage() {
                     alt=""
                     width={1600}
                     height={120}
-                    className="h-auto w-full object-cover py-5"
+                    className="h-[82px] w-full object-contain px-8"
                 />
 
-                <section className="mx-auto grid max-w-[1440px] grid-cols-3 gap-5 px-10 py-5">
-                    {[
-                        [
-                            "Festive dressing",
-                            "Thoughtfully chosen festive wear",
-                            "Explore dressing",
-                        ],
-                        [
-                            "Gifts with a story",
-                            "Gifts that carry meaning",
-                            "Explore gifts",
-                        ],
-                        [
-                            "Home for the season",
-                            "Create comfort around every ritual",
-                            "Shop home",
-                        ],
-                    ].map(([title, copy, action], index) => (
-                        <article
-                            key={title}
-                            className="group relative min-h-[240px] overflow-hidden bg-[#6d4038]"
-                        >
-                            <ImagePlaceholder
-                                label={`Editorial tile ${index + 1}`}
-                                className="absolute inset-0 min-h-full bg-[#694b42] text-[#eadbc7] transition duration-500 group-hover:scale-105"
-                            />
-                            <div className="relative flex min-h-[240px] flex-col justify-end bg-gradient-to-t from-[#301914]/80 via-transparent p-7 text-[#fff8eb]">
-                                <h2 className="font-serif text-3xl">{title}</h2>
-                                <p className="mt-2 text-xs text-[#f3dfc5]">
-                                    {copy}
-                                </p>
-                                <span className="mt-5 text-[9px] font-bold uppercase tracking-[0.2em] underline underline-offset-4">
-                                    {action} →
-                                </span>
-                            </div>
-                        </article>
-                    ))}
-                </section>
-
-                <section className="mx-auto max-w-[1440px] px-10 py-20">
-                    <SectionHeading
-                        eyebrow="Curated for conscious celebrations"
-                        title="The Festive Edit"
-                    />
-                    <div className="grid grid-cols-[250px_1fr] gap-7">
-                        <div className="relative overflow-hidden bg-[#651f27] p-9 text-[#fff2dc]">
-                            <Image
-                                src={`${assetRoot}/maroon-arch.png`}
-                                alt=""
-                                fill
-                                className="object-cover opacity-70"
-                            />
-                            <div className="relative flex min-h-[320px] flex-col justify-between">
-                                <div>
-                                    <p className="text-[9px] uppercase tracking-[0.28em]">
-                                        Curated edit
-                                    </p>
-                                    <h3 className="mt-8 font-serif text-4xl leading-tight">
-                                        The
-                                        <br /> Festive Edit
-                                    </h3>
-                                </div>
-                                <a
-                                    href="/shop"
-                                    className="text-[9px] font-bold uppercase tracking-[0.2em] underline underline-offset-4"
-                                >
-                                    View all →
-                                </a>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-5 gap-4">
-                            {editItems.map((item, index) => (
-                                <article key={item.name}>
-                                    <ImagePlaceholder
-                                        label={`Edit ${index + 1}`}
-                                        className="aspect-[0.76] min-h-0"
-                                    />
-                                    <h3 className="mt-3 text-xs font-medium leading-4">
-                                        {item.name}
-                                    </h3>
-                                    <p className="mt-2 text-xs text-[#806653]">
-                                        {item.price}
-                                    </p>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section className="mx-auto grid max-w-[1440px] grid-cols-3 bg-[#d8b09c]">
-                    <ImagePlaceholder
-                        label="Story left"
-                        className="min-h-[310px] bg-[#c88b83]"
-                    />
-                    <div className="flex min-h-[310px] flex-col items-center justify-center bg-[#76232b] px-14 text-center text-[#fff2dc]">
-                        <h2 className="font-serif text-4xl leading-tight">
-                            Celebrate beautifully.
-                            <br /> Choose thoughtfully.
-                        </h2>
-                        <p className="mt-5 max-w-[300px] text-xs leading-5 text-[#f1d4c0]">
-                            At Renivet, we bring you a curated selection of
-                            homegrown brands that care—for people, planet, and
-                            the future.
-                        </p>
-                        <a
-                            href="/about"
-                            className="mt-7 border border-[#ead4bc] px-6 py-3 text-[9px] font-bold uppercase tracking-[0.2em]"
-                        >
-                            Our story →
-                        </a>
-                    </div>
-                    <ImagePlaceholder
-                        label="Story right"
-                        className="min-h-[310px] bg-[#8f8173]"
-                    />
-                </section>
-
-                <section className="mx-auto max-w-[1440px] px-10 py-20">
-                    <SectionHeading title="Brands worth discovering" />
-                    <p className="-mt-4 mb-8 text-sm text-[#806653]">
-                        Independent brands. Meaningful stories. A kinder
-                        tomorrow.
+                <section
+                    data-festive-section="gift-intention"
+                    className="px-8 pb-12 pt-5"
+                >
+                    <h2 className="font-serif text-[34px] leading-none">
+                        Gift by intention
+                    </h2>
+                    <p className="mt-3 text-[10px] text-[#806f60]">
+                        Thoughtful curation for everyone on your list.
                     </p>
-                    <div className="grid grid-cols-6 gap-3">
-                        {[
-                            "Rasa",
-                            "Sui",
-                            "Bare Necessities",
-                            "The Indian Earth",
-                            "Wèli",
-                            "My Mithila",
-                        ].map((brand) => (
-                            <a
-                                key={brand}
-                                href="/brands"
-                                className="flex h-16 items-center justify-center border border-[#e2cfb2] bg-[#fffaf1] px-3 text-center text-[10px] uppercase tracking-[0.23em] transition hover:border-[#8f5b49]"
+                    <div className="mt-8 grid gap-5 lg:grid-cols-5">
+                        {giftItems.map((item, index) => (
+                            <Link
+                                href="/shop"
+                                key={item}
+                                className="group min-w-0"
                             >
-                                {brand}
-                            </a>
+                                <ImagePlaceholder
+                                    label={`Gift ${index + 1}`}
+                                    hideLabel
+                                    className="aspect-[1.35] w-full bg-[#d6b893]"
+                                />
+                                <p className="mt-3 text-[10px] font-medium">
+                                    {item} <span aria-hidden>→</span>
+                                </p>
+                            </Link>
                         ))}
                     </div>
                 </section>
 
-                <section className="border-y border-[#e0c9a8] bg-[#f8e8d3]">
-                    <div className="mx-auto max-w-[1440px] px-10 py-16">
-                        <Image
-                            src={`${assetRoot}/pond-peacock.png`}
-                            alt=""
-                            width={500}
-                            height={170}
-                            className="mx-auto mb-6 h-24 w-auto object-contain"
-                        />
-                        <SectionHeading
-                            eyebrow="Gifts chosen with care"
-                            title="Gift by intention"
-                        />
-                        <p className="-mt-4 mb-8 text-sm text-[#806653]">
-                            Thoughtful curation for everyone on your list.
-                        </p>
-                        <div className="grid grid-cols-5 gap-5">
-                            {giftItems.map((item, index) => (
-                                <a href="/shop" key={item} className="group">
-                                    <ImagePlaceholder
-                                        label={`Gift ${index + 1}`}
-                                        className="aspect-[1.15] min-h-0 transition group-hover:bg-[#d8c5aa]"
-                                    />
-                                    <p className="mt-3 text-xs">
-                                        {item}{" "}
-                                        <span className="float-right">→</span>
-                                    </p>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section className="mx-auto grid max-w-[1440px] grid-cols-4 border-b border-[#e1ceb1] py-8 text-center text-[10px] uppercase tracking-[0.16em] text-[#6d5849]">
+                <section className="grid border-y border-[#e2d2b9] bg-[#fffaf0] px-8 py-7 lg:grid-cols-4">
                     {[
-                        "Curated & verified",
-                        "Pan-India delivery",
-                        "Easy returns",
-                        "A kinder tomorrow",
-                    ].map((item) => (
+                        ["◎", "Curated & Verified", "Conscious brands"],
+                        ["♧", "Pan India Delivery", "3–7 working days"],
+                        ["▣", "Easy Returns", "Hassle free"],
+                        ["☼", "A Kinder Tomorrow", "With every purchase"],
+                    ].map(([icon, title, copy]) => (
                         <div
-                            key={item}
-                            className="border-r border-[#e1ceb1] last:border-0"
+                            key={title}
+                            className="flex items-center justify-center gap-4 border-r border-[#e2d2b9] px-5 last:border-0"
                         >
-                            ✦ <span className="ml-2">{item}</span>
+                            <span className="text-xl" aria-hidden>
+                                {icon}
+                            </span>
+                            <div>
+                                <p className="text-[9px] font-semibold">
+                                    {title}
+                                </p>
+                                <p className="mt-1 text-[8px] text-[#8a7969]">
+                                    {copy}
+                                </p>
+                            </div>
                         </div>
                     ))}
                 </section>
