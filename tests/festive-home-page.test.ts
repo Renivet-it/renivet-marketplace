@@ -281,6 +281,22 @@ test("gift by intention uses the five supplied images in display order", async (
     expect(source).not.toContain("label={`Gift ${index + 1}`}");
 });
 
+test("gift by intention links to the requested festive catalogue filters", async () => {
+    const source = await Bun.file(pagePath).text();
+    const destinations = [
+        "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
+        "/festive?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02",
+        "/festive?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+        "/festive?maxPrice=2000",
+        "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
+    ];
+
+    for (const href of destinations) {
+        expect(source).toContain(`href: "${href}"`);
+    }
+    expect(source).toContain("href={gift.href}");
+});
+
 test("brands gifts and benefits follow the approved two-column mobile layout", async () => {
     const source = await Bun.file(pagePath).text();
     const brands = await Bun.file(
