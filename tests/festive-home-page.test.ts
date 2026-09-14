@@ -4,13 +4,16 @@ const pagePath = "src/app/(home)/festive-home/page.tsx";
 
 test("festive home defines the desktop editorial sections and keeps the shared shell", async () => {
     const source = await Bun.file(pagePath).text();
+    const carousel = await Bun.file(
+        "src/components/festive-home/festive-product-carousel.tsx"
+    ).text();
 
     expect(source).toContain("A More Conscious Festive Season");
-    expect(source).toContain("Festive Edit");
+    expect(carousel).toContain("Festive Edit");
     expect(source).toContain("Brands worth discovering");
     expect(source).toContain("Gift by intention");
     expect(source).toContain("heritage-rail.png");
-    expect(source).toContain("maroon-arch.png");
+    expect(carousel).toContain("festive-edit-panel.png");
     expect(source).toContain("sandstone-arch.png");
     expect(source).toContain("/festive-home");
     expect(source).not.toContain("<NavbarHome");
@@ -26,10 +29,13 @@ test("festive home provides intentional placeholders for missing editorial image
 
 test("festive home mirrors the approved desktop section proportions", async () => {
     const source = await Bun.file(pagePath).text();
+    const carousel = await Bun.file(
+        "src/components/festive-home/festive-product-carousel.tsx"
+    ).text();
 
     expect(source).toContain('data-festive-section="hero"');
     expect(source).toContain('data-festive-section="editorial-cards"');
-    expect(source).toContain('data-festive-section="festive-edit"');
+    expect(carousel).toContain('data-festive-section="festive-edit"');
     expect(source).toContain('data-festive-section="brand-story"');
     expect(source).toContain('data-festive-section="brands"');
     expect(source).toContain('data-festive-section="gift-intention"');
@@ -91,6 +97,22 @@ test("festive home stacks portrait editorial cards with imagery on mobile", asyn
     expect(source).toContain("md:aspect-[1.75]");
     expect(source).toContain('data-festive-editorial-image="true"');
     expect(source).toContain("justify-end");
+});
+
+test("festive edit loads approved storefront products into a carousel", async () => {
+    const source = await Bun.file(pagePath).text();
+    const carousel = await Bun.file(
+        "src/components/festive-home/festive-product-carousel.tsx"
+    ).text();
+
+    expect(source).toContain("productQueries.getProducts");
+    expect(source).toContain('verificationStatus: "approved"');
+    expect(source).toContain("requireMedia: true");
+    expect(source).toContain("<FestiveProductCarousel");
+    expect(carousel).toContain("<Carousel");
+    expect(carousel).toContain("<CarouselItem");
+    expect(carousel).toContain("<ProductCard");
+    expect(carousel).toContain("festive-edit-panel.png");
 });
 
 test("festive home is not obscured by the global guest acquisition popup", async () => {
