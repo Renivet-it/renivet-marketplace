@@ -60,6 +60,19 @@ test("festive home uses the supplied portrait campaign cover on mobile", async (
     expect(source).toContain("Choices");
 });
 
+test("festive home maps the supplied desktop editorial images in order", async () => {
+    const source = await Bun.file(pagePath).text();
+    const urls = [
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+    ];
+
+    const positions = urls.map((url) => source.indexOf(url));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
