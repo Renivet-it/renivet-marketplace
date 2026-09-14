@@ -176,7 +176,8 @@ export default async function FestiveHomePage() {
                             every celebration.
                         </p>
                         <Link
-                            href="/shop"
+                            href="/festive"
+                            data-festive-hero-cta="true"
                             className="mt-[5%] bg-[#26321c] px-7 py-3 text-[clamp(7px,0.58vw,9px)] font-semibold uppercase tracking-[0.18em] text-white"
                         >
                             Shop the edit&nbsp; →
@@ -220,7 +221,8 @@ export default async function FestiveHomePage() {
                                 for every celebration.
                             </p>
                             <Link
-                                href="/shop"
+                                href="/festive"
+                                data-festive-hero-cta="true"
                                 className="mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
                             >
                                 Shop the edit&nbsp; →

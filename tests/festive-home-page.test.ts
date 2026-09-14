@@ -72,6 +72,15 @@ test("festive home uses the supplied portrait campaign cover on mobile", async (
     expect(source).toContain("Choices");
 });
 
+test("festive hero shop-the-edit actions open the festive catalogue", async () => {
+    const source = await Bun.file(pagePath).text();
+    const heroCtas = source.match(/data-festive-hero-cta="true"/g) ?? [];
+    const festiveLinks = source.match(/href="\/festive"/g) ?? [];
+
+    expect(heroCtas).toHaveLength(2);
+    expect(festiveLinks.length).toBeGreaterThanOrEqual(2);
+});
+
 test("festive home maps the desktop editorial images to the referenced cards", async () => {
     const source = await Bun.file(pagePath).text();
     const urls = [
