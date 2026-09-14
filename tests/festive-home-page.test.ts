@@ -241,6 +241,13 @@ test("festive benefits span the full desktop viewport", async () => {
     expect(source).toContain("lg:-translate-x-1/2");
 });
 
+test("festive benefits retain a cream gap before the footer", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain('data-festive-bottom-spacer="true"');
+    expect(source).toContain("h-12 md:h-20");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
