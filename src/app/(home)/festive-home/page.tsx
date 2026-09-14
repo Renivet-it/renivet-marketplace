@@ -419,18 +419,35 @@ export default async function FestiveHomePage() {
                     className="grid grid-cols-2 gap-y-7 border-y border-[#e2d2b9] bg-[#fffaf0] px-4 py-8 lg:grid-cols-4 lg:gap-y-0 lg:px-8 lg:py-7"
                 >
                     {[
-                        ["◎", "Curated & Verified", "Conscious brands"],
-                        ["♧", "Pan India Delivery", "3–7 working days"],
-                        ["▣", "Easy Returns", "Hassle free"],
-                        ["☼", "A Kinder Tomorrow", "With every purchase"],
+                        [
+                            "benefit-curated.png",
+                            "Curated & Verified",
+                            "Conscious brands",
+                        ],
+                        [
+                            "benefit-delivery.png",
+                            "Pan India Delivery",
+                            "3–7 working days",
+                        ],
+                        ["benefit-returns.png", "Easy Returns", "Hassle free"],
+                        [
+                            "benefit-tomorrow.png",
+                            "A Kinder Tomorrow",
+                            "With every purchase",
+                        ],
                     ].map(([icon, title, copy]) => (
                         <div
                             key={title}
                             className="flex items-center justify-start gap-3 px-2 lg:justify-center lg:gap-4 lg:border-r lg:border-[#e2d2b9] lg:px-5 lg:last:border-0"
                         >
-                            <span className="text-xl" aria-hidden>
-                                {icon}
-                            </span>
+                            <Image
+                                src={`${assetRoot}/${icon}`}
+                                alt=""
+                                width={28}
+                                height={28}
+                                className="size-6 shrink-0 object-contain lg:size-7"
+                                aria-hidden
+                            />
                             <div>
                                 <p className="text-[9px] font-semibold">
                                     {title}
