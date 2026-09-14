@@ -60,17 +60,21 @@ test("festive home uses the supplied portrait campaign cover on mobile", async (
     expect(source).toContain("Choices");
 });
 
-test("festive home maps the supplied desktop editorial images in order", async () => {
+test("festive home maps the desktop editorial images to the referenced cards", async () => {
     const source = await Bun.file(pagePath).text();
     const urls = [
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
     ];
 
     const positions = urls.map((url) => source.indexOf(url));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(source).toContain("aspect-[1.75]");
+    expect(source).toContain("objectPosition");
+    expect(source).toContain("max-w-[220px]");
+    expect(source).toContain("titleLines");
 });
 
 test("festive home is not obscured by the global guest acquisition popup", async () => {
