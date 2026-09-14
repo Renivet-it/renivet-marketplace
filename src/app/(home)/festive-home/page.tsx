@@ -17,19 +17,28 @@ export const metadata: Metadata = {
 const assetRoot = "/assets/festive-home";
 
 const getFestiveEditProducts = unstable_cache(
-    () =>
-        productQueries.getProducts({
+    async () => {
+        const festiveSelection =
+            await productQueries.getFestiveSeasonProducts();
+        const curatedProductIds = Array.from(
+            new Set(festiveSelection.map((entry) => entry.productId))
+        );
+        const festiveProducts = await productQueries.getProducts({
             page: 1,
-            limit: 12,
+            limit: Math.max(curatedProductIds.length, 1),
             isAvailable: true,
             isActive: true,
             isPublished: true,
             isDeleted: false,
             verificationStatus: "approved",
-            prioritizeBestSellers: true,
             requireMedia: true,
-        }),
-    ["festive-home-edit-products-v1"],
+            curatedProductIds,
+            curatedDefaultOrder: curatedProductIds,
+        });
+
+        return festiveProducts.data;
+    },
+    ["festive-home-edit-products-v3"],
     { revalidate: 300 }
 );
 
@@ -276,7 +285,7 @@ export default async function FestiveHomePage() {
                 </section>
 
                 <FestiveProductCarousel
-                    products={festiveProducts.data}
+                    products={festiveProducts}
                     wishlist={wishlist}
                     userId={userId ?? undefined}
                 />

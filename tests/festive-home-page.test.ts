@@ -99,20 +99,45 @@ test("festive home stacks portrait editorial cards with imagery on mobile", asyn
     expect(source).toContain("justify-end");
 });
 
-test("festive edit loads approved storefront products into a carousel", async () => {
+test("festive edit loads the ordered festive products table into a carousel", async () => {
     const source = await Bun.file(pagePath).text();
     const carousel = await Bun.file(
         "src/components/festive-home/festive-product-carousel.tsx"
     ).text();
 
-    expect(source).toContain("productQueries.getProducts");
-    expect(source).toContain('verificationStatus: "approved"');
-    expect(source).toContain("requireMedia: true");
+    expect(source).toContain("productQueries.getFestiveSeasonProducts");
+    expect(source).toContain("festiveSelection.map");
+    expect(source).toContain("curatedProductIds");
+    expect(source).toContain("curatedDefaultOrder: curatedProductIds");
+    expect(carousel).not.toContain("FALLBACK_FESTIVE_PRODUCTS");
     expect(source).toContain("<FestiveProductCarousel");
     expect(carousel).toContain("<Carousel");
     expect(carousel).toContain("<CarouselItem");
     expect(carousel).toContain("<ProductCard");
     expect(carousel).toContain("festive-edit-panel.png");
+});
+
+test("festive edit keeps its curation panel beside the swipeable products on mobile", async () => {
+    const carousel = await Bun.file(
+        "src/components/festive-home/festive-product-carousel.tsx"
+    ).text();
+
+    expect(carousel).toContain("grid-cols-[145px_minmax(0,1fr)]");
+    expect(carousel).toContain("basis-[145px]");
+    expect(carousel).toContain("h-[46px]");
+    expect(carousel).toContain("bg-[#eef0d6]");
+});
+
+test("festive product admin changes revalidate the festive home collection", async () => {
+    const actions = await Bun.file("src/actions/product-action.ts").text();
+    const toggleAction = actions.slice(
+        actions.indexOf("export async function toggleFestiveSeasonProduct"),
+        actions.indexOf("export async function toggleBestSeller")
+    );
+
+    expect(
+        toggleAction.match(/revalidatePath\("\/festive-home"\)/g)
+    ).toHaveLength(2);
 });
 
 test("festive home is not obscured by the global guest acquisition popup", async () => {

@@ -1700,6 +1700,7 @@ export async function toggleFestiveSeasonProduct(
                 .where(eq(products.id, productId));
             revalidatePath("/dashboard/general/products");
             revalidatePath("/");
+            revalidatePath("/festive-home");
             return {
                 success: true,
                 message: "Product removed from Festive Season",
@@ -1748,6 +1749,7 @@ export async function toggleFestiveSeasonProduct(
         revalidatePath("/dashboard/general/products");
         revalidatePath("/");
         revalidatePath("/festive");
+        revalidatePath("/festive-home");
         return { success: true, message: "Product added to Festive Season" };
     } catch (error) {
         console.error("Error toggling Festive Season status:", error);
