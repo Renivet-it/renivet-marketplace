@@ -196,6 +196,23 @@ test("brand story preserves both portrait compositions on desktop", async () => 
     expect(source).toContain("lg:object-contain");
 });
 
+test("brand story uses the supplied mobile-only celebration artwork", async () => {
+    const source = await Bun.file(pagePath).text();
+    const mobileImages = [
+        "brand-story-mobile-uruli.png",
+        "brand-story-mobile-lotus-field.png",
+    ];
+
+    for (const image of mobileImages) {
+        expect(
+            await Bun.file(`public/assets/festive-home/${image}`).exists()
+        ).toBe(true);
+        expect(source).toContain(image);
+    }
+    expect(source).toContain("lg:hidden");
+    expect(source).toContain("hidden object-cover lg:block");
+});
+
 test("gift by intention uses the five supplied images in display order", async () => {
     const source = await Bun.file(pagePath).text();
     const expectedImages = [

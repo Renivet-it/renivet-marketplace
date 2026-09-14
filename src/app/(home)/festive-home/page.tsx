@@ -306,13 +306,20 @@ export default async function FestiveHomePage() {
                     data-festive-section="brand-story"
                     className="grid min-h-[390px] lg:aspect-[2.9] lg:min-h-0 lg:grid-cols-[30%_41.5%_28.5%]"
                 >
-                    <div className="relative min-h-[390px] overflow-hidden bg-[#c48d79] lg:h-full lg:min-h-0">
+                    <div className="relative aspect-[1.52] overflow-hidden bg-[#c48d79] lg:aspect-auto lg:h-full lg:min-h-0">
+                        <Image
+                            src={`${assetRoot}/brand-story-mobile-uruli.png`}
+                            alt="Hand placing a lotus blossom in a brass water uruli"
+                            fill
+                            sizes="100vw"
+                            className="object-cover lg:hidden"
+                        />
                         <Image
                             src={`${assetRoot}/brand-story-women.png`}
                             alt="Woman wearing a pink festive saree"
                             fill
                             sizes="(min-width: 1024px) 30vw, 100vw"
-                            className="object-cover lg:object-contain"
+                            className="hidden object-cover lg:block lg:object-contain"
                         />
                     </div>
                     <div className="flex min-h-[390px] flex-col items-center justify-center bg-[#741f2a] px-12 text-center text-[#fff1dc] lg:h-full lg:min-h-0">
@@ -333,13 +340,20 @@ export default async function FestiveHomePage() {
                             Our story&nbsp; →
                         </Link>
                     </div>
-                    <div className="relative min-h-[390px] overflow-hidden bg-[#6e645d] lg:h-full lg:min-h-0">
+                    <div className="relative aspect-[1.52] overflow-hidden bg-[#6e645d] lg:aspect-auto lg:h-full lg:min-h-0">
+                        <Image
+                            src={`${assetRoot}/brand-story-mobile-lotus-field.png`}
+                            alt="Lotus pond representing people, planet, and better choices"
+                            fill
+                            sizes="100vw"
+                            className="object-cover lg:hidden"
+                        />
                         <Image
                             src={`${assetRoot}/brand-story-men.png`}
                             alt="Man wearing festive everyday menswear"
                             fill
                             sizes="(min-width: 1024px) 28.5vw, 100vw"
-                            className="object-cover grayscale lg:object-contain"
+                            className="hidden object-cover grayscale lg:block lg:object-contain"
                         />
                     </div>
                 </section>
