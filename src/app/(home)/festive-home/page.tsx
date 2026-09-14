@@ -205,7 +205,7 @@ export default function FestiveHomePage() {
 
                 <div
                     data-festive-section="editorial-transition"
-                    className="relative h-[130px] bg-[#fff9eb]"
+                    className="relative hidden h-[130px] bg-[#fff9eb] md:block"
                 >
                     <Image
                         src={`${assetRoot}/sandstone-arch.png`}
@@ -225,30 +225,26 @@ export default function FestiveHomePage() {
 
                 <section
                     data-festive-section="editorial-cards"
-                    className="grid gap-6 px-8 pb-10 lg:grid-cols-3"
+                    className="grid gap-5 px-3 pb-10 pt-8 md:gap-6 md:px-8 md:pt-0 lg:grid-cols-3"
                 >
-                    {editorialCards.map((card, index) => (
+                    {editorialCards.map((card) => (
                         <Link
                             href="/shop"
                             key={card.title}
-                            className="group relative aspect-[1.75] overflow-hidden"
+                            className="group relative aspect-[0.94] overflow-hidden md:aspect-[1.75]"
                         >
-                            <ImagePlaceholder
-                                label={`Editorial ${index + 1}`}
-                                hideLabel
-                                className="absolute inset-0 h-full md:hidden"
-                            />
                             <Image
+                                data-festive-editorial-image="true"
                                 src={card.image}
                                 alt=""
                                 fill
-                                sizes="(min-width: 1024px) 32vw, 100vw"
-                                className="hidden object-cover md:block"
+                                sizes="(min-width: 1024px) 32vw, calc(100vw - 24px)"
+                                className="object-cover"
                                 style={{ objectPosition: card.objectPosition }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
-                            <div className="absolute inset-0 flex flex-col justify-center px-[7%] py-[6%] text-[#fff8ec]">
-                                <h2 className="max-w-[220px] font-serif text-[clamp(24px,2vw,32px)] leading-[1.08]">
+                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:justify-center md:px-[7%] md:py-[6%]">
+                                <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
                                     {card.titleLines.map((line) => (
                                         <span key={line} className="block">
                                             {line}

@@ -84,6 +84,15 @@ test("festive home leaves breathing room above the editorial corner artwork", as
     expect(source).toContain("h-[130px]");
 });
 
+test("festive home stacks portrait editorial cards with imagery on mobile", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain("aspect-[0.94]");
+    expect(source).toContain("md:aspect-[1.75]");
+    expect(source).toContain('data-festive-editorial-image="true"');
+    expect(source).toContain("justify-end");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
