@@ -201,6 +201,14 @@ test("brands gifts and benefits follow the approved two-column mobile layout", a
     expect(source).toContain("lg:grid-cols-4");
 });
 
+test("heritage divider keeps desktop breathing room below the brand grid", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain('data-festive-heritage-divider="true"');
+    expect(source).toContain("md:min-h-[132px]");
+    expect(source).toContain("md:h-[64px]");
+});
+
 test("festive benefits use the supplied artwork in the approved order", async () => {
     const source = await Bun.file(pagePath).text();
     const expectedIcons = [

@@ -369,13 +369,18 @@ export default async function FestiveHomePage() {
                     </div>
                 </section>
 
-                <Image
-                    src={`${assetRoot}/heritage-rail.png`}
-                    alt=""
-                    width={1600}
-                    height={120}
-                    className="h-[38px] w-full object-cover md:h-[82px] md:object-contain md:px-8"
-                />
+                <div
+                    data-festive-heritage-divider="true"
+                    className="flex min-h-[62px] items-center md:min-h-[132px] md:px-8"
+                >
+                    <Image
+                        src={`${assetRoot}/heritage-rail.png`}
+                        alt=""
+                        width={1600}
+                        height={120}
+                        className="h-[38px] w-full object-cover md:h-[64px] md:object-contain"
+                    />
+                </div>
 
                 <section
                     data-festive-section="gift-intention"
