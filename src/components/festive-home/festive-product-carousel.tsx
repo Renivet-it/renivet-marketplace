@@ -5,8 +5,6 @@ import {
     Carousel,
     CarouselContent,
     CarouselItem,
-    CarouselNext,
-    CarouselPrevious,
 } from "@/components/ui/carousel";
 import type { CachedWishlist, ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
@@ -26,20 +24,21 @@ export function FestiveProductCarousel({
     return (
         <section
             data-festive-section="festive-edit"
-            className="bg-[#f4dcd5] px-3 py-6 md:px-8 md:py-9"
+            className="bg-[#eef0d6] bg-gradient-to-b from-[#e2e7d3] via-[#f0ebe0] to-[#fae2da] px-3 py-5 md:px-8 md:py-8"
         >
-            <div className="grid gap-5 md:grid-cols-[224px_minmax(0,1fr)]">
-                <div className="overflow-hidden">
+            <div className="grid grid-cols-[145px_minmax(0,1fr)] items-start gap-2.5 md:grid-cols-[224px_minmax(0,1fr)] md:gap-5">
+                <div className="flex shrink-0 flex-col overflow-hidden">
                     <Link
                         href="/shop"
-                        className="relative block overflow-hidden"
+                        className="relative block overflow-hidden transition-transform duration-300 hover:scale-[1.01]"
                     >
                         <Image
                             src="/assets/festive-home/festive-edit-panel.png"
                             alt="The Festive Edit - view all products"
                             width={560}
                             height={585}
-                            className="h-auto w-full"
+                            className="h-auto w-full object-contain"
+                            priority
                         />
                     </Link>
                     <Image
@@ -47,20 +46,20 @@ export function FestiveProductCarousel({
                         alt=""
                         width={560}
                         height={179}
-                        className="hidden h-[72px] w-full object-cover object-left md:block"
+                        className="-mt-1 h-[46px] w-full object-cover object-left md:h-[72px]"
                     />
                 </div>
 
                 {products.length ? (
                     <Carousel
                         opts={{ align: "start", containScroll: "trimSnaps" }}
-                        className="min-w-0"
+                        className="group/carousel relative min-w-0"
                     >
-                        <CarouselContent className="-ml-3">
+                        <CarouselContent className="-ml-3 md:-ml-4">
                             {products.map((product) => (
                                 <CarouselItem
                                     key={product.id}
-                                    className="basis-[68%] pl-3 sm:basis-[44%] lg:basis-1/4 xl:basis-1/5"
+                                    className="basis-[145px] pl-3 md:basis-1/3 md:pl-4 lg:basis-1/4 xl:basis-1/5"
                                 >
                                     <ProductCard
                                         className="h-full min-w-0"
@@ -70,13 +69,11 @@ export function FestiveProductCarousel({
                                                 item.productId === product.id
                                         )}
                                         userId={userId}
-                                        theme="festive"
+                                        theme="festive-editorial"
                                     />
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        <CarouselPrevious className="left-2 hidden border-[#d8c6b6] bg-[#fff9ef]/95 text-[#67202a] shadow-md md:flex" />
-                        <CarouselNext className="right-2 hidden border-[#d8c6b6] bg-[#fff9ef]/95 text-[#67202a] shadow-md md:flex" />
                     </Carousel>
                 ) : (
                     <div className="flex min-h-48 items-center justify-center border border-[#d9c7b8] bg-[#fff7ee]/55 px-6 text-center text-sm text-[#705b50]">
