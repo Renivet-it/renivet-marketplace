@@ -87,6 +87,12 @@ test("festive home maps the desktop editorial images to the referenced cards", a
     expect(source).toContain("objectPosition");
     expect(source).toContain("max-w-[220px]");
     expect(source).toContain("titleLines");
+    expect(source).toContain(
+        'overlay: "from-black/50 via-black/10 to-transparent"'
+    );
+    expect(source).toContain(
+        'overlay: "from-black/70 via-black/15 to-black/5"'
+    );
 });
 
 test("festive home leaves breathing room above the editorial corner artwork", async () => {
