@@ -77,6 +77,13 @@ test("festive home maps the desktop editorial images to the referenced cards", a
     expect(source).toContain("titleLines");
 });
 
+test("festive home leaves breathing room above the editorial corner artwork", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain('data-festive-section="editorial-transition"');
+    expect(source).toContain("h-[130px]");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"

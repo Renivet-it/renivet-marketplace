@@ -203,7 +203,10 @@ export default function FestiveHomePage() {
                     </div>
                 </section>
 
-                <div className="relative h-[82px] bg-[#fff9eb]">
+                <div
+                    data-festive-section="editorial-transition"
+                    className="relative h-[130px] bg-[#fff9eb]"
+                >
                     <Image
                         src={`${assetRoot}/sandstone-arch.png`}
                         alt=""
