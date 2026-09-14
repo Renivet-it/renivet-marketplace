@@ -94,6 +94,10 @@ test("festive home leaves breathing room above the editorial corner artwork", as
 
     expect(source).toContain('data-festive-section="editorial-transition"');
     expect(source).toContain("h-[130px]");
+    expect(source).toContain(
+        'className="absolute bottom-0 left-0 w-[170px] -scale-x-100"'
+    );
+    expect(source).toContain('className="absolute bottom-0 right-0 w-[170px]"');
 });
 
 test("festive home stacks portrait editorial cards with imagery on mobile", async () => {
