@@ -378,7 +378,7 @@ export default async function FestiveHomePage() {
                         alt=""
                         width={1600}
                         height={120}
-                        className="h-[38px] w-full object-cover md:h-[64px] md:w-[94%] md:object-contain"
+                        className="h-[38px] w-full object-cover md:h-auto md:w-[94%] md:object-contain"
                     />
                 </div>
 
