@@ -470,6 +470,7 @@ export function ProductCard({
                             src={activeCardImage}
                             alt={product.title || "Product image"}
                             fill
+                            loading="eager"
                             sizes="(max-width: 768px) 145px, (max-width: 1200px) 25vw, 20vw"
                             className="object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
                         />

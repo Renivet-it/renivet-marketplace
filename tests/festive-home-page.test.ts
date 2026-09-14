@@ -136,6 +136,19 @@ test("festive product images fill a positioned wrapper instead of a zero-height 
     expect(productCard).not.toContain('className="block h-full w-full"');
 });
 
+test("festive carousel product images load immediately when the row is visible", async () => {
+    const productCard = await Bun.file(
+        "src/components/globals/cards/product.tsx"
+    ).text();
+    const editorialStart = productCard.indexOf('theme === "festive-editorial"');
+    const editorialImage = productCard.slice(
+        editorialStart,
+        productCard.indexOf("</AnimatedProductLink>", editorialStart)
+    );
+
+    expect(editorialImage).toContain('loading="eager"');
+});
+
 test("festive product admin changes revalidate the festive home collection", async () => {
     const actions = await Bun.file("src/actions/product-action.ts").text();
     const toggleAction = actions.slice(
