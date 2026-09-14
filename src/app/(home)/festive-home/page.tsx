@@ -332,10 +332,13 @@ export default async function FestiveHomePage() {
                     </div>
                 </section>
 
-                <section data-festive-section="brands" className="px-8 py-9">
-                    <div className="mb-7 flex items-end justify-between">
+                <section
+                    data-festive-section="brands"
+                    className="px-3 py-8 md:px-8 md:py-9"
+                >
+                    <div className="mb-6 block border-b border-[#e2d2b9] pb-4 md:mb-7 md:flex md:items-end md:justify-between md:border-0 md:pb-0">
                         <div>
-                            <h2 className="font-serif text-[34px] leading-none">
+                            <h2 className="font-serif text-[26px] leading-none md:text-[34px]">
                                 Brands worth discovering
                             </h2>
                             <p className="mt-3 text-[10px] text-[#806f60]">
@@ -345,17 +348,20 @@ export default async function FestiveHomePage() {
                         </div>
                         <Link
                             href="/brands"
-                            className="text-[8px] font-semibold uppercase tracking-[0.16em]"
+                            className="mt-4 inline-block text-[8px] font-semibold uppercase tracking-[0.16em] md:mt-0"
                         >
                             View all brands&nbsp; →
                         </Link>
                     </div>
-                    <div className="grid gap-4 lg:grid-cols-6">
+                    <div
+                        data-festive-brand-grid="true"
+                        className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-6"
+                    >
                         {brands.map((brand) => (
                             <Link
                                 href="/brands"
                                 key={brand}
-                                className="flex h-[72px] items-center justify-center border border-[#dfccb0] bg-[#fffaf0] px-3 text-center text-[10px] uppercase tracking-[0.22em]"
+                                className="flex h-16 items-center justify-center border border-[#dfccb0] bg-[#fffaf0] px-3 text-center text-[10px] uppercase tracking-[0.22em] md:h-[72px]"
                             >
                                 {brand}
                             </Link>
@@ -368,25 +374,28 @@ export default async function FestiveHomePage() {
                     alt=""
                     width={1600}
                     height={120}
-                    className="h-[82px] w-full object-contain px-8"
+                    className="h-[38px] w-full object-cover md:h-[82px] md:object-contain md:px-8"
                 />
 
                 <section
                     data-festive-section="gift-intention"
-                    className="px-8 pb-12 pt-5"
+                    className="px-3 pb-10 pt-6 md:px-8 md:pb-12 md:pt-5"
                 >
-                    <h2 className="font-serif text-[34px] leading-none">
+                    <h2 className="font-serif text-[28px] leading-none md:text-[34px]">
                         Gift by intention
                     </h2>
                     <p className="mt-3 text-[10px] text-[#806f60]">
                         Thoughtful curation for everyone on your list.
                     </p>
-                    <div className="mt-8 grid gap-5 lg:grid-cols-5">
+                    <div
+                        data-festive-gift-grid="true"
+                        className="mt-7 grid grid-cols-2 gap-x-3 gap-y-4 md:mt-8 lg:grid-cols-5 lg:gap-5"
+                    >
                         {giftItems.map((gift) => (
                             <Link
                                 href="/shop"
                                 key={gift.label}
-                                className="group min-w-0"
+                                className="group min-w-0 last:col-span-2 lg:last:col-span-1"
                             >
                                 <div className="relative aspect-[1.35] w-full overflow-hidden bg-[#d6b893]">
                                     <Image
@@ -405,7 +414,10 @@ export default async function FestiveHomePage() {
                     </div>
                 </section>
 
-                <section className="grid border-y border-[#e2d2b9] bg-[#fffaf0] px-8 py-7 lg:grid-cols-4">
+                <section
+                    data-festive-benefits="true"
+                    className="grid grid-cols-2 gap-y-7 border-y border-[#e2d2b9] bg-[#fffaf0] px-4 py-8 lg:grid-cols-4 lg:gap-y-0 lg:px-8 lg:py-7"
+                >
                     {[
                         ["◎", "Curated & Verified", "Conscious brands"],
                         ["♧", "Pan India Delivery", "3–7 working days"],
@@ -414,7 +426,7 @@ export default async function FestiveHomePage() {
                     ].map(([icon, title, copy]) => (
                         <div
                             key={title}
-                            className="flex items-center justify-center gap-4 border-r border-[#e2d2b9] px-5 last:border-0"
+                            className="flex items-center justify-start gap-3 px-2 lg:justify-center lg:gap-4 lg:border-r lg:border-[#e2d2b9] lg:px-5 lg:last:border-0"
                         >
                             <span className="text-xl" aria-hidden>
                                 {icon}

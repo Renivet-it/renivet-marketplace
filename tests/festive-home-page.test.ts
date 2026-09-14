@@ -172,6 +172,17 @@ test("gift by intention uses the five supplied images in display order", async (
     expect(source).not.toContain("label={`Gift ${index + 1}`}");
 });
 
+test("brands gifts and benefits follow the approved two-column mobile layout", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain('data-festive-brand-grid="true"');
+    expect(source).toContain("grid-cols-2");
+    expect(source).toContain('data-festive-gift-grid="true"');
+    expect(source).toContain("last:col-span-2");
+    expect(source).toContain('data-festive-benefits="true"');
+    expect(source).toContain("lg:grid-cols-4");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
