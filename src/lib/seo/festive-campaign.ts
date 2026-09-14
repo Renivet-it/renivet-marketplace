@@ -12,18 +12,18 @@ export const FESTIVE_CAMPAIGN = {
     },
     art: {
         openGraph: {
-            src: "/assets/festive-season/rakhi.png",
-            width: 140,
-            height: 465,
-            alt: "Renivet Rakhi Collection",
+            src: "/assets/festive-season/festive-banner-desktop.png",
+            width: 2880,
+            height: 1216,
+            alt: "Celebrate consciously with Renivet's sustainable festive picks",
         },
         mobileHero: {
-            src: "/assets/festive-season/rakhi-mobile-cutout-trimmed.png",
-            alt: "",
+            src: "/assets/festive-season/festive-banner.png",
+            alt: "Celebrate consciously with sustainable festive picks",
         },
         desktopHero: {
-            src: "/assets/festive-season/rakhi.png",
-            alt: "",
+            src: "/assets/festive-season/festive-banner-desktop.png",
+            alt: "Celebrate consciously with sustainable festive picks",
         },
     },
 } as const;
