@@ -421,7 +421,7 @@ export default async function FestiveHomePage() {
 
                 <section
                     data-festive-benefits="true"
-                    className="grid grid-cols-2 gap-y-7 border-y border-[#e2d2b9] bg-[#fffaf0] px-4 py-8 lg:grid-cols-4 lg:gap-y-0 lg:px-8 lg:py-7"
+                    className="grid grid-cols-2 gap-y-7 border-y border-[#e2d2b9] bg-[#fffaf0] px-4 py-8 lg:relative lg:left-1/2 lg:w-screen lg:-translate-x-1/2 lg:grid-cols-4 lg:gap-y-0 lg:px-8 lg:py-7"
                 >
                     {[
                         [

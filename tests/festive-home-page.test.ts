@@ -233,6 +233,14 @@ test("festive benefits use the supplied artwork in the approved order", async ()
     }
 });
 
+test("festive benefits span the full desktop viewport", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain("lg:left-1/2");
+    expect(source).toContain("lg:w-screen");
+    expect(source).toContain("lg:-translate-x-1/2");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
