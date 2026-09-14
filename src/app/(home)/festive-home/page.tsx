@@ -1,6 +1,7 @@
+import { FestiveBrandShowcase } from "@/components/festive-home/festive-brand-showcase";
 import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
 import { productQueries } from "@/lib/db/queries";
-import { userWishlistCache } from "@/lib/redis/methods";
+import { brandCache, userWishlistCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
@@ -72,14 +73,6 @@ const editorialCards = [
     },
 ];
 
-const brands = [
-    "Rasa",
-    "Sui",
-    "Bare Necessities",
-    "The Indian Earth",
-    "Mèli",
-    "My Mithila",
-];
 const giftItems = [
     { label: "For her", image: "gift-for-her.png" },
     { label: "For him", image: "gift-for-him.png" },
@@ -122,9 +115,28 @@ function MiniLink({ children }: { children: React.ReactNode }) {
 
 export default async function FestiveHomePage() {
     const festiveProductsPromise = getFestiveEditProducts();
+    const festiveBrandsPromise = brandCache
+        .getAll()
+        .then((brands) =>
+            brands
+                .filter((brand) => brand.isActive)
+                .map(({ id, name, slug, logoUrl }) => ({
+                    id,
+                    name,
+                    slug,
+                    logoUrl: logoUrl || null,
+                }))
+                .sort((left, right) =>
+                    left.name.localeCompare(right.name, "en", {
+                        sensitivity: "base",
+                    })
+                )
+        )
+        .catch(() => []);
     const { userId } = await auth();
-    const [festiveProducts, wishlist] = await Promise.all([
+    const [festiveProducts, festiveBrands, wishlist] = await Promise.all([
         festiveProductsPromise,
+        festiveBrandsPromise,
         userId ? userWishlistCache.get(userId).catch(() => []) : [],
     ]);
 
@@ -332,42 +344,7 @@ export default async function FestiveHomePage() {
                     </div>
                 </section>
 
-                <section
-                    data-festive-section="brands"
-                    className="px-3 py-8 md:px-8 md:py-9"
-                >
-                    <div className="mb-6 block border-b border-[#e2d2b9] pb-4 md:mb-7 md:flex md:items-end md:justify-between md:border-0 md:pb-0">
-                        <div>
-                            <h2 className="font-serif text-[26px] leading-none md:text-[34px]">
-                                Brands worth discovering
-                            </h2>
-                            <p className="mt-3 text-[10px] text-[#806f60]">
-                                Independent brands. Meaningful stories. A kinder
-                                tomorrow.
-                            </p>
-                        </div>
-                        <Link
-                            href="/brands"
-                            className="mt-4 inline-block text-[8px] font-semibold uppercase tracking-[0.16em] md:mt-0"
-                        >
-                            View all brands&nbsp; →
-                        </Link>
-                    </div>
-                    <div
-                        data-festive-brand-grid="true"
-                        className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-6"
-                    >
-                        {brands.map((brand) => (
-                            <Link
-                                href="/brands"
-                                key={brand}
-                                className="flex h-16 items-center justify-center border border-[#dfccb0] bg-[#fffaf0] px-3 text-center text-[10px] uppercase tracking-[0.22em] md:h-[72px]"
-                            >
-                                {brand}
-                            </Link>
-                        ))}
-                    </div>
-                </section>
+                <FestiveBrandShowcase brands={festiveBrands} />
 
                 <div
                     data-festive-heritage-divider="true"

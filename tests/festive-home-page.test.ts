@@ -7,10 +7,13 @@ test("festive home defines the desktop editorial sections and keeps the shared s
     const carousel = await Bun.file(
         "src/components/festive-home/festive-product-carousel.tsx"
     ).text();
+    const brands = await Bun.file(
+        "src/components/festive-home/festive-brand-showcase.tsx"
+    ).text();
 
     expect(source).toContain("A More Conscious Festive Season");
     expect(carousel).toContain("Festive Edit");
-    expect(source).toContain("Brands worth discovering");
+    expect(brands).toContain("Brands worth discovering");
     expect(source).toContain("Gift by intention");
     expect(source).toContain("heritage-rail.png");
     expect(carousel).toContain("festive-edit-panel.png");
@@ -32,15 +35,18 @@ test("festive home mirrors the approved desktop section proportions", async () =
     const carousel = await Bun.file(
         "src/components/festive-home/festive-product-carousel.tsx"
     ).text();
+    const brands = await Bun.file(
+        "src/components/festive-home/festive-brand-showcase.tsx"
+    ).text();
 
     expect(source).toContain('data-festive-section="hero"');
     expect(source).toContain('data-festive-section="editorial-cards"');
     expect(carousel).toContain('data-festive-section="festive-edit"');
     expect(source).toContain('data-festive-section="brand-story"');
-    expect(source).toContain('data-festive-section="brands"');
+    expect(brands).toContain('data-festive-section="brands"');
     expect(source).toContain('data-festive-section="gift-intention"');
     expect(source).toContain("lg:grid-cols-3");
-    expect(source).toContain("lg:grid-cols-6");
+    expect(brands).toContain("lg:grid-cols-6");
     expect(source).toContain("lg:grid-cols-5");
 });
 
@@ -214,9 +220,12 @@ test("gift by intention uses the five supplied images in display order", async (
 
 test("brands gifts and benefits follow the approved two-column mobile layout", async () => {
     const source = await Bun.file(pagePath).text();
+    const brands = await Bun.file(
+        "src/components/festive-home/festive-brand-showcase.tsx"
+    ).text();
 
-    expect(source).toContain('data-festive-brand-grid="true"');
-    expect(source).toContain("grid-cols-2");
+    expect(brands).toContain('data-festive-brand-grid="true"');
+    expect(brands).toContain("grid-cols-2");
     expect(source).toContain('data-festive-gift-grid="true"');
     expect(source).toContain("last:col-span-2");
     expect(source).toContain('data-festive-benefits="true"');
@@ -277,4 +286,38 @@ test("festive home is not obscured by the global guest acquisition popup", async
 
     expect(popup).toContain("usePathname");
     expect(popup).toContain('pathname === "/festive-home"');
+});
+
+test("festive home loads active brands and links them to their public shops", async () => {
+    const source = await Bun.file(pagePath).text();
+    const showcasePath =
+        "src/components/festive-home/festive-brand-showcase.tsx";
+
+    expect(await Bun.file(showcasePath).exists()).toBe(true);
+    const showcase = await Bun.file(showcasePath).text();
+
+    expect(source).toContain("brandCache");
+    expect(source).toContain(".getAll()");
+    expect(source).toContain("brand.isActive");
+    expect(source).toContain("localeCompare");
+    expect(source).toContain("<FestiveBrandShowcase");
+    expect(showcase).toContain("/brands/${brand.slug}/shop");
+    expect(showcase).toContain("brand.logoUrl");
+});
+
+test("festive brand showcase opens an alphabetical responsive all-brands dialog", async () => {
+    const showcasePath =
+        "src/components/festive-home/festive-brand-showcase.tsx";
+
+    expect(await Bun.file(showcasePath).exists()).toBe(true);
+    const showcase = await Bun.file(showcasePath).text();
+
+    expect(showcase).toContain("View all brands");
+    expect(showcase).toContain("<Dialog");
+    expect(showcase).toContain("<DialogTrigger");
+    expect(showcase).toContain("<DialogContent");
+    expect(showcase).toContain("All brands");
+    expect(showcase).toContain("grid-cols-2");
+    expect(showcase).toContain("md:grid-cols-3");
+    expect(showcase).toContain("overflow-y-auto");
 });
