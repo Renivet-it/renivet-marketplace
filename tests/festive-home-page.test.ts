@@ -201,6 +201,28 @@ test("brands gifts and benefits follow the approved two-column mobile layout", a
     expect(source).toContain("lg:grid-cols-4");
 });
 
+test("festive benefits use the supplied artwork in the approved order", async () => {
+    const source = await Bun.file(pagePath).text();
+    const expectedIcons = [
+        "benefit-curated.png",
+        "benefit-delivery.png",
+        "benefit-returns.png",
+        "benefit-tomorrow.png",
+    ];
+
+    for (const [index, icon] of expectedIcons.entries()) {
+        expect(
+            await Bun.file(`public/assets/festive-home/${icon}`).exists()
+        ).toBe(true);
+        expect(source).toContain(icon);
+        if (index > 0) {
+            expect(source.indexOf(icon)).toBeGreaterThan(
+                source.indexOf(expectedIcons[index - 1]!)
+            );
+        }
+    }
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
