@@ -150,6 +150,16 @@ test("brand story uses the supplied campaign artwork", async () => {
     expect(source).toContain("grayscale");
 });
 
+test("brand story preserves both portrait compositions on desktop", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain("lg:grid-cols-[30%_41.5%_28.5%]");
+    expect(source).toContain("lg:aspect-[2.9]");
+    expect(source).toContain("lg:min-h-0");
+    expect(source).toContain("lg:h-full");
+    expect(source).toContain("lg:object-contain");
+});
+
 test("gift by intention uses the five supplied images in display order", async () => {
     const source = await Bun.file(pagePath).text();
     const expectedImages = [
