@@ -81,11 +81,11 @@ const brands = [
     "My Mithila",
 ];
 const giftItems = [
-    "For her",
-    "For him",
-    "For home",
-    "Under ₹2,000",
-    "Host gifts",
+    { label: "For her", image: "gift-for-her.png" },
+    { label: "For him", image: "gift-for-him.png" },
+    { label: "For home", image: "gift-for-home.png" },
+    { label: "Under ₹2,000", image: "gift-under-2000.png" },
+    { label: "Host gifts", image: "gift-host.png" },
 ];
 
 function ImagePlaceholder({
@@ -382,19 +382,23 @@ export default async function FestiveHomePage() {
                         Thoughtful curation for everyone on your list.
                     </p>
                     <div className="mt-8 grid gap-5 lg:grid-cols-5">
-                        {giftItems.map((item, index) => (
+                        {giftItems.map((gift) => (
                             <Link
                                 href="/shop"
-                                key={item}
+                                key={gift.label}
                                 className="group min-w-0"
                             >
-                                <ImagePlaceholder
-                                    label={`Gift ${index + 1}`}
-                                    hideLabel
-                                    className="aspect-[1.35] w-full bg-[#d6b893]"
-                                />
+                                <div className="relative aspect-[1.35] w-full overflow-hidden bg-[#d6b893]">
+                                    <Image
+                                        src={`${assetRoot}/${gift.image}`}
+                                        alt={gift.label}
+                                        fill
+                                        sizes="(min-width: 1024px) 20vw, 100vw"
+                                        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                                    />
+                                </div>
                                 <p className="mt-3 text-[10px] font-medium">
-                                    {item} <span aria-hidden>→</span>
+                                    {gift.label} <span aria-hidden>→</span>
                                 </p>
                             </Link>
                         ))}

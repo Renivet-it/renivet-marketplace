@@ -150,6 +150,28 @@ test("brand story uses the supplied campaign artwork", async () => {
     expect(source).toContain("grayscale");
 });
 
+test("gift by intention uses the five supplied images in display order", async () => {
+    const source = await Bun.file(pagePath).text();
+    const expectedImages = [
+        "gift-for-her.png",
+        "gift-for-him.png",
+        "gift-for-home.png",
+        "gift-under-2000.png",
+        "gift-host.png",
+    ];
+
+    expectedImages.forEach((image, index) => {
+        expect(source).toContain(image);
+        if (index > 0) {
+            expect(source.indexOf(image)).toBeGreaterThan(
+                source.indexOf(expectedImages[index - 1]!)
+            );
+        }
+    });
+    expect(source).toContain("gift.image");
+    expect(source).not.toContain("label={`Gift ${index + 1}`}");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"
