@@ -52,6 +52,7 @@ const editorialCards = [
         tone: "from-[#572c2a] to-[#b47d6d]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
         objectPosition: "center 30%",
+        overlay: "from-black/50 via-black/10 to-transparent",
     },
     {
         title: "Gifts with a story",
@@ -61,6 +62,7 @@ const editorialCards = [
         tone: "from-[#53624d] to-[#9e8b70]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
         objectPosition: "center 45%",
+        overlay: "from-black/70 via-black/15 to-black/5",
     },
     {
         title: "Home for the season",
@@ -70,6 +72,7 @@ const editorialCards = [
         tone: "from-[#3d1714] to-[#7d463d]",
         image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
         objectPosition: "center 55%",
+        overlay: "from-black/50 via-black/10 to-transparent",
     },
 ];
 
@@ -276,7 +279,9 @@ export default async function FestiveHomePage() {
                                 className="object-cover"
                                 style={{ objectPosition: card.objectPosition }}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
+                            <div
+                                className={`absolute inset-0 bg-gradient-to-t ${card.overlay}`}
+                            />
                             <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:justify-center md:px-[7%] md:py-[6%]">
                                 <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
                                     {card.titleLines.map((line) => (
