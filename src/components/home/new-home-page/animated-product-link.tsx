@@ -10,6 +10,7 @@ interface AnimatedProductLinkProps {
     href: string;
     children: ReactNode;
     className?: string;
+    contentClassName?: string;
     target?: string;
     rel?: string;
     prefetch?: boolean;
@@ -22,6 +23,7 @@ export function AnimatedProductLink({
     href,
     children,
     className,
+    contentClassName,
     target,
     rel,
     prefetch,
@@ -33,7 +35,7 @@ export function AnimatedProductLink({
     const isProductHref = href.startsWith("/products/");
     const resolvedTarget = target ?? (isProductHref ? "_blank" : undefined);
     const resolvedRel =
-        resolvedTarget === "_blank" ? rel ?? "noopener noreferrer" : rel;
+        resolvedTarget === "_blank" ? (rel ?? "noopener noreferrer") : rel;
 
     useEffect(() => {
         return () => {
@@ -90,6 +92,7 @@ export function AnimatedProductLink({
             <span
                 className={cn(
                     "relative z-[1] block transition duration-200",
+                    contentClassName,
                     isRedirecting && "opacity-95"
                 )}
             >
@@ -123,7 +126,7 @@ export function AnimatedProductLink({
             <span
                 aria-hidden="true"
                 className={cn(
-                    "pointer-events-none absolute left-1/2 top-1/2 z-[5] flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/92 shadow-md transition duration-200 backdrop-blur-sm",
+                    "bg-white/92 pointer-events-none absolute left-1/2 top-1/2 z-[5] flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 shadow-md backdrop-blur-sm transition duration-200",
                     isRedirecting
                         ? "scale-100 opacity-100"
                         : "scale-90 opacity-0"
