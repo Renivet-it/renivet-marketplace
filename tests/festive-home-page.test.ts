@@ -10,7 +10,6 @@ test("festive home defines the desktop editorial sections and keeps the shared s
     expect(source).toContain("Brands worth discovering");
     expect(source).toContain("Gift by intention");
     expect(source).toContain("heritage-rail.png");
-    expect(source).toContain("pond-peacock.png");
     expect(source).toContain("maroon-arch.png");
     expect(source).toContain("sandstone-arch.png");
     expect(source).toContain("/festive-home");
@@ -34,10 +33,20 @@ test("festive home mirrors the approved desktop section proportions", async () =
     expect(source).toContain('data-festive-section="brand-story"');
     expect(source).toContain('data-festive-section="brands"');
     expect(source).toContain('data-festive-section="gift-intention"');
-    expect(source).toContain("lg:grid-cols-2");
     expect(source).toContain("lg:grid-cols-3");
     expect(source).toContain("lg:grid-cols-6");
     expect(source).toContain("lg:grid-cols-5");
+});
+
+test("festive home starts with the supplied full-width campaign cover", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain(
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxRLtEs1IezOinSmtdvjDw08UlbRkW2MQqNBX"
+    );
+    expect(source).toContain('alt="A more conscious festive season"');
+    expect(source).toContain('data-festive-hero-copy="true"');
+    expect(source).not.toContain('label="Main campaign portrait"');
 });
 
 test("festive home is not obscured by the global guest acquisition popup", async () => {
