@@ -75,6 +75,9 @@ test("festive home maps the desktop editorial images to the referenced cards", a
     expect(source).toContain("objectPosition");
     expect(source).toContain("max-w-[220px]");
     expect(source).toContain("titleLines");
+    expect(source).toContain('data-festive-editorial-frame="true"');
+    expect(source).toContain("max-w-[1050px]");
+    expect(source).toContain("text-[24px]");
 });
 
 test("festive home is not obscured by the global guest acquisition popup", async () => {

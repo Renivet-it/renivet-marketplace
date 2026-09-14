@@ -203,26 +203,29 @@ export default function FestiveHomePage() {
                     </div>
                 </section>
 
-                <div className="relative h-[82px] bg-[#fff9eb]">
-                    <Image
-                        src={`${assetRoot}/sandstone-arch.png`}
-                        alt=""
-                        width={180}
-                        height={100}
-                        className="absolute bottom-0 left-0 w-[170px]"
-                    />
-                    <Image
-                        src={`${assetRoot}/sandstone-arch.png`}
-                        alt=""
-                        width={180}
-                        height={100}
-                        className="absolute bottom-0 right-0 w-[170px] -scale-x-100"
-                    />
+                <div className="bg-[#fff9eb]">
+                    <div className="relative mx-auto h-[82px] w-full max-w-[1050px]">
+                        <Image
+                            src={`${assetRoot}/sandstone-arch.png`}
+                            alt=""
+                            width={180}
+                            height={100}
+                            className="absolute bottom-0 left-0 w-[150px]"
+                        />
+                        <Image
+                            src={`${assetRoot}/sandstone-arch.png`}
+                            alt=""
+                            width={180}
+                            height={100}
+                            className="absolute bottom-0 right-0 w-[150px] -scale-x-100"
+                        />
+                    </div>
                 </div>
 
                 <section
                     data-festive-section="editorial-cards"
-                    className="grid gap-6 px-8 pb-10 lg:grid-cols-3"
+                    data-festive-editorial-frame="true"
+                    className="mx-auto grid w-full max-w-[1050px] gap-6 px-8 pb-10 lg:grid-cols-3"
                 >
                     {editorialCards.map((card, index) => (
                         <Link
@@ -245,7 +248,7 @@ export default function FestiveHomePage() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
                             <div className="absolute inset-0 flex flex-col justify-center px-[7%] py-[6%] text-[#fff8ec]">
-                                <h2 className="max-w-[220px] font-serif text-[clamp(24px,2vw,32px)] leading-[1.08]">
+                                <h2 className="max-w-[220px] font-serif text-[24px] leading-[1.08]">
                                     {card.titleLines.map((line) => (
                                         <span key={line} className="block">
                                             {line}
