@@ -140,6 +140,16 @@ test("festive product admin changes revalidate the festive home collection", asy
     ).toHaveLength(2);
 });
 
+test("brand story uses the supplied campaign artwork", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain("brand-story-women.png");
+    expect(source).toContain("brand-story-men.png");
+    expect(source).toContain('alt="Woman wearing a pink festive saree"');
+    expect(source).toContain('alt="Man wearing festive everyday menswear"');
+    expect(source).toContain("grayscale");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"

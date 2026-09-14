@@ -294,11 +294,15 @@ export default async function FestiveHomePage() {
                     data-festive-section="brand-story"
                     className="grid min-h-[390px] lg:grid-cols-3"
                 >
-                    <ImagePlaceholder
-                        label="Story campaign"
-                        hideLabel
-                        className="min-h-[390px] bg-[#c48d79]"
-                    />
+                    <div className="relative min-h-[390px] overflow-hidden bg-[#c48d79]">
+                        <Image
+                            src={`${assetRoot}/brand-story-women.png`}
+                            alt="Woman wearing a pink festive saree"
+                            fill
+                            sizes="(min-width: 1024px) 33vw, 100vw"
+                            className="object-cover"
+                        />
+                    </div>
                     <div className="flex min-h-[390px] flex-col items-center justify-center bg-[#741f2a] px-12 text-center text-[#fff1dc]">
                         <h2 className="font-serif text-[42px] leading-[0.98]">
                             Celebrate beautifully.
@@ -317,11 +321,15 @@ export default async function FestiveHomePage() {
                             Our story&nbsp; →
                         </Link>
                     </div>
-                    <ImagePlaceholder
-                        label="Artisan campaign"
-                        hideLabel
-                        className="min-h-[390px] bg-[#6e645d] grayscale"
-                    />
+                    <div className="relative min-h-[390px] overflow-hidden bg-[#6e645d]">
+                        <Image
+                            src={`${assetRoot}/brand-story-men.png`}
+                            alt="Man wearing festive everyday menswear"
+                            fill
+                            sizes="(min-width: 1024px) 33vw, 100vw"
+                            className="object-cover grayscale"
+                        />
+                    </div>
                 </section>
 
                 <section data-festive-section="brands" className="px-8 py-9">
