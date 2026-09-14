@@ -29,7 +29,8 @@ export function FestiveProductCarousel({
             <div className="grid grid-cols-[145px_minmax(0,1fr)] items-start gap-2.5 md:grid-cols-[224px_minmax(0,1fr)] md:gap-5">
                 <div className="flex shrink-0 flex-col overflow-hidden">
                     <Link
-                        href="/shop"
+                        href="/festive"
+                        data-festive-edit-view-all="true"
                         className="relative block overflow-hidden transition-transform duration-300 hover:scale-[1.01]"
                     >
                         <Image

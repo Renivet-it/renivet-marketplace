@@ -168,6 +168,18 @@ test("festive edit keeps its curation panel beside the swipeable products on mob
     expect(carousel).toContain("bg-[#eef0d6]");
 });
 
+test("festive campaign navigation uses the catalogue and about routes", async () => {
+    const source = await Bun.file(pagePath).text();
+    const carousel = await Bun.file(
+        "src/components/festive-home/festive-product-carousel.tsx"
+    ).text();
+
+    expect(carousel).toContain('data-festive-edit-view-all="true"');
+    expect(carousel).toContain('href="/festive"');
+    expect(source).toContain('data-festive-our-story="true"');
+    expect(source).toContain('href="/about"');
+});
+
 test("festive product images fill a positioned wrapper instead of a zero-height link", async () => {
     const productCard = await Bun.file(
         "src/components/globals/cards/product.tsx"

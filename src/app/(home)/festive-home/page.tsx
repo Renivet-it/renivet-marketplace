@@ -345,6 +345,7 @@ export default async function FestiveHomePage() {
                         </p>
                         <Link
                             href="/about"
+                            data-festive-our-story="true"
                             className="mt-7 border border-white/55 px-7 py-3 text-[9px] uppercase tracking-[0.18em]"
                         >
                             Our story&nbsp; →
