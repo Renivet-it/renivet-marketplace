@@ -49,6 +49,17 @@ test("festive home starts with the supplied full-width campaign cover", async ()
     expect(source).not.toContain('label="Main campaign portrait"');
 });
 
+test("festive home uses the supplied portrait campaign cover on mobile", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain(
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNboUTcKuZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+    );
+    expect(source).toContain('data-festive-mobile-cover="true"');
+    expect(source).toContain("Better");
+    expect(source).toContain("Choices");
+});
+
 test("festive home is not obscured by the global guest acquisition popup", async () => {
     const popup = await Bun.file(
         "src/components/globals/modals/guest-add-to-cart-popup.tsx"

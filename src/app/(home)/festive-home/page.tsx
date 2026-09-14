@@ -104,6 +104,7 @@ export default function FestiveHomePage() {
                     data-festive-section="hero"
                     className="relative w-full overflow-hidden bg-[#542313]"
                 >
+                    <h1 className="sr-only">A more conscious festive season</h1>
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxRLtEs1IezOinSmtdvjDw08UlbRkW2MQqNBX"
                         alt="A more conscious festive season"
@@ -111,19 +112,19 @@ export default function FestiveHomePage() {
                         height={740}
                         priority
                         sizes="(min-width: 1600px) 1600px, 100vw"
-                        className="block h-auto w-full"
+                        className="hidden h-auto w-full md:block"
                     />
                     <div
                         data-festive-hero-copy="true"
-                        className="absolute bottom-0 left-[7.7%] flex h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center rounded-t-[48%] border-[4px] border-[#b85609] bg-[#fff8e9] px-[4%] text-center shadow-[0_0_0_2px_rgba(67,27,8,0.55)]"
+                        className="absolute bottom-0 left-[7.7%] hidden h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center rounded-t-[48%] border-[4px] border-[#b85609] bg-[#fff8e9] px-[4%] text-center shadow-[0_0_0_2px_rgba(67,27,8,0.55)] md:flex"
                     >
-                        <h1 className="font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
+                        <div className="font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
                             A more
                             <br />
                             <em>conscious</em>
                             <br />
                             festive season
-                        </h1>
+                        </div>
                         <p className="mt-[8%] max-w-[310px] text-[clamp(8px,0.76vw,12px)] leading-relaxed text-[#75675d]">
                             Thoughtfully chosen fashion, home &amp; beauty for
                             every celebration.
@@ -145,6 +146,51 @@ export default function FestiveHomePage() {
                             height={100}
                             className="absolute bottom-0 right-[-8%] w-[38%]"
                         />
+                    </div>
+
+                    <div
+                        data-festive-mobile-cover="true"
+                        className="relative md:hidden"
+                    >
+                        <Image
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNboUTcKuZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+                            alt="A more conscious festive season"
+                            width={1024}
+                            height={1536}
+                            priority
+                            sizes="100vw"
+                            className="block h-auto w-full"
+                        />
+                        <div className="absolute bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col justify-center rounded-t-[48%] border-2 border-[#aa4d09] bg-[#fff8e9]/85 px-4 text-left shadow-[0_0_0_1px_rgba(67,27,8,0.45)] backdrop-blur-[1px]">
+                            <div className="font-serif text-[clamp(24px,7.4vw,31px)] leading-[1.05] tracking-[-0.025em] text-[#30221c]">
+                                A more
+                                <br />
+                                <em>conscious</em>
+                                <br />
+                                festive season
+                            </div>
+                            <p className="mt-5 text-[9px] leading-[1.45] text-[#4f443c]">
+                                Thoughtfully chosen fashion, home &amp; beauty
+                                for every celebration.
+                            </p>
+                            <Link
+                                href="/shop"
+                                className="mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
+                            >
+                                Shop the edit&nbsp; →
+                            </Link>
+                            <Image
+                                src={`${assetRoot}/pond-peacock.png`}
+                                alt=""
+                                width={280}
+                                height={100}
+                                className="absolute bottom-0 right-[-8%] w-[45%]"
+                            />
+                        </div>
+                        <p className="absolute inset-x-[9%] bottom-[5.5%] border-t border-[#f5e5ca]/80 pt-3 text-center text-[7px] uppercase tracking-[0.34em] text-[#fff4df]">
+                            People&nbsp; | &nbsp;Planet&nbsp; | &nbsp;Better
+                            Choices
+                        </p>
                     </div>
                 </section>
 
