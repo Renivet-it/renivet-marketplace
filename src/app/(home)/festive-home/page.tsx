@@ -371,14 +371,14 @@ export default async function FestiveHomePage() {
 
                 <div
                     data-festive-heritage-divider="true"
-                    className="flex min-h-[62px] items-center md:min-h-[132px] md:px-8"
+                    className="flex min-h-[62px] items-center justify-center md:min-h-[132px]"
                 >
                     <Image
                         src={`${assetRoot}/heritage-rail.png`}
                         alt=""
                         width={1600}
                         height={120}
-                        className="h-[38px] w-full object-cover md:h-[64px] md:object-contain"
+                        className="h-[38px] w-full object-cover md:h-[64px] md:w-[94%] md:object-contain"
                     />
                 </div>
 
