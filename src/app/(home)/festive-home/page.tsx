@@ -464,6 +464,11 @@ export default async function FestiveHomePage() {
                         </div>
                     ))}
                 </section>
+                <div
+                    data-festive-bottom-spacer="true"
+                    className="h-12 md:h-20"
+                    aria-hidden
+                />
             </main>
         </div>
     );
