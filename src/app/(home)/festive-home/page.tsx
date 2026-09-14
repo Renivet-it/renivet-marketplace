@@ -17,18 +17,21 @@ const editorialCards = [
         copy: "Thoughtfully chosen festive wear.",
         action: "Shop apparel",
         tone: "from-[#572c2a] to-[#b47d6d]",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
     },
     {
         title: "Gifts with a story",
         copy: "Made with care, meant to be remembered.",
         action: "Explore gifts",
         tone: "from-[#53624d] to-[#9e8b70]",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
     },
     {
         title: "Home for the season",
         copy: "Create warmth around every ritual.",
         action: "Shop home",
         tone: "from-[#3d1714] to-[#7d463d]",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
     },
 ];
 
@@ -224,11 +227,16 @@ export default function FestiveHomePage() {
                             <ImagePlaceholder
                                 label={`Editorial ${index + 1}`}
                                 hideLabel
-                                className="absolute inset-0 h-full"
+                                className="absolute inset-0 h-full md:hidden"
                             />
-                            <div
-                                className={`absolute inset-0 bg-gradient-to-r ${card.tone} opacity-70`}
+                            <Image
+                                src={card.image}
+                                alt=""
+                                fill
+                                sizes="(min-width: 1024px) 32vw, 100vw"
+                                className="hidden object-cover md:block"
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/5" />
                             <div className="relative flex min-h-[250px] flex-col justify-center p-9 text-[#fff8ec]">
                                 <h2 className="font-serif text-[36px] leading-none">
                                     {card.title}
