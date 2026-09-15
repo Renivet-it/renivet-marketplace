@@ -674,8 +674,8 @@ implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: main
-    base_commit: "a592e86f0ecdfe36e27f1fa538fa1996d018af81"
-    head_commit: "2bb867f25cec5b11187445a6b68a335e5e5c9c74"
+    base_commit: "a10b6c59b6f728278e4baeefe792e1be626e089f"
+    head_commit: "d96e08ddcd620e3b4bc190c41419bba1c465e1bd"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -691,7 +691,7 @@ implementation_review:
         - "REV-221-005: Attach three-real-product-type staging, UTM, observability, and rollback evidence before permanent-mode rollout."
         - "REV-221-006: Track unrelated repository-wide test and type-check baseline failures separately."
     evidence:
-        - "Compared the approved REN-221 contract with the complete base-to-head diff from a592e86f0ecdfe36e27f1fa538fa1996d018af81 to 2bb867f25cec5b11187445a6b68a335e5e5c9c74."
+        - "Compared the approved REN-221 contract with the complete base-to-head diff from a10b6c59b6f728278e4baeefe792e1be626e089f to d96e08ddcd620e3b4bc190c41419bba1c465e1bd."
         - "Inspected slug routing, redirect eligibility and status, bounded lookup, hierarchy enforcement, metadata/H1/editorial rendering, category mutation safety, telemetry, and all required link producers."
         - "Focused REN-221, SEO heading, search, and sitemap tests passed before REVIEW; REVIEW did not execute application tests."
         - "Repository-wide checks retain unrelated baseline failures; filtered REN-221 TypeScript paths contain no errors."
