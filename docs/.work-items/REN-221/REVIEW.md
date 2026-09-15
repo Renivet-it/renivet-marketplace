@@ -2,11 +2,11 @@
 
 ## Executive Result
 
-REVIEW_PASSED_WITH_FINDINGS with NO_DRIFT. Base and head are both `a592e86f0ecdfe36e27f1fa538fa1996d018af81`; the reviewed implementation is currently uncommitted in the working tree. Governance re-entry is not required.
+REVIEW_PASSED_WITH_FINDINGS with NO_DRIFT. Base is `a592e86f0ecdfe36e27f1fa538fa1996d018af81` and the reviewed implementation head is `2bb867f25cec5b11187445a6b68a335e5e5c9c74`. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
-Reviewed the approved REN-221 contract against the complete working-tree diff from `origin/master` on branch `feat/ren-221`. Scope includes the slug route, legacy middleware redirect, internal lookup endpoint, category URL/content/telemetry helpers, catalog integration, category mutations, navigation/search/home links, breadcrumbs, metadata, and task-focused tests. No PR URL exists.
+Reviewed the approved REN-221 contract against the complete base-to-head diff from `origin/master` on branch `feat/ren-221`. Scope includes the slug route, legacy middleware redirect, internal lookup endpoint, category URL/content/telemetry helpers, catalog integration, category mutations, navigation/search/home links, breadcrumbs, metadata, and task-focused tests. No PR URL exists.
 
 ## Requirement Reconciliation
 
