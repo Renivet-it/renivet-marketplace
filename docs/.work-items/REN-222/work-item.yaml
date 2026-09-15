@@ -1,0 +1,105 @@
+schema_version: "1.0"
+task:
+    id: REN-222
+    title: "[SEO][P2] Improve Product Slug Generation"
+    source: linear
+    branch: ayanganguly333/ren-222-seop2-improve-product-slug-generation
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-222, priority: Medium, labels: [tech-debt], status: Backlog, assignee: Ayan Ganguly, project: Renivet - SEO & Organic Growth Program, milestone: Workstream C - Architecture }
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons: [Shared creation helper affects direct and bulk brand flows; slug uniqueness and concurrent creation must preserve existing URL data and authorization boundaries.]
+    escalation_history: [L1 -> L2: shared helper, two creation paths, unique constraint, and concurrent collision behavior require dependency-spanning design.]
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-222 and comments, generateProductSlug implementation, direct brand product creation, bulk/import brand product creation, general product-review bulk creation, products.slug unique constraint, product slug lookup and canonical consumers, existing SEO audit evidence]
+    excluded_areas: [Existing slug rewrite or backfill, migrations, redirects, search/display changes, analytics, sitemap behavior, product authorization redesign]
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: []
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions: [new_product_input -> base_slug_candidate -> unique_slug_persisted, collision_or_unique_conflict -> deterministic_suffix_or_safe_failure]
+    uncertainties: [The existing bulk route performs updates before its new-product insert; implementation must keep slug retry local to the insert transaction so unrelated side effects are not replayed.]
+dependencies:
+    - { id: DEP-001, name: Direct brand creation flow, purpose: Generate slugs for newly created products, description: src/lib/trpc/routes/brands/products.ts createProduct path, status: resolved }
+    - { id: DEP-002, name: Bulk/import brand creation flow, purpose: Generate slugs for new products in bulk operations, description: src/lib/trpc/routes/brands/products.ts bulk/import paths, status: resolved }
+    - { id: DEP-003, name: Product slug uniqueness, purpose: Prevent duplicate persisted slugs, description: products.slug has a database unique constraint and product lookup uses slug, status: resolved }
+    - { id: DEP-004, name: General product-review bulk creation, purpose: Cover the third active generateProductSlug call site, description: src/lib/trpc/routes/general/product-review.ts addBulkProducts path, status: resolved }
+integrations: []
+personas:
+    - { id: PER-001, role: brand_operator, applicability: Creates products through direct and bulk brand workflows and needs reliable product creation. }
+    - { id: PER-002, role: shopper, applicability: Depends on existing product URLs continuing to resolve without change. }
+security_boundaries:
+    - { id: SEC-001, description: Preserve existing authentication, authorization, and brand ownership checks at every product creation call site. }
+    - { id: SEC-002, description: Slugs may contain public brand/title data only; do not derive them from private fields or expose internal identifiers unnecessarily. }
+business_rules:
+    - { id: BR-001, description: Existing product slugs are immutable within REN-222, source: Linear REN-222 approved requirements }
+    - { id: BR-002, description: A database uniqueness constraint remains authoritative if application-level collision selection races, source: products schema and Linear acceptance criteria }
+decisions:
+    - { id: DEC-001, question: How should a base-slug collision be disambiguated?, class: AUTO_DECIDE, status: decided, recommendation: Try the base first, then the first available bounded numeric suffix -2 through -100; reserve repeated bases in deterministic input order within a bulk request, and retry only the insert transaction after a unique conflict, basis: Linear requires a short stable suffix and the existing products.slug unique index is authoritative, confidence: high, consequence: medium, human_confirmation_required: false, confirmation_source: REN-222 }
+    - { id: DEC-002, question: Should existing slugs be rewritten?, class: AUTO_DECIDE, status: decided, recommendation: No; limit behavior to newly created products, basis: Linear explicitly excludes retroactive rewrites and redirects, confidence: high, consequence: low, human_confirmation_required: false, confirmation_source: REN-222 }
+requirements:
+    - { id: REQ-001, description: New product slugs use a normalized brand-title base without timestamp or random noise in the no-collision case, type: explicit }
+    - { id: REQ-002, description: A base collision receives a short stable disambiguator and never the legacy timestamp-plus-random pattern, type: explicit }
+    - { id: REQ-003, description: Direct brand, brand bulk/import, and general product-review bulk creation paths use collision-safe slug generation consistently, type: explicit }
+    - { id: REQ-004, description: Existing product rows and URLs remain unchanged and continue to resolve, type: explicit }
+    - { id: REQ-005, description: Concurrent collisions cannot persist duplicate slugs and have an explicit safe retry or error outcome, type: inferred }
+    - { id: REQ-006, description: Existing authentication, authorization, brand ownership, product creation, and indexed lookup behavior remain intact, type: compatibility }
+    - { id: REQ-007, description: Empty/short normalized bases, Unicode normalization, maximum length, repeated bulk bases, occupied suffixes, and exhausted suffixes have explicit validation and failure behavior, type: inferred }
+    - { id: REQ-008, description: Collision retries are bounded, scoped to slug persistence, and observable without logging sensitive product data, type: inferred }
+scenarios:
+    - { id: SCN-001, description: Create a new product whose normalized brand-title base is unused and persist the clean base slug, requirement_ids: [REQ-001, REQ-003] }
+    - { id: SCN-002, description: Create two products with the same normalized base and persist distinct readable slugs with a short stable suffix for the collision, requirement_ids: [REQ-002, REQ-003] }
+    - { id: SCN-003, description: Exercise simultaneous creation attempts for the same base and verify uniqueness is preserved through bounded retry or a safe surfaced failure, requirement_ids: [REQ-005] }
+    - { id: SCN-004, description: Load representative existing products before and after the change and verify stored slugs, product URLs, and slug lookups are unchanged, requirement_ids: [REQ-004] }
+    - { id: SCN-005, description: Exercise direct, brand bulk/import, and general product-review bulk creation under existing authorization and validation rules, requirement_ids: [REQ-003, REQ-006] }
+    - { id: SCN-006, description: Exercise empty/short bases, Unicode/diacritics, long titles, repeated bases in one batch, occupied suffixes, and bounded suffix exhaustion, requirement_ids: [REQ-007] }
+    - { id: SCN-007, description: Force a database unique conflict during creation and verify only the slug insert attempt retries, with redacted collision/retry telemetry and a safe terminal error, requirement_ids: [REQ-008] }
+invariants:
+    - { id: INV-001, description: Every persisted product slug is unique and non-empty, including collision and concurrent paths. }
+    - { id: INV-002, description: REN-222 never mutates an existing product slug or requires a redirect for an existing product URL. }
+    - { id: INV-003, description: Slug generation cannot bypass existing product creation authentication, authorization, validation, or brand ownership checks. }
+    - { id: INV-004, description: Collision retry never repeats unrelated writes or emits private product fields in logs or errors. }
+flows:
+    - { id: FLOW-001, description: Product input -> normalized base candidate -> indexed existence/insert attempt -> deterministic suffix retry when needed -> persisted unique slug, state_transitions: [new_product_input -> unique_slug_persisted] }
+    - { id: FLOW-002, description: Existing product request -> existing stored slug -> unchanged product lookup and canonical URL, state_transitions: [existing_slug -> unchanged] }
+    - { id: FLOW-003, description: Bulk input -> deterministic per-batch candidate reservation -> one insert transaction -> local unique-conflict retry -> all-or-nothing success or safe failure, state_transitions: [bulk_input -> batch_insert -> unique_slug_persisted_or_safe_failure] }
+test_expectations:
+    - { id: TEXP-001, category: unit, classification: REQUIRED, reason: Prove clean base generation, normalization, and absence of legacy timestamp/random output, scenarios: [SCN-001] }
+    - { id: TEXP-002, category: unit, classification: REQUIRED, reason: Prove collision suffix is short, stable, readable, and distinct, scenarios: [SCN-002] }
+    - { id: TEXP-003, category: integration, classification: REQUIRED, reason: Prove direct and bulk/import creation paths persist valid slugs without changing their existing behavior, scenarios: [SCN-005] }
+    - { id: TEXP-004, category: regression, classification: REQUIRED, reason: Prove existing rows and URL lookup behavior are untouched and no migration/backfill occurs, scenarios: [SCN-004] }
+    - { id: TEXP-005, category: e2e, classification: REQUIRED, reason: Prove concurrent collision handling respects the database unique constraint and gives a bounded safe outcome, scenarios: [SCN-003] }
+    - { id: TEXP-006, category: security, classification: REQUIRED, reason: Prove existing auth, authorization, and brand ownership checks remain enforced, scenarios: [SCN-005] }
+    - { id: TEXP-007, category: unit, classification: REQUIRED, reason: Prove normalization, length, repeated-base ordering, occupied suffixes, and bounded exhaustion behavior, scenarios: [SCN-006] }
+    - { id: TEXP-008, category: exploratory, classification: REQUIRED, reason: Prove retries and exhaustion are distinguishable from validation failures without sensitive fields, scenarios: [SCN-007] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: Sagan, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [{ id: CRIT-001, severity: DESIGN_BLOCKER, status: addressed, summary: Exact suffix algorithm and identity were unspecified. }, { id: CRIT-002, severity: DESIGN_BLOCKER, status: addressed, summary: Bulk retry transaction semantics were unspecified. }, { id: CRIT-003, severity: MAJOR, status: addressed, summary: General product-review creation call site was missing. }, { id: CRIT-004, severity: MAJOR, status: addressed, summary: Slug edge cases were underspecified. }, { id: CRIT-005, severity: MINOR, status: addressed, summary: Public-safe suffix source was underspecified. }, { id: CRIT-006, severity: MINOR, status: addressed, summary: Retry observability was missing. }] }
+approval: { state: APPROVED, design_blockers: [], approved_by: User request in conversation on 2026-09-16 after independent critic review }
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-002, SCN-005] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-003] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-005] }
+        - { requirement_id: REQ-007, scenario_ids: [SCN-006] }
+        - { requirement_id: REQ-008, scenario_ids: [SCN-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-001, INV-004] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003, TEXP-006] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-007] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-005, TEXP-008] }
