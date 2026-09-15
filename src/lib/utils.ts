@@ -490,10 +490,22 @@ export function normalizeBrandName(value: string | null | undefined) {
         .replace(/\bThe\b/g, "The");
 }
 
+export const PRODUCT_SLUG_MAX_SUFFIX = 100;
+
 export function generateProductSlug(productName: string, brandName: string) {
-    return slugify(
-        `${brandName} ${productName} ${Date.now()} ${Math.random().toString(36).substring(7)}`
-    );
+    return slugify(`${brandName} ${productName}`);
+}
+
+export function generateProductSlugCandidate(baseSlug: string, suffix: number) {
+    if (baseSlug.length < 3) {
+        throw new Error("Product slug base must contain at least 3 characters");
+    }
+
+    if (!Number.isInteger(suffix) || suffix < 1) {
+        throw new Error("Product slug suffix must be a positive integer");
+    }
+
+    return suffix === 1 ? baseSlug : `${baseSlug}-${suffix}`;
 }
 
 export function calculateTotalPrice(prices: number[]) {
