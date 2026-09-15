@@ -72,6 +72,36 @@ test("festive home uses the supplied portrait campaign cover on mobile", async (
     expect(source).toContain("Choices");
 });
 
+test("festive hero uses the supplied responsive arch silhouettes", async () => {
+    const source = await Bun.file(pagePath).text();
+    const desktopShape = await Bun.file(
+        "public/assets/festive-home/hero-shape-desktop.svg"
+    ).text();
+    const mobileShape = await Bun.file(
+        "public/assets/festive-home/hero-shape-mobile.svg"
+    ).text();
+
+    expect(source).toContain('data-festive-hero-shape="desktop"');
+    expect(desktopShape).toContain('viewBox="0 0 537 578"');
+    expect(desktopShape).toContain(
+        "M268.637 4.70801C269.027 5.01484 269.477 5.39681"
+    );
+    expect(source).toContain('data-festive-hero-shape="mobile"');
+    expect(mobileShape).toContain('viewBox="0 0 208 322"');
+    expect(mobileShape).toContain(
+        "M188.922 73.9707C189.165 74.893 189.274 75.7994"
+    );
+    expect(source).not.toContain("rounded-t-[48%]");
+});
+
+test("festive mobile hero keeps its arch position and centers its content", async () => {
+    const source = await Bun.file(pagePath).text();
+
+    expect(source).toContain(
+        'bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center'
+    );
+});
+
 test("festive hero shop-the-edit actions open the festive catalogue", async () => {
     const source = await Bun.file(pagePath).text();
     const heroCtas = source.match(/data-festive-hero-cta="true"/g) ?? [];
@@ -83,17 +113,27 @@ test("festive hero shop-the-edit actions open the festive catalogue", async () =
 
 test("festive home maps the desktop editorial images to the referenced cards", async () => {
     const source = await Bun.file(pagePath).text();
-    const urls = [
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
-    ];
+    const editorialImages = source.match(
+        /image: "https:\/\/4o4vm2cu6g\.ufs\.sh\/f\/[^"]+"/g
+    );
 
-    const positions = urls.map((url) => source.indexOf(url));
-    expect(positions.every((position) => position >= 0)).toBe(true);
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(editorialImages).toHaveLength(3);
+    expect(new Set(editorialImages).size).toBe(3);
+    expect(source).toContain(
+        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap\""
+    );
+    expect(source).toContain(
+        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA\""
+    );
+    expect(source).toContain(
+        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl\""
+    );
+    expect(source.match(/desktopImage: \"https:\/\/4o4vm2cu6g\.ufs\.sh\/f\//g)).toHaveLength(3);
     expect(source).toContain("aspect-[1.75]");
     expect(source).toContain("objectPosition");
+    expect(source).toContain(
+        "absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:hidden"
+    );
     expect(source).toContain("max-w-[220px]");
     expect(source).toContain("titleLines");
     expect(source).toContain(

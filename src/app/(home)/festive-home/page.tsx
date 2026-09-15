@@ -51,7 +51,8 @@ const editorialCards = [
         action: "Shop apparel",
         href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
         tone: "from-[#572c2a] to-[#b47d6d]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNm2vhhBZNpGL6AgslOfF3vz5Wa1NUerQXMBIP",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQwOnMhg0rgXZuWwadPABUqnljV5RbJMFsx1",
+        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap",
         objectPosition: "center 30%",
         overlay: "from-black/50 via-black/10 to-transparent",
     },
@@ -62,7 +63,8 @@ const editorialCards = [
         action: "Explore gifts",
         href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
         tone: "from-[#53624d] to-[#9e8b70]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrXG4iwzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoMBQif0WvnGEidmOVIP6xXt4S7befYUykMJq",
+        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA",
         objectPosition: "center 45%",
         overlay: "from-black/70 via-black/15 to-black/5",
     },
@@ -73,7 +75,8 @@ const editorialCards = [
         action: "Shop home",
         href: "/festive?subCategoryId=cd98e50e-02d6-4bc4-bc1e-7b0ba5b6dd0e",
         tone: "from-[#3d1714] to-[#7d463d]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKP6iPRoXWY4M9GmONJv38rnKquVZUx0pjkQE",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2dYwWpMQOYTpvrXwqtZHon4P85jVxyMmDkf3",
+        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl",
         objectPosition: "center 55%",
         overlay: "from-black/50 via-black/10 to-transparent",
     },
@@ -185,27 +188,36 @@ export default async function FestiveHomePage() {
                     />
                     <div
                         data-festive-hero-copy="true"
-                        className="absolute bottom-0 left-[7.7%] hidden h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center rounded-t-[48%] border-[4px] border-[#b85609] bg-[#fff8e9] px-[4%] text-center shadow-[0_0_0_2px_rgba(67,27,8,0.55)] md:flex"
+                        className="absolute bottom-0 left-[7.7%] hidden h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center px-[4%] text-center md:flex"
                     >
-                        <div className="font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
+                        <Image
+                            src={`${assetRoot}/hero-shape-desktop.svg`}
+                            alt=""
+                            fill
+                            sizes="(min-width: 1600px) 530px, 35vw"
+                            data-festive-hero-shape="desktop"
+                            className="pointer-events-none object-fill"
+                            aria-hidden
+                        />
+                        <div className="relative font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
                             A more
                             <br />
                             <em>conscious</em>
                             <br />
                             festive season
                         </div>
-                        <p className="mt-[8%] max-w-[310px] text-[clamp(8px,0.76vw,12px)] leading-relaxed text-[#75675d]">
+                        <p className="relative mt-[8%] max-w-[310px] text-[clamp(8px,0.76vw,12px)] leading-relaxed text-[#75675d]">
                             Thoughtfully chosen fashion, home &amp; beauty for
                             every celebration.
                         </p>
                         <Link
                             href="/festive"
                             data-festive-hero-cta="true"
-                            className="mt-[5%] bg-[#26321c] px-7 py-3 text-[clamp(7px,0.58vw,9px)] font-semibold uppercase tracking-[0.18em] text-white"
+                            className="relative mt-[5%] bg-[#26321c] px-7 py-3 text-[clamp(7px,0.58vw,9px)] font-semibold uppercase tracking-[0.18em] text-white"
                         >
                             Shop the edit&nbsp; →
                         </Link>
-                        <p className="mt-[7%] text-[clamp(6px,0.5vw,8px)] uppercase tracking-[0.42em] text-[#6f6258]">
+                        <p className="relative mt-[7%] text-[clamp(6px,0.5vw,8px)] uppercase tracking-[0.42em] text-[#6f6258]">
                             People&nbsp; | &nbsp;Planet&nbsp; |
                             &nbsp;Sustainability
                         </p>
@@ -214,7 +226,7 @@ export default async function FestiveHomePage() {
                             alt=""
                             width={280}
                             height={100}
-                            className="absolute bottom-0 right-[-8%] w-[38%]"
+                            className="absolute bottom-0 right-[-8%] z-10 w-[38%]"
                         />
                     </div>
 
@@ -231,22 +243,31 @@ export default async function FestiveHomePage() {
                             sizes="100vw"
                             className="block h-auto w-full"
                         />
-                        <div className="absolute bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col justify-center rounded-t-[48%] border-2 border-[#aa4d09] bg-[#fff8e9]/85 px-4 text-left shadow-[0_0_0_1px_rgba(67,27,8,0.45)] backdrop-blur-[1px]">
-                            <div className="font-serif text-[clamp(24px,7.4vw,31px)] leading-[1.05] tracking-[-0.025em] text-[#30221c]">
+                        <div className="absolute bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center">
+                            <Image
+                                src={`${assetRoot}/hero-shape-mobile.svg`}
+                                alt=""
+                                fill
+                                sizes="53vw"
+                                data-festive-hero-shape="mobile"
+                                className="pointer-events-none object-fill"
+                                aria-hidden
+                            />
+                            <div className="relative font-serif text-[clamp(24px,7.4vw,31px)] leading-[1.05] tracking-[-0.025em] text-[#30221c]">
                                 A more
                                 <br />
                                 <em>conscious</em>
                                 <br />
                                 festive season
                             </div>
-                            <p className="mt-5 text-[9px] leading-[1.45] text-[#4f443c]">
+                            <p className="relative mt-5 text-[9px] leading-[1.45] text-[#4f443c]">
                                 Thoughtfully chosen fashion, home &amp; beauty
                                 for every celebration.
                             </p>
                             <Link
                                 href="/festive"
                                 data-festive-hero-cta="true"
-                                className="mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
+                                className="relative mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
                             >
                                 Shop the edit&nbsp; →
                             </Link>
@@ -255,7 +276,7 @@ export default async function FestiveHomePage() {
                                 alt=""
                                 width={280}
                                 height={100}
-                                className="absolute bottom-0 right-[-8%] w-[45%]"
+                                className="absolute bottom-0 right-[-8%] z-10 w-[45%]"
                             />
                         </div>
                         <p className="absolute inset-x-[9%] bottom-[5.5%] border-t border-[#f5e5ca]/80 pt-3 text-center text-[7px] uppercase tracking-[0.34em] text-[#fff4df]">
@@ -301,13 +322,22 @@ export default async function FestiveHomePage() {
                                 alt=""
                                 fill
                                 sizes="(min-width: 1024px) 32vw, calc(100vw - 24px)"
-                                className="object-cover"
+                                className="object-cover md:hidden"
+                                style={{ objectPosition: card.objectPosition }}
+                            />
+                            <Image
+                                data-festive-editorial-image="true"
+                                src={card.desktopImage}
+                                alt=""
+                                fill
+                                sizes="(min-width: 1024px) 32vw, 0px"
+                                className="hidden object-cover md:block"
                                 style={{ objectPosition: card.objectPosition }}
                             />
                             <div
                                 className={`absolute inset-0 bg-gradient-to-t ${card.overlay}`}
                             />
-                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:justify-center md:px-[7%] md:py-[6%]">
+                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:hidden">
                                 <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
                                     {card.titleLines.map((line) => (
                                         <span key={line} className="block">
