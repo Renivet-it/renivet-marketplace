@@ -126,21 +126,21 @@ export function MobileCategories() {
             subtitle: "Elegant ethnic styles for every occasion.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNzQ7NO8wvAfHxUCD4uo0de9jTMakKRhw8ctYL",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09&productTypeId=0f13d48d-50de-43ec-8bab-a7bfbbcf8773",
+            link: "/shop/women?subCategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09&productTypeId=0f13d48d-50de-43ec-8bab-a7bfbbcf8773",
         },
         {
             title: "Western Wear",
             subtitle: "Modern and comfortable everyday fashion.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhPFJaWb4imNMJ6l9SbIRxWLcDyX3vTqk2UV",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=f050d1bc-f435-45fc-ac22-47942a4d4a74",
+            link: "/shop/women?subCategoryId=f050d1bc-f435-45fc-ac22-47942a4d4a74",
         },
         {
             title: "Footwear",
             subtitle: "Step out in style with premium quality.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8g1QARjj1qpSPZJEOTHVgaenl2yArM78zCkm",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
+            link: "/shop/women?subCategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
         },
 
         {
@@ -148,28 +148,28 @@ export function MobileCategories() {
             subtitle: "Classic cuts and contemporary designs.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvWCA90dPZsh5fuDbkAelMyqICmp3NU7X4nHY",
-            link: "https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02&subcategoryId=7f1e41e3-e7a9-46ef-aaf6-f0e0a37a971d&productTypeId=e027b0df-5287-4114-849d-1f3bfc05e594",
+            link: "/shop/men?subCategoryId=7f1e41e3-e7a9-46ef-aaf6-f0e0a37a971d&productTypeId=e027b0df-5287-4114-849d-1f3bfc05e594",
         },
         {
             title: "Accessories",
             subtitle: "Buy Any 2, Get 15% Off. The perfect finish.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNawKqqt9B8YEoL1wGJl0ZibnpvNAMuVzCFqKc",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=32674fe3-d167-4b48-914b-0819b17a2292",
+            link: "/shop/women?subCategoryId=32674fe3-d167-4b48-914b-0819b17a2292",
         },
         {
             title: "Home Decor",
             subtitle: "Beautiful pieces for your personal space.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNeqhEsg0rgXZuWwadPABUqnljV5RbJMFsx1v",
-            link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+            link: "/shop/home-and-living",
         },
         {
             title: "Kids",
             subtitle: "Comfortable and cute outfits.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgHih7umPpnZoHc5f2E4rFNLugdK3ty9ObjY",
-            link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
+            link: "/shop/beauty-and-personal-care",
         },
         {
             title: "Sale",

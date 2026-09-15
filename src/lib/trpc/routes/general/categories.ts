@@ -237,23 +237,14 @@ export const categoriesRouter = createTRPCRouter({
             const { queries } = ctx;
             const { id, data } = input;
 
-            const existingCategory = categoryCache.get(id);
+            const existingCategory = await categoryCache.get(id);
             if (!existingCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Category not found",
                 });
 
-            const slug = slugify(data.name);
-
-            const existingOtherCategory =
-                await queries.categories.getOtherCategory(slug, id);
-            if (existingOtherCategory)
-                throw new TRPCError({
-                    code: "CONFLICT",
-                    message:
-                        "Another category with the same name already exists",
-                });
+            const slug = existingCategory.slug;
 
             const [updatedCategory] = await Promise.all([
                 queries.categories.updateCategory(id, {
@@ -282,6 +273,26 @@ export const categoriesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Category not found",
                 });
+
+            const blockers = await queries.categories.getDeletionBlockers(id);
+            if (
+                existingCategory.slug ||
+                blockers.subCategoryCount > 0 ||
+                blockers.productCount > 0
+            ) {
+                console.info(
+                    JSON.stringify({
+                        event: "category_delete_blocked",
+                        categoryId: id,
+                        reason: "published_category_has_references",
+                    })
+                );
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message:
+                        "Published categories with a slug, products, or subcategories cannot be deleted.",
+                });
+            }
 
             await Promise.all([
                 queries.categories.deleteCategory(id),

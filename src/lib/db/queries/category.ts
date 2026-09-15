@@ -1,7 +1,7 @@
 import { CreateCategory, UpdateCategory } from "@/lib/validations";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "..";
-import { categories } from "../schema";
+import { categories, products, subCategories } from "../schema";
 
 class CategoryQuery {
     async getCount() {
@@ -88,6 +88,14 @@ class CategoryQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async getDeletionBlockers(id: string) {
+        const [subCategoryCount, productCount] = await Promise.all([
+            db.$count(subCategories, eq(subCategories.categoryId, id)),
+            db.$count(products, eq(products.categoryId, id)),
+        ]);
+        return { subCategoryCount, productCount };
     }
 }
 

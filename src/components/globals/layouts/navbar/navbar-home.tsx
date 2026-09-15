@@ -25,6 +25,7 @@ import { ProductSearch } from "@/components/ui/product-search";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+import { buildCategoryUrl } from "@/lib/shop/category-url";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -257,11 +258,14 @@ export function NavbarHome({
     );
 
     const handleNavigate = (
-        categoryId: string,
+        categorySlug: string,
         subcategoryId: string,
         productTypeId: string
     ) => {
-        return `/shop?categoryId=${categoryId}&subcategoryId=${subcategoryId}&productTypeId=${productTypeId}`;
+        return buildCategoryUrl(categorySlug, {
+            subCategoryId: subcategoryId,
+            productTypeId,
+        });
     };
 
     const cartCount = user
@@ -465,7 +469,7 @@ export function NavbarHome({
                                                                         className="space-y-2"
                                                                     >
                                                                         <Link
-                                                                            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                                            href={buildCategoryUrl(category.slug, { subCategoryId: subcategory.id })}
                                                                             className="block hover:opacity-80"
                                                                         >
                                                                             <h3 className="font-medium text-primary">
@@ -499,7 +503,7 @@ export function NavbarHome({
                                                                                             >
                                                                                                 <Link
                                                                                                     href={handleNavigate(
-                                                                                                        category.id,
+                                                                                                        category.slug,
                                                                                                         subcategory.id,
                                                                                                         productType.id
                                                                                                     )}
@@ -712,7 +716,13 @@ export function NavbarHome({
                                                                                                     className="space-y-3"
                                                                                                 >
                                                                                                     <Link
-                                                                                                        href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                                                                        href={buildCategoryUrl(
+                                                                                                            category.slug,
+                                                                                                            {
+                                                                                                                subCategoryId:
+                                                                                                                    subcategory.id,
+                                                                                                            }
+                                                                                                        )}
                                                                                                         className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
                                                                                                     >
                                                                                                         <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
@@ -756,7 +766,7 @@ export function NavbarHome({
                                                                                                                         >
                                                                                                                             <Link
                                                                                                                                 href={handleNavigate(
-                                                                                                                                    category.id,
+                                                                                                                                    category.slug,
                                                                                                                                     subcategory.id,
                                                                                                                                     productType.id
                                                                                                                                 )}

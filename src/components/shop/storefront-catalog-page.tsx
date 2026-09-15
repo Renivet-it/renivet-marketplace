@@ -20,6 +20,7 @@ import {
     isSearchAnalyticsId,
     logSearchResultCount,
 } from "@/lib/search/search-engine";
+import { buildCategoryUrl } from "@/lib/shop/category-url";
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
@@ -73,6 +74,7 @@ interface StorefrontCatalogPageProps {
     catalogContext?: "festive";
     theme?: "festive";
     pageHeading?: ReactNode;
+    editorialIntro?: string;
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -91,6 +93,7 @@ export async function StorefrontCatalogPage({
     catalogContext,
     theme,
     pageHeading,
+    editorialIntro,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -119,6 +122,13 @@ export async function StorefrontCatalogPage({
     const selectedProductType = productTypes.find(
         (productType) => productType.id === params.productTypeId
     );
+    const categoryHref = (filters: Record<string, string | undefined>) =>
+        basePath.startsWith("/shop/") && selectedCategory
+            ? buildCategoryUrl(selectedCategory.slug, filters)
+            : `${basePath}?${new URLSearchParams({
+                  categoryId: selectedCategory?.id ?? "",
+                  ...filters,
+              }).toString()}`;
 
     const breadcrumbItems = [
         ...breadcrumbBaseItems,
@@ -126,7 +136,7 @@ export async function StorefrontCatalogPage({
             ? [
                   {
                       label: selectedCategory.name,
-                      href: `${basePath}?categoryId=${selectedCategory.id}`,
+                      href: categoryHref({}),
                   },
               ]
             : []),
@@ -134,7 +144,9 @@ export async function StorefrontCatalogPage({
             ? [
                   {
                       label: selectedSubCategory.name,
-                      href: `${basePath}?categoryId=${selectedSubCategory.categoryId}&subCategoryId=${selectedSubCategory.id}`,
+                      href: categoryHref({
+                          subCategoryId: selectedSubCategory.id,
+                      }),
                   },
               ]
             : []),
@@ -142,7 +154,10 @@ export async function StorefrontCatalogPage({
             ? [
                   {
                       label: selectedProductType.name,
-                      href: `${basePath}?categoryId=${selectedCategory?.id ?? ""}&subCategoryId=${selectedSubCategory?.id ?? ""}&productTypeId=${selectedProductType.id}`,
+                      href: categoryHref({
+                          subCategoryId: selectedSubCategory?.id,
+                          productTypeId: selectedProductType.id,
+                      }),
                   },
               ]
             : []),
@@ -153,7 +168,20 @@ export async function StorefrontCatalogPage({
     return (
         <GeneralShell>
             <div className="space-y-4 md:space-y-6">
-                {pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}
+                {pageHeading ? (
+                    <h1
+                        className={
+                            editorialIntro ? "font-serif text-3xl" : "sr-only"
+                        }
+                    >
+                        {pageHeading}
+                    </h1>
+                ) : null}
+                {editorialIntro ? (
+                    <p className="max-w-3xl text-sm leading-6 text-[#6f6559]">
+                        {editorialIntro}
+                    </p>
+                ) : null}
                 <StorefrontBreadcrumbs items={breadcrumbItems} />
                 {hero}
             </div>
@@ -190,7 +218,6 @@ export async function StorefrontCatalogPage({
                             <FestiveMobileSearch>
                                 <ProductSearch
                                     searchBasePath={basePath}
-                                    inlineResults
                                     className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
                                 />
                             </FestiveMobileSearch>

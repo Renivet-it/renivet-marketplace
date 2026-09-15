@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { buildCategoryUrl } from "@/lib/shop/category-url";
 import { eq } from "drizzle-orm";
 import {
     brandAliases,
@@ -547,15 +548,27 @@ export function getSearchRedirectUrl(
             break;
 
         case "CATEGORY":
-            redirectUrl = `/shop?categoryId=${result.categoryId}`;
+            redirectUrl = result.categorySlug
+                ? buildCategoryUrl(result.categorySlug)
+                : `/shop?categoryId=${result.categoryId}`;
             break;
 
         case "SUBCATEGORY":
-            redirectUrl = `/shop?subcategoryId=${result.subcategoryId}`;
+            redirectUrl = result.categorySlug
+                ? buildCategoryUrl(result.categorySlug, {
+                      subCategoryId: result.subcategoryId,
+                  })
+                : `/shop?subcategoryId=${result.subcategoryId}`;
             break;
 
         case "PRODUCT_TYPE":
-            redirectUrl = `/shop?productTypeId=${result.productTypeId}`;
+            redirectUrl =
+                result.categorySlug && result.subcategoryId
+                    ? buildCategoryUrl(result.categorySlug, {
+                          subCategoryId: result.subcategoryId,
+                          productTypeId: result.productTypeId,
+                      })
+                    : `/shop?productTypeId=${result.productTypeId}`;
             break;
 
         case "UNKNOWN":

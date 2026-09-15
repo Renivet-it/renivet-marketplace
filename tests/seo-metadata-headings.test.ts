@@ -62,9 +62,11 @@ test("shop and festive routes each have one explicit H1 owner", async () => {
     ]);
 
     expect(shop).toContain(`pageHeading="${SHOP_TITLE}"`);
+    expect(storefront).toContain("{pageHeading ? (");
     expect(storefront).toContain(
-        '{pageHeading ? <h1 className="sr-only">{pageHeading}</h1> : null}'
+        'editorialIntro ? "font-serif text-3xl" : "sr-only"'
     );
+    expect(storefront.match(/<h1\b/g)).toHaveLength(1);
     expect(festive).toContain("pageHeading={FESTIVE_CAMPAIGN.heading}");
     expect(festive).toContain("<StorefrontCatalogPage");
 });
@@ -96,7 +98,9 @@ test("composed home, shop, and festive documents each own exactly one H1", async
         (source.match(/<h1\b/g) ?? []).length;
 
     expect(
-        countLiteralH1s([home, homeLayout, footer, ...homepageSections].join("\n"))
+        countLiteralH1s(
+            [home, homeLayout, footer, ...homepageSections].join("\n")
+        )
     ).toBe(1);
     expect(
         countLiteralH1s([shop, shopLayout, storefront, footer].join("\n"))
@@ -107,7 +111,9 @@ test("composed home, shop, and festive documents each own exactly one H1", async
     expect(headingGuard).toContain('route: "/"');
     expect(headingGuard).toContain('route: "/shop"');
     expect(headingGuard).toContain('route: "/festive"');
-    expect(headingGuard).toContain("src/components/shop/storefront-catalog-page.tsx");
+    expect(headingGuard).toContain(
+        "src/components/shop/storefront-catalog-page.tsx"
+    );
 });
 
 test("festive keeps its meaningful H1 through the shared storefront owner", async () => {
@@ -118,10 +124,7 @@ test("festive keeps its meaningful H1 through the shared storefront owner", asyn
 });
 
 test("festive campaign configuration is the single source for crawler-facing copy and art", async () => {
-    const festive = await readFile(
-        "src/app/(home)/festive/page.tsx",
-        "utf8"
-    );
+    const festive = await readFile("src/app/(home)/festive/page.tsx", "utf8");
 
     expect(festive).toContain('export const dynamic = "force-dynamic"');
     expect(festive).toContain(
