@@ -49,7 +49,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNHKdd5g0rgXZuWwadPABUqnljV5RbJMFsx1v",
-            link: "https://renivet.com/shop?sortBy=best-sellers&categoryId=08ce51fe-adb8-4086-acfd-759772767ec8",
+            link: "/shop/beauty-and-personal-care?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIG3sMyLrApCnKbtW0hkXs6adUVPBQFlvOi2M",

@@ -19,6 +19,7 @@ import {
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
+import { buildCategoryUrl } from "@/lib/shop/category-url";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
 import { Metadata } from "next";
@@ -290,15 +291,20 @@ async function ProductFetch({ params, searchParams }: PageProps) {
         { label: "Shop", href: "/shop" },
         {
             label: existingProduct.category.name,
-            href: `/shop?categoryId=${existingProduct.categoryId}`,
+            href: buildCategoryUrl(existingProduct.category.slug),
         },
         {
             label: existingProduct.subcategory.name,
-            href: `/shop?categoryId=${existingProduct.categoryId}&subCategoryId=${existingProduct.subcategoryId}`,
+            href: buildCategoryUrl(existingProduct.category.slug, {
+                subCategoryId: existingProduct.subcategoryId,
+            }),
         },
         {
             label: existingProduct.productType.name,
-            href: `/shop?categoryId=${existingProduct.categoryId}&subCategoryId=${existingProduct.subcategoryId}&productTypeId=${existingProduct.productTypeId}`,
+            href: buildCategoryUrl(existingProduct.category.slug, {
+                subCategoryId: existingProduct.subcategoryId,
+                productTypeId: existingProduct.productTypeId,
+            }),
         },
         {
             label: existingProduct.title,
