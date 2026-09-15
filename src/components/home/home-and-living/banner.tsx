@@ -193,7 +193,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     {/* CTA */}
                     <div className="absolute bottom-16 flex w-full justify-center">
                         <Link
-                            href="https://renivet.com/shop?categoryId=5c85d886-f4d1-4db5-bdf3-f54e60882772"
+                            href="/shop/home-and-living"
                             className="group inline-flex items-center justify-center px-8 py-3 text-sm font-medium btn-liquid btn-liquid-secondary"
                         >
                             Shop With Purpose
