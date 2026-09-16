@@ -4,6 +4,9 @@ import { isTimingSafeSecretMatch } from "@/lib/auth/secret-comparison";
 import { db } from "@/lib/db";
 import { orderQueries } from "@/lib/db/queries";
 import { orderShipments, returnShipments } from "@/lib/db/schema";
+import { ensureInvoiceWithRetry } from "@/lib/invoice-availability";
+import { ensureOrderInvoiceNumber } from "@/lib/order-invoice";
+import { createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { analytics, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderDelivered } from "@/lib/resend/emails";
@@ -147,7 +150,17 @@ async function handleDefaultShipmentFlow(
                     user: true,
                     items: {
                         with: {
-                            product: true,
+                            product: {
+                                with: {
+                                    brand: {
+                                        columns: {
+                                            id: true,
+                                            name: true,
+                                            invoiceCode: true,
+                                        },
+                                    },
+                                },
+                            },
                             variant: true,
                         },
                     },
@@ -181,6 +194,64 @@ async function handleDefaultShipmentFlow(
             paymentMethod: shipment.order.paymentMethod,
             paymentStatus: shipment.order.paymentStatus,
         });
+
+        const invoiceBrand = shipment.order.items.find(
+            (item) => item.product?.brand
+        )?.product?.brand;
+        if (!invoiceBrand) {
+            try {
+                await createOperationalAlert({
+                    entityType: "order",
+                    entityId: shipment.order.id,
+                    title: "Customer invoice could not be created",
+                    message: "Delivered order has no supplier brand for invoice issuance.",
+                    severity: "critical",
+                    ownerRole: "operations",
+                    type: "customer_invoice_persistence_failed",
+                    dedupeKey: `customer_invoice_persistence_failed:${shipment.order.id}`,
+                    metadata: { trigger: "shipping_webhook_delivered" },
+                });
+            } catch (error) {
+                console.error("customer invoice alert failed", {
+                    orderId: shipment.order.id,
+                    error,
+                });
+            }
+        } else {
+            try {
+                await ensureInvoiceWithRetry({
+                    issue: () =>
+                        ensureOrderInvoiceNumber({
+                            orderId: shipment.order.id,
+                            brandId: invoiceBrand.id,
+                            brandName: invoiceBrand.name,
+                            invoiceCode: invoiceBrand.invoiceCode,
+                        }),
+                    onFailure: async (error, attempts) => {
+                        await createOperationalAlert({
+                            entityType: "order",
+                            entityId: shipment.order.id,
+                            title: "Customer invoice persistence failed",
+                            message: "Invoice creation failed after automatic retries for a delivered order.",
+                            severity: "critical",
+                            ownerRole: "operations",
+                            type: "customer_invoice_persistence_failed",
+                            dedupeKey: `customer_invoice_persistence_failed:${shipment.order.id}`,
+                            metadata: {
+                                trigger: "shipping_webhook_delivered",
+                                attempts,
+                                error: error.message,
+                            },
+                        });
+                    },
+                });
+            } catch (error) {
+                console.error("customer invoice persistence failed", {
+                    orderId: shipment.order.id,
+                    error,
+                });
+            }
+        }
 
         // updaate delivery date
         const today = new Date();

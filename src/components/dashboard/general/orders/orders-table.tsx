@@ -274,6 +274,23 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
         },
     },
     {
+        accessorKey: "invoiceNumber",
+        header: "Invoice",
+        cell: ({ row }) => (
+            <div className="max-w-[145px] text-xs">
+                {row.original.invoiceNumber ? (
+                    <span className="break-all font-medium text-slate-700">
+                        {row.original.invoiceNumber}
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground">
+                        Not available
+                    </span>
+                )}
+            </div>
+        ),
+    },
+    {
         id: "pickupAddress",
         header: "Pickup / RTO Addresses",
         cell: ({ row }) => {
