@@ -7,8 +7,8 @@ not required. The committed implementation is within the approved contract.
 
 ## Review Scope and Git Evidence
 
-Compared `origin/master` merge base `a592e86f0ecdfe36e27f1fa538fa1996d018af81`
-with HEAD `a075532e7cf922ffba78a19395a5b70a55031072`. The diff contains the
+Compared `origin/master` at `22b975c3011802a30582a73fe479853fbdb1b4f3`
+with HEAD `d4e644247f87a4386dd96e1ea0076bd12d1e76d6`. The diff contains the
 approved task-local governance artifacts, the shared utility, the product query
 insert paths, and focused utility tests. The worktree was clean during review.
 
@@ -73,7 +73,8 @@ added.
 
 ## Test Expectation Review
 
-- TEXP-001, TEXP-002, and TEXP-007 have focused unit coverage.
+- TEXP-001, TEXP-002, and TEXP-007 have focused unit coverage in
+  `src/lib/utils.test.ts`.
 - TEXP-003 and TEXP-006 have static three-call-site and boundary evidence.
 - TEXP-004 has diff evidence showing no migration or existing-row rewrite.
 - TEXP-005 and TEXP-008 are implemented but lack a live-database fixture; this
