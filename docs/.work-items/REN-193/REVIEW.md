@@ -2,13 +2,13 @@
 
 ## Executive Result
 
-`REVIEW_PASSED_WITH_FINDINGS` with `NO_DRIFT`. The implementation was compared from `origin/master` at `59975662c6e44e434aefdc1473671c86f14d41d9` to the current branch HEAD at the same commit, including the recorded unstaged and untracked REN-193 working-tree changes. Governance re-entry is not required.
+`REVIEW_PASSED_WITH_FINDINGS` with `NO_DRIFT`. The implementation was compared from `origin/master` at `59975662c6e44e434aefdc1473671c86f14d41d9` to implementation commit `166d40b8fe0d7fd78a2e24f85f9428e56c8e3869`. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
 - Linear identity, title, description, status, labels, assignee, project, comment, and relations were retrieved for REN-193 and match `docs/.work-items/REN-193/work-item.yaml`.
-- Base branch: `origin/master`; merge base: `59975662c6e44e434aefdc1473671c86f14d41d9`; HEAD: `59975662c6e44e434aefdc1473671c86f14d41d9`; PR: none.
-- The implementation is uncommitted. Reviewed paths are `navbar-home.tsx`, `brand-navigation.tsx`, `storefront-brand-order.ts`, `brands.ts`, and `ren-193-brand-navigation.test.ts`, plus task-local governance artifacts.
+- Base branch: `origin/master`; merge base: `59975662c6e44e434aefdc1473671c86f14d41d9`; implementation commit: `166d40b8fe0d7fd78a2e24f85f9428e56c8e3869`; PR: none.
+- Reviewed paths are `navbar-home.tsx`, `brand-navigation.tsx`, `storefront-brand-order.ts`, `brands.ts`, and `ren-193-brand-navigation.test.ts`, plus task-local governance artifacts.
 - The pre-review governance validation passed while the contract was `READY_FOR_DEV` and `APPROVED`.
 
 ## Requirement Reconciliation
