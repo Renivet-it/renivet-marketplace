@@ -1,5 +1,9 @@
 ﻿"use client";
 
+import {
+    BrandDesktopNavigationItem,
+    BrandMobileNavigation,
+} from "@/components/globals/layouts/navbar/brand-navigation";
 import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { Icons } from "@/components/icons";
 import { RenivetFull } from "@/components/svgs";
@@ -214,6 +218,11 @@ export function NavbarHome({
         isCategoriesFetching ||
         isSubcategoriesFetching ||
         isProductTypesFetching;
+
+    const {
+        data: storefrontBrands = [],
+        isPending: isStorefrontBrandsLoading,
+    } = trpc.general.brands.getStorefrontBrands.useQuery();
 
     const { data: userWishlist } =
         trpc.general.users.wishlist.getWishlist.useQuery(
@@ -805,17 +814,25 @@ export function NavbarHome({
                                                 </NavigationMenuItem>
                                             ))
                                     )}
+                                    <BrandDesktopNavigationItem
+                                        brands={storefrontBrands}
+                                        isLoading={isStorefrontBrandsLoading}
+                                    />
                                 </NavigationMenuList>
                             </NavigationMenu>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-1 sm:gap-3 xl:gap-4">
+                        <BrandMobileNavigation
+                            brands={storefrontBrands}
+                            isLoading={isStorefrontBrandsLoading}
+                        />
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
                                 wrapper:
-                                    "hidden min-w-[280px] xl:flex xl:min-w-[360px] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                    "hidden min-w-[320px] min-[1700px]:flex [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
                             }}
                         />
                         {/* âœ… Guest-only Wishlist & Cart */}
