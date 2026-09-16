@@ -55,30 +55,30 @@ export function CategoryOverviewPanel({
     const overview = buildCategoryOverview({ category, subCategories });
 
     return (
-        <aside className="rounded-[28px] border border-[#eadfce] bg-[#f4eee4] p-6 shadow-[0_16px_38px_rgba(76,55,31,0.08)] md:p-8">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9a7950]">
+        <aside className="rounded-2xl border border-[#e9dfd0] bg-[#faf6ee] p-5 shadow-[0_10px_24px_rgba(76,55,31,0.05)] md:p-6">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#9a7950]">
                 Curated for you
             </p>
-            <h2 className="mt-3 font-serif text-3xl leading-tight text-[#26321f]">
+            <h2 className="mt-2 font-serif text-2xl leading-tight text-[#26321f]">
                 {overview.title}
             </h2>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-[#6f6559]">
+            <p className="mt-3 max-w-sm text-xs leading-5 text-[#6f6559]">
                 {overview.description}
             </p>
             {overview.links.length > 0 ? (
                 <nav
                     aria-label={`${category.name} subcategories`}
-                    className="mt-6 space-y-2"
+                    className="mt-4 flex flex-wrap gap-2"
                 >
                     {overview.links.slice(0, 5).map((link) => (
                         <Link
                             href={link.href}
                             key={link.id}
-                            className="group flex items-center justify-between rounded-xl border border-[#e4d5c1] bg-[#fffaf2]/70 px-4 py-3 text-sm text-[#33442d] transition-colors hover:border-[#b8925f] hover:bg-[#fffaf2]"
+                            className="group inline-flex items-center gap-1.5 rounded-full border border-[#e4d5c1] bg-[#fffaf2] px-3 py-2 text-xs text-[#33442d] transition-colors hover:border-[#b8925f] hover:bg-white"
                         >
                             <span>{link.label}</span>
                             <ArrowRight
-                                className="size-4 transition-transform group-hover:translate-x-1"
+                                className="size-3 transition-transform group-hover:translate-x-0.5"
                                 aria-hidden="true"
                             />
                         </Link>
@@ -87,7 +87,7 @@ export function CategoryOverviewPanel({
             ) : null}
             <Link
                 href={buildCategoryUrl(category.slug)}
-                className="mt-6 inline-flex items-center gap-2 border-b border-[#33442d] pb-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#33442d]"
+                className="mt-5 inline-flex items-center gap-2 border-b border-[#33442d] pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#33442d]"
             >
                 Explore the collection
                 <ArrowRight className="size-4" aria-hidden="true" />
