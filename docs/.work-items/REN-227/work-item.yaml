@@ -1,0 +1,185 @@
+schema_version: "1.0"
+task:
+    id: REN-227
+    title: "[FCCP][P1] Investigate & Fix Customer Invoice-Availability Gap (BIZ-18)"
+    source: linear
+    branch: feat/ren-227-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-227
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-224
+        linear_branch: ayanganguly333/ren-227-fccpp1-investigate-fix-customer-invoice-availability-gap-biz
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Changes order-lifecycle financial-document availability."
+        - "Invoice identity and download access affect customers, admins, tax records, and auditability."
+        - "Incorrect retries or eligibility could duplicate or expose invoice records."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-227 and relations
+        - marketplace order schema and invoice fields
+        - Delhivery invoice writer and sequence allocation
+        - customer invoice download route and token validation
+        - Delhivery and Shiprocket UI/action paths
+        - admin order visibility references
+        - existing invoice/corporate document tests
+    excluded_areas:
+        - production database reads or writes
+        - historical invoice backfill
+        - new invoice download endpoint
+        - canonical invoice format owned by REN-225
+        - corporate invoice document flows
+        - TDS/TCS or tax attribution changes
+    dependencies: [DEP-227-001, DEP-227-002, DEP-227-003, DEP-227-004]
+    integrations: [INT-227-001, INT-227-002, INT-227-003]
+    security_boundaries: [SEC-227-001, SEC-227-002]
+    state_transitions: [order_created, order_eligible, invoice_issuance_started, invoice_issued, invoice_issuance_failed, customer_download, admin_visibility]
+    related_tests: [TEXP-227-001, TEXP-227-002, TEXP-227-003, TEXP-227-004, TEXP-227-005, TEXP-227-006]
+    uncertainties:
+        - "Runtime population evidence must be collected during implementation validation."
+requirements:
+    - { id: REQ-227-001, description: "Trace and document every marketplace invoice-number writer, caller, retry path, and customer/admin reader before changing code.", type: explicit }
+    - { id: REQ-227-002, description: "Populate the existing authoritative order invoice reference for every explicitly qualifying new order, regardless of supported carrier path, using the approved numbering authority.", type: explicit }
+    - { id: REQ-227-003, description: "Do not assign invoice numbers to orders outside the approved eligibility matrix, including orders not yet due for an invoice.", type: safety }
+    - { id: REQ-227-004, description: "Make issuance idempotent, unique, concurrency-safe, and non-overwriting for an already-issued order.", type: explicit }
+    - { id: REQ-227-005, description: "Make qualifying-path failures visible, alertable, and retryable without silently leaving an indistinguishable missing reference.", type: explicit }
+    - { id: REQ-227-006, description: "Preserve existing customer download authorization/rendering behavior and expose the populated reference through existing admin order views.", type: compatibility }
+    - { id: REQ-227-007, description: "Do not backfill history, mutate existing invoice numbers, create a second endpoint, change invoice format, or alter tax/TDS/corporate-document behavior.", type: compatibility }
+    - { id: REQ-227-008, description: "Provide reproducible pre-fix trace, focused tests, controlled new-order evidence, and aggregate before/after population evidence.", type: explicit }
+scenarios:
+    - { id: SCN-227-001, description: "The pre-fix trace identifies each marketplace invoice writer and explains the observed missing-reference gap across carrier/order paths.", requirement_ids: [REQ-227-001] }
+    - { id: SCN-227-002, description: "A qualifying new Delhivery order receives one invoice reference and remains downloadable through the existing customer route.", requirement_ids: [REQ-227-002, REQ-227-006] }
+    - { id: SCN-227-003, description: "A qualifying new Shiprocket order receives the same authoritative order reference while retaining its existing carrier invoice behavior.", requirement_ids: [REQ-227-002, REQ-227-006] }
+    - { id: SCN-227-004, description: "An unpaid, cancelled, or otherwise non-qualifying order remains without an invoice reference according to the approved eligibility matrix.", requirement_ids: [REQ-227-003] }
+    - { id: SCN-227-005, description: "Concurrent retries for one order return the existing number, allocate no duplicate, and never overwrite it; different orders remain unique.", requirement_ids: [REQ-227-004] }
+    - { id: SCN-227-006, description: "A sequence/database/carrier failure produces bounded alertable evidence and a safe retry outcome without falsely claiming issuance.", requirement_ids: [REQ-227-005] }
+    - { id: SCN-227-007, description: "An admin order view displays the same populated reference and existing customer download behavior remains authorized by the signed token.", requirement_ids: [REQ-227-006] }
+    - { id: SCN-227-008, description: "Historical orders and invoice numbers remain unchanged, and corporate invoices, tax/TDS behavior, and invoice format remain outside the change.", requirement_ids: [REQ-227-007] }
+    - { id: SCN-227-009, description: "Controlled evidence reports expected population for representative post-fix orders without exposing sensitive order, payment, bank, or GSTIN details.", requirement_ids: [REQ-227-008] }
+invariants:
+    - { id: INV-227-001, description: "One qualifying order maps to at most one immutable marketplace invoice reference." }
+    - { id: INV-227-002, description: "Invoice issuance uses the approved canonical numbering authority and never invents a competing format." }
+    - { id: INV-227-003, description: "Customer access requires the existing order-bound authorization/token contract." }
+    - { id: INV-227-004, description: "Non-qualifying or failed issuance is not represented as a successful invoice." }
+    - { id: INV-227-005, description: "REN-227 does not mutate historical records or unrelated tax/corporate document state." }
+    - { id: INV-227-006, description: "Operational diagnostics are aggregate/redacted and exclude sensitive customer, payment, bank, and GSTIN data." }
+flows:
+    - { id: FLOW-227-001, description: "Eligible order/shipment path -> approved invoice issuance trigger -> idempotent number allocation -> orders.invoice_number persistence -> customer/admin readers.", state_transitions: [order_eligible, invoice_issuance_started, invoice_issued, customer_download, admin_visibility] }
+    - { id: FLOW-227-002, description: "Non-qualifying order -> no issuance -> existing order behavior remains unchanged.", state_transitions: [order_created] }
+    - { id: FLOW-227-003, description: "Issuance failure -> visible redacted failure -> safe retry -> either one issued number or explicit unresolved failure.", state_transitions: [invoice_issuance_started, invoice_issuance_failed, invoice_issued] }
+dependencies:
+    - { id: DEP-227-001, name: orders.invoice_number, purpose: Existing marketplace invoice reference, description: "Nullable unique order field consumed by customer download authorization.", status: resolved }
+    - { id: DEP-227-002, name: Delhivery invoice route, purpose: Current marketplace writer, description: "Row-locks the order, allocates brand/FY sequence, and persists invoice number.", status: resolved }
+    - { id: DEP-227-003, name: Shiprocket invoice action, purpose: Alternate carrier invoice path, description: "Returns external invoice URL and currently does not visibly persist orders.invoice_number; implementation must reconcile this path.", status: resolved }
+    - { id: DEP-227-004, name: REN-225, purpose: Canonical invoice-number architecture, description: "Related issue; REN-227 uses orders.invoice_number and must use the approved REN-225 format.", status: resolved }
+integrations:
+    - { id: INT-227-001, system: Delhivery and Shiprocket, purpose: Carrier-specific fulfilment/invoice paths, failure_mode: "External failure or divergent persistence leaves qualifying orders unavailable", retry_idempotency: "Repeated carrier/action requests must not issue a second order number." }
+    - { id: INT-227-002, system: customer invoice download, purpose: Customer access to invoice PDF, failure_mode: "403 or missing invoice for qualifying order", retry_idempotency: "Repeated authorized downloads do not change issuance state." }
+    - { id: INT-227-003, system: admin order views, purpose: Operational visibility of invoice reference, failure_mode: "Admin and customer records diverge", retry_idempotency: "Readers are side-effect free." }
+personas:
+    - { id: PER-227-001, role: customer, applicability: Downloads an invoice for an eligible order. }
+    - { id: PER-227-002, role: admin_or_operations, applicability: Reviews order and invoice availability. }
+    - { id: PER-227-003, role: finance_auditor, applicability: Reconciles issuance population and uniqueness. }
+security_boundaries:
+    - { id: SEC-227-001, description: "Customer invoice download remains order-bound and token-protected; no new unauthenticated access path is introduced." }
+    - { id: SEC-227-002, description: "Logs and issue evidence exclude raw customer, payment, bank, GSTIN, and full invoice-sensitive payloads." }
+business_rules:
+    - { id: BR-227-001, description: "Only orders in the approved eligibility matrix should receive a marketplace invoice reference." }
+    - { id: BR-227-002, description: "A populated invoice reference is immutable for that order; uniqueness is global under the existing constraint." }
+    - { id: BR-227-003, description: "Historical backfill and format changes require separate explicit approval and are not part of REN-227." }
+decisions:
+    - { id: DEC-227-001, question: "Which order/payment/carrier states qualify for invoice issuance?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Create the customer invoice reference after delivery for both prepaid and COD orders.", basis: "User confirmation in conversation on 2026-09-16.", confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: User confirmation in conversation on 2026-09-16 }
+    - { id: DEC-227-002, question: "Which field and numbering authority should REN-227 populate?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use orders.invoice_number and converge with REN-225’s approved authority/format.", basis: "Existing customer route consumes this field; user confirmed retaining it.", confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: User confirmation in conversation on 2026-09-16 }
+    - { id: DEC-227-003, question: "Should invoice issuance be triggered synchronously or through a retryable job/event?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use an idempotent delivery-triggered path with automatic retry and admin-visible failure state.", basis: "User confirmed automatic retry and admin visibility; implementation must preserve existing integration boundaries.", confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: User confirmation in conversation on 2026-09-16 }
+    - { id: DEC-227-004, question: "May REN-227 backfill historical orders?", class: AUTO_DECIDE, status: resolved, recommendation: "No; require a separate explicit proposal and approval.", basis: "Explicit Linear scope and production-safety gate.", confidence: high, consequence: high, human_confirmation_required: true }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-227-001, severity: DESIGN_BLOCKER, status: addressed, summary: "Qualifying population confirmed as delivered prepaid and COD orders." }
+        - { id: CRIT-227-002, severity: DESIGN_BLOCKER, status: addressed, summary: "Static trace identifies Delhivery persistence and Shiprocket divergence; implementation tests must prove closure." }
+        - { id: CRIT-227-003, severity: DESIGN_BLOCKER, status: addressed, summary: "orders.invoice_number retained and tied to REN-225 authority." }
+        - { id: CRIT-227-004, severity: MAJOR, status: open, summary: "Customer/admin contracts and retry/failure evidence remain required implementation validation." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation in conversation on 2026-09-16
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-227-001, scenario_ids: [SCN-227-001] }
+        - { requirement_id: REQ-227-002, scenario_ids: [SCN-227-002, SCN-227-003] }
+        - { requirement_id: REQ-227-003, scenario_ids: [SCN-227-004] }
+        - { requirement_id: REQ-227-004, scenario_ids: [SCN-227-005] }
+        - { requirement_id: REQ-227-005, scenario_ids: [SCN-227-006] }
+        - { requirement_id: REQ-227-006, scenario_ids: [SCN-227-002, SCN-227-007] }
+        - { requirement_id: REQ-227-007, scenario_ids: [SCN-227-008] }
+        - { requirement_id: REQ-227-008, scenario_ids: [SCN-227-009] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-227-001, invariant_ids: [INV-227-002] }
+        - { scenario_id: SCN-227-002, invariant_ids: [INV-227-001, INV-227-002, INV-227-003] }
+        - { scenario_id: SCN-227-003, invariant_ids: [INV-227-001, INV-227-002] }
+        - { scenario_id: SCN-227-004, invariant_ids: [INV-227-004] }
+        - { scenario_id: SCN-227-005, invariant_ids: [INV-227-001, INV-227-002] }
+        - { scenario_id: SCN-227-006, invariant_ids: [INV-227-004, INV-227-006] }
+        - { scenario_id: SCN-227-007, invariant_ids: [INV-227-003, INV-227-006] }
+        - { scenario_id: SCN-227-008, invariant_ids: [INV-227-005] }
+        - { scenario_id: SCN-227-009, invariant_ids: [INV-227-006] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-227-001, test_expectation_ids: [TEXP-227-001] }
+        - { scenario_id: SCN-227-002, test_expectation_ids: [TEXP-227-002] }
+        - { scenario_id: SCN-227-003, test_expectation_ids: [TEXP-227-003] }
+        - { scenario_id: SCN-227-004, test_expectation_ids: [TEXP-227-004] }
+        - { scenario_id: SCN-227-005, test_expectation_ids: [TEXP-227-005] }
+        - { scenario_id: SCN-227-006, test_expectation_ids: [TEXP-227-006] }
+        - { scenario_id: SCN-227-007, test_expectation_ids: [TEXP-227-002, TEXP-227-006] }
+        - { scenario_id: SCN-227-008, test_expectation_ids: [TEXP-227-006] }
+        - { scenario_id: SCN-227-009, test_expectation_ids: [TEXP-227-006] }
+test_expectations:
+    - { id: TEXP-227-001, category: exploratory, classification: REQUIRED, reason: "Record the complete pre-fix writer/caller/reader trace and root cause on REN-227.", scenarios: [SCN-227-001] }
+    - { id: TEXP-227-002, category: integration, classification: REQUIRED, reason: "Verify qualifying Delhivery issuance, customer download, and admin visibility.", scenarios: [SCN-227-002, SCN-227-007] }
+    - { id: TEXP-227-003, category: integration, classification: REQUIRED, reason: "Verify qualifying Shiprocket issuance converges on the authoritative order reference without breaking carrier behavior.", scenarios: [SCN-227-003] }
+    - { id: TEXP-227-004, category: regression, classification: REQUIRED, reason: "Verify non-qualifying order states remain without an invoice according to the approved matrix.", scenarios: [SCN-227-004] }
+    - { id: TEXP-227-005, category: regression, classification: REQUIRED, reason: "Verify concurrent retries, uniqueness, existing-number return, and no overwrite.", scenarios: [SCN-227-005] }
+    - { id: TEXP-227-006, category: business_uat, classification: REQUIRED, reason: "Verify controlled post-fix population, redacted failure evidence, unchanged history, and customer/admin availability.", scenarios: [SCN-227-006, SCN-227-007, SCN-227-008, SCN-227-009] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "1f60fefa5cd7edca3c433aba04cb43e488cdbf11"
+    head_commit: "1f60fefa5cd7edca3c433aba04cb43e488cdbf11"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Run controlled staging delivery, duplicate-callback, customer/admin availability, and aggregate population validation."
+    evidence:
+        - "Shared allocator in src/lib/order-invoice.ts preserves the locked, unique, non-overwriting orders.invoice_number write path."
+        - "Delivered shipment handling in src/app/api/webhooks/shipping/route.ts invokes bounded retry and deduplicated operational alerting."
+        - "Existing customer download route is unchanged and admin orders table now displays the same persisted invoice reference."
+        - "Focused Bun tests pass; repository-wide Bun tests retain unrelated pre-existing failures and one existing festive route import error."
+    governance_reentry_required: false
