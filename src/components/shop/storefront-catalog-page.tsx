@@ -31,6 +31,7 @@ import {
     type CategoryCatalogCacheFactory,
     type CategoryCatalogCacheInput,
 } from "./catalog-cache";
+import { CategoryOverviewPanel } from "./category-overview-panel";
 import { FestiveFloralDivider } from "./festive-floral-divider";
 import { FestiveMobileCatalogHeader } from "./festive-mobile-catalog-header";
 import { FestiveMobileSearch } from "./festive-mobile-search";
@@ -168,19 +169,39 @@ export async function StorefrontCatalogPage({
     return (
         <GeneralShell>
             <div className="space-y-4 md:space-y-6">
-                {pageHeading ? (
-                    <h1
+                {pageHeading || editorialIntro ? (
+                    <div
                         className={
-                            editorialIntro ? "font-serif text-3xl" : "sr-only"
+                            selectedCategory
+                                ? "grid gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)] md:items-start"
+                                : ""
                         }
                     >
-                        {pageHeading}
-                    </h1>
-                ) : null}
-                {editorialIntro ? (
-                    <p className="max-w-3xl text-sm leading-6 text-[#6f6559]">
-                        {editorialIntro}
-                    </p>
+                        <div>
+                            {pageHeading ? (
+                                <h1
+                                    className={
+                                        editorialIntro
+                                            ? "font-serif text-3xl"
+                                            : "sr-only"
+                                    }
+                                >
+                                    {pageHeading}
+                                </h1>
+                            ) : null}
+                            {editorialIntro ? (
+                                <p className="max-w-3xl text-sm leading-6 text-[#6f6559]">
+                                    {editorialIntro}
+                                </p>
+                            ) : null}
+                        </div>
+                        {selectedCategory ? (
+                            <CategoryOverviewPanel
+                                category={selectedCategory}
+                                subCategories={subCategories}
+                            />
+                        ) : null}
+                    </div>
                 ) : null}
                 <StorefrontBreadcrumbs items={breadcrumbItems} />
                 {hero}
