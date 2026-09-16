@@ -11,7 +11,11 @@ import {
 } from "@/lib/python/sematic-search";
 import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 import { mediaCache } from "@/lib/redis/methods";
-import { convertPriceToPaise } from "@/lib/utils";
+import {
+    PRODUCT_SLUG_MAX_SUFFIX,
+    convertPriceToPaise,
+    generateProductSlugCandidate,
+} from "@/lib/utils";
 import {
     CreateProduct,
     CreateProductJourney,
@@ -2495,19 +2499,45 @@ class ProductQuery {
                 );
             }
 
-            // Insert the new product with embeddings
-            const newProduct = await tx
-                .insert(products)
-                .values({
-                    ...values,
-                    embeddings, // Include embeddings in the initial insert
-                    semanticSearchEmbeddings,
-                    searchSuggestionEmbeddings,
-                    inventoryLastSyncedAt: new Date(),
-                    inventorySource: "manual",
-                })
-                .returning()
-                .then((res) => res[0]);
+            let newProduct: typeof products.$inferSelect | undefined;
+            for (
+                let suffix = 1;
+                suffix <= PRODUCT_SLUG_MAX_SUFFIX;
+                suffix++
+            ) {
+                const inserted = await tx
+                    .insert(products)
+                    .values({
+                        ...values,
+                        slug: generateProductSlugCandidate(values.slug, suffix),
+                        embeddings,
+                        semanticSearchEmbeddings,
+                        searchSuggestionEmbeddings,
+                        inventoryLastSyncedAt: new Date(),
+                        inventorySource: "manual",
+                    })
+                    .onConflictDoNothing({ target: products.slug })
+                    .returning();
+
+                if (inserted[0]) {
+                    newProduct = inserted[0];
+                    if (suffix > 1) {
+                        console.info("Product slug collision resolved", {
+                            suffix,
+                        });
+                    }
+                    break;
+                }
+            }
+
+            if (!newProduct) {
+                console.error("Product slug allocation exhausted", {
+                    maxSuffix: PRODUCT_SLUG_MAX_SUFFIX,
+                });
+                throw new Error(
+                    `Unable to allocate a unique product slug for ${values.slug}`
+                );
+            }
 
             console.log("Inserted product:", newProduct);
 
@@ -2595,22 +2625,60 @@ class ProductQuery {
             //     .values(values)
             //     .returning()
             //     .then((res) => res);
-            const newProducts = await tx
-                .insert(products)
-                .values(
-                    values.map((value) => ({
-                        ...value,
-                        embeddings: value.embeddings, // Include embeddings
-                        semanticSearchEmbeddings:
-                            value.semanticSearchEmbeddings,
-                        searchSuggestionEmbeddings:
-                            value.searchSuggestionEmbeddings,
-                        inventoryLastSyncedAt: new Date(),
-                        inventorySource: "manual",
-                    }))
-                )
-                .returning()
-                .then((res) => res);
+            const newProducts: (typeof products.$inferSelect)[] = [];
+            const reservedSlugs = new Set<string>();
+
+            for (const value of values) {
+                let insertedProduct: typeof products.$inferSelect | undefined;
+                for (
+                    let suffix = 1;
+                    suffix <= PRODUCT_SLUG_MAX_SUFFIX;
+                    suffix++
+                ) {
+                    const candidate = generateProductSlugCandidate(
+                        value.slug,
+                        suffix
+                    );
+                    if (reservedSlugs.has(candidate)) continue;
+
+                    const inserted = await tx
+                        .insert(products)
+                        .values({
+                            ...value,
+                            slug: candidate,
+                            embeddings: value.embeddings,
+                            semanticSearchEmbeddings:
+                                value.semanticSearchEmbeddings,
+                            searchSuggestionEmbeddings:
+                                value.searchSuggestionEmbeddings,
+                            inventoryLastSyncedAt: new Date(),
+                            inventorySource: "manual",
+                        })
+                        .onConflictDoNothing({ target: products.slug })
+                        .returning();
+
+                    if (inserted[0]) {
+                        insertedProduct = inserted[0];
+                        reservedSlugs.add(candidate);
+                        if (suffix > 1) {
+                            console.info("Product slug collision resolved", {
+                                suffix,
+                            });
+                        }
+                        break;
+                    }
+                }
+
+                if (!insertedProduct) {
+                    console.error("Product slug allocation exhausted", {
+                        maxSuffix: PRODUCT_SLUG_MAX_SUFFIX,
+                    });
+                    throw new Error(
+                        `Unable to allocate a unique product slug for ${value.slug}`
+                    );
+                }
+                newProducts.push(insertedProduct);
+            }
 
             const productOptionsToInsert = values.flatMap((value, index) =>
                 value.options.map((option) => ({
