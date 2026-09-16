@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog-general";
 import { useGuestPopupStore } from "@/lib/store/use-guest-popup-store";
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 
 // eslint-disable-next-line quotes
 const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
@@ -25,8 +26,9 @@ const BENEFITS = [
 export function GuestAddToCartPopup() {
     const { isOpen, closePopup, mode } = useGuestPopupStore();
     const { isSignedIn } = useAuth();
+    const pathname = usePathname();
 
-    if (isSignedIn) return null;
+    if (isSignedIn || pathname === "/festive-home") return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && closePopup()}>
@@ -151,7 +153,7 @@ export function GuestAddToCartPopup() {
 
                             <div className="mx-auto flex w-full max-w-[34ch] flex-col items-center space-y-2 pb-0 text-center">
                                 {mode === "cart" && (
-                                    <p className="font-outfit inline-flex rounded-full bg-[#234236]/6 px-3 py-1 text-[12px] font-semibold text-[#234236]">
+                                    <p className="font-outfit bg-[#234236]/6 inline-flex rounded-full px-3 py-1 text-[12px] font-semibold text-[#234236]">
                                         Your item is already in the cart.
                                     </p>
                                 )}
@@ -194,9 +196,9 @@ export function GuestAddToCartPopup() {
                                         thoughtful way to shop.
                                     </h2>
                                     <p className="font-outfit text-white/78 mt-4 max-w-[30ch] text-16 leading-7">
-                                        Join Renivet for curated finds,
-                                        mindful stories, and a welcome offer
-                                        made for your first order.
+                                        Join Renivet for curated finds, mindful
+                                        stories, and a welcome offer made for
+                                        your first order.
                                     </p>
                                 </div>
                             </div>

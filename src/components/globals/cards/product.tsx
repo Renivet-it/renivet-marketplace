@@ -13,6 +13,7 @@ import {
 import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
-import { ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronRight, Heart, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -81,7 +82,7 @@ interface PageProps extends GenericProps {
     product: ProductWithBrand;
     isWishlisted: boolean;
     userId?: string;
-    theme?: "festive";
+    theme?: "festive" | "festive-editorial";
 }
 
 const PLACEHOLDER_IMAGE_URL =
@@ -98,6 +99,67 @@ export function ProductCard({
     const router = useRouter();
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { addToGuestCart } = useGuestCart();
+    const { addToGuestWishlist } = useGuestWishlist();
+
+    const [isProductWishlisted, setIsProductWishlisted] =
+        useState(isWishlisted);
+
+    useEffect(() => {
+        setIsProductWishlisted(isWishlisted);
+    }, [isWishlisted]);
+
+    const { mutateAsync: addWishlistMutation } =
+        trpc.general.users.wishlist.addProductInWishlist.useMutation({
+            onError: (err) =>
+                toast.error(err.message || "Could not add to wishlist."),
+        });
+
+    const { mutateAsync: removeWishlistMutation } =
+        trpc.general.users.wishlist.removeProductInWishlist.useMutation({
+            onError: (err) =>
+                toast.error(err.message || "Could not remove from wishlist."),
+        });
+
+    const handleToggleWishlist = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextState = !isProductWishlisted;
+        setIsProductWishlisted(nextState);
+
+        try {
+            if (userId) {
+                if (nextState) {
+                    await addWishlistMutation({
+                        userId,
+                        productId: product.id,
+                    });
+                    toast.success("Added to Wishlist!");
+                } else {
+                    await removeWishlistMutation({
+                        userId,
+                        productId: product.id,
+                    });
+                    toast.success("Removed from Wishlist!");
+                }
+            } else {
+                addToGuestWishlist({
+                    productId: product.id,
+                    variantId: selectedVariant?.id || null,
+                    title: product.title,
+                    brand: product.brand?.name,
+                    price: selectedVariant?.price ?? rawPrice,
+                    image: imageUrl,
+                    sku: selectedVariant?.nativeSku ?? null,
+                    fullProduct: product,
+                });
+                toast.success(
+                    nextState ? "Added to Wishlist!" : "Removed from Wishlist!"
+                );
+            }
+        } catch {
+            setIsProductWishlisted(!nextState);
+        }
+    };
 
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -387,6 +449,99 @@ export function ProductCard({
             toast.error(err.message || "Could not proceed.");
         }
     };
+
+    if (theme === "festive-editorial") {
+        return (
+            <div
+                className={cn(
+                    "group/card relative block h-full min-w-0 select-none",
+                    className
+                )}
+                data-wishlist-state={isProductWishlisted ? "saved" : "none"}
+                title={product.title}
+                {...props}
+            >
+                <div className="relative aspect-[0.93] w-full overflow-hidden bg-[#ece7df]">
+                    <AnimatedProductLink
+                        href={`/products/${product.slug}`}
+                        className="absolute inset-0 block"
+                        contentClassName="h-full"
+                    >
+                        <Image
+                            src={activeCardImage}
+                            alt={product.title || "Product image"}
+                            fill
+                            loading="eager"
+                            sizes="(max-width: 768px) 145px, (max-width: 1200px) 25vw, 20vw"
+                            className="object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
+                        />
+                    </AnimatedProductLink>
+
+                    {/* Wishlist Heart Button: Frosted circular badge on mobile, floating white outline with shadow on desktop */}
+                    <button
+                        type="button"
+                        onClick={handleToggleWishlist}
+                        aria-label={
+                            isProductWishlisted
+                                ? "Remove from wishlist"
+                                : "Add to wishlist"
+                        }
+                        className="absolute right-2 top-2 z-10 flex size-6 items-center justify-center rounded-full bg-white/85 text-neutral-800 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95 md:right-2.5 md:top-2.5 md:size-7 md:bg-transparent md:text-white md:shadow-none md:drop-shadow-[0_1px_3px_rgba(0,0,0,0.65)] md:backdrop-blur-none"
+                    >
+                        <Heart
+                            className={cn(
+                                "size-3.5 transition-colors md:size-4",
+                                isProductWishlisted
+                                    ? "fill-[#741f2a] text-[#741f2a] md:fill-white md:text-white"
+                                    : "fill-transparent stroke-[1.75]"
+                            )}
+                        />
+                    </button>
+
+                    {/* Quick Add Shopping Cart Button: Clean white circle on desktop, hidden on mobile */}
+                    <button
+                        type="button"
+                        onClick={handleQuickAddCart}
+                        aria-label="Add to cart"
+                        className="absolute bottom-2.5 right-2.5 z-10 hidden size-8 items-center justify-center rounded-full bg-white/95 text-neutral-800 shadow-[0_2px_8px_rgba(0,0,0,0.14)] transition-all duration-200 hover:scale-105 hover:bg-white active:scale-95 md:flex"
+                    >
+                        <ShoppingCart className="size-3.5 stroke-[1.8]" />
+                    </button>
+                </div>
+
+                {/* Product Info below image */}
+                <AnimatedProductLink
+                    href={`/products/${product.slug}`}
+                    className="block pt-2 text-left md:pt-2.5"
+                >
+                    <p className="truncate text-[10px] font-bold uppercase tracking-[0.06em] text-[#1c1917] md:text-[11px]">
+                        {normalizeBrandName(product.brand?.name) || "Renivet"}
+                    </p>
+                    <p className="mt-0.5 truncate text-[12px] font-normal leading-snug text-[#57534e] md:text-[13px]">
+                        {product.title}
+                    </p>
+                    <div className="flex items-baseline gap-1.5 pt-0.5 leading-none">
+                        <span className="text-[12px] font-semibold text-[#1c1917] md:text-[13px]">
+                            ₹{" "}
+                            {Math.round(
+                                Number(convertPaiseToRupees(rawPrice))
+                            ).toLocaleString("en-IN")}
+                        </span>
+                        {displayOriginal ? (
+                            <span className="text-[10px] font-normal text-[#8c827a] line-through md:text-[11px]">
+                                ₹ {displayOriginal.toLocaleString("en-IN")}
+                            </span>
+                        ) : null}
+                        {discount ? (
+                            <span className="text-[10px] font-medium text-[#786b63] md:text-[11px]">
+                                {discount}% OFF
+                            </span>
+                        ) : null}
+                    </div>
+                </AnimatedProductLink>
+            </div>
+        );
+    }
 
     return (
         <div
