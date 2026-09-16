@@ -3,6 +3,17 @@ import { NextResponse } from "next/server";
 import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
 import { buildAuthRedirectUrl } from "./lib/auth/redirect";
+import {
+    createCategoryRedirectEvent,
+    emitCategoryEvent,
+    type CategoryRedirectReason,
+} from "./lib/shop/category-telemetry";
+import {
+    getCategorySlugRedirectMode,
+    getCategorySlugRedirectStatus,
+    getLegacyProductTypeRedirectReason,
+    replacePathPreservingSearch,
+} from "./lib/shop/category-url";
 import { cFetch, hasPermission } from "./lib/utils";
 import { ResponseData } from "./lib/validations";
 
@@ -10,6 +21,97 @@ export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
     const supportQueue = url.searchParams.get("queue");
+
+    if (url.pathname === "/api/internal/category-slug-lookup")
+        return NextResponse.next();
+
+    if (url.pathname === "/shop" && url.search) {
+        const reason = getLegacyProductTypeRedirectReason(url.searchParams);
+        const productTypeId =
+            url.searchParams.get("productTypeId") ?? undefined;
+        const mode = getCategorySlugRedirectMode(
+            process.env.CATEGORY_SLUG_REDIRECT_MODE
+        );
+        const emitRedirect = (
+            outcome: "redirected" | "fail_open" | "bypassed",
+            eventReason: CategoryRedirectReason,
+            status: number,
+            details: {
+                categoryId?: string;
+                destinationPathname?: string;
+            } = {}
+        ) =>
+            emitCategoryEvent(
+                createCategoryRedirectEvent({
+                    outcome,
+                    reason: eventReason,
+                    status,
+                    ...(productTypeId ? { productTypeId } : {}),
+                    ...details,
+                    environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+                })
+            );
+        if (mode === "off") {
+            emitRedirect("bypassed", "mode_off", 200);
+        } else if (reason !== "success") {
+            emitRedirect("bypassed", reason, 200);
+        } else {
+            const token = process.env.CATEGORY_SLUG_LOOKUP_TOKEN;
+            if (token) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 250);
+                try {
+                    const lookup = await fetch(
+                        new URL(
+                            `/api/internal/category-slug-lookup?productTypeId=${encodeURIComponent(url.searchParams.get("productTypeId")!)}`,
+                            url
+                        ),
+                        {
+                            headers: {
+                                "x-renivet-internal-lookup-token": token,
+                            },
+                            cache: "no-store",
+                            signal: controller.signal,
+                        }
+                    );
+                    if (lookup.ok) {
+                        const result = (await lookup.json()) as {
+                            categorySlug?: string;
+                            categoryId?: string;
+                        };
+                        if (result.categorySlug && result.categoryId) {
+                            const destination = replacePathPreservingSearch(
+                                url,
+                                `/shop/${result.categorySlug}`
+                            );
+                            const status = getCategorySlugRedirectStatus(mode);
+                            emitRedirect("redirected", "success", status, {
+                                categoryId: result.categoryId,
+                                destinationPathname: destination.pathname,
+                            });
+                            return NextResponse.redirect(destination, {
+                                status,
+                            });
+                        }
+                    }
+                    emitRedirect("fail_open", "invalid_lookup_response", 200);
+                } catch (error) {
+                    emitRedirect(
+                        "fail_open",
+                        error instanceof DOMException &&
+                            error.name === "AbortError"
+                            ? "lookup_timeout"
+                            : "lookup_error",
+                        200
+                    );
+                } finally {
+                    clearTimeout(timeout);
+                }
+            } else {
+                emitRedirect("bypassed", "mode_off", 200);
+            }
+        }
+    }
 
     if (
         url.pathname === "/api/webhooks/clerk" ||

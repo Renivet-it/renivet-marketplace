@@ -1,0 +1,698 @@
+schema_version: "1.0"
+task:
+    id: REN-221
+    title: "[SEO][P1] Category URL Migration to /shop/[category-slug]"
+    source: linear
+    branch: feat/ren-221-clean
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-221/seop1-category-url-migration-to-shopcategory-slug-architectural
+        priority: High
+        labels: [Feature]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — SEO & Organic Growth Program"
+        milestone: "Workstream C — Architecture"
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Live indexed category URLs and paid-ad landing URLs are being migrated.
+        - Redirect, canonical, sitemap, analytics, and rollback behavior span middleware, routing, data, and acquisition paths.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        [
+            Linear issue and relations,
+            current /shop route,
+            storefront catalog component,
+            middleware runtime,
+            category and product-type schema and queries,
+            breadcrumbs,
+            sitemap,
+            canonical metadata,
+            tests,
+        ]
+    excluded_areas:
+        [
+            production deployment,
+            production data mutation,
+            live paid campaigns,
+            bulk editorial copy,
+            implementation source changes,
+        ]
+    dependencies:
+        [DEP-221-001, DEP-221-002, DEP-221-003, DEP-221-004, DEP-221-005]
+    integrations: [INT-221-001, INT-221-002]
+    security_boundaries: [SEC-221-001]
+    state_transitions:
+        [
+            legacy_query_url,
+            redirect_response,
+            slug_url,
+            category_disappeared,
+            fail_open,
+            rollback,
+        ]
+    related_tests:
+        [
+            TEXP-221-001,
+            TEXP-221-002,
+            TEXP-221-003,
+            TEXP-221-004,
+            TEXP-221-005,
+            TEXP-221-006,
+            TEXP-221-007,
+            TEXP-221-008,
+            TEXP-221-009,
+            TEXP-221-010,
+            TEXP-221-011,
+        ]
+    uncertainties:
+        [
+            Production enablement timing remains outside implementation scope and defaults off.,
+        ]
+requirements:
+    - {
+          id: REQ-221-001,
+          description: "Provide /shop/[category-slug], resolve an existing category slug server-side, and render the existing catalog behavior.",
+          type: explicit,
+      }
+    - {
+          id: REQ-221-002,
+          description: "For one valid productTypeId, off mode leaves the request untouched, temporary mode returns 307, and permanent mode returns 301 to the parent slug while retaining productTypeId and unrelated parameters.",
+          type: explicit,
+      }
+    - {
+          id: REQ-221-003,
+          description: "Migrate internally generated category links to one shared slug URL builder without changing product URLs or product-type filter semantics.",
+          type: explicit,
+      }
+    - {
+          id: REQ-221-004,
+          description: "Self-canonicalize slug pages, provide explicit REN-217 sitemap and REN-219 canonical handoffs, and preserve a reversible rollout.",
+          type: explicit,
+      }
+    - {
+          id: REQ-221-005,
+          description: "Redirect only one productTypeId with no categoryId/subCategoryId/subcategoryId; fail open unchanged for aliases, duplicates, conflicts, malformed, unknown, unavailable, inconsistent, or unsafe lookups and prevent loops.",
+          type: compatibility,
+      }
+    - {
+          id: REQ-221-006,
+          description: "Use a bounded secret-protected same-origin Node lookup from middleware, exhaustive bounded diagnostics, and off/temporary/permanent redirect modes.",
+          type: inferred,
+      }
+    - {
+          id: REQ-221-007,
+          description: "Return standard non-indexable 404 behavior for unknown, malformed, differently cased, or non-canonical encoded category slugs.",
+          type: inferred,
+      }
+    - {
+          id: REQ-221-008,
+          description: "Treat the slug path as authoritative; allow only matching categoryId/subCategoryId/productTypeId hierarchy and return non-indexable 404 for any mismatch.",
+          type: compatibility,
+      }
+    - {
+          id: REQ-221-009,
+          description: "Keep existing category slugs stable by decoupling category-name updates from slug mutation; future explicit slug edits require a separate redirect migration.",
+          type: inferred,
+      }
+    - {
+          id: REQ-221-010,
+          description: "Exclude the fixed internal lookup path from Clerk and redirect processing before other middleware logic while retaining mandatory route-handler token validation.",
+          type: inferred,
+      }
+    - {
+          id: REQ-221-011,
+          description: "Prevent ordinary deletion of a published category until a separately approved retirement/tombstone redirect policy exists.",
+          type: explicit,
+      }
+    - {
+          id: REQ-221-012,
+          description: "Render category title, description, H1, and a 150–300 word editorial introduction from category content or deterministic fallback before catalog content.",
+          type: explicit,
+      }
+scenarios:
+    - {
+          id: SCN-221-001,
+          description: "A valid category slug renders the existing category catalog and emits category-specific H1 and self-canonical metadata.",
+          requirement_ids: [REQ-221-001, REQ-221-004],
+      }
+    - {
+          id: SCN-221-002,
+          description: "A valid legacy URL is untouched in off mode, returns 307 in temporary mode, or 301 in permanent mode; redirected modes preserve productTypeId, filters, UTMs, and result parity.",
+          requirement_ids: [REQ-221-002, REQ-221-005],
+      }
+    - {
+          id: SCN-221-003,
+          description: "Unknown, malformed, duplicate, either/both subcategory aliases, mixed hierarchy, unavailable, or inconsistent lookups remain on the untouched legacy route without unrelated redirect, loop, or migration-generated 5xx.",
+          requirement_ids: [REQ-221-005, REQ-221-006],
+      }
+    - {
+          id: SCN-221-004,
+          description: "Navigation, breadcrumbs, product category links, canonical metadata, sitemap handoff, and analytics use the shared category URL identity.",
+          requirement_ids: [REQ-221-003, REQ-221-004, REQ-221-006],
+      }
+    - {
+          id: SCN-221-005,
+          description: "Off mode prevents new redirects while slug routes stay valid; temporary mode returns 307; owner-approved permanent mode returns 301; every lookup reads authoritative database state.",
+          requirement_ids: [REQ-221-004, REQ-221-006],
+      }
+    - {
+          id: SCN-221-006,
+          description: "An invalid, differently cased, or non-canonical category slug returns the standard 404 without category canonical metadata.",
+          requirement_ids: [REQ-221-007],
+      }
+    - {
+          id: SCN-221-007,
+          description: "A slug route with matching narrower hierarchy filters renders and self-canonicalizes; any category, subcategory, or product-type mismatch returns non-indexable 404.",
+          requirement_ids: [REQ-221-008],
+      }
+    - {
+          id: SCN-221-008,
+          description: "Renaming a category changes its display name but preserves its published slug and existing public URL.",
+          requirement_ids: [REQ-221-009],
+      }
+    - {
+          id: SCN-221-009,
+          description: "Internal lookup bypasses Clerk and redirect recursion, rejects missing/invalid tokens, and behaves identically for anonymous and authenticated callers within the total 250 ms budget.",
+          requirement_ids: [REQ-221-006, REQ-221-010],
+      }
+    - {
+          id: SCN-221-010,
+          description: "A category disappearing between lookup and slug rendering returns non-indexable 404 with category_deleted telemetry; ordinary deletion is rejected if the proposed policy is approved.",
+          requirement_ids: [REQ-221-007, REQ-221-011],
+      }
+    - {
+          id: SCN-221-011,
+          description: "A valid slug page renders title, description, H1, and a 150–300 word editorial introduction before catalog content.",
+          requirement_ids: [REQ-221-001, REQ-221-012],
+      }
+invariants:
+    - {
+          id: INV-221-001,
+          description: "A productTypeId maps only to its authoritative parent category and remains in the destination query so filtering is unchanged.",
+      }
+    - {
+          id: INV-221-002,
+          description: "The legacy query route remains functional; off mode stops new redirects while slug routes and slug-based internal links remain valid.",
+      }
+    - {
+          id: INV-221-003,
+          description: "No product URL, catalog filter result, authorization rule, analytics identity, or arbitrary query value changes during migration.",
+      }
+    - {
+          id: INV-221-004,
+          description: "Middleware imports no database/cache client, uses only the fixed same-origin lookup, and never redirects a slug route back to itself.",
+      }
+    - {
+          id: INV-221-005,
+          description: "The slug path category and every supplied hierarchy filter resolve to the same category.",
+      }
+    - {
+          id: INV-221-006,
+          description: "An existing category slug is immutable through the ordinary category-name update operation.",
+      }
+    - {
+          id: INV-221-007,
+          description: "A blocked category deletion performs no database writes or cascade and leaves the public slug/page available.",
+      }
+flows:
+    - {
+          id: FLOW-221-001,
+          description: "Exact /shop request -> require one productTypeId and no hierarchy conflicts -> bounded same-origin lookup -> clone URL/change pathname -> 301 -> slug route -> shared catalog render.",
+          state_transitions: [legacy_query_url, redirect_response, slug_url],
+      }
+    - {
+          id: FLOW-221-002,
+          description: "Slug route -> database category resolution -> shared catalog query -> H1/canonical -> analytics and navigation outputs.",
+          state_transitions: [slug_url],
+      }
+    - {
+          id: FLOW-221-003,
+          description: "Invalid or failed mapping -> privacy-safe diagnostic -> no migration redirect -> legacy route render.",
+          state_transitions: [legacy_query_url, fail_open],
+      }
+    - {
+          id: FLOW-221-004,
+          description: "Rollback -> set redirect mode off -> verify legacy and slug URLs both render -> retain slug internal links and diagnostics.",
+          state_transitions: [rollback],
+      }
+    - {
+          id: FLOW-221-005,
+          description: "Delete request -> published/dependency guard -> typed conflict and category_delete_blocked event -> no cascade/write.",
+          state_transitions: [category_disappeared],
+      }
+dependencies:
+    - {
+          id: DEP-221-001,
+          name: categories.slug,
+          purpose: Authoritative public category path identity,
+          description: "Existing unique slugs are used as-is; all current category rows are public because no visibility state exists.",
+          status: resolved,
+      }
+    - {
+          id: DEP-221-002,
+          name: StorefrontCatalogPage,
+          purpose: Shared catalog rendering,
+          description: Existing /shop page delegates to this component and its filter semantics must be reused.,
+          status: resolved,
+      }
+    - {
+          id: DEP-221-003,
+          name: REN-217 and REN-219,
+          purpose: Sitemap and canonical coordination,
+          description: "REN-221 provides src/lib/shop/category-url.ts; REN-217 and REN-219 consume it after the slug route is deployable.",
+          status: resolved,
+      }
+    - {
+          id: DEP-221-004,
+          name: internal category redirect lookup,
+          purpose: Authoritative middleware lookup,
+          description: "A secret-protected fixed same-origin Node route performs one indexed join, validates hierarchy, sets 200 ms database statement timeout, and is aborted by middleware at 250 ms.",
+          status: resolved,
+      }
+    - {
+          id: DEP-221-005,
+          name: LINK-INVENTORY.md,
+          purpose: Deterministic internal-link scope,
+          description: Enumerates required,
+          conditional,
+          data-owned,
+          and excluded link producers.,
+          status: resolved,
+      }
+integrations:
+    - {
+          id: INT-221-001,
+          system: Search engines and paid landing URLs,
+          purpose: Preserve traffic through deterministic 301 migration,
+          failure_mode: Ranking loss,
+          broken landing pages,
+          loops,
+          or lost attribution,
+          retry_idempotency: Identical requests produce the same redirect and slug routes never re-enter migration.,
+      }
+    - {
+          id: INT-221-002,
+          system: Analytics and sitemap/canonical consumers,
+          purpose: Keep URL identity consistent across discovery and measurement,
+          failure_mode: Duplicate URLs or split attribution,
+          retry_idempotency: URL generation is deterministic and idempotent.,
+      }
+personas:
+    - {
+          id: PER-221-001,
+          role: shopper,
+          applicability: Uses category navigation and catalog filtering.,
+      }
+    - {
+          id: PER-221-002,
+          role: SEO/operator,
+          applicability: Monitors redirects,
+          rankings,
+          canonical URLs,
+          sitemap,
+          paid attribution,
+          and rollback.,
+      }
+security_boundaries:
+    - {
+          id: SEC-221-001,
+          description: "All current categories are public; internal lookup requires a constant-time checked server secret, accepts only UUIDs, returns only public IDs/slugs, uses fixed origin, and bounded logs exclude identity/query values.",
+      }
+business_rules:
+    - {
+          id: BR-221-001,
+          description: "Accepted mappings use 307 in temporary mode and 301 only in permanent mode, retain productTypeId, and keep the slug destination compatible.",
+      }
+    - {
+          id: BR-221-002,
+          description: "Slug edits and historical slug redirects are excluded and require a separate migration contract.",
+      }
+decisions:
+    - {
+          id: DEC-221-001,
+          question: "How does productTypeId map to a category URL?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: "Redirect to the product type's parent category slug and retain productTypeId.",
+          basis: Preserves current product-type filter semantics while adding the keyword category path.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-002,
+          question: "Which categories are eligible?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: Treat every existing category row as public until a visibility model is introduced.,
+          basis: The current schema has no visibility or tenant discriminator.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-003,
+          question: "What is the slug persistence policy?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: Use existing unique slugs without backfill and require a separate contract for future edits.,
+          basis: Avoids production data mutation and hidden historical URL behavior.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-004,
+          question: "When may production redirects be enabled?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: Only after staging evidence and separate owner operational approval.,
+          basis: Implementation defaults off and cannot itself enable production rollout.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-005,
+          question: "How are conflicting hierarchy inputs handled?",
+          class: AUTO_DECIDE,
+          status: resolved,
+          recommendation: "Redirect only with one productTypeId and no categoryId/subCategoryId; otherwise preserve the legacy request unchanged.",
+          basis: Prevents changing current filter precedence or catalog results.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-006,
+          question: "How is redirect lookup kept authoritative?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: "Use a bounded same-origin Node lookup against current database/cache state; productTypes.categoryId is authoritative and subcategory ancestry must agree.",
+          basis: Supports exact 301 middleware behavior and genuine fail-open without stale snapshots.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-007,
+          question: "How is rollback controlled?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: "CATEGORY_SLUG_REDIRECT_MODE defaults off, temporary mode is reversible, permanent mode follows acceptance, and slug routes remain valid in all modes.",
+          basis: Stops new redirects while acknowledging already cached permanent redirects cannot be recalled.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-008,
+          question: "How are permanent redirects rolled out safely?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: "Use server-only off/temporary/permanent modes; validate 307 in staging/canary before owner-approved 301, and keep slug routes compatible after permanent release.",
+          basis: A cached 301 cannot be recalled by an application flag.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-009,
+          question: "What controls hierarchy on slug routes?",
+          class: AUTO_DECIDE,
+          status: resolved,
+          recommendation: "Path slug is authoritative; matching narrower filters are allowed and every mismatch returns non-indexable 404.",
+          basis: Prevents misleading H1/canonical and cross-category filter combinations.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-010,
+          question: "How are published slugs protected?",
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: "Ordinary category-name updates preserve existing slugs; explicit slug edits are a separate migration.",
+          basis: Existing admin behavior would otherwise invalidate indexed URLs.,
+          confidence: high,
+          consequence: manageable,
+          human_confirmation_required: false,
+      }
+    - {
+          id: DEC-221-011,
+          question: "May an admin delete a category after its public slug is published?",
+          class: HUMAN_CONFIRMATION,
+          status: resolved,
+          recommendation: "Reject ordinary deletion in the authorized mutation before cascade when slug is non-empty or products/subcategories exist; use typed conflict and no-write transaction.",
+          basis: "Product owner approved on 2026-09-15; cascading deletion can permanently break indexed and cached redirect destinations.",
+          confidence: high,
+          consequence: high,
+          human_confirmation_required: true,
+      }
+test_expectations:
+    - {
+          id: TEXP-221-001,
+          category: integration,
+          classification: REQUIRED,
+          reason: Verify valid and invalid slug resolution,
+          catalog rendering,
+          H1,
+          and self-canonical metadata.,
+          scenarios: [SCN-221-001],
+      }
+    - {
+          id: TEXP-221-002,
+          category: regression,
+          classification: REQUIRED,
+          reason: Verify at least three real legacy product types redirect to parent slugs with exact result parity and query/UTM preservation.,
+          scenarios: [SCN-221-002],
+      }
+    - {
+          id: TEXP-221-003,
+          category: security,
+          classification: REQUIRED,
+          reason: Verify malformed,
+          unknown,
+          duplicate,
+          conflicting,
+          and failed mappings fail open without data exposure,
+          loops,
+          or migration 5xx.,
+          scenarios: [SCN-221-003],
+      }
+    - {
+          id: TEXP-221-004,
+          category: integration,
+          classification: REQUIRED,
+          reason: Audit shared URL builder consumers,
+          canonical identity,
+          REN-217/REN-219 handoffs,
+          and analytics URL/category identity.,
+          scenarios: [SCN-221-004],
+      }
+    - {
+          id: TEXP-221-005,
+          category: regression,
+          classification: REQUIRED,
+          reason: Verify redirect modes,
+          exhaustive privacy-safe telemetry,
+          exact rate formulas/thresholds,
+          slug and legacy availability in off mode,
+          and staging rollback rehearsal.,
+          scenarios: [SCN-221-005],
+      }
+    - {
+          id: TEXP-221-006,
+          category: integration,
+          classification: REQUIRED,
+          reason: Verify invalid/cased/encoded slugs return standard 404 and emit no category canonical metadata.,
+          scenarios: [SCN-221-006],
+      }
+    - {
+          id: TEXP-221-007,
+          category: regression,
+          classification: REQUIRED,
+          reason: Verify every path/query hierarchy combination accepts only matching filters and returns non-indexable 404 for mismatches.,
+          scenarios: [SCN-221-007],
+      }
+    - {
+          id: TEXP-221-008,
+          category: regression,
+          classification: REQUIRED,
+          reason: Verify ordinary category rename preserves the existing slug while category creation still generates a unique slug.,
+          scenarios: [SCN-221-008],
+      }
+    - {
+          id: TEXP-221-009,
+          category: business_uat,
+          classification: REQUIRED,
+          reason: Verify three real staging product types in temporary mode before operational approval for permanent redirects.,
+          scenarios: [SCN-221-002, SCN-221-005],
+      }
+    - {
+          id: TEXP-221-010,
+          category: security,
+          classification: REQUIRED,
+          reason: Verify middleware internal-path bypass,
+          no recursion,
+          mandatory token rejection,
+          anonymous/session parity,
+          abort propagation,
+          SQL deadline,
+          and total 250 ms budget.,
+          scenarios: [SCN-221-009],
+      }
+    - {
+          id: TEXP-221-012,
+          category: component,
+          classification: REQUIRED,
+          reason: Verify category metadata,
+          H1,
+          editorial length/source fallback,
+          placement,
+          and catalog rendering.,
+          scenarios: [SCN-221-011],
+      }
+    - {
+          id: TEXP-221-011,
+          category: regression,
+          classification: REQUIRED,
+          reason: Verify category disappearance returns non-indexable 404/category_deleted telemetry and approved deletion guards reject destructive retirement.,
+          scenarios: [SCN-221-010],
+      }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Independent critic subagent
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-221-001, scenario_ids: [SCN-221-001] }
+        - { requirement_id: REQ-221-002, scenario_ids: [SCN-221-002] }
+        - { requirement_id: REQ-221-003, scenario_ids: [SCN-221-004] }
+        - {
+              requirement_id: REQ-221-004,
+              scenario_ids: [SCN-221-001, SCN-221-004, SCN-221-005],
+          }
+        - {
+              requirement_id: REQ-221-005,
+              scenario_ids: [SCN-221-002, SCN-221-003],
+          }
+        - {
+              requirement_id: REQ-221-006,
+              scenario_ids: [SCN-221-003, SCN-221-004, SCN-221-005],
+          }
+        - { requirement_id: REQ-221-007, scenario_ids: [SCN-221-006] }
+        - { requirement_id: REQ-221-008, scenario_ids: [SCN-221-007] }
+        - { requirement_id: REQ-221-009, scenario_ids: [SCN-221-008] }
+        - { requirement_id: REQ-221-010, scenario_ids: [SCN-221-009] }
+        - { requirement_id: REQ-221-011, scenario_ids: [SCN-221-010] }
+        - { requirement_id: REQ-221-012, scenario_ids: [SCN-221-011] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-221-001, invariant_ids: [INV-221-003] }
+        - {
+              scenario_id: SCN-221-002,
+              invariant_ids:
+                  [INV-221-001, INV-221-002, INV-221-003, INV-221-004],
+          }
+        - {
+              scenario_id: SCN-221-003,
+              invariant_ids: [INV-221-001, INV-221-003, INV-221-004],
+          }
+        - { scenario_id: SCN-221-004, invariant_ids: [INV-221-003] }
+        - {
+              scenario_id: SCN-221-005,
+              invariant_ids: [INV-221-002, INV-221-004],
+          }
+        - { scenario_id: SCN-221-006, invariant_ids: [INV-221-003] }
+        - {
+              scenario_id: SCN-221-007,
+              invariant_ids: [INV-221-003, INV-221-005],
+          }
+        - { scenario_id: SCN-221-008, invariant_ids: [INV-221-006] }
+        - { scenario_id: SCN-221-009, invariant_ids: [INV-221-004] }
+        - {
+              scenario_id: SCN-221-010,
+              invariant_ids: [INV-221-002, INV-221-006, INV-221-007],
+          }
+        - { scenario_id: SCN-221-011, invariant_ids: [INV-221-003] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-221-001, test_expectation_ids: [TEXP-221-001] }
+        - {
+              scenario_id: SCN-221-002,
+              test_expectation_ids: [TEXP-221-002, TEXP-221-009],
+          }
+        - { scenario_id: SCN-221-003, test_expectation_ids: [TEXP-221-003] }
+        - { scenario_id: SCN-221-004, test_expectation_ids: [TEXP-221-004] }
+        - {
+              scenario_id: SCN-221-005,
+              test_expectation_ids: [TEXP-221-005, TEXP-221-009],
+          }
+        - { scenario_id: SCN-221-006, test_expectation_ids: [TEXP-221-006] }
+        - { scenario_id: SCN-221-007, test_expectation_ids: [TEXP-221-007] }
+        - { scenario_id: SCN-221-008, test_expectation_ids: [TEXP-221-008] }
+        - { scenario_id: SCN-221-009, test_expectation_ids: [TEXP-221-010] }
+        - { scenario_id: SCN-221-010, test_expectation_ids: [TEXP-221-011] }
+        - { scenario_id: SCN-221-011, test_expectation_ids: [TEXP-221-012] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "a592e86f0ecdfe36e27f1fa538fa1996d018af81"
+    head_commit: "2bb867f25cec5b11187445a6b68a335e5e5c9c74"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-221-005: Attach three-real-product-type staging, UTM, observability, and rollback evidence before permanent-mode rollout."
+        - "REV-221-006: Track unrelated repository-wide test and type-check baseline failures separately."
+    evidence:
+        - "Compared the approved REN-221 contract with the complete base-to-head diff from a592e86f0ecdfe36e27f1fa538fa1996d018af81 to 2bb867f25cec5b11187445a6b68a335e5e5c9c74."
+        - "Inspected slug routing, redirect eligibility and status, bounded lookup, hierarchy enforcement, metadata/H1/editorial rendering, category mutation safety, telemetry, and all required link producers."
+        - "Focused REN-221, SEO heading, search, and sitemap tests passed before REVIEW; REVIEW did not execute application tests."
+        - "Repository-wide checks retain unrelated baseline failures; filtered REN-221 TypeScript paths contain no errors."
+    governance_reentry_required: false
