@@ -1,6 +1,9 @@
 ﻿"use client";
 
-import { BrandDesktopNavigationItem } from "@/components/globals/layouts/navbar/brand-navigation";
+import {
+    BrandDesktopNavigationItem,
+    BrandMobileNavigation,
+} from "@/components/globals/layouts/navbar/brand-navigation";
 import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { Icons } from "@/components/icons";
 import { RenivetFull } from "@/components/svgs";
@@ -148,14 +151,6 @@ const ANNOUNCEMENT_MESSAGES = [
     },
 ];
 
-const FALLBACK_CATEGORY_LINKS = [
-    { label: "MEN", href: "/men" },
-    { label: "WOMEN", href: "/women" },
-    { label: "KIDS", href: "/kids" },
-    { label: "HOME AND LIVING", href: "/home-living" },
-    { label: "BEAUTY AND PERSONAL CARE", href: "/beauty-personal" },
-] as const;
-
 export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
@@ -223,8 +218,6 @@ export function NavbarHome({
         isCategoriesFetching ||
         isSubcategoriesFetching ||
         isProductTypesFetching;
-    const shouldShowCategoryFallback =
-        isCategoriesLoading || !categories || !subcategories || !productTypes;
 
     const {
         data: storefrontBrands = [],
@@ -419,7 +412,7 @@ export function NavbarHome({
                         <Icons.Menu className="size-6" />
                     </button>
 
-                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-4 xl:gap-6">
+                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-8 xl:gap-12">
                         {customLogo ? (
                             customLogo
                         ) : (
@@ -436,7 +429,7 @@ export function NavbarHome({
                             </Link>
                         )}
 
-                        <div className="hidden items-center gap-0.5 lg:flex">
+                        <div className="hidden items-center gap-1 lg:flex">
                             <NavigationMenu className="static h-full max-w-none">
                                 {/* <NavigationMenuList>
                                 {isCategoriesLoading ? (
@@ -544,19 +537,8 @@ export function NavbarHome({
                                 )}
                             </NavigationMenuList> */}
                                 <NavigationMenuList>
-                                    {shouldShowCategoryFallback ? (
-                                        FALLBACK_CATEGORY_LINKS.map(
-                                            ({ label, href }) => (
-                                                <NavigationMenuItem key={href}>
-                                                    <Link
-                                                        href={href}
-                                                        className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
-                                                    >
-                                                        {label}
-                                                    </Link>
-                                                </NavigationMenuItem>
-                                            )
-                                        )
+                                    {isCategoriesLoading ? (
+                                        <></>
                                     ) : (
                                         categories &&
                                         subcategories &&
@@ -583,7 +565,7 @@ export function NavbarHome({
                                                         "Beauty and Personal Care" ? (
                                                         <>
                                                             <NavigationMenuTrigger
-                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
+                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary"
                                                                 onClick={(
                                                                     e
                                                                 ) => {
@@ -821,7 +803,7 @@ export function NavbarHome({
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]">
+                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary">
                                                                 {category.name}
                                                             </NavigationMenuTrigger>
                                                             <NavigationMenuContent>
@@ -842,15 +824,15 @@ export function NavbarHome({
                     </div>
 
                     <div className="flex items-center gap-1 sm:gap-3 xl:gap-4">
+                        <BrandMobileNavigation
+                            brands={storefrontBrands}
+                            isLoading={isStorefrontBrandsLoading}
+                        />
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
-                                wrapper: cn(
-                                    "hidden min-w-0 xl:flex [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
-                                    showUserActions
-                                        ? "xl:w-[clamp(140px,calc(45vw-436px),420px)]"
-                                        : "xl:w-[clamp(140px,14vw,320px)]"
-                                ),
+                                wrapper:
+                                    "hidden min-w-[320px] min-[1700px]:flex [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
                             }}
                         />
                         {/* âœ… Guest-only Wishlist & Cart */}
@@ -884,7 +866,7 @@ export function NavbarHome({
                                             className={cn(
                                                 "size-5",
                                                 isFestivePage &&
-                                                    "size-4 text-[#8B1E2D]"
+                                                    "size-4 text-[#DF2463]"
                                             )}
                                         />
                                     </motion.div>
@@ -921,7 +903,7 @@ export function NavbarHome({
                                             className={cn(
                                                 "size-6",
                                                 isFestivePage &&
-                                                    "size-4 text-[#8B1E2D]"
+                                                    "size-4 text-[#DF2463]"
                                             )}
                                         />
                                     </motion.div>
@@ -1102,7 +1084,7 @@ export function NavbarHome({
                                                 className={cn(
                                                     "size-5",
                                                     isFestivePage &&
-                                                        "size-4 text-[#8B1E2D]"
+                                                        "size-4 text-[#DF2463]"
                                                 )}
                                             />
                                         </motion.div>
