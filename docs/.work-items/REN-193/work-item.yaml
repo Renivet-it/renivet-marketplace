@@ -366,7 +366,7 @@ implementation_review:
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: origin/master
     base_commit: "59975662c6e44e434aefdc1473671c86f14d41d9"
-    head_commit: "59975662c6e44e434aefdc1473671c86f14d41d9"
+    head_commit: "166d40b8fe0d7fd78a2e24f85f9428e56c8e3869"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -381,7 +381,7 @@ implementation_review:
     required_actions:
         - "REV-001: Add mounted interaction and accessibility coverage when a DOM-capable React test harness is available."
     evidence:
-        - "Compared the approved REN-193 contract with the origin/master merge base, current HEAD, and all recorded unstaged and untracked REN-193 implementation paths."
+        - "Compared the approved REN-193 contract with the origin/master merge base and implementation commit 166d40b8fe0d7fd78a2e24f85f9428e56c8e3869."
         - "Observed one active-only public brand projection, one shared priority-ordering utility, responsive desktop/mobile navigation surfaces, and canonical brand-shop links."
         - "Static test inspection covers ordering and public projection but not mounted keyboard, Escape, image-failure, or overlay-transition behavior."
     governance_reentry_required: false
