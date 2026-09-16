@@ -3,7 +3,7 @@ task:
     id: REN-221
     title: "[SEO][P1] Category URL Migration to /shop/[category-slug]"
     source: linear
-    branch: feat/ren-221
+    branch: feat/ren-221-clean
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-221/seop1-category-url-migration-to-shopcategory-slug-architectural
