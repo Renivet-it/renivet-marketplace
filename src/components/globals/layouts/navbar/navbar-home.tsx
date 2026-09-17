@@ -859,7 +859,7 @@ export function NavbarHome({
                                             className={cn(
                                                 "size-5",
                                                 isFestivePage &&
-                                                    "size-4 text-[#DF2463]"
+                                                    "size-4 text-[#8B1E2D]"
                                             )}
                                         />
                                     </motion.div>
@@ -896,7 +896,7 @@ export function NavbarHome({
                                             className={cn(
                                                 "size-6",
                                                 isFestivePage &&
-                                                    "size-4 text-[#DF2463]"
+                                                    "size-4 text-[#8B1E2D]"
                                             )}
                                         />
                                     </motion.div>
@@ -1077,7 +1077,7 @@ export function NavbarHome({
                                                 className={cn(
                                                     "size-5",
                                                     isFestivePage &&
-                                                        "size-4 text-[#DF2463]"
+                                                        "size-4 text-[#8B1E2D]"
                                                 )}
                                             />
                                         </motion.div>

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-test("uses festive pink only for active festive product-type pills", async () => {
+test("uses festive red only for active festive product-type pills", async () => {
     let getPillClassName:
         | undefined
         | ((options: { active: boolean; theme?: "festive" }) => string);
@@ -26,8 +26,8 @@ test("uses festive pink only for active festive product-type pills", async () =>
     });
     const activeDefault = getPillClassName!({ active: true });
 
-    expect(activeFestive).toContain("bg-[#DF2463]");
+    expect(activeFestive).toContain("bg-[#8B1E2D]");
     expect(activeFestive).toContain("text-white");
-    expect(inactiveFestive).not.toContain("bg-[#DF2463]");
+    expect(inactiveFestive).not.toContain("bg-[#8B1E2D]");
     expect(activeDefault).toContain("bg-[#1f3553]");
 });

@@ -1107,6 +1107,7 @@ class ProductQuery {
         isUnder999,
         curatedProductIds,
         curatedDefaultOrder,
+        prioritizedSubcategoryIds,
     }: {
         limit: number;
         page: number;
@@ -1139,6 +1140,7 @@ class ProductQuery {
         isUnder999?: boolean | null;
         curatedProductIds?: string[];
         curatedDefaultOrder?: string[];
+        prioritizedSubcategoryIds?: string[];
     }) {
         console.log(
             "[getProducts] search:",
@@ -1443,9 +1445,9 @@ class ProductQuery {
         // --- OrderBy construction ---
         const orderBy: any[] = [];
 
-        // Curated catalogues (such as Festive Season) use the administrator's
-        // sequence by default. Shopper-selected sort values deliberately take
-        // precedence while the product-ID scope remains enforced above.
+        // Curated catalogues use their supplied merchandising sequence by
+        // default. Shopper-selected sort values deliberately take precedence
+        // while the product-ID scope remains enforced above.
         if (
             curatedDefaultOrder?.length &&
             (!sortBy || sortBy === "recommended") &&
@@ -1455,6 +1457,16 @@ class ProductQuery {
                 .map(
                     (id, index) =>
                         `WHEN products.id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
+                )
+                .join(" ");
+            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
+        }
+
+        if (prioritizedSubcategoryIds?.length && !search) {
+            const cases = prioritizedSubcategoryIds
+                .map(
+                    (id, index) =>
+                        `WHEN products.subcategory_id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
                 )
                 .join(" ");
             orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);

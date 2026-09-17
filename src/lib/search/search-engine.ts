@@ -7,6 +7,7 @@ import {
     searchAnalytics,
     searchIntents,
 } from "../db/schema";
+import { getBrandSearchTerms } from "./brand-search-query";
 
 /**
  * Search Engine Flow - Phase 1
@@ -544,7 +545,18 @@ export function getSearchRedirectUrl(
 
     switch (result.intentType) {
         case "BRAND":
-            redirectUrl = `/brands/${result.brandSlug}`;
+            {
+                const brandSearch = getBrandSearchTerms(
+                    result.originalQuery,
+                    result.brandName,
+                    result.brandSlug
+                );
+                const params = new URLSearchParams();
+                if (brandSearch) params.set("search", brandSearch);
+                redirectUrl = `/brands/${result.brandSlug}/shop${
+                    params.toString() ? `?${params.toString()}` : ""
+                }`;
+            }
             break;
 
         case "CATEGORY":

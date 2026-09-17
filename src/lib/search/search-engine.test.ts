@@ -26,7 +26,7 @@ describe("REN-154 search redirect correlation", () => {
     test.each([
         [
             searchResult({ intentType: "BRAND", brandSlug: "earth-kind" }),
-            `/brands/earth-kind?searchId=${searchId}`,
+            `/brands/earth-kind/shop?search=linen+saree&searchId=${searchId}`,
         ],
         [
             searchResult({ intentType: "CATEGORY", categoryId: "women" }),

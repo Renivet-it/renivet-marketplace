@@ -9,6 +9,11 @@ import { Label } from "@/components/ui/label";
 import { ProductSearch } from "@/components/ui/product-search";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    getFestiveCatalogLimit,
+    rankFestiveProductIds,
+    rankProductIdsBySubcategory,
+} from "@/lib/catalog/merchandising";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
 import {
     categoryCache,
@@ -76,6 +81,7 @@ interface StorefrontCatalogPageProps {
     theme?: "festive";
     pageHeading?: ReactNode;
     editorialIntro?: string;
+    defaultSubcategoryOrder?: string[];
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -95,24 +101,44 @@ export async function StorefrontCatalogPage({
     theme,
     pageHeading,
     editorialIntro,
+    defaultSubcategoryOrder,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
-    const subCategoryId = params.subCategoryId || params.subcategoryId;
-    const curatedProductIds =
-        catalogContext === "festive"
-            ? Array.from(
-                  new Set(
-                      (await productQueries.getFestiveSeasonProducts())
-                          .map((entry: any) => entry.productId)
-                          .filter(Boolean)
-                  )
-              )
-            : undefined;
     const [productTypes, categories, subCategories] = await Promise.all([
         productTypeCache.getAll(),
         categoryCache.getAll(),
         subCategoryCache.getAll(),
     ]);
+    const subCategoryId = params.subCategoryId || params.subcategoryId;
+    const festiveEntries = catalogContext
+        ? await productQueries.getFestiveSeasonProducts()
+        : [];
+    const categoryNames = new Map(
+        categories.map((item) => [item.id, item.name])
+    );
+    const subCategoryNames = new Map(
+        subCategories.map((item) => [item.id, item.name])
+    );
+    const festiveProducts = festiveEntries.map((entry: any) => ({
+        ...entry.product,
+        categoryName: categoryNames.get(entry.product.categoryId),
+        subcategoryName: subCategoryNames.get(entry.product.subcategoryId),
+    }));
+    const curatedProductIds = catalogContext
+        ? Array.from(new Set(festiveProducts.map((product) => product.id)))
+        : undefined;
+    const curatedDefaultOrder = catalogContext
+        ? rankFestiveProductIds(festiveProducts)
+        : undefined;
+    const prioritizedSubcategoryIds = defaultSubcategoryOrder
+        ? rankProductIdsBySubcategory(
+              subCategories.map((item) => ({
+                  id: item.id,
+                  subcategoryName: item.name,
+              })),
+              defaultSubcategoryOrder
+          )
+        : undefined;
 
     const selectedCategory = categories.find(
         (category) => category.id === params.categoryId
@@ -262,6 +288,11 @@ export async function StorefrontCatalogPage({
                             defaultSortOrder={defaultSortOrder}
                             prioritizeNewProducts={prioritizeNewProducts}
                             catalogContext={catalogContext}
+                            curatedProductIds={curatedProductIds}
+                            curatedDefaultOrder={curatedDefaultOrder}
+                            prioritizedSubcategoryIds={
+                                prioritizedSubcategoryIds
+                            }
                             theme={theme}
                             desktopCatalogHeader={
                                 <div
@@ -615,6 +646,9 @@ async function StorefrontProductsFetch({
     desktopCatalogHeader,
     catalogContext,
     theme,
+    curatedProductIds,
+    curatedDefaultOrder,
+    prioritizedSubcategoryIds,
 }: {
     searchParams: Promise<StorefrontSearchParams>;
     productTypes: any[];
@@ -626,6 +660,9 @@ async function StorefrontProductsFetch({
     desktopCatalogHeader?: ReactNode;
     catalogContext?: "festive";
     theme?: "festive";
+    curatedProductIds?: string[];
+    curatedDefaultOrder?: string[];
+    prioritizedSubcategoryIds?: string[];
 }) {
     const { userId } = await auth();
 
@@ -649,10 +686,11 @@ async function StorefrontProductsFetch({
         searchId: searchIdRaw,
     } = await searchParams;
 
-    const limit =
-        limitRaw && !isNaN(parseInt(limitRaw, 10))
-            ? parseInt(limitRaw, 10)
-            : 28;
+    const limit = catalogContext
+        ? getFestiveCatalogLimit(limitRaw, curatedProductIds?.length ?? 0)
+        : limitRaw && !isNaN(parseInt(limitRaw, 10))
+          ? parseInt(limitRaw, 10)
+          : 28;
     const pageCandidate = shopPageRaw ?? pageRaw;
     const page =
         pageCandidate && !isNaN(parseInt(pageCandidate, 10))
@@ -698,6 +736,10 @@ async function StorefrontProductsFetch({
             : defaultSortBy === "recommended"
               ? undefined
               : defaultSortOrder;
+    const effectivePrioritizedSubcategoryIds =
+        !sortByRaw || sortByRaw === "recommended"
+            ? prioritizedSubcategoryIds
+            : undefined;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
     const minDiscount =
@@ -836,20 +878,9 @@ async function StorefrontProductsFetch({
                 sizes,
                 minDiscount,
                 requireMedia: true,
-                curatedProductIds: Array.from(
-                    new Set(
-                        (await productQueries.getFestiveSeasonProducts())
-                            .map((entry: any) => entry.productId)
-                            .filter(Boolean)
-                    )
-                ),
-                curatedDefaultOrder: Array.from(
-                    new Set(
-                        (await productQueries.getFestiveSeasonProducts())
-                            .map((entry: any) => entry.productId)
-                            .filter(Boolean)
-                    )
-                ),
+                curatedProductIds,
+                curatedDefaultOrder,
+                prioritizedSubcategoryIds: effectivePrioritizedSubcategoryIds,
             });
         } else if (isDefaultNewArrivalsView) {
             finalData = await getCachedNewArrivalProducts();
