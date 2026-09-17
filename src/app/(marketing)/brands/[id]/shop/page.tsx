@@ -113,6 +113,11 @@ export default async function Page({ params, searchParams }: PageProps) {
             hideBrandFilter
             defaultSortBy="createdAt"
             defaultSortOrder="desc"
+            defaultSubcategoryOrder={
+                brand.slug.toLowerCase() === "bamboology"
+                    ? ["Men", "Women", "Accessories", "Bathwear", "Innerwear"]
+                    : undefined
+            }
         />
     );
 }

@@ -1107,6 +1107,7 @@ class ProductQuery {
         isUnder999,
         curatedProductIds,
         curatedDefaultOrder,
+        prioritizedSubcategoryIds,
     }: {
         limit: number;
         page: number;
@@ -1139,6 +1140,7 @@ class ProductQuery {
         isUnder999?: boolean | null;
         curatedProductIds?: string[];
         curatedDefaultOrder?: string[];
+        prioritizedSubcategoryIds?: string[];
     }) {
         console.log(
             "[getProducts] search:",
@@ -1455,6 +1457,16 @@ class ProductQuery {
                 .map(
                     (id, index) =>
                         `WHEN products.id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
+                )
+                .join(" ");
+            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
+        }
+
+        if (prioritizedSubcategoryIds?.length && !search) {
+            const cases = prioritizedSubcategoryIds
+                .map(
+                    (id, index) =>
+                        `WHEN products.subcategory_id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
                 )
                 .join(" ");
             orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
