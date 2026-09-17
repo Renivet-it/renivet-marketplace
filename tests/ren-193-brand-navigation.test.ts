@@ -65,6 +65,7 @@ test("REN-193 exposes only an active public brand projection and integrates both
     const navbar = await Bun.file(
         "src/components/globals/layouts/navbar/navbar-home.tsx"
     ).text();
+    const landing = await Bun.file("src/components/home/landing.tsx").text();
     const navigation = await Bun.file(
         "src/components/globals/layouts/navbar/brand-navigation.tsx"
     ).text();
@@ -75,10 +76,56 @@ test("REN-193 exposes only an active public brand projection and integrates both
     expect(router).not.toContain("getStorefrontBrands: protectedProcedure");
 
     expect(navbar).toContain("BrandDesktopNavigationItem");
-    expect(navbar).toContain("BrandMobileNavigation");
     expect(navbar).toContain("general.brands.getStorefrontBrands.useQuery");
+    expect(navbar).not.toContain("<BrandMobileNavigation");
+    expect(landing).toContain("<BrandMobileNavigation");
+    expect(landing).toContain("general.brands.getStorefrontBrands.useQuery");
     expect(navigation).toContain("BRANDS");
     expect(navigation).toContain("View All Brands");
     expect(navigation).toContain("Browse brands");
     expect(navigation).toContain("/brands/${brand.slug}/shop");
+});
+
+test("REN-193 keeps Brands after the category navigation and uses the category mega-menu width", async () => {
+    const navbar = await Bun.file(
+        "src/components/globals/layouts/navbar/navbar-home.tsx"
+    ).text();
+    const navigation = await Bun.file(
+        "src/components/globals/layouts/navbar/brand-navigation.tsx"
+    ).text();
+
+    expect(navbar.indexOf("<BrandDesktopNavigationItem")).toBeGreaterThan(
+        navbar.indexOf("categories.data")
+    );
+    expect(navbar).toContain('className="hidden items-center gap-0.5 lg:flex"');
+    expect(navigation).toContain("w-[1180px] max-w-[95vw]");
+});
+
+test("REN-193 expands all mobile brands inside the same bottom sheet", async () => {
+    const navigation = await Bun.file(
+        "src/components/globals/layouts/navbar/brand-navigation.tsx"
+    ).text();
+    const mobileNavigation = navigation.slice(
+        navigation.indexOf("export function BrandMobileNavigation")
+    );
+
+    expect(mobileNavigation).toContain("const [showAll, setShowAll]");
+    expect(mobileNavigation).toContain("showAll ? orderedBrands : preview");
+    expect(mobileNavigation).not.toContain("<AllBrandsDialog");
+    expect(mobileNavigation).not.toContain("window.setTimeout");
+});
+
+test("REN-193 places the mobile brand trigger after the home category circles", async () => {
+    const landing = await Bun.file("src/components/home/landing.tsx").text();
+    const navigation = await Bun.file(
+        "src/components/globals/layouts/navbar/brand-navigation.tsx"
+    ).text();
+
+    expect(landing.indexOf("<BrandMobileNavigation")).toBeGreaterThan(
+        landing.indexOf("categories.map")
+    );
+    expect(landing).toContain(
+        'triggerClassName="size-12 min-[390px]:size-[52px] min-[420px]:size-14'
+    );
+    expect(navigation).toContain("triggerClassName?: string");
 });
