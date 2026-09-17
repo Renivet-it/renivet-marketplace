@@ -815,6 +815,7 @@ export const productVariantGroupSchema = z.object({
 });
 
 export const productWithBrandSchema = productSchema.extend({
+    festivePosition: z.number().int().nonnegative().nullable().optional(),
     // brand: z.lazy(() => brandSchema),
     //     brand: z.lazy(() => brandSchema.extend({
     //     confidential: brandConfidentialSchema.nullable().optional()

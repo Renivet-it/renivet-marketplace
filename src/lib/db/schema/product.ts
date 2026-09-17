@@ -622,6 +622,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     }),
     specifications: many(productSpecifications),
     reviews: many(reviews),
+    festiveSeasonProducts: many(festiveSeasonProducts),
 }));
 
 export const productOptionsRelations = relations(productOptions, ({ one }) => ({

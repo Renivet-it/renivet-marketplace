@@ -81,6 +81,7 @@ export type TableProduct = ProductWithBrand & {
     stock: number;
     brandName: string;
     visibility: boolean;
+    festivePosition?: number | null;
 };
 
 type ImageFilter = "with" | "without" | "all";
@@ -133,6 +134,15 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
         header: () => <span className="text-xs">Brand</span>,
         cell: ({ row }) => (
             <span className="text-[13px] text-slate-800">{row.original.brandName}</span>
+        ),
+    },
+    {
+        accessorKey: "festivePosition",
+        header: () => <span className="text-xs">Festive Sequence</span>,
+        cell: ({ row }) => (
+            <span className="text-[13px] text-slate-800">
+                {row.original.festivePosition ?? "—"}
+            </span>
         ),
     },
     {
@@ -574,6 +584,10 @@ export function ProductsReviewTable({
             "critical",
         ] as const).withDefault("all")
     );
+    const [festiveFilter, setFestiveFilter] = useQueryState(
+        "isFestiveProduct",
+        parseAsStringLiteral(["all", "festive"] as const).withDefault("all")
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -611,6 +625,8 @@ export function ProductsReviewTable({
             qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
             productImage,
             productVisiblity,
+            isFestiveProduct:
+                festiveFilter === "festive" ? true : undefined,
             brandIds: isBrandScoped
                 ? [brandId ?? ""]
                 : brandIds.length > 0
@@ -736,6 +752,7 @@ export function ProductsReviewTable({
         void setQcStatusFilter("all");
         void setImageFilter("all");
         void setVisiblityFilter("all");
+        void setFestiveFilter("all");
         if (!isBrandScoped) void setBrandIds([]);
         void table.resetRowSelection();
     };
@@ -909,6 +926,22 @@ export function ProductsReviewTable({
                             <SelectItem value="public">Public</SelectItem>
                             <SelectItem value="private">Private</SelectItem>
                             <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={festiveFilter}
+                        onValueChange={(value: "all" | "festive") =>
+                            setFestiveFilter(value)
+                        }
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by Festive" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="festive">
+                                Festive Products
+                            </SelectItem>
+                            <SelectItem value="all">All Products</SelectItem>
                         </SelectContent>
                     </Select>
                     {!isBrandScoped && (

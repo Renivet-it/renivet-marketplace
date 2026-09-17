@@ -33,6 +33,7 @@ interface PageProps {
         qcStatus?: Product["qcStatus"] | "all";
         catalogIssue?: "all" | "oos_but_live" | "stale_inventory" | "claim_mismatch";
         search?: string;
+        isFestiveProduct?: "all" | "festive";
     }>;
 }
 
@@ -74,6 +75,7 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         qcStatus: qcStatusRaw,
         catalogIssue: catalogIssueRaw,
         search: searchRaw,
+        isFestiveProduct: isFestiveProductRaw,
     } = await searchParams;
 
     const limit =
@@ -90,6 +92,8 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
             ? catalogIssueRaw
             : undefined;
     const search = searchRaw?.length ? searchRaw : undefined;
+    const isFestiveProduct =
+        isFestiveProductRaw === "festive" ? true : undefined;
 
     const data = await productQueries.getProducts({
         limit,
@@ -98,6 +102,7 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         verificationStatus,
         qcStatus,
         catalogIssue,
+        isFestiveProduct,
     });
 
     return <ProductsReviewTable initialData={data} />;

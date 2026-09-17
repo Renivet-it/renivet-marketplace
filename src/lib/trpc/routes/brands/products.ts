@@ -140,6 +140,7 @@ export const productsRouter = createTRPCRouter({
                 colors: z.array(z.string()).optional(),
                 sizes: z.array(z.string()).optional(),
                 minDiscount: z.number().min(0).max(100).optional(),
+                isFestiveProduct: z.boolean().optional(),
                 prioritizeBestSellers: z.boolean().optional(),
                 prioritizeNewProducts: z.boolean().optional(),
                 requireMedia: z.boolean().optional(),

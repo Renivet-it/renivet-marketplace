@@ -701,7 +701,10 @@ export function ProductAction({ product }: PageProps) {
                     </Button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent
+                    align="end"
+                    className="max-h-[min(70vh,36rem)] overflow-y-auto"
+                >
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
