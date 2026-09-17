@@ -1108,6 +1108,7 @@ class ProductQuery {
         curatedProductIds,
         curatedDefaultOrder,
         prioritizedSubcategoryIds,
+        isFestiveProduct,
     }: {
         limit: number;
         page: number;
@@ -1141,6 +1142,7 @@ class ProductQuery {
         curatedProductIds?: string[];
         curatedDefaultOrder?: string[];
         prioritizedSubcategoryIds?: string[];
+        isFestiveProduct?: boolean;
     }) {
         console.log(
             "[getProducts] search:",
@@ -1440,6 +1442,21 @@ class ProductQuery {
                     ? inArray(products.id, curatedProductIds)
                     : sql`false`
                 : undefined,
+            isFestiveProduct !== undefined
+                ? isFestiveProduct
+                    ? sql`EXISTS (
+                        SELECT 1
+                        FROM festive_season_products fsp
+                        WHERE fsp.product_id = ${products.id}
+                          AND fsp.is_deleted = false
+                    )`
+                    : sql`NOT EXISTS (
+                        SELECT 1
+                        FROM festive_season_products fsp
+                        WHERE fsp.product_id = ${products.id}
+                          AND fsp.is_deleted = false
+                    )`
+                : undefined,
         ].filter(Boolean);
 
         // --- OrderBy construction ---
@@ -1626,6 +1643,9 @@ class ProductQuery {
                     specifications: {
                         columns: { key: true, value: true },
                     },
+                    festiveSeasonProducts: {
+                        columns: { position: true, isDeleted: true },
+                    },
                 },
                 where: whereClause,
                 limit,
@@ -1658,6 +1678,10 @@ class ProductQuery {
 
         const enhancedData = data.map((product) => ({
             ...product,
+            festivePosition:
+                product.festiveSeasonProducts.find(
+                    (entry) => !entry.isDeleted
+                )?.position ?? null,
             media: product.media.map((m) => ({
                 ...m,
                 mediaItem: mediaMap.get(m.id),
