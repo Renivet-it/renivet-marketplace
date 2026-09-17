@@ -4,7 +4,7 @@ task:
     title: "[FCCP] Commission Rules Data Integrity / Foundation"
     source: linear
     branch: feat/ren-229-spec
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-229/fccp-commission-rules-data-integrity-foundation
         priority: Medium
@@ -140,3 +140,27 @@ traceability:
         - { scenario_id: SCN-229-005, test_expectation_ids: [TEXP-229-003] }
         - { scenario_id: SCN-229-006, test_expectation_ids: [TEXP-229-006] }
         - { scenario_id: SCN-229-007, test_expectation_ids: [TEXP-229-005, TEXP-229-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: main
+    base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
+    head_commit: "46913c94e5178bdf87ad54076678847d5dc2b045"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/666
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: FAIL
+        scenarios: FAIL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: FAIL
+        scope: PASS
+    blocking_findings:
+        - "REV-001: Required PostgreSQL integration and recovery coverage is missing."
+    required_actions:
+        - "Add executable database integration tests for FK, range, overlap, wildcard, concurrency, migration recovery, rollback, and regression cases; rerun REVIEW."
+    evidence:
+        - "Compared the approved REN-229 contract with the base-to-head diff from main 58a5a2b2d236449d788e0f26a988d1eadb6e2591 to feat/ren-229-spec 46913c94e5178bdf87ad54076678847d5dc2b045."
+        - "The only added test file, tests/ren-229-commission-rules-integrity.test.ts, performs static source assertions and does not connect to PostgreSQL."
+    governance_reentry_required: true
