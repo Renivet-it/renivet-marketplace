@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog-general";
 import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
+import { createSingleFlightGuard } from "@/lib/cart/cart-guards";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -26,7 +27,7 @@ import { ProductWithBrand } from "@/lib/validations";
 import { ChevronRight, Heart, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 function useGuestCart() {
@@ -97,6 +98,7 @@ export function ProductCard({
     ...props
 }: PageProps) {
     const router = useRouter();
+    const utils = trpc.useUtils();
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { addToGuestCart } = useGuestCart();
     const { addToGuestWishlist } = useGuestWishlist();
@@ -170,12 +172,14 @@ export function ProductCard({
     const [quickViewImageIndex, setQuickViewImageIndex] = useState(0);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
+    const quickAddGuard = useRef(createSingleFlightGuard());
 
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
-            onSuccess: () => {},
-            onError: (err) =>
-                toast.error(err.message || "Could not add to cart."),
+            onSuccess: (_, input) =>
+                void utils.general.users.cart.getCartForUser.invalidate({
+                    userId: input.userId,
+                }),
         });
 
     const mediaUrls = useMemo(
@@ -376,45 +380,47 @@ export function ProductCard({
     ) => {
         e.preventDefault();
         e.stopPropagation();
-        handleCartFlyAnimation(e, imageUrl);
+        await quickAddGuard.current.run(async () => {
+            handleCartFlyAnimation(e, imageUrl);
 
-        try {
-            await trackAddToCartEvent({
-                productId: product.id,
-                brandId: product.brandId,
-                productTitle: product.title,
-                brandName: product.brand?.name,
-                productPrice: selectedVariant?.price ?? rawPrice,
-                quantity,
-            });
+            try {
+                await trackAddToCartEvent({
+                    productId: product.id,
+                    brandId: product.brandId,
+                    productTitle: product.title,
+                    brandName: product.brand?.name,
+                    productPrice: selectedVariant?.price ?? rawPrice,
+                    quantity,
+                });
 
-            if (userId) {
-                await addToCart({
-                    productId: product.id,
-                    variantId: selectedVariant?.id || null,
-                    quantity,
-                    userId,
-                });
-                showAddToCartToast(
-                    product,
-                    selectedVariant ?? null,
-                    "Item added to cart!"
-                );
-            } else {
-                addToGuestCart({
-                    productId: product.id,
-                    variantId: selectedVariant?.id || null,
-                    quantity,
-                    title: product.title,
-                    brand: product.brand?.name,
-                    price: selectedVariant?.price ?? rawPrice,
-                    image: imageUrl,
-                    fullProduct: product,
-                });
+                if (userId) {
+                    await addToCart({
+                        productId: product.id,
+                        variantId: selectedVariant?.id || null,
+                        quantity,
+                        userId,
+                    });
+                    showAddToCartToast(
+                        product,
+                        selectedVariant ?? null,
+                        "Item added to cart!"
+                    );
+                } else {
+                    addToGuestCart({
+                        productId: product.id,
+                        variantId: selectedVariant?.id || null,
+                        quantity,
+                        title: product.title,
+                        brand: product.brand?.name,
+                        price: selectedVariant?.price ?? rawPrice,
+                        image: imageUrl,
+                        fullProduct: product,
+                    });
+                }
+            } catch (err: any) {
+                toast.error(err.message || "Could not add to cart.");
             }
-        } catch (err: any) {
-            toast.error(err.message || "Could not add to cart.");
-        }
+        });
     };
 
     const handleBuyNow = async (e: React.MouseEvent<HTMLButtonElement>) => {

@@ -11,12 +11,15 @@ export interface MerchandisingProduct {
     }>;
 }
 
-const FESTIVE_CATEGORY_PRIORITY = [
-    "home & living",
-    "beauty products",
-    "women",
-    "men",
-];
+const FESTIVE_CATEGORY_PRIORITY = new Map([
+    ["home & living", 0],
+    ["home and living", 0],
+    ["beauty products", 1],
+    ["beauty and personal care", 1],
+    ["beauty & personal care", 1],
+    ["women", 2],
+    ["men", 3],
+]);
 
 function discountPercent(
     price?: number | null,
@@ -44,18 +47,18 @@ export function getProductDiscountPercent(product: MerchandisingProduct) {
 
 function categoryRank(categoryName?: string | null) {
     const normalized = categoryName?.trim().toLowerCase();
-    const index = normalized
-        ? FESTIVE_CATEGORY_PRIORITY.indexOf(normalized)
-        : -1;
-    return index === -1 ? FESTIVE_CATEGORY_PRIORITY.length : index;
+    return normalized
+        ? (FESTIVE_CATEGORY_PRIORITY.get(normalized) ??
+              FESTIVE_CATEGORY_PRIORITY.size)
+        : FESTIVE_CATEGORY_PRIORITY.size;
 }
 
 export function rankFestiveProductIds(products: MerchandisingProduct[]) {
     return [...products]
         .sort((a, b) => {
             const discountBand =
-                Number(getProductDiscountPercent(b) >= 30) -
-                Number(getProductDiscountPercent(a) >= 30);
+                Number(getProductDiscountPercent(b) > 30) -
+                Number(getProductDiscountPercent(a) > 30);
             if (discountBand !== 0) return discountBand;
 
             const categoryPriority =
@@ -69,6 +72,43 @@ export function rankFestiveProductIds(products: MerchandisingProduct[]) {
             return 0;
         })
         .map((product) => product.id);
+}
+
+export function buildFestiveCatalogOrdering(
+    entries: Array<{
+        productId: string;
+        product: MerchandisingProduct & {
+            categoryId?: string | null;
+            subcategoryId?: string | null;
+        };
+    }>,
+    categories: Array<{ id: string; name: string }>,
+    subcategories: Array<{ id: string; name: string }>
+) {
+    const categoryNames = new Map(
+        categories.map((category) => [category.id, category.name])
+    );
+    const subcategoryNames = new Map(
+        subcategories.map((subcategory) => [subcategory.id, subcategory.name])
+    );
+    const products = entries.map(({ product }) => ({
+        ...product,
+        categoryName: product.categoryId
+            ? categoryNames.get(product.categoryId)
+            : undefined,
+        subcategoryName: product.subcategoryId
+            ? subcategoryNames.get(product.subcategoryId)
+            : undefined,
+    }));
+
+    return {
+        curatedProductIds: Array.from(
+            new Set(entries.map((entry) => entry.productId).filter(Boolean))
+        ),
+        curatedDefaultOrder: Array.from(
+            new Set(rankFestiveProductIds(products))
+        ),
+    };
 }
 
 export function getFestiveCatalogLimit(

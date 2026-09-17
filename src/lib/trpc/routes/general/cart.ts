@@ -1,13 +1,11 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { hasCartStock } from "@/lib/cart/cart-guards";
+import { withCartTransactionLock } from "@/lib/cart/cart-transaction";
+import { carts } from "@/lib/db/schema/cart";
 import { posthog } from "@/lib/posthog/server";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding768 } from "@/lib/python/sematic-search";
-import {
-    getDeterministicWardrobeFallbackRows,
-    getVectorOrDeterministicFallbackRows,
-    getWardrobeFallbackCategoryIds,
-} from "./wardrobe-suggestion-fallback";
 import {
     analytics,
     mediaCache,
@@ -18,8 +16,13 @@ import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { getAbsoluteURL } from "@/lib/utils";
 import { cartSchema, createCartSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+    getDeterministicWardrobeFallbackRows,
+    getVectorOrDeterministicFallbackRows,
+    getWardrobeFallbackCategoryIds,
+} from "./wardrobe-suggestion-fallback";
 
 export const cartRouter = createTRPCRouter({
     getCartForUser: protectedProcedure
@@ -116,168 +119,159 @@ export const cartRouter = createTRPCRouter({
             return next({ ctx, input });
         })
         .mutation(async ({ ctx, input }) => {
-            const { queries, db, schemas } = ctx;
+            const { db, schemas } = ctx;
             const { userId, productId, variantId, quantity } = input;
 
-            if (variantId) {
-                const existingVariant =
-                    await db.query.productVariants.findFirst({
-                        where: and(
-                            variantId
-                                ? eq(schemas.productVariants.id, variantId)
-                                : undefined,
-                            eq(schemas.productVariants.productId, productId),
-                            gte(schemas.productVariants.quantity, quantity),
-                            eq(schemas.productVariants.isDeleted, false)
-                        ),
-                        with: {
-                            product: true,
-                        },
-                    });
-                if (!existingVariant)
-                    throw new TRPCError({
-                        code: "NOT_FOUND",
-                        message: "Product not found",
-                    });
+            const result = await withCartTransactionLock(
+                db,
+                [userId, productId, variantId ?? "product"].join(":"),
+                async (transaction) => {
+                    const existingCart =
+                        await transaction.query.carts.findFirst({
+                            where: and(
+                                eq(carts.userId, userId),
+                                eq(carts.productId, productId),
+                                variantId
+                                    ? eq(carts.variantId, variantId)
+                                    : isNull(carts.variantId)
+                            ),
+                        });
 
-                if (
-                    !existingVariant.product.isAvailable ||
-                    !existingVariant.product.isActive ||
-                    existingVariant.product.isDeleted ||
-                    existingVariant.product.verificationStatus !== "approved" ||
-                    !existingVariant.product.isPublished
-                )
-                    throw new TRPCError({
-                        code: "BAD_REQUEST",
-                        message: "This product is not available for purchase",
-                    });
+                    let product: {
+                        brandId: string;
+                        title: string;
+                        slug: string;
+                        isAvailable: boolean;
+                        isActive: boolean;
+                        isDeleted: boolean;
+                        verificationStatus: string;
+                        isPublished: boolean;
+                    };
+                    let sku: string | null;
+                    let stock: number;
 
-                const existingCart = await userCartCache.getProduct({
-                    userId,
-                    productId,
-                    variantId: variantId ?? undefined,
-                });
+                    if (variantId) {
+                        const variant =
+                            await transaction.query.productVariants.findFirst({
+                                where: and(
+                                    eq(schemas.productVariants.id, variantId),
+                                    eq(
+                                        schemas.productVariants.productId,
+                                        productId
+                                    ),
+                                    eq(schemas.productVariants.isDeleted, false)
+                                ),
+                                with: { product: true },
+                            });
+                        if (!variant)
+                            throw new TRPCError({
+                                code: "NOT_FOUND",
+                                message: "Product not found",
+                            });
 
-                if (!existingCart)
-                    await queries.userCarts.addProductToCart(input);
-                else {
-                    await Promise.all([
-                        queries.userCarts.updateProductInCart(existingCart.id, {
-                            ...existingCart,
-                            quantity: existingCart.quantity + quantity,
-                        }),
-                        userCartCache.remove({
-                            userId,
-                            productId,
-                            variantId: variantId ?? undefined,
-                        }),
-                    ]);
+                        product = variant.product;
+                        sku = variant.nativeSku;
+                        stock = variant.quantity;
+                    } else {
+                        const baseProduct =
+                            await transaction.query.products.findFirst({
+                                where: and(
+                                    eq(schemas.products.id, productId),
+                                    eq(schemas.products.isAvailable, true),
+                                    eq(schemas.products.isActive, true),
+                                    eq(schemas.products.isDeleted, false),
+                                    eq(
+                                        schemas.products.verificationStatus,
+                                        "approved"
+                                    ),
+                                    eq(schemas.products.isPublished, true)
+                                ),
+                            });
+                        if (!baseProduct)
+                            throw new TRPCError({
+                                code: "NOT_FOUND",
+                                message: "Product not found",
+                            });
+
+                        product = baseProduct;
+                        sku = baseProduct.nativeSku;
+                        stock = baseProduct.quantity ?? 0;
+                    }
+
+                    if (
+                        !product.isAvailable ||
+                        !product.isActive ||
+                        product.isDeleted ||
+                        product.verificationStatus !== "approved" ||
+                        !product.isPublished
+                    )
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message:
+                                "This product is not available for purchase",
+                        });
+
+                    if (
+                        !hasCartStock({
+                            stock,
+                            existingQuantity: existingCart?.quantity ?? 0,
+                            requestedQuantity: quantity,
+                        })
+                    )
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message: "Not enough stock available",
+                        });
+
+                    if (existingCart) {
+                        await transaction
+                            .update(carts)
+                            .set({
+                                quantity: existingCart.quantity + quantity,
+                                updatedAt: new Date(),
+                            })
+                            .where(eq(carts.id, existingCart.id));
+                    } else {
+                        await transaction.insert(carts).values(input);
+                    }
+
+                    return {
+                        type: existingCart
+                            ? ("update" as const)
+                            : ("add" as const),
+                        product,
+                        sku,
+                    };
                 }
+            );
 
-                posthog.capture({
-                    event: POSTHOG_EVENTS.CART.ADDED,
-                    distinctId: userId,
-                    properties: {
-                        productId,
-                        variantId,
-                        sku: existingVariant.nativeSku,
-                        quantity,
-                    },
-                });
+            await userCartCache.remove({
+                userId,
+                productId,
+                variantId: variantId ?? undefined,
+            });
 
-                await analytics.track({
-                    namespace: BRAND_EVENTS.CART.ADDED,
-                    brandId: existingVariant.product.brandId,
-                    event: {
-                        productId,
-                        variantId,
-                        userId,
-                        productName: existingVariant.product.title,
-                        url: getAbsoluteURL(
-                            `/products/${existingVariant.product.slug}`
-                        ),
-                        sku: existingVariant.nativeSku,
-                        quantity,
-                    },
-                });
+            posthog.capture({
+                event: POSTHOG_EVENTS.CART.ADDED,
+                distinctId: userId,
+                properties: { productId, variantId, sku: result.sku, quantity },
+            });
 
-                return {
-                    type: existingCart ? ("update" as const) : ("add" as const),
-                };
-            } else {
-                const existingProduct = await queries.products.getProduct({
+            await analytics.track({
+                namespace: BRAND_EVENTS.CART.ADDED,
+                brandId: result.product.brandId,
+                event: {
                     productId,
-                    isAvailable: true,
-                    isActive: true,
-                    isDeleted: false,
-                    verificationStatus: "approved",
-                    isPublished: true,
-                });
-                if (!existingProduct)
-                    throw new TRPCError({
-                        code: "NOT_FOUND",
-                        message: "Product not found",
-                    });
-
-                if (existingProduct.quantity! <= quantity)
-                    throw new TRPCError({
-                        code: "BAD_REQUEST",
-                        message: "Not enough stock available",
-                    });
-
-                const existingCart = await userCartCache.getProduct({
+                    variantId,
                     userId,
-                    productId,
-                    variantId: variantId ?? undefined,
-                });
+                    productName: result.product.title,
+                    url: getAbsoluteURL(`/products/${result.product.slug}`),
+                    sku: result.sku,
+                    quantity,
+                },
+            });
 
-                if (!existingCart)
-                    await queries.userCarts.addProductToCart(input);
-                else {
-                    await Promise.all([
-                        queries.userCarts.updateProductInCart(existingCart.id, {
-                            ...existingCart,
-                            quantity: existingCart.quantity + quantity,
-                        }),
-                        userCartCache.remove({
-                            userId,
-                            productId,
-                            variantId: variantId ?? undefined,
-                        }),
-                    ]);
-                }
-
-                posthog.capture({
-                    event: POSTHOG_EVENTS.CART.ADDED,
-                    distinctId: userId,
-                    properties: {
-                        productId,
-                        variantId,
-                        sku: existingProduct.nativeSku,
-                        quantity,
-                    },
-                });
-
-                await analytics.track({
-                    namespace: BRAND_EVENTS.CART.ADDED,
-                    brandId: existingProduct.brandId,
-                    event: {
-                        productId,
-                        variantId,
-                        userId,
-                        productName: existingProduct.title,
-                        url: getAbsoluteURL(
-                            `/products/${existingProduct.slug}`
-                        ),
-                        sku: existingProduct.nativeSku,
-                        quantity,
-                    },
-                });
-
-                return {
-                    type: existingCart ? ("update" as const) : ("add" as const),
-                };
-            }
+            return { type: result.type };
         }),
     updateProductQuantityInCart: protectedProcedure
         .input(
@@ -369,7 +363,10 @@ export const cartRouter = createTRPCRouter({
                 customizationRequest: z
                     .string()
                     .trim()
-                    .max(500, "Customization request must be 500 characters or less")
+                    .max(
+                        500,
+                        "Customization request must be 500 characters or less"
+                    )
                     .nullable(),
             })
         )
@@ -749,7 +746,8 @@ export const cartRouter = createTRPCRouter({
                 // We'll take the last 3 items added to cart to generate suggestions
                 const cartItems = cart.slice(0, 3);
                 const cartProductIds = new Set(cart.map((c) => c.productId));
-                const fallbackCategoryIds = getWardrobeFallbackCategoryIds(cart);
+                const fallbackCategoryIds =
+                    getWardrobeFallbackCategoryIds(cart);
 
                 // Fetch recommendations in parallel
                 const recommendationsPromises = cartItems.map((item) =>
@@ -831,9 +829,8 @@ export const cartRouter = createTRPCRouter({
                         await getVectorOrDeterministicFallbackRows({
                             getVectorRows: async () => {
                                 // Generate 768-dim embedding
-                                const embedding = await getEmbedding768(
-                                    searchText
-                                );
+                                const embedding =
+                                    await getEmbedding768(searchText);
 
                                 // Find similar products via cosine similarity, excluding cart items
                                 const excludeList = cartProductIds
