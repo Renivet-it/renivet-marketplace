@@ -57,8 +57,8 @@ export function rankFestiveProductIds(products: MerchandisingProduct[]) {
     return [...products]
         .sort((a, b) => {
             const discountBand =
-                Number(getProductDiscountPercent(b) >= 30) -
-                Number(getProductDiscountPercent(a) >= 30);
+                Number(getProductDiscountPercent(b) > 30) -
+                Number(getProductDiscountPercent(a) > 30);
             if (discountBand !== 0) return discountBand;
 
             const categoryPriority =

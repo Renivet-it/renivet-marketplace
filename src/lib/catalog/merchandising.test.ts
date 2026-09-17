@@ -42,16 +42,16 @@ const products = [
 ];
 
 describe("catalog merchandising", () => {
-    test("ranks the 30%+ band by category, then the below-30% band by category", () => {
+    test("ranks the above-30% band before the 30%-and-below band", () => {
         expect(rankFestiveProductIds(products)).toEqual([
             "home-40",
-            "aroma-30",
             "women-50",
             "men-60",
+            "aroma-30",
         ]);
     });
 
-    test("keeps every 30%+ product ahead of lower discounts while preserving category order", () => {
+    test("preserves category order inside both discount bands", () => {
         expect(
             rankFestiveProductIds([
                 ...products,
@@ -64,7 +64,7 @@ describe("catalog merchandising", () => {
                     compareAtPrice: 1000,
                 },
             ])
-        ).toEqual(["home-80", "home-40", "aroma-30", "women-50", "men-60"]);
+        ).toEqual(["home-80", "home-40", "women-50", "men-60", "aroma-30"]);
     });
 
     test("uses Home & Living, Beauty Products, Women, then Men for equal discounts", () => {
@@ -98,7 +98,7 @@ describe("catalog merchandising", () => {
         ).toEqual(["home", "beauty", "women", "men"]);
     });
 
-    test("recognizes production category labels in both Festive discount bands", () => {
+    test("puts exactly 30% in the second Festive discount band", () => {
         expect(
             rankFestiveProductIds([
                 {
@@ -153,10 +153,10 @@ describe("catalog merchandising", () => {
         ).toEqual([
             "home-40",
             "beauty-35",
-            "women-30",
             "men-60",
             "home-20",
             "beauty-15",
+            "women-30",
             "women-10",
             "men-25",
         ]);
