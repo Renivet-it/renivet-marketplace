@@ -188,7 +188,10 @@ test("festive edit loads the ordered festive products table into a carousel", as
     expect(source).toContain("productQueries.getFestiveSeasonProducts");
     expect(source).toContain("festiveSelection.map");
     expect(source).toContain("curatedProductIds");
-    expect(source).toContain("curatedDefaultOrder: curatedProductIds");
+    expect(source).toContain("rankFestiveProductIds");
+    expect(source).toContain("curatedDefaultOrder");
+    expect(source).toContain("categoryCache.getAll()");
+    expect(source).toContain("subCategoryCache.getAll()");
     expect(carousel).not.toContain("FALLBACK_FESTIVE_PRODUCTS");
     expect(source).toContain("<FestiveProductCarousel");
     expect(carousel).toContain("<Carousel");

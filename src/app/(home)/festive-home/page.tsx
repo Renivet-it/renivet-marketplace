@@ -1,7 +1,13 @@
 import { FestiveBrandShowcase } from "@/components/festive-home/festive-brand-showcase";
 import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
+import { rankFestiveProductIds } from "@/lib/catalog/merchandising";
 import { productQueries } from "@/lib/db/queries";
-import { brandCache, userWishlistCache } from "@/lib/redis/methods";
+import {
+    brandCache,
+    categoryCache,
+    subCategoryCache,
+    userWishlistCache,
+} from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
@@ -19,10 +25,30 @@ const assetRoot = "/assets/festive-home";
 
 const getFestiveEditProducts = unstable_cache(
     async () => {
-        const festiveSelection =
-            await productQueries.getFestiveSeasonProducts();
+        const [festiveSelection, categories, subCategories] =
+            await Promise.all([
+                productQueries.getFestiveSeasonProducts(),
+                categoryCache.getAll(),
+                subCategoryCache.getAll(),
+            ]);
+        const categoryNames = new Map(
+            categories.map((category) => [category.id, category.name])
+        );
+        const subCategoryNames = new Map(
+            subCategories.map((subcategory) => [
+                subcategory.id,
+                subcategory.name,
+            ])
+        );
         const curatedProductIds = Array.from(
             new Set(festiveSelection.map((entry) => entry.productId))
+        );
+        const curatedDefaultOrder = rankFestiveProductIds(
+            festiveSelection.map(({ product }) => ({
+                ...product,
+                categoryName: categoryNames.get(product.categoryId),
+                subcategoryName: subCategoryNames.get(product.subcategoryId),
+            }))
         );
         const festiveProducts = await productQueries.getProducts({
             page: 1,
@@ -34,12 +60,12 @@ const getFestiveEditProducts = unstable_cache(
             verificationStatus: "approved",
             requireMedia: true,
             curatedProductIds,
-            curatedDefaultOrder: curatedProductIds,
+            curatedDefaultOrder,
         });
 
         return festiveProducts.data;
     },
-    ["festive-home-edit-products-v3"],
+    ["festive-home-edit-products-v4"],
     { revalidate: 300 }
 );
 
