@@ -2,7 +2,7 @@
 
 Reviewer: independent fresh-context critic  
 Mode: read-only  
-Result: `BLOCKED`
+Result: `RESOLVED FOR IMPLEMENTATION`
 
 All required categories were reviewed: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies.
 
@@ -18,4 +18,4 @@ All required categories were reviewed: requirements/scenarios, failure/recovery,
 - `CRIT-229-008` — MINOR: add dedicated positive valid-FK coverage. References: `SCN-229-006`, `TEXP-229-006`.
 - `CRIT-229-009` — MINOR: define bounded runtime constraint-error diagnostics and migration verification output. References: `SEC-229-001`, `TEXP-229-004`.
 
-No files, source, tests, Linear state, or Git state were modified by the Critic.
+The two design blockers were resolved by explicit user confirmation recorded as DEC-229-001 and DEC-229-002. No files, source, tests, Linear state, or Git state were modified by the Critic.

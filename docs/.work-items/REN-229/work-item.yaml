@@ -4,7 +4,7 @@ task:
     title: "[FCCP] Commission Rules Data Integrity / Foundation"
     source: linear
     branch: feat/ren-229-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-229/fccp-commission-rules-data-integrity-foundation
         priority: Medium
@@ -81,8 +81,8 @@ business_rules:
     - { id: BR-229-002, description: "Active rules with identical scope cannot overlap in effective dates." }
     - { id: BR-229-003, description: "REN-229 does not choose commission rates or calculate payouts." }
 decisions:
-    - { id: DEC-229-001, question: "What ON DELETE action applies to each commission-rule FK?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "RESTRICT/NO ACTION for brand and category; confirm product type explicitly.", basis: "SET NULL can silently widen a financial rule and CASCADE can erase it; the issue leaves the choice open.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-229-002, question: "How should active date overlap with NULL wildcard dimensions be enforced?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Prefer a DB-enforced guard, optionally with an application pre-check, after confirming the range/NULL strategy and extension policy.", basis: "Application-only checks are bypassable; naïve exclusion constraints do not match NULL wildcard equality.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-229-001, question: "What ON DELETE action applies to each commission-rule FK?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "RESTRICT for brand, category, and product type.", basis: "User approved the recommendation; RESTRICT prevents silent wildcard widening and rule loss.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-229-002, question: "How should active date overlap with NULL wildcard dimensions be enforced?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Database-enforced exact nullable-scope overlap protection; NULL equals NULL, wildcard-vs-specific scopes may coexist; inclusive/open-ended dates; reject invalid ranges.", basis: "User approved the recommendation and exact semantics.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-229-001, category: integration, classification: REQUIRED, reason: "Verify all three FK violations and valid nullable references.", scenarios: [SCN-229-001, SCN-229-003] }
     - { id: TEXP-229-002, category: integration, classification: REQUIRED, reason: "Verify overlap, date boundaries, inactive rules, wildcard scope, and concurrent conflicting writes.", scenarios: [SCN-229-002, SCN-229-003] }
@@ -101,19 +101,19 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-229-001, severity: DESIGN_BLOCKER, status: open, summary: "Wildcard overlap semantics, date boundaries, and null-date open bounds need exact definition.", references: [REQ-229-003, SCN-229-002, SCN-229-003, DEC-229-002] }
-        - { id: CRIT-229-002, severity: DESIGN_BLOCKER, status: open, summary: "ON DELETE must be selected independently for brand, category, and product type, including indirect category/product-type deletion.", references: [REQ-229-001, DEC-229-001] }
-        - { id: CRIT-229-003, severity: MAJOR, status: open, summary: "Rollback must fit the repository's forward-only Drizzle migration model.", references: [REQ-229-008, SCN-229-004] }
-        - { id: CRIT-229-004, severity: MAJOR, status: open, summary: "Contract must require Drizzle schema and emitted migration synchronization.", references: [REQ-229-006, INV-229-006] }
-        - { id: CRIT-229-005, severity: MAJOR, status: open, summary: "Invalid effective date ranges must be rejected or explicitly defined.", references: [REQ-229-007, SCN-229-006] }
-        - { id: CRIT-229-006, severity: MAJOR, status: open, summary: "Concurrency protection must be database-enforced, not only a pre-check.", references: [REQ-229-003, INV-229-007, TEXP-229-007] }
-        - { id: CRIT-229-007, severity: MAJOR, status: open, summary: "Migration idempotency and partial-failure recovery need explicit implementation behavior.", references: [REQ-229-008, SCN-229-007] }
-        - { id: CRIT-229-008, severity: MINOR, status: open, summary: "Positive valid-FK coverage needs a dedicated scenario.", references: [SCN-229-006, TEXP-229-006] }
-        - { id: CRIT-229-009, severity: MINOR, status: open, summary: "Constraint violation observability should define bounded diagnostics and constraint mapping.", references: [SEC-229-001, TEXP-229-004] }
+        - { id: CRIT-229-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Wildcard overlap semantics and date boundaries were explicitly confirmed.", references: [REQ-229-003, SCN-229-002, SCN-229-003, DEC-229-002] }
+        - { id: CRIT-229-002, severity: DESIGN_BLOCKER, status: resolved, summary: "RESTRICT was confirmed independently for all three FKs.", references: [REQ-229-001, DEC-229-001] }
+        - { id: CRIT-229-003, severity: MAJOR, status: resolved, summary: "Forward-only rollback/recovery is specified as a verified reversal procedure.", references: [REQ-229-008, SCN-229-004] }
+        - { id: CRIT-229-004, severity: MAJOR, status: resolved, summary: "Drizzle schema and emitted migration synchronization is explicit.", references: [REQ-229-006, INV-229-006] }
+        - { id: CRIT-229-005, severity: MAJOR, status: resolved, summary: "Invalid ranges are rejected and date semantics are explicit.", references: [REQ-229-007, SCN-229-006] }
+        - { id: CRIT-229-006, severity: MAJOR, status: resolved, summary: "Database-level overlap enforcement and concurrency coverage are required.", references: [REQ-229-003, INV-229-007, TEXP-229-007] }
+        - { id: CRIT-229-007, severity: MAJOR, status: resolved, summary: "Migration transaction, rerun, and partial-failure behavior are required implementation evidence.", references: [REQ-229-008, SCN-229-007] }
+        - { id: CRIT-229-008, severity: MINOR, status: resolved, summary: "Positive valid-FK coverage has a dedicated scenario.", references: [SCN-229-006, TEXP-229-006] }
+        - { id: CRIT-229-009, severity: MINOR, status: resolved, summary: "Bounded constraint diagnostics and migration verification are required.", references: [SEC-229-001, TEXP-229-004] }
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-229-001, DEC-229-002]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: "User confirmation in conversation"
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-229-001, scenario_ids: [SCN-229-001, SCN-229-004] }
