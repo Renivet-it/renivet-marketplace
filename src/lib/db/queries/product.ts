@@ -1445,9 +1445,9 @@ class ProductQuery {
         // --- OrderBy construction ---
         const orderBy: any[] = [];
 
-        // Curated catalogues (such as Festive Season) use the administrator's
-        // sequence by default. Shopper-selected sort values deliberately take
-        // precedence while the product-ID scope remains enforced above.
+        // Curated catalogues use their supplied merchandising sequence by
+        // default. Shopper-selected sort values deliberately take precedence
+        // while the product-ID scope remains enforced above.
         if (
             curatedDefaultOrder?.length &&
             (!sortBy || sortBy === "recommended") &&

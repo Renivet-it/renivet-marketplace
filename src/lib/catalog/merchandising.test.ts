@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    getFestiveCatalogLimit,
     rankFestiveProductIds,
     rankProductIdsBySubcategory,
 } from "./merchandising";
@@ -63,6 +64,26 @@ describe("catalog merchandising", () => {
                 },
             ])
         ).toEqual(["aroma-30", "home-80", "men-60", "women-50", "home-40"]);
+    });
+
+    test("uses Home & Living, Beauty Products, Women, then Men for equal discounts", () => {
+        expect(
+            rankFestiveProductIds([
+                { id: "men", categoryName: "Men", price: 700, compareAtPrice: 1000 },
+                { id: "beauty", categoryName: "Beauty Products", price: 700, compareAtPrice: 1000 },
+                { id: "women", categoryName: "Women", price: 700, compareAtPrice: 1000 },
+                { id: "home", categoryName: "Home & Living", price: 700, compareAtPrice: 1000 },
+            ])
+        ).toEqual(["home", "beauty", "women", "men"]);
+    });
+
+    test("shows every curated Festive product when no limit is requested", () => {
+        expect(getFestiveCatalogLimit(undefined, 43)).toBe(43);
+        expect(getFestiveCatalogLimit(undefined, 12)).toBe(28);
+    });
+
+    test("honors an explicit shopper limit on the Festive catalogue", () => {
+        expect(getFestiveCatalogLimit("16", 43)).toBe(16);
     });
 
     test("orders a brand catalogue by configured subcategory priority", () => {

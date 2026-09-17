@@ -27,7 +27,7 @@ export function getProductTypePillClassName({
         "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
         active &&
             (theme === "festive"
-                ? "border-[#DF2463] bg-[#DF2463] text-white shadow-[0_4px_14px_rgba(223,36,99,0.24)] hover:border-[#DF2463] hover:bg-[#DF2463]"
+                ? "border-[#8B1E2D] bg-[#8B1E2D] text-white shadow-[0_4px_14px_rgba(139,30,45,0.24)] hover:border-[#8B1E2D] hover:bg-[#8B1E2D]"
                 : "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]")
     );
 }

@@ -74,6 +74,19 @@ export function rankFestiveProductIds(products: MerchandisingProduct[]) {
         .map((product) => product.id);
 }
 
+export function getFestiveCatalogLimit(
+    requestedLimit: string | undefined,
+    curatedProductCount: number
+) {
+    const parsedLimit = requestedLimit
+        ? Number.parseInt(requestedLimit, 10)
+        : Number.NaN;
+
+    if (Number.isFinite(parsedLimit) && parsedLimit > 0) return parsedLimit;
+
+    return Math.max(28, curatedProductCount);
+}
+
 export function rankProductIdsBySubcategory(
     products: Array<{ id: string; subcategoryName?: string | null }>,
     priority: string[]

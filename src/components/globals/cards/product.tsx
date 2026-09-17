@@ -583,7 +583,7 @@ export function ProductCard({
                                         className={cn(
                                             "relative flex items-center justify-center rounded-full transition-all duration-300 active:scale-95",
                                             theme
-                                                ? "h-10 w-10 border-[#DF2463] bg-[#DF2463] text-white shadow-[0_8px_20px_rgba(223,36,99,0.28)] sm:h-11 sm:w-11"
+                                                ? "h-10 w-10 border-[#8B1E2D] bg-[#8B1E2D] text-white shadow-[0_8px_20px_rgba(139,30,45,0.28)] sm:h-11 sm:w-11"
                                                 : "h-11 w-11 border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] sm:h-12 sm:w-12",
                                             isQuickViewOpen &&
                                                 "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"

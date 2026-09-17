@@ -10,6 +10,7 @@ import { ProductSearch } from "@/components/ui/product-search";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+    getFestiveCatalogLimit,
     rankFestiveProductIds,
     rankProductIdsBySubcategory,
 } from "@/lib/catalog/merchandising";
@@ -685,10 +686,11 @@ async function StorefrontProductsFetch({
         searchId: searchIdRaw,
     } = await searchParams;
 
-    const limit =
-        limitRaw && !isNaN(parseInt(limitRaw, 10))
-            ? parseInt(limitRaw, 10)
-            : 28;
+    const limit = catalogContext
+        ? getFestiveCatalogLimit(limitRaw, curatedProductIds?.length ?? 0)
+        : limitRaw && !isNaN(parseInt(limitRaw, 10))
+          ? parseInt(limitRaw, 10)
+          : 28;
     const pageCandidate = shopPageRaw ?? pageRaw;
     const page =
         pageCandidate && !isNaN(parseInt(pageCandidate, 10))
