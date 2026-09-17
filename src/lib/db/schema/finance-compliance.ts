@@ -5,6 +5,7 @@ import {
     index,
     integer,
     jsonb,
+    check,
     pgTable,
     text,
     timestamp,
@@ -13,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands, brandConfidentials } from "./brand";
+import { categories, productTypes } from "./category";
 import { orders } from "./order";
 import { refunds } from "./refund";
 import { users } from "./user";
@@ -214,10 +216,15 @@ export const commissionRules = pgTable(
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         brandId: uuid("brand_id").references(() => brands.id, {
-            onDelete: "cascade",
+            onDelete: "restrict",
         }),
-        categoryId: uuid("category_id"),
-        productTypeId: uuid("product_type_id"),
+        categoryId: uuid("category_id").references(() => categories.id, {
+            onDelete: "restrict",
+        }),
+        productTypeId: uuid("product_type_id").references(
+            () => productTypes.id,
+            { onDelete: "restrict" }
+        ),
         ruleName: text("rule_name").notNull(),
         commissionPercentBps: integer("commission_percent_bps")
             .notNull()
@@ -241,6 +248,10 @@ export const commissionRules = pgTable(
         ),
         commissionRulesPriorityIdx: index("commission_rules_priority_idx").on(
             table.priority
+        ),
+        commissionRulesEffectiveRangeCheck: check(
+            "commission_rules_effective_range_check",
+            sql`${table.effectiveFrom} IS NULL OR ${table.effectiveTo} IS NULL OR ${table.effectiveFrom} <= ${table.effectiveTo}`
         ),
     })
 );

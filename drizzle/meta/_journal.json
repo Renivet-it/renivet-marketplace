@@ -1807,6 +1807,13 @@
             "when": 1789054440610,
             "tag": "0284_corporate_document_operational_address",
             "breakpoints": true
+        },
+        {
+            "idx": 258,
+            "version": "7",
+            "when": 1789641000000,
+            "tag": "0285_commission_rules_integrity",
+            "breakpoints": true
         }
     ]
 }

@@ -1,6 +1,6 @@
 # REN-229 — Commission Rules Data Integrity / Foundation
 
-Status: `BLOCKED` pending confirmation of two Class C decisions.
+Status: `READY_FOR_DEV` — approved after confirmation of the recommended policy.
 
 ## Scope and risk
 
@@ -53,10 +53,10 @@ The preferred enforcement architecture is a database-level guard, optionally pai
 
 ## Decisions and blockers
 
-- **DEC-229-001 (HUMAN_CONFIRMATION):** Select `ON DELETE` behavior for brand, category, and product type. Recommendation: `RESTRICT`/`NO ACTION` for financial correctness, avoiding silent wildcard widening (`SET NULL`) and rule loss (`CASCADE`). Product-type behavior remains open for the same reason.
-- **DEC-229-002 (HUMAN_CONFIRMATION):** Select overlap enforcement. Recommendation: a DB-enforced guard plus an application pre-check if practical; confirm the extension/range/NULL strategy before migration authoring. Application-only validation is bypassable by direct SQL and is not sufficient as the sole integrity control.
+- **DEC-229-001 (HUMAN_CONFIRMATION):** Use `ON DELETE RESTRICT` for brand, category, and product type. Confirmed by the user. This prevents silent wildcard widening and rule loss.
+- **DEC-229-002 (HUMAN_CONFIRMATION):** Use database-enforced overlap protection with exact nullable-scope matching: `NULL = NULL`, while a wildcard dimension may coexist with a more-specific non-null dimension. Use inclusive date ranges, null endpoints as open bounds, and reject `effective_from > effective_to`. Confirmed by the user.
 
-Until DEC-229-001 and DEC-229-002 are confirmed, approval is blocked. No schema or application implementation may begin.
+DEC-229-001 and DEC-229-002 are confirmed. The migration may proceed with no rule population or payout-calculation changes.
 
 ## Independent Critic review
 
