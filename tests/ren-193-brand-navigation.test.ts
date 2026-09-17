@@ -128,4 +128,5 @@ test("REN-193 places the mobile brand trigger after the home category circles", 
         'triggerClassName="size-12 min-[390px]:size-[52px] min-[420px]:size-14'
     );
     expect(navigation).toContain("triggerClassName?: string");
+    expect(navigation).toContain("Brands");
 });

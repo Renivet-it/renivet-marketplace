@@ -329,6 +329,9 @@ export function BrandMobileNavigation({
                     )}
                 </SheetContent>
             </Sheet>
+            <span className="pt-1 text-[11px] font-medium text-black min-[390px]:text-xs">
+                Brands
+            </span>
         </div>
     );
 }
