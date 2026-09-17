@@ -1,6 +1,6 @@
 import { FestiveBrandShowcase } from "@/components/festive-home/festive-brand-showcase";
 import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
-import { rankFestiveProductIds } from "@/lib/catalog/merchandising";
+import { buildFestiveCatalogOrdering } from "@/lib/catalog/merchandising";
 import { productQueries } from "@/lib/db/queries";
 import {
     brandCache,
@@ -25,31 +25,19 @@ const assetRoot = "/assets/festive-home";
 
 const getFestiveEditProducts = unstable_cache(
     async () => {
-        const [festiveSelection, categories, subCategories] =
-            await Promise.all([
+        const [festiveSelection, categories, subCategories] = await Promise.all(
+            [
                 productQueries.getFestiveSeasonProducts(),
                 categoryCache.getAll(),
                 subCategoryCache.getAll(),
-            ]);
-        const categoryNames = new Map(
-            categories.map((category) => [category.id, category.name])
+            ]
         );
-        const subCategoryNames = new Map(
-            subCategories.map((subcategory) => [
-                subcategory.id,
-                subcategory.name,
-            ])
-        );
-        const curatedProductIds = Array.from(
-            new Set(festiveSelection.map((entry) => entry.productId))
-        );
-        const curatedDefaultOrder = rankFestiveProductIds(
-            festiveSelection.map(({ product }) => ({
-                ...product,
-                categoryName: categoryNames.get(product.categoryId),
-                subcategoryName: subCategoryNames.get(product.subcategoryId),
-            }))
-        );
+        const { curatedProductIds, curatedDefaultOrder } =
+            buildFestiveCatalogOrdering(
+                festiveSelection,
+                categories,
+                subCategories
+            );
         const festiveProducts = await productQueries.getProducts({
             page: 1,
             limit: Math.max(curatedProductIds.length, 1),
@@ -65,7 +53,7 @@ const getFestiveEditProducts = unstable_cache(
 
         return festiveProducts.data;
     },
-    ["festive-home-edit-products-v4"],
+    ["festive-home-edit-products-v5"],
     { revalidate: 300 }
 );
 

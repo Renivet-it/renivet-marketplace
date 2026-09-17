@@ -5,6 +5,7 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { buildFestiveCatalogOrdering } from "@/lib/catalog/merchandising";
 import { hsnMaster } from "@/lib/db/schema/finance-compliance";
 import {
     products,
@@ -155,19 +156,22 @@ export const productsRouter = createTRPCRouter({
 
             // Check if we should use personalized recommendations
             // Apply when no specific category/search filters are active
-            const festiveSelection =
-                input.catalogContext === "festive"
-                    ? await queries.products.getFestiveSeasonProducts()
-                    : undefined;
-            const curatedProductIds = festiveSelection
-                ? Array.from(
-                      new Set(
-                          festiveSelection
-                              .map((entry: any) => entry.productId)
-                              .filter(Boolean)
-                      )
-                  )
-                : undefined;
+            let curatedProductIds: string[] | undefined;
+            let curatedDefaultOrder: string[] | undefined;
+            if (input.catalogContext === "festive") {
+                const [festiveSelection, categories, subcategories] =
+                    await Promise.all([
+                        queries.products.getFestiveSeasonProducts(),
+                        categoryCache.getAll(),
+                        subCategoryCache.getAll(),
+                    ]);
+                ({ curatedProductIds, curatedDefaultOrder } =
+                    buildFestiveCatalogOrdering(
+                        festiveSelection,
+                        categories,
+                        subcategories
+                    ));
+            }
 
             const shouldUseRecommendations =
                 input.useRecommendations &&
@@ -221,7 +225,7 @@ export const productsRouter = createTRPCRouter({
             const data = await queries.products.getProducts({
                 ...productInput,
                 curatedProductIds,
-                curatedDefaultOrder: curatedProductIds,
+                curatedDefaultOrder,
             });
             return { ...data, recommendationSource: null };
         }),

@@ -98,7 +98,7 @@ test("festive mobile hero keeps its arch position and centers its content", asyn
     const source = await Bun.file(pagePath).text();
 
     expect(source).toContain(
-        'bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center'
+        "bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center"
     );
 });
 
@@ -120,15 +120,17 @@ test("festive home maps the desktop editorial images to the referenced cards", a
     expect(editorialImages).toHaveLength(3);
     expect(new Set(editorialImages).size).toBe(3);
     expect(source).toContain(
-        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap\""
+        'desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap"'
     );
     expect(source).toContain(
-        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA\""
+        'desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA"'
     );
     expect(source).toContain(
-        "desktopImage: \"https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl\""
+        'desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl"'
     );
-    expect(source.match(/desktopImage: \"https:\/\/4o4vm2cu6g\.ufs\.sh\/f\//g)).toHaveLength(3);
+    expect(
+        source.match(/desktopImage: \"https:\/\/4o4vm2cu6g\.ufs\.sh\/f\//g)
+    ).toHaveLength(3);
     expect(source).toContain("aspect-[1.75]");
     expect(source).toContain("objectPosition");
     expect(source).toContain(
@@ -186,9 +188,8 @@ test("festive edit loads the ordered festive products table into a carousel", as
     ).text();
 
     expect(source).toContain("productQueries.getFestiveSeasonProducts");
-    expect(source).toContain("festiveSelection.map");
+    expect(source).toContain("buildFestiveCatalogOrdering");
     expect(source).toContain("curatedProductIds");
-    expect(source).toContain("rankFestiveProductIds");
     expect(source).toContain("curatedDefaultOrder");
     expect(source).toContain("categoryCache.getAll()");
     expect(source).toContain("subCategoryCache.getAll()");

@@ -133,7 +133,9 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
         accessorKey: "brandName",
         header: () => <span className="text-xs">Brand</span>,
         cell: ({ row }) => (
-            <span className="text-[13px] text-slate-800">{row.original.brandName}</span>
+            <span className="text-[13px] text-slate-800">
+                {row.original.brandName}
+            </span>
         ),
     },
     {
@@ -356,7 +358,11 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
         header: () => <span className="text-xs">Available</span>,
         cell: ({ row }) => {
             const data = row.original;
-            return <span className="text-[13px]">{data.isAvailable ? "Yes" : "No"}</span>;
+            return (
+                <span className="text-[13px]">
+                    {data.isAvailable ? "Yes" : "No"}
+                </span>
+            );
         },
     },
     {
@@ -625,8 +631,7 @@ export function ProductsReviewTable({
             qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
             productImage,
             productVisiblity,
-            isFestiveProduct:
-                festiveFilter === "festive" ? true : undefined,
+            isFestiveProduct: festiveFilter === "festive" ? true : undefined,
             brandIds: isBrandScoped
                 ? [brandId ?? ""]
                 : brandIds.length > 0
@@ -635,24 +640,27 @@ export function ProductsReviewTable({
         },
         { initialData: queryInitialData }
     );
-    const { data: qcSummary } = trpc.brands.products.getCatalogQcSummary.useQuery(
-        {
-            search: search || undefined,
-            brandIds: isBrandScoped
-                ? [brandId ?? ""]
-                : brandIds.length > 0
-                  ? brandIds
-                  : undefined,
-            verificationStatus:
-                verificationStatus === "all" ? undefined : verificationStatus,
-            qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
-            productImage,
-            productVisiblity,
-        },
-        {
-            staleTime: 30_000,
-        }
-    );
+    const { data: qcSummary } =
+        trpc.brands.products.getCatalogQcSummary.useQuery(
+            {
+                search: search || undefined,
+                brandIds: isBrandScoped
+                    ? [brandId ?? ""]
+                    : brandIds.length > 0
+                      ? brandIds
+                      : undefined,
+                verificationStatus:
+                    verificationStatus === "all"
+                        ? undefined
+                        : verificationStatus,
+                qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+                productImage,
+                productVisiblity,
+            },
+            {
+                staleTime: 30_000,
+            }
+        );
     const count = queryData?.count ?? 0;
 
     const data = useMemo(
@@ -673,33 +681,40 @@ export function ProductsReviewTable({
         const avgQcScore =
             data.length > 0
                 ? Math.round(
-                      data.reduce((sum, product) => sum + (product.qcScore ?? 0), 0) /
-                          data.length
+                      data.reduce(
+                          (sum, product) => sum + (product.qcScore ?? 0),
+                          0
+                      ) / data.length
                   )
                 : 0;
 
         return {
             avgQcScore,
-            criticalCount: data.filter((product) => product.qcStatus === "critical")
-                .length,
-            warningCount: data.filter((product) => product.qcStatus === "warning")
-                .length,
+            criticalCount: data.filter(
+                (product) => product.qcStatus === "critical"
+            ).length,
+            warningCount: data.filter(
+                (product) => product.qcStatus === "warning"
+            ).length,
             oosAvailableCount: data.filter(
                 (product) => product.isAvailable && product.stock <= 0
             ).length,
             staleInventoryCount: data.filter((product) => {
-                const reference = product.inventoryLastSyncedAt ?? product.updatedAt;
+                const reference =
+                    product.inventoryLastSyncedAt ?? product.updatedAt;
                 if (!reference) return false;
                 const ageDays = Math.floor(
-                    (now - new Date(reference).getTime()) / (1000 * 60 * 60 * 24)
+                    (now - new Date(reference).getTime()) /
+                        (1000 * 60 * 60 * 24)
                 );
                 return ageDays >= STALE_INVENTORY_DAYS;
             }).length,
             claimMismatchCount: data.filter((product) =>
                 (product.qcFindings ?? []).some((finding) =>
-                    ["claim_scope_mismatch", "claim_without_brand_scope"].includes(
-                        finding.code
-                    )
+                    [
+                        "claim_scope_mismatch",
+                        "claim_without_brand_scope",
+                    ].includes(finding.code)
                 )
             ).length,
         };
@@ -771,7 +786,7 @@ export function ProductsReviewTable({
     };
 
     return (
-        <div className="w-full rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-3 border-b border-slate-200 bg-slate-50/60 p-4 md:grid-cols-2 xl:grid-cols-6">
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -1054,14 +1069,13 @@ export function ProductsReviewTable({
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="overflow-x-auto">
-                <DataTable
-                    columns={tableColumns}
-                    table={table}
-                    pages={pages}
-                    count={count}
-                />
-            </div>
+            <DataTable
+                columns={tableColumns}
+                table={table}
+                pages={pages}
+                count={count}
+                tableContainerClassName="max-h-[70vh] overscroll-contain"
+            />
         </div>
     );
 }

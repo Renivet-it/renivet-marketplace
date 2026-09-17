@@ -10,8 +10,8 @@ import { ProductSearch } from "@/components/ui/product-search";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+    buildFestiveCatalogOrdering,
     getFestiveCatalogLimit,
-    rankFestiveProductIds,
     rankProductIdsBySubcategory,
 } from "@/lib/catalog/merchandising";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
@@ -113,23 +113,11 @@ export async function StorefrontCatalogPage({
     const festiveEntries = catalogContext
         ? await productQueries.getFestiveSeasonProducts()
         : [];
-    const categoryNames = new Map(
-        categories.map((item) => [item.id, item.name])
-    );
-    const subCategoryNames = new Map(
-        subCategories.map((item) => [item.id, item.name])
-    );
-    const festiveProducts = festiveEntries.map((entry: any) => ({
-        ...entry.product,
-        categoryName: categoryNames.get(entry.product.categoryId),
-        subcategoryName: subCategoryNames.get(entry.product.subcategoryId),
-    }));
-    const curatedProductIds = catalogContext
-        ? Array.from(new Set(festiveProducts.map((product) => product.id)))
+    const festiveOrdering = catalogContext
+        ? buildFestiveCatalogOrdering(festiveEntries, categories, subCategories)
         : undefined;
-    const curatedDefaultOrder = catalogContext
-        ? rankFestiveProductIds(festiveProducts)
-        : undefined;
+    const curatedProductIds = festiveOrdering?.curatedProductIds;
+    const curatedDefaultOrder = festiveOrdering?.curatedDefaultOrder;
     const prioritizedSubcategoryIds = defaultSubcategoryOrder
         ? rankProductIdsBySubcategory(
               subCategories.map((item) => ({

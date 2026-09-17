@@ -1,13 +1,9 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { hasCartStock } from "@/lib/cart/cart-guards";
 import { posthog } from "@/lib/posthog/server";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding768 } from "@/lib/python/sematic-search";
-import {
-    getDeterministicWardrobeFallbackRows,
-    getVectorOrDeterministicFallbackRows,
-    getWardrobeFallbackCategoryIds,
-} from "./wardrobe-suggestion-fallback";
 import {
     analytics,
     mediaCache,
@@ -18,8 +14,13 @@ import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { getAbsoluteURL } from "@/lib/utils";
 import { cartSchema, createCartSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+    getDeterministicWardrobeFallbackRows,
+    getVectorOrDeterministicFallbackRows,
+    getWardrobeFallbackCategoryIds,
+} from "./wardrobe-suggestion-fallback";
 
 export const cartRouter = createTRPCRouter({
     getCartForUser: protectedProcedure
@@ -127,7 +128,6 @@ export const cartRouter = createTRPCRouter({
                                 ? eq(schemas.productVariants.id, variantId)
                                 : undefined,
                             eq(schemas.productVariants.productId, productId),
-                            gte(schemas.productVariants.quantity, quantity),
                             eq(schemas.productVariants.isDeleted, false)
                         ),
                         with: {
@@ -157,6 +157,18 @@ export const cartRouter = createTRPCRouter({
                     productId,
                     variantId: variantId ?? undefined,
                 });
+
+                if (
+                    !hasCartStock({
+                        stock: existingVariant.quantity,
+                        existingQuantity: existingCart?.quantity ?? 0,
+                        requestedQuantity: quantity,
+                    })
+                )
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Not enough stock available",
+                    });
 
                 if (!existingCart)
                     await queries.userCarts.addProductToCart(input);
@@ -219,17 +231,23 @@ export const cartRouter = createTRPCRouter({
                         message: "Product not found",
                     });
 
-                if (existingProduct.quantity! <= quantity)
-                    throw new TRPCError({
-                        code: "BAD_REQUEST",
-                        message: "Not enough stock available",
-                    });
-
                 const existingCart = await userCartCache.getProduct({
                     userId,
                     productId,
                     variantId: variantId ?? undefined,
                 });
+
+                if (
+                    !hasCartStock({
+                        stock: existingProduct.quantity ?? 0,
+                        existingQuantity: existingCart?.quantity ?? 0,
+                        requestedQuantity: quantity,
+                    })
+                )
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Not enough stock available",
+                    });
 
                 if (!existingCart)
                     await queries.userCarts.addProductToCart(input);
@@ -369,7 +387,10 @@ export const cartRouter = createTRPCRouter({
                 customizationRequest: z
                     .string()
                     .trim()
-                    .max(500, "Customization request must be 500 characters or less")
+                    .max(
+                        500,
+                        "Customization request must be 500 characters or less"
+                    )
                     .nullable(),
             })
         )
@@ -749,7 +770,8 @@ export const cartRouter = createTRPCRouter({
                 // We'll take the last 3 items added to cart to generate suggestions
                 const cartItems = cart.slice(0, 3);
                 const cartProductIds = new Set(cart.map((c) => c.productId));
-                const fallbackCategoryIds = getWardrobeFallbackCategoryIds(cart);
+                const fallbackCategoryIds =
+                    getWardrobeFallbackCategoryIds(cart);
 
                 // Fetch recommendations in parallel
                 const recommendationsPromises = cartItems.map((item) =>
@@ -831,9 +853,8 @@ export const cartRouter = createTRPCRouter({
                         await getVectorOrDeterministicFallbackRows({
                             getVectorRows: async () => {
                                 // Generate 768-dim embedding
-                                const embedding = await getEmbedding768(
-                                    searchText
-                                );
+                                const embedding =
+                                    await getEmbedding768(searchText);
 
                                 // Find similar products via cosine similarity, excluding cart items
                                 const excludeList = cartProductIds

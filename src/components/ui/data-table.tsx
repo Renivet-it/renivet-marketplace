@@ -36,12 +36,14 @@ export function DataTable<T>({
     count,
     pages,
     showResults = true,
+    tableContainerClassName,
 }: {
     table: TTable<T>;
     columns: ColumnDef<T>[];
     count: number;
     pages: number;
     showResults?: boolean;
+    tableContainerClassName?: string;
 }) {
     const [page, setPage] = useQueryState(
         "page",
@@ -49,10 +51,9 @@ export function DataTable<T>({
     );
     const [limitRaw, setLimit] = useQueryState("limit", parseAsInteger);
 
-    const activePageSize =
-        isValidPageSize(limitRaw)
-            ? limitRaw
-            : table.getRowModel().rows.length || DEFAULT_PAGE_SIZE;
+    const activePageSize = isValidPageSize(limitRaw)
+        ? limitRaw
+        : table.getRowModel().rows.length || DEFAULT_PAGE_SIZE;
 
     const rowCount = table.getRowModel().rows.length ?? 0;
     const rangeStart = count > 0 ? (page - 1) * activePageSize + 1 : 0;
@@ -62,7 +63,9 @@ export function DataTable<T>({
     useEffect(() => {
         if (typeof window === "undefined") return;
 
-        const saved = Number(window.localStorage.getItem(PAGE_SIZE_PREFERENCE_KEY));
+        const saved = Number(
+            window.localStorage.getItem(PAGE_SIZE_PREFERENCE_KEY)
+        );
         const fallback = isValidPageSize(saved) ? saved : DEFAULT_PAGE_SIZE;
 
         if (limitRaw === null) {
@@ -71,7 +74,10 @@ export function DataTable<T>({
         }
 
         if (isValidPageSize(limitRaw)) {
-            window.localStorage.setItem(PAGE_SIZE_PREFERENCE_KEY, String(limitRaw));
+            window.localStorage.setItem(
+                PAGE_SIZE_PREFERENCE_KEY,
+                String(limitRaw)
+            );
         }
     }, [limitRaw, setLimit]);
 
@@ -83,14 +89,17 @@ export function DataTable<T>({
         void setPage(1);
 
         if (typeof window !== "undefined") {
-            window.localStorage.setItem(PAGE_SIZE_PREFERENCE_KEY, String(parsed));
+            window.localStorage.setItem(
+                PAGE_SIZE_PREFERENCE_KEY,
+                String(parsed)
+            );
         }
     };
 
     return (
         <>
             <div className="rounded-md border">
-                <Table>
+                <Table containerClassName={tableContainerClassName}>
                     <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
@@ -99,7 +108,8 @@ export function DataTable<T>({
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
-                                                  header.column.columnDef.header,
+                                                  header.column.columnDef
+                                                      .header,
                                                   header.getContext()
                                               )}
                                     </TableHead>
@@ -118,7 +128,11 @@ export function DataTable<T>({
                                             ? "bg-background"
                                             : "bg-muted/20"
                                     }
-                                    data-state={row.getIsSelected() ? "selected" : undefined}
+                                    data-state={
+                                        row.getIsSelected()
+                                            ? "selected"
+                                            : undefined
+                                    }
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>
@@ -148,7 +162,8 @@ export function DataTable<T>({
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center">
                     {showResults && (
                         <p>
-                            Showing {rangeStart}-{rangeEnd} of {count ?? 0} results
+                            Showing {rangeStart}-{rangeEnd} of {count ?? 0}{" "}
+                            results
                         </p>
                     )}
 
