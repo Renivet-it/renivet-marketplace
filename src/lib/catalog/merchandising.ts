@@ -50,26 +50,23 @@ function categoryRank(categoryName?: string | null) {
     return index === -1 ? FESTIVE_CATEGORY_PRIORITY.length : index;
 }
 
-function isAromaAndCandles(product: MerchandisingProduct) {
-    const text =
-        `${product.title ?? ""} ${product.categoryName ?? ""} ${product.subcategoryName ?? ""}`.toLowerCase();
-    return (
-        /aroma|candle/.test(text) && getProductDiscountPercent(product) >= 30
-    );
-}
-
 export function rankFestiveProductIds(products: MerchandisingProduct[]) {
     return [...products]
         .sort((a, b) => {
-            const aromaPriority =
-                Number(isAromaAndCandles(b)) - Number(isAromaAndCandles(a));
-            if (aromaPriority !== 0) return aromaPriority;
+            const discountBand =
+                Number(getProductDiscountPercent(b) >= 30) -
+                Number(getProductDiscountPercent(a) >= 30);
+            if (discountBand !== 0) return discountBand;
+
+            const categoryPriority =
+                categoryRank(a.categoryName) - categoryRank(b.categoryName);
+            if (categoryPriority !== 0) return categoryPriority;
 
             const discountPriority =
                 getProductDiscountPercent(b) - getProductDiscountPercent(a);
             if (discountPriority !== 0) return discountPriority;
 
-            return categoryRank(a.categoryName) - categoryRank(b.categoryName);
+            return 0;
         })
         .map((product) => product.id);
 }
@@ -84,7 +81,7 @@ export function getFestiveCatalogLimit(
 
     if (Number.isFinite(parsedLimit) && parsedLimit > 0) return parsedLimit;
 
-    return Math.max(28, curatedProductCount);
+    return 28;
 }
 
 export function rankProductIdsBySubcategory(
