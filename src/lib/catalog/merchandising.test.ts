@@ -41,16 +41,16 @@ const products = [
 ];
 
 describe("catalog merchandising", () => {
-    test("ranks Festive products by discount first, then category priority", () => {
+    test("ranks the 30%+ band by category, then the below-30% band by category", () => {
         expect(rankFestiveProductIds(products)).toEqual([
-            "aroma-30",
-            "men-60",
-            "women-50",
             "home-40",
+            "aroma-30",
+            "women-50",
+            "men-60",
         ]);
     });
 
-    test("promotes 30%+ Aroma & Candles products ahead of other Festive items", () => {
+    test("keeps every 30%+ product ahead of lower discounts while preserving category order", () => {
         expect(
             rankFestiveProductIds([
                 ...products,
@@ -63,7 +63,7 @@ describe("catalog merchandising", () => {
                     compareAtPrice: 1000,
                 },
             ])
-        ).toEqual(["aroma-30", "home-80", "men-60", "women-50", "home-40"]);
+        ).toEqual(["home-80", "home-40", "aroma-30", "women-50", "men-60"]);
     });
 
     test("uses Home & Living, Beauty Products, Women, then Men for equal discounts", () => {
@@ -77,8 +77,8 @@ describe("catalog merchandising", () => {
         ).toEqual(["home", "beauty", "women", "men"]);
     });
 
-    test("shows every curated Festive product when no limit is requested", () => {
-        expect(getFestiveCatalogLimit(undefined, 43)).toBe(43);
+    test("keeps the initial Festive request at the lazy-load page size", () => {
+        expect(getFestiveCatalogLimit(undefined, 43)).toBe(28);
         expect(getFestiveCatalogLimit(undefined, 12)).toBe(28);
     });
 

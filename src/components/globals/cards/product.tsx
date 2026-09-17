@@ -533,7 +533,7 @@ export function ProductCard({
                             </span>
                         ) : null}
                         {discount ? (
-                            <span className="text-[10px] font-medium text-[#786b63] md:text-[11px]">
+                            <span className="text-[10px] font-medium text-[#b4232f] md:text-[11px]">
                                 {discount}% OFF
                             </span>
                         ) : null}
