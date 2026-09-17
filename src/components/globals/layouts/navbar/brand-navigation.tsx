@@ -192,11 +192,11 @@ export function BrandDesktopNavigationItem({
     return (
         <>
             <NavigationMenuItem>
-                <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary">
+                <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]">
                     BRANDS
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="pt-3">
-                    <div className="w-[760px] overflow-hidden rounded-[24px] border border-[#e7e0d5] bg-[#fbf9f4] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.38)]">
+                    <div className="w-[1180px] max-w-[95vw] overflow-hidden rounded-[24px] border border-[#e7e0d5] bg-[#fbf9f4] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.38)]">
                         <div className="flex items-end justify-between border-b border-[#e9e2d7] px-6 py-5">
                             <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#987b55]">
@@ -249,30 +249,39 @@ export function BrandDesktopNavigationItem({
 export function BrandMobileNavigation({
     brands,
     isLoading,
+    className,
+    triggerClassName,
 }: {
     brands: StorefrontBrand[];
     isLoading: boolean;
+    className?: string;
+    triggerClassName?: string;
 }) {
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [directoryOpen, setDirectoryOpen] = useState(false);
+    const [showAll, setShowAll] = useState(false);
+    const orderedBrands = useMemo(() => sortStorefrontBrands(brands), [brands]);
     const preview = useMemo(
-        () => sortStorefrontBrands(brands).slice(0, PREVIEW_LIMIT),
-        [brands]
+        () => orderedBrands.slice(0, PREVIEW_LIMIT),
+        [orderedBrands]
     );
+    const visibleBrands = showAll ? orderedBrands : preview;
 
-    const openDirectory = () => {
-        setSheetOpen(false);
-        window.setTimeout(() => setDirectoryOpen(true), 180);
+    const handleSheetOpenChange = (open: boolean) => {
+        setSheetOpen(open);
+        if (!open) setShowAll(false);
     };
 
     return (
-        <div className="lg:hidden">
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <div className={cn("lg:hidden", className)}>
+            <Sheet open={sheetOpen} onOpenChange={handleSheetOpenChange}>
                 <SheetTrigger asChild>
                     <button
                         type="button"
                         aria-label="Browse brands"
-                        className="flex size-9 items-center justify-center rounded-full bg-[#244136] text-white shadow-sm transition hover:bg-[#193128] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#244136] focus-visible:ring-offset-2"
+                        className={cn(
+                            "flex size-9 items-center justify-center rounded-full bg-[#244136] text-white shadow-sm transition hover:bg-[#193128] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#244136] focus-visible:ring-offset-2",
+                            triggerClassName
+                        )}
                     >
                         <Icons.Tag className="size-5" />
                     </button>
@@ -287,7 +296,7 @@ export function BrandMobileNavigation({
                             Brands
                         </p>
                         <SheetTitle className="font-serif text-[28px] font-normal text-[#241f1a]">
-                            Shop by Brand
+                            {showAll ? "All Brands" : "Shop by Brand"}
                         </SheetTitle>
                         <SheetDescription className="text-xs text-[#756d63]">
                             Discover homegrown brands, all in one place.
@@ -295,8 +304,8 @@ export function BrandMobileNavigation({
                     </SheetHeader>
 
                     <div className="mt-5 grid grid-cols-2 gap-2.5">
-                        {preview.length ? (
-                            preview.map((brand) => (
+                        {visibleBrands.length ? (
+                            visibleBrands.map((brand) => (
                                 <BrandLink
                                     key={brand.id}
                                     brand={brand}
@@ -308,21 +317,18 @@ export function BrandMobileNavigation({
                             <EmptyBrands isLoading={isLoading} />
                         )}
                     </div>
-                    <button
-                        type="button"
-                        onClick={openDirectory}
-                        className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#244136] text-xs font-semibold uppercase tracking-[0.13em] text-white"
-                    >
-                        View All Brands
-                        <Icons.ArrowRight className="size-4" />
-                    </button>
+                    {!showAll && (
+                        <button
+                            type="button"
+                            onClick={() => setShowAll(true)}
+                            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#244136] text-xs font-semibold uppercase tracking-[0.13em] text-white"
+                        >
+                            View All Brands
+                            <Icons.ArrowRight className="size-4" />
+                        </button>
+                    )}
                 </SheetContent>
             </Sheet>
-            <AllBrandsDialog
-                brands={brands}
-                open={directoryOpen}
-                onOpenChange={setDirectoryOpen}
-            />
         </div>
     );
 }

@@ -1,9 +1,6 @@
 ﻿"use client";
 
-import {
-    BrandDesktopNavigationItem,
-    BrandMobileNavigation,
-} from "@/components/globals/layouts/navbar/brand-navigation";
+import { BrandDesktopNavigationItem } from "@/components/globals/layouts/navbar/brand-navigation";
 import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { Icons } from "@/components/icons";
 import { RenivetFull } from "@/components/svgs";
@@ -412,7 +409,7 @@ export function NavbarHome({
                         <Icons.Menu className="size-6" />
                     </button>
 
-                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-8 xl:gap-12">
+                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-4 xl:gap-6">
                         {customLogo ? (
                             customLogo
                         ) : (
@@ -429,7 +426,7 @@ export function NavbarHome({
                             </Link>
                         )}
 
-                        <div className="hidden items-center gap-1 lg:flex">
+                        <div className="hidden items-center gap-0.5 lg:flex">
                             <NavigationMenu className="static h-full max-w-none">
                                 {/* <NavigationMenuList>
                                 {isCategoriesLoading ? (
@@ -565,7 +562,7 @@ export function NavbarHome({
                                                         "Beauty and Personal Care" ? (
                                                         <>
                                                             <NavigationMenuTrigger
-                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary"
+                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
                                                                 onClick={(
                                                                     e
                                                                 ) => {
@@ -803,7 +800,7 @@ export function NavbarHome({
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary">
+                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]">
                                                                 {category.name}
                                                             </NavigationMenuTrigger>
                                                             <NavigationMenuContent>
@@ -824,10 +821,6 @@ export function NavbarHome({
                     </div>
 
                     <div className="flex items-center gap-1 sm:gap-3 xl:gap-4">
-                        <BrandMobileNavigation
-                            brands={storefrontBrands}
-                            isLoading={isStorefrontBrandsLoading}
-                        />
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
