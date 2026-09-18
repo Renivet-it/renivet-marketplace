@@ -35,4 +35,4 @@ Re-run the A02 reproduction in a read-only controlled environment, record before
 
 ## Approval gate
 
-This specification is blocked pending explicit confirmation of the recommended COD/split-payment behavior: hold with a queryable `cod_reconciliation_pending` reason until REN-212 defines the reconciliation rule. This is a Class C financial decision and must not be invented by implementation.
+The requester approved the recommended COD/split-payment behavior: hold with a queryable `cod_reconciliation_pending` reason until REN-212 defines the reconciliation rule. This is now `READY_FOR_DEV`; implementation must not map uncertain COD or split-payment states to paid.
