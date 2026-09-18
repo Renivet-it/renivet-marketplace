@@ -16,6 +16,10 @@ import {
     getDeliveredAt,
     isWithinPayoutWindow,
 } from "./payout-eligibility";
+import {
+    calculateHoldbackPaise,
+    getHoldbackPolicyMetadata,
+} from "./payout-holdback";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -347,10 +351,8 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                         gstin: brand.gstin,
                         pan: brand.pan,
                         payoutEmail: brand.payoutEmail,
-                        holdbackPercentBps:
-                            brand.holdbackPercentBps && brand.holdbackPercentBps > 0
-                                ? brand.holdbackPercentBps
-                                : 500,
+                        holdbackPercentBps: 0,
+                        holdbackPolicy: getHoldbackPolicyMetadata(),
                     },
                 } satisfies BrandCycleSummary);
 
@@ -365,7 +367,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                         deliveredAt: deliveredAt.toISOString(),
                         commissionStatus: rule ? "applied" : "blocked_unconfigured",
                         commissionPercentBps: rule?.commissionPercentBps,
-                        holdbackPercentBps: rule?.holdbackPercentBps ?? brand.holdbackPercentBps ?? 500,
+                        holdbackPercentBps: 0,
                         ruleName: rule?.ruleName,
                         ruleId: rule?.ruleId,
                     },
@@ -464,15 +466,15 @@ async function buildBrandPayoutSummaries(cycleId: string) {
     }
 
     for (const summary of summaries.values()) {
-        const holdbackPercentBps = Number(summary.metadata.holdbackPercentBps ?? 500);
+        const holdbackPercentBps = Number(summary.metadata.holdbackPercentBps ?? 0);
         const preHoldbackBase =
             summary.grossSalesPaise -
             summary.commissionPaise -
             summary.returnsPaise -
             summary.carrierClaimsPaise;
-        summary.holdbackPaise = Math.max(
-            0,
-            Math.round(Math.max(preHoldbackBase, 0) * (holdbackPercentBps / 10_000))
+        summary.holdbackPaise = calculateHoldbackPaise(
+            preHoldbackBase,
+            holdbackPercentBps
         );
         if (summary.holdbackPaise > 0) {
             summary.lineItems.push({
@@ -485,12 +487,14 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             });
         }
 
-        summary.holdbackReleasePaise = await computeHoldbackRelease({
-            brandId: summary.brandId,
-            payoutDate: new Date(cycle.payoutDate),
-            previousCycles,
-            refundRows,
-        });
+        summary.holdbackReleasePaise = summary.holdbackPaise > 0
+            ? await computeHoldbackRelease({
+                  brandId: summary.brandId,
+                  payoutDate: new Date(cycle.payoutDate),
+                  previousCycles,
+                  refundRows,
+              })
+            : 0;
         if (summary.holdbackReleasePaise > 0) {
             summary.lineItems.push({
                 lineType: "holdback_release",
