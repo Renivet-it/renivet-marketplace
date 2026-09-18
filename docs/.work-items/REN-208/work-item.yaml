@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P1] Build Admin Contract Management & Brand Agreement Repository"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-208/fccpp1-build-admin-contract-management-and-brand-agreement-repository
         priority: High
@@ -33,7 +33,7 @@ investigation:
     security_boundaries: [SEC-208-001, SEC-208-002, SEC-208-003]
     state_transitions: [not_on_file, upload_pending, version_active, version_replaced, download_authorized, access_denied, cleanup_required]
     related_tests: [TEXP-208-001, TEXP-208-002, TEXP-208-003, TEXP-208-004, TEXP-208-005, TEXP-208-006, TEXP-208-007, TEXP-208-008]
-    uncertainties: ["Private storage provider and signed-delivery contract are not established in the repository.", "Brand-owner versus brand-member read scope must follow the approved brand membership policy once storage is selected.", "The exact failed-upload cleanup mechanism depends on the chosen provider API."]
+    uncertainties: ["Brand-owner versus brand-member read scope must follow the existing persisted brand membership policy.", "The database file-size limit must be enforced consistently at validation and route boundaries."]
 requirements:
     - { id: REQ-208-001, description: "Admin can create an agreement version with brand mapping and required metadata.", type: explicit }
     - { id: REQ-208-002, description: "Agreement replacement is append-only and retains prior versions.", type: safety }
@@ -72,7 +72,7 @@ flows:
 dependencies:
     - { id: DEP-208-001, name: brands and brand_members, purpose: "Authoritative brand tenancy and membership", description: "Existing brand and membership rows determine agreement ownership.", status: resolved }
     - { id: DEP-208-002, name: authorization middleware, purpose: "Admin and brand permission enforcement", description: "Existing tRPC permission middleware must be supplemented with persisted agreement-brand checks.", status: resolved }
-    - { id: DEP-208-003, name: private storage provider, purpose: "Private object storage and short-lived delivery", description: "Required capability is not established; current UploadThing URL patterns are public-link patterns.", status: blocked }
+    - { id: DEP-208-003, name: UploadThing private ACL, purpose: "Private agreement files and signed delivery", description: "Dedicated uploader uses private ACL; database stores only file keys and download returns a five-minute signed URL after authorization.", status: resolved }
     - { id: DEP-208-004, name: audit_logs, purpose: "Append-only action evidence", description: "Existing audit log query and schema can record safe agreement events.", status: resolved }
     - { id: DEP-208-005, name: REN-209, purpose: "Future commercial-term citation", description: "Commercial configuration will cite agreement versions; no terms are stored here.", status: resolved }
 integrations:
@@ -92,7 +92,7 @@ business_rules:
     - { id: BR-208-003, description: "This issue stores documents and metadata, not commercial rates or extracted terms." }
     - { id: BR-208-004, description: "Existing contract timestamps and terms acceptance are not agreement evidence and are not modified." }
 decisions:
-    - { id: DEC-208-001, question: "Which private storage and short-lived delivery mechanism should hold agreement files?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Approve an existing private object-storage provider with server-side signed delivery, or explicitly approve a separate encrypted storage implementation; reject public UploadThing URLs.", basis: "Repository inspection found only public UploadThing file URL patterns; the issue requires private, non-guessable, authorized delivery.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-208-001, question: "Which private storage and delivery mechanism should hold agreement files?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use UploadThing private ACLs, store only file keys in PostgreSQL, and issue five-minute signed URLs after server authorization; do not use public UploadThing URLs.", basis: "User approved private UploadThing storage after reviewing the dashboard setting and preserving existing public upload defaults.", confidence: high, consequence: high, human_confirmation_required: true }
     - { id: DEC-208-002, question: "Should agreement replacement overwrite the prior version?", class: AUTO_DECIDE, status: resolved, recommendation: "No; append a new immutable version.", basis: "Explicit issue requirement and auditability.", confidence: high, consequence: medium, human_confirmation_required: false }
     - { id: DEC-208-003, question: "Where should agreement metadata live?", class: AUTO_DECIDE, status: resolved, recommendation: "A dedicated additive agreement-version table with brand FK and private storage reference.", basis: "Avoids conflating brand profile fields, confidential data, and generic audit attachments.", confidence: high, consequence: medium, human_confirmation_required: false }
 test_expectations:
@@ -113,14 +113,14 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-208-001, severity: DESIGN_BLOCKER, status: open, summary: "Private storage and signed delivery are not available in the current UploadThing pattern and must be approved before implementation.", references: [REQ-208-006, DEC-208-001] }
+        - { id: CRIT-208-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Private storage is provided by the approved UploadThing private ACL and five-minute signed URL design.", references: [REQ-208-006, DEC-208-001] }
         - { id: CRIT-208-002, severity: MAJOR, status: open, summary: "Every read/download path must authorize against the persisted agreement brand to prevent IDOR.", references: [REQ-208-005, INV-208-003, INV-208-004] }
         - { id: CRIT-208-003, severity: MAJOR, status: open, summary: "Upload/database failure cleanup must be implemented and tested.", references: [REQ-208-011, FLOW-208-004] }
         - { id: CRIT-208-004, severity: MINOR, status: open, summary: "Agreement metadata must not overload generic audit attachment storage or existing brand contract fields.", references: [REQ-208-007, REQ-208-010] }
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-208-001, CRIT-208-001]
-    approved_by: user-requested-spec-pending-storage-decision
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-approved-private-uploadthing
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-208-001, scenario_ids: [SCN-208-001, SCN-208-002] }
