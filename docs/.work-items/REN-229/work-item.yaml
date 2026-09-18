@@ -1,0 +1,166 @@
+schema_version: "1.0"
+task:
+    id: REN-229
+    title: "[FCCP] Commission Rules Data Integrity / Foundation"
+    source: linear
+    branch: feat/ren-229-spec
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-229/fccp-commission-rules-data-integrity-foundation
+        priority: Medium
+        labels: [Feature]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-229-fccp-commission-rules-data-integrity-foundation
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The change modifies the database schema that governs future financial commission rules."
+        - "Deletion and overlap semantics can silently widen, remove, or duplicate payable rules."
+        - "Migration failure or incorrect constraints affects subsequent payout-governance work."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, commission schema, creating migration, payout resolver, FK target tables, migration conventions, existing tests]
+    excluded_areas: [production data mutation, rule population, payouts.ts changes, category rate changes, admin UI, audit completion, payout execution]
+    dependencies: [DEP-229-001, DEP-229-002, DEP-229-003, DEP-229-004]
+    integrations: [INT-229-001]
+    security_boundaries: [SEC-229-001]
+    state_transitions: [schema_unconstrained, migration_applied, rule_write_rejected, rule_write_committed, rollback_restored]
+    related_tests: [TEXP-229-001, TEXP-229-002, TEXP-229-003, TEXP-229-004, TEXP-229-005]
+    uncertainties: ["FK ON DELETE actions are not selected by the issue.", "Wildcard-aware overlap enforcement method is not selected by the issue.", "A live production database is not modified during specification."]
+requirements:
+    - { id: REQ-229-001, description: "Add three nullable-safe foreign keys with explicitly selected ON DELETE behavior.", type: safety }
+    - { id: REQ-229-002, description: "Add commission_rules_brand_idx and commission_rules_priority_idx.", type: explicit }
+    - { id: REQ-229-003, description: "Reject overlapping effective ranges for active identical nullable scopes while preserving wildcard semantics.", type: safety }
+    - { id: REQ-229-004, description: "Keep the migration additive, data-preserving, and isolated from payout calculation and rule population.", type: compatibility }
+    - { id: REQ-229-005, description: "Provide reproducible integration, migration, rollback, concurrency, and regression evidence.", type: explicit }
+    - { id: REQ-229-006, description: "Keep the Drizzle schema synchronized with the emitted migration, including selected FK actions and indexes.", type: compatibility }
+    - { id: REQ-229-007, description: "Reject effective_from later than effective_to and define inclusive/open-ended date semantics.", type: safety }
+    - { id: REQ-229-008, description: "Define transactionality, rerun/idempotency, partial-failure recovery, and repository-compatible rollback.", type: explicit }
+scenarios:
+    - { id: SCN-229-001, description: "Nonexistent brand/category/product type references are rejected.", requirement_ids: [REQ-229-001, REQ-229-005] }
+    - { id: SCN-229-002, description: "Active identical-scope overlapping ranges are rejected and non-overlapping ranges succeed.", requirement_ids: [REQ-229-003, REQ-229-005] }
+    - { id: SCN-229-003, description: "Inactive overlap and NULL-brand wildcard rules succeed as permitted.", requirement_ids: [REQ-229-003, REQ-229-005] }
+    - { id: SCN-229-004, description: "Migration and rollback produce only the intended constraint/index changes.", requirement_ids: [REQ-229-001, REQ-229-002, REQ-229-004, REQ-229-005] }
+    - { id: SCN-229-005, description: "The table remains empty and payout calculation/resolver behavior is unchanged.", requirement_ids: [REQ-229-004, REQ-229-005] }
+    - { id: SCN-229-006, description: "Valid references succeed, invalid effective ranges fail, and open-ended/inclusive dates follow the confirmed semantics.", requirement_ids: [REQ-229-001, REQ-229-003, REQ-229-007] }
+    - { id: SCN-229-007, description: "Concurrent conflicting writes and migration reruns/partial failures follow the database and recovery contract.", requirement_ids: [REQ-229-005, REQ-229-008] }
+invariants:
+    - { id: INV-229-001, description: "Every non-null scope identifier references an existing authoritative row." }
+    - { id: INV-229-002, description: "Active identical scopes cannot have intersecting effective ranges; inactive rules are excluded." }
+    - { id: INV-229-003, description: "NULL scope dimensions retain wildcard semantics and are not silently widened by deletion." }
+    - { id: INV-229-004, description: "REN-229 does not mutate production commission data." }
+    - { id: INV-229-005, description: "Payout amounts, resolver behavior, category rates, and payout state transitions do not change." }
+    - { id: INV-229-006, description: "The Drizzle schema and emitted migration express the same constraints, indexes, and delete actions." }
+    - { id: INV-229-007, description: "Overlap enforcement is atomic at the database boundary and cannot be bypassed by concurrent writers." }
+flows:
+    - { id: FLOW-229-001, description: "Migration adds confirmed FKs, indexes, and overlap enforcement, then validates metadata.", state_transitions: [schema_unconstrained, migration_applied] }
+    - { id: FLOW-229-002, description: "Rule write is atomically accepted only after FK and active/date/scope checks.", state_transitions: [rule_write_rejected, rule_write_committed] }
+    - { id: FLOW-229-003, description: "Rollback removes REN-229 objects and restores the prior empty-table shape.", state_transitions: [rollback_restored] }
+    - { id: FLOW-229-004, description: "Migration failure and rerun follow the documented transaction/recovery procedure and leave verifiable metadata.", state_transitions: [schema_unconstrained, migration_applied, rollback_restored] }
+dependencies:
+    - { id: DEP-229-001, name: commission_rules, purpose: "Target table", description: "Existing table has only a primary key in the emitted migration.", status: resolved }
+    - { id: DEP-229-002, name: FK target tables, purpose: "Authoritative brand/category/product-type identifiers", description: "Existing brands, categories, and product_types tables must be available before migration.", status: resolved }
+    - { id: DEP-229-003, name: REN-203, purpose: "Related commission unit/resolver correction", description: "Separate behavior change; remains out of scope.", status: resolved }
+    - { id: DEP-229-004, name: REN-209, purpose: "Future commercial configuration consumer", description: "Must follow the constrained foundation before rule population.", status: resolved }
+integrations:
+    - { id: INT-229-001, system: PostgreSQL/Drizzle migration, purpose: "Enforce financial rule integrity at the source of truth", failure_mode: "Migration or concurrent writes could leave rules unconstrained or duplicated", retry_idempotency: "Migration is additive and must be safely detectable/re-runnable according to repository migration conventions." }
+personas:
+    - { id: PER-229-001, role: finance_operator, applicability: "Relies on non-ambiguous future commission configuration." }
+    - { id: PER-229-002, role: platform_operator, applicability: "Runs and verifies migrations and rollback." }
+security_boundaries:
+    - { id: SEC-229-001, description: "Only authorized deployment/database operators may apply the migration; tests and logs must exclude customer/payment-sensitive data." }
+business_rules:
+    - { id: BR-229-001, description: "A NULL scope dimension is a wildcard and must remain valid." }
+    - { id: BR-229-002, description: "Active rules with identical scope cannot overlap in effective dates." }
+    - { id: BR-229-003, description: "REN-229 does not choose commission rates or calculate payouts." }
+decisions:
+    - { id: DEC-229-001, question: "What ON DELETE action applies to each commission-rule FK?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "RESTRICT for brand, category, and product type.", basis: "User approved the recommendation; RESTRICT prevents silent wildcard widening and rule loss.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-229-002, question: "How should active date overlap with NULL wildcard dimensions be enforced?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Database-enforced exact nullable-scope overlap protection; NULL equals NULL, wildcard-vs-specific scopes may coexist; inclusive/open-ended dates; reject invalid ranges.", basis: "User approved the recommendation and exact semantics.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-229-001, category: integration, classification: REQUIRED, reason: "Verify all three FK violations and valid nullable references.", scenarios: [SCN-229-001, SCN-229-003] }
+    - { id: TEXP-229-002, category: integration, classification: REQUIRED, reason: "Verify overlap, date boundaries, inactive rules, wildcard scope, and concurrent conflicting writes.", scenarios: [SCN-229-002, SCN-229-003] }
+    - { id: TEXP-229-003, category: regression, classification: REQUIRED, reason: "Verify indexes/constraints, zero rows, no category-rate changes, and unchanged payouts.ts behavior.", scenarios: [SCN-229-004, SCN-229-005] }
+    - { id: TEXP-229-004, category: security, classification: REQUIRED, reason: "Verify authorized migration path and bounded diagnostics without sensitive data.", scenarios: [SCN-229-004] }
+    - { id: TEXP-229-005, category: exploratory, classification: REQUIRED, reason: "Verify rollback restores the prior schema shape without unrelated changes.", scenarios: [SCN-229-004, SCN-229-007] }
+    - { id: TEXP-229-006, category: integration, classification: REQUIRED, reason: "Verify positive FK references, invalid ranges, open-ended boundaries, and inclusive date semantics.", scenarios: [SCN-229-006] }
+    - { id: TEXP-229-007, category: integration, classification: REQUIRED, reason: "Verify database-atomic conflict handling under concurrency and safe migration rerun/partial-failure recovery.", scenarios: [SCN-229-007] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-229-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Wildcard overlap semantics and date boundaries were explicitly confirmed.", references: [REQ-229-003, SCN-229-002, SCN-229-003, DEC-229-002] }
+        - { id: CRIT-229-002, severity: DESIGN_BLOCKER, status: resolved, summary: "RESTRICT was confirmed independently for all three FKs.", references: [REQ-229-001, DEC-229-001] }
+        - { id: CRIT-229-003, severity: MAJOR, status: resolved, summary: "Forward-only rollback/recovery is specified as a verified reversal procedure.", references: [REQ-229-008, SCN-229-004] }
+        - { id: CRIT-229-004, severity: MAJOR, status: resolved, summary: "Drizzle schema and emitted migration synchronization is explicit.", references: [REQ-229-006, INV-229-006] }
+        - { id: CRIT-229-005, severity: MAJOR, status: resolved, summary: "Invalid ranges are rejected and date semantics are explicit.", references: [REQ-229-007, SCN-229-006] }
+        - { id: CRIT-229-006, severity: MAJOR, status: resolved, summary: "Database-level overlap enforcement and concurrency coverage are required.", references: [REQ-229-003, INV-229-007, TEXP-229-007] }
+        - { id: CRIT-229-007, severity: MAJOR, status: resolved, summary: "Migration transaction, rerun, and partial-failure behavior are required implementation evidence.", references: [REQ-229-008, SCN-229-007] }
+        - { id: CRIT-229-008, severity: MINOR, status: resolved, summary: "Positive valid-FK coverage has a dedicated scenario.", references: [SCN-229-006, TEXP-229-006] }
+        - { id: CRIT-229-009, severity: MINOR, status: resolved, summary: "Bounded constraint diagnostics and migration verification are required.", references: [SEC-229-001, TEXP-229-004] }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "User confirmation in conversation"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-229-001, scenario_ids: [SCN-229-001, SCN-229-004] }
+        - { requirement_id: REQ-229-002, scenario_ids: [SCN-229-004] }
+        - { requirement_id: REQ-229-003, scenario_ids: [SCN-229-002, SCN-229-003] }
+        - { requirement_id: REQ-229-004, scenario_ids: [SCN-229-004, SCN-229-005] }
+        - { requirement_id: REQ-229-005, scenario_ids: [SCN-229-001, SCN-229-002, SCN-229-003, SCN-229-004, SCN-229-005, SCN-229-007] }
+        - { requirement_id: REQ-229-006, scenario_ids: [SCN-229-004] }
+        - { requirement_id: REQ-229-007, scenario_ids: [SCN-229-006] }
+        - { requirement_id: REQ-229-008, scenario_ids: [SCN-229-004, SCN-229-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-229-001, invariant_ids: [INV-229-001] }
+        - { scenario_id: SCN-229-002, invariant_ids: [INV-229-002] }
+        - { scenario_id: SCN-229-003, invariant_ids: [INV-229-002, INV-229-003] }
+        - { scenario_id: SCN-229-004, invariant_ids: [INV-229-004, INV-229-006] }
+        - { scenario_id: SCN-229-005, invariant_ids: [INV-229-004, INV-229-005] }
+        - { scenario_id: SCN-229-006, invariant_ids: [INV-229-001, INV-229-002, INV-229-003] }
+        - { scenario_id: SCN-229-007, invariant_ids: [INV-229-007] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-229-001, test_expectation_ids: [TEXP-229-001] }
+        - { scenario_id: SCN-229-002, test_expectation_ids: [TEXP-229-002] }
+        - { scenario_id: SCN-229-003, test_expectation_ids: [TEXP-229-001, TEXP-229-002] }
+        - { scenario_id: SCN-229-004, test_expectation_ids: [TEXP-229-003, TEXP-229-004, TEXP-229-005] }
+        - { scenario_id: SCN-229-005, test_expectation_ids: [TEXP-229-003] }
+        - { scenario_id: SCN-229-006, test_expectation_ids: [TEXP-229-006] }
+        - { scenario_id: SCN-229-007, test_expectation_ids: [TEXP-229-005, TEXP-229-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: main
+    base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
+    head_commit: "46913c94e5178bdf87ad54076678847d5dc2b045"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/666
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: FAIL
+        scenarios: FAIL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: FAIL
+        scope: PASS
+    blocking_findings:
+        - "REV-001: Required PostgreSQL integration and recovery coverage is missing."
+    required_actions:
+        - "Add executable database integration tests for FK, range, overlap, wildcard, concurrency, migration recovery, rollback, and regression cases; rerun REVIEW."
+    evidence:
+        - "Compared the approved REN-229 contract with the base-to-head diff from main 58a5a2b2d236449d788e0f26a988d1eadb6e2591 to feat/ren-229-spec 46913c94e5178bdf87ad54076678847d5dc2b045."
+        - "The only added test file, tests/ren-229-commission-rules-integrity.test.ts, performs static source assertions and does not connect to PostgreSQL."
+    governance_reentry_required: true
