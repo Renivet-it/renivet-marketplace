@@ -6,6 +6,11 @@ import {
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
+import {
+    calculateCommissionPaise,
+    resolveCommissionRuleFromCandidates,
+    type CommissionRuleCandidate,
+} from "./payout-commission";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -67,26 +72,6 @@ function toDate(value?: string | Date | null) {
     return value instanceof Date ? value : new Date(value);
 }
 
-function isRuleEffective(
-    effectiveFrom: string | null,
-    effectiveTo: string | null,
-    targetDate: Date
-) {
-    const from = effectiveFrom ? new Date(effectiveFrom) : null;
-    const to = effectiveTo ? new Date(effectiveTo) : null;
-    if (from && targetDate < from) return false;
-    if (to && targetDate > to) return false;
-    return true;
-}
-
-function getRuleSpecificityScore(input: {
-    brandId?: string | null;
-    categoryId?: string | null;
-    productTypeId?: string | null;
-}) {
-    return [input.brandId, input.categoryId, input.productTypeId].filter(Boolean).length;
-}
-
 function getCycleSummaryRecord(cycle: {
     calculationSummary?: Record<string, unknown> | null;
 }) {
@@ -130,31 +115,10 @@ async function resolveCommissionRuleForItem(input: {
         isActive: true,
     });
 
-    const matching = rules.filter((rule) => {
-        if (!isRuleEffective(rule.effectiveFrom, rule.effectiveTo, input.targetDate)) {
-            return false;
-        }
-        const brandOk = !rule.brandId || rule.brandId === input.brandId;
-        const categoryOk = !rule.categoryId || rule.categoryId === input.categoryId;
-        const productTypeOk = !rule.productTypeId || rule.productTypeId === input.productTypeId;
-        return brandOk && categoryOk && productTypeOk;
+    const winner = resolveCommissionRuleFromCandidates({
+        ...input,
+        rules,
     });
-
-    const winner = matching.sort((left, right) => {
-        if (right.priority !== left.priority) return right.priority - left.priority;
-        return (
-            getRuleSpecificityScore({
-                brandId: right.brandId,
-                categoryId: right.categoryId,
-                productTypeId: right.productTypeId,
-            }) -
-            getRuleSpecificityScore({
-                brandId: left.brandId,
-                categoryId: left.categoryId,
-                productTypeId: left.productTypeId,
-            })
-        );
-    })[0];
 
     if (!winner) return null;
 
@@ -277,23 +241,18 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             if (!brand) continue;
 
             const previous = previousSummaryMap.get(brandId);
-            const rule =
-                (await resolveCommissionRuleForItem({
+            const rule = await resolveCommissionRuleForItem({
                     brandId,
                     categoryId: item.product?.categoryId,
                     productTypeId: item.product?.productTypeId,
                     targetDate: deliveredAt,
-                })) ?? {
-                    commissionPercentBps: item.product?.category?.commissionRate ?? 2000,
-                    holdbackPercentBps: brand.holdbackPercentBps ?? 500,
-                    ruleName: "default_20_percent",
-                };
+                });
 
             const grossItemPaise =
                 Number(item.variant?.price ?? item.product?.price ?? 0) * item.quantity;
-            const commissionPaise = Math.round(
-                grossItemPaise * (rule.commissionPercentBps / 10_000)
-            );
+            const commissionPaise = rule
+                ? calculateCommissionPaise(grossItemPaise, rule.commissionPercentBps)
+                : 0;
 
             const existing =
                 summaries.get(brandId) ??
@@ -345,22 +304,26 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 description: `${item.product?.title ?? "Product"} x${item.quantity}`,
                 amountPaise: grossItemPaise,
                 referenceId: order.id,
-                metadata: {
-                    deliveredAt: deliveredAt.toISOString(),
-                    commissionPercentBps: rule.commissionPercentBps,
-                    holdbackPercentBps: rule.holdbackPercentBps,
-                    ruleName: rule.ruleName,
-                    ruleId: "ruleId" in rule ? rule.ruleId : undefined,
-                },
-            });
+                    metadata: {
+                        deliveredAt: deliveredAt.toISOString(),
+                        commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                        commissionPercentBps: rule?.commissionPercentBps,
+                        holdbackPercentBps: rule?.holdbackPercentBps ?? brand.holdbackPercentBps ?? 500,
+                        ruleName: rule?.ruleName,
+                        ruleId: rule?.ruleId,
+                    },
+                });
             existing.lineItems.push({
-                lineType: "commission",
-                description: `Platform commission for ${item.product?.title ?? "product"}`,
+                lineType: rule ? "commission" : "commission_blocked",
+                description: rule
+                    ? `Platform commission for ${item.product?.title ?? "product"}`
+                    : `Commission blocked: no approved rule for ${item.product?.title ?? "product"}`,
                 amountPaise: -commissionPaise,
                 referenceId: order.id,
                 metadata: {
-                    ruleName: rule.ruleName,
-                    ruleId: "ruleId" in rule ? rule.ruleId : undefined,
+                    commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                    ruleName: rule?.ruleName,
+                    ruleId: rule?.ruleId,
                 },
             });
 
