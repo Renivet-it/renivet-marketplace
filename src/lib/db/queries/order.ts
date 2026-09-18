@@ -1,4 +1,5 @@
 import { mediaCache } from "@/lib/redis/methods";
+import { resolveCommissionRuleFromCandidates } from "@/lib/finance/payout-commission";
 import {
     CreateOrder,
     Order,
@@ -31,6 +32,7 @@ import {
     addresses,
     brandProductTypePacking,
     brands,
+    commissionRules,
     orderItems,
     orders,
     orderShipments,
@@ -129,6 +131,39 @@ const parseSingleOrderSafely = (orderData: any): OrderWithItemAndBrand => {
     return sanitizedOrder as OrderWithItemAndBrand;
 };
 
+type OrdersWithProducts = Array<{
+    createdAt?: Date | string | null;
+    items: Array<{ product?: any }>;
+}>;
+
+async function attachCanonicalCommissionRates<T extends OrdersWithProducts>(
+    ordersData: T
+): Promise<T> {
+    const rules = await db.query.commissionRules.findMany({
+        where: eq(commissionRules.isActive, true),
+    });
+
+    return ordersData.map((order) => ({
+        ...order,
+        items: order.items.map((item) => {
+            const winner = item.product?.brandId
+                ? resolveCommissionRuleFromCandidates({
+                      brandId: item.product.brandId,
+                      categoryId: item.product.categoryId,
+                      productTypeId: item.product.productTypeId,
+                      targetDate: new Date(order.createdAt ?? new Date()),
+                      rules,
+                  })
+                : null;
+
+            return {
+                ...item,
+                commissionPercentBps: winner?.commissionPercentBps ?? null,
+            };
+        }),
+    })) as unknown as T;
+}
+
 class OrderQuery {
     async getAllOrders() {
         const data = await db.query.orders.findMany({
@@ -203,7 +238,9 @@ class OrderQuery {
             })),
         }));
 
-        return parseOrderArraySafely(enhancedData);
+        return parseOrderArraySafely(
+            await attachCanonicalCommissionRates(enhancedData)
+        );
     }
 
     async getOrders({
@@ -494,7 +531,9 @@ class OrderQuery {
             })),
         }));
         return {
-            data: parseOrderArraySafely(enhancedData),
+            data: parseOrderArraySafely(
+                await attachCanonicalCommissionRates(enhancedData)
+            ),
             count: +data?.[0]?.count || 0,
         };
     }
