@@ -33,7 +33,7 @@ investigation:
     security_boundaries: [SEC-212-001, SEC-212-002]
     state_transitions: [unconfirmed, held, remittance_observed, matched, disputed, escalated, payout_eligible]
     related_tests: [TEXP-212-001, TEXP-212-002, TEXP-212-003]
-    uncertainties: ["Production carrier credential state.", "Live versus vestigial COD table family.", "Per-order split-payment confirmation semantics.", "Aging/escalation owner and thresholds."]
+    uncertainties: ["Automatic Delhivery sync failure mode and live production row evidence.", "Live versus vestigial COD table family.", "Per-order split-payment confirmation semantics.", "Aging/escalation owner and thresholds."]
 requirements:
     - { id: REQ-212-001, description: "Document the COD money path end to end with carrier, fields, tables, and jobs.", type: discovery }
     - { id: REQ-212-002, description: "Report production carrier credential state without changing credentials.", type: safety }
@@ -78,7 +78,7 @@ business_rules:
     - { id: BR-212-002, description: "Unconfirmed COD payment evidence is held, not paid." }
     - { id: BR-212-003, description: "BIZ-9 refund source-of-truth work remains separate." }
 decisions:
-    - { id: DEC-212-001, question: "Are carrier credentials set, unset, or set-but-failing in production?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Report the factual state without changing credentials.", basis: "BIZ-11 remains undecided and repository code cannot establish production configuration.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-212-001, question: "Are carrier credentials set, unset, or set-but-failing in production?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Record Delhivery as credentials set but automatic remittance not synced; do not change credentials.", basis: "User confirmed Delhivery is used, credentials are set, and remittance is handled manually.", confidence: medium, consequence: high, human_confirmation_required: true }
     - { id: DEC-212-002, question: "What evidence and aging/escalation policy releases a COD order for payout?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Finance owner must decide after the money path and table state are evidenced.", basis: "BIZ-8 requires explicit COD logic and the issue forbids silent paid assumptions.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-212-001, category: exploratory, classification: REQUIRED, reason: "Discovery must document systems, fields, jobs, credentials, and live/vestigial table evidence.", scenarios: [SCN-212-001, SCN-212-002, SCN-212-004] }
@@ -94,12 +94,12 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-212-001, severity: DESIGN_BLOCKER, status: open, summary: "Production credential state cannot be established from repository evidence.", references: [REQ-212-002, DEC-212-001] }
+        - { id: CRIT-212-001, severity: MAJOR, status: open, summary: "Delhivery credentials are reported as set, but automatic remittance is not synced; provider connectivity and production row evidence remain unverified.", references: [REQ-212-002, DEC-212-001] }
         - { id: CRIT-212-002, severity: DESIGN_BLOCKER, status: open, summary: "The release evidence and aging/escalation policy remain undecided.", references: [REQ-212-005, DEC-212-002] }
         - { id: CRIT-212-003, severity: MAJOR, status: open, summary: "Live versus vestigial table family needs production row evidence.", references: [REQ-212-004, SCN-212-004] }
 approval:
     state: BLOCKED
-    design_blockers: [CRIT-212-001, CRIT-212-002, CRIT-212-003]
+    design_blockers: [CRIT-212-002, CRIT-212-003]
     approved_by: ""
 traceability:
     requirement_to_scenarios:
