@@ -67,6 +67,14 @@ export function classifyRefundReconciliation(input: {
     refundCount: number;
     hasProcessedRefund?: boolean;
 }): RefundReconciliationClassification {
+    if (
+        input.refundCount > 0 &&
+        input.hasProcessedRefund === true &&
+        input.paymentStatus !== "refunded"
+    ) {
+        return "refund_status_conflict";
+    }
+
     if (input.paymentStatus === "refunded" && input.refundCount === 0) {
         return "missing_refund_row";
     }

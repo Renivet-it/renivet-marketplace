@@ -4,7 +4,7 @@ import {
     resolveRefundEventStatus,
     type RefundEventStatus,
 } from "@/lib/finance/refund-source-of-truth";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { db } from "..";
 import { orders, refunds } from "../schema";
 
@@ -57,10 +57,13 @@ class RefundQuery {
             .where(
                 orderIds?.length
                     ? inArray(orders.id, orderIds)
-                    : eq(orders.paymentStatus, "refunded")
+                    : or(
+                          eq(orders.paymentStatus, "refunded"),
+                          eq(refunds.status, "processed")
+                      )
             );
 
-        return rows.filter((row) => row.paymentStatus === "refunded");
+        return rows;
     }
 
     async recordRefundEvent(input: RecordRefundEventInput) {
