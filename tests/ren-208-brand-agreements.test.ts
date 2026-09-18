@@ -17,6 +17,7 @@ describe("REN-208 private brand agreements", () => {
         expect(source).toContain("canReadAgreement");
         expect(source).toContain("utApi.getSignedURL");
         expect(source).toContain("expiresIn: 300");
+        expect(source).toContain("deleteFiles([input.file.key])");
         expect(source).not.toContain("file.url");
     });
 
