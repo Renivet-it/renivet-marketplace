@@ -170,3 +170,31 @@ traceability:
         - { scenario_id: SCN-225-008, test_expectation_ids: [TEXP-225-005, TEXP-225-007] }
         - { scenario_id: SCN-225-009, test_expectation_ids: [TEXP-225-004, TEXP-225-006] }
         - { scenario_id: SCN-225-010, test_expectation_ids: [TEXP-225-006] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: feat/ren-203-spec
+    base_commit: "ed2f9c0f0c6c6de91b402996513730586e189b4d"
+    head_commit: "61b8462003270294c38c5e45d80b0d77dba186ef"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-225-001: Add a deterministic database integration test for concurrent issuance and a forced unique collision."
+        - "REV-225-002: Record the forward-only cutover deployment/date boundary and bounded legacy/new-format reporting."
+        - "REV-225-004: Complete the authenticated non-production invoice/reference and configured/unconfigured commission walkthrough."
+    evidence:
+        - "Compared the approved REN-225 contract with the implementation commit 61b8462003270294c38c5e45d80b0d77dba186ef using the task-local stacked-branch base ed2f9c0f0c6c6de91b402996513730586e189b4d."
+        - "src/lib/order-invoice-number.ts and src/lib/order-invoice.ts implement a random non-identifying invoice token, row-lock idempotency, and bounded unique-violation retry."
+        - "src/lib/db/queries/order.ts resolves active commission_rules into order-item commissionPercentBps for active order reporting consumers."
+        - "src/lib/finance/gst.ts uses stored storefront and corporate tax invoice numbers and records missing authoritative values as validation errors."
+        - "Focused unit tests, governance validation, and static integration inspection support the review; runtime UAT and database collision integration evidence remain outstanding."
+    governance_reentry_required: false
