@@ -1268,10 +1268,10 @@ class FinanceComplianceQuery {
 
     async listOrdersForFinanceWindow(input: { start: Date; end: Date }) {
         return db.query.orders.findMany({
-            where: and(
-                gte(orders.createdAt, input.start),
-                lte(orders.createdAt, input.end)
-            ),
+            // Delivery eligibility is resolved from the delivered shipment
+            // timestamp in the payout calculation. Filtering by createdAt
+            // here would drop orders created before the settlement cycle.
+            where: eq(orders.status, "delivered"),
             with: {
                 address: true,
                 shipments: true,
