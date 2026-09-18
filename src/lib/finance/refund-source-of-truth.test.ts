@@ -61,6 +61,13 @@ describe("refund source-of-truth rules", () => {
                 refundCount: 1,
             })
         ).toBe("consistent");
+        expect(
+            classifyRefundReconciliation({
+                paymentStatus: "paid",
+                refundCount: 1,
+                hasProcessedRefund: true,
+            })
+        ).toBe("refund_status_conflict");
     });
 
     test("does not downgrade a durable terminal refund state on replay", () => {
