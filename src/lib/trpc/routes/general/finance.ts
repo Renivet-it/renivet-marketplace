@@ -37,6 +37,8 @@ import {
     completeManualBrandPayout,
     createPayoutOverride,
     executePayoutCycle,
+    recordPayoutExecutionClearance,
+    revokePayoutExecutionClearance,
     runPayoutCycleAlerts,
 } from "@/lib/finance/payouts";
 import {
@@ -495,6 +497,49 @@ export const financeComplianceRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "payouts", "manage");
             return executePayoutCycle(input.cycleId, ctx.user.id, input.brandId);
+        }),
+
+    getPayoutExecutionClearance: protectedProcedure
+        .input(z.object({ cycleId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "view");
+            return ctx.queries.financeCompliance.getLatestPayoutExecutionClearance(
+                input.cycleId
+            );
+        }),
+
+    recordPayoutExecutionClearance: adminProcedure
+        .input(
+            z.object({
+                cycleId: z.string().uuid(),
+                evidenceReference: z.string().min(3),
+                transactionValidationReference: z.string().min(3),
+                transactionValidatedAt: z.coerce.date(),
+                expiresAt: z.coerce.date().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "manage");
+            return recordPayoutExecutionClearance({
+                ...input,
+                actorId: ctx.user.id,
+            });
+        }),
+
+    revokePayoutExecutionClearance: adminProcedure
+        .input(
+            z.object({
+                clearanceId: z.string().uuid(),
+                reason: z.string().min(3),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "manage");
+            return revokePayoutExecutionClearance(
+                input.clearanceId,
+                ctx.user.id,
+                input.reason
+            );
         }),
 
     createPayoutOverride: adminProcedure

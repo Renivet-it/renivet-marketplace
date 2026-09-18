@@ -20,6 +20,10 @@ import {
     calculateHoldbackPaise,
     getHoldbackPolicyMetadata,
 } from "./payout-holdback";
+import {
+    evaluatePayoutExecutionGate,
+    isPayoutOverrideApproved,
+} from "./payout-execution-gate";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -72,6 +76,12 @@ type CycleCalculationSummary = {
     totalGrossPaise: number;
     totalNetPayablePaise: number;
     brands: BrandCycleSummary[];
+    controlEvidence?: {
+        commissionValidation: "REN-203";
+        eligibilityGating: "REN-204";
+        paymentStateGating: "REN-204";
+        holdbackSuspension: "BIZ-15";
+    };
     eligibilityDiagnostics?: Array<{
         orderId: string;
         disposition: "excluded" | "held";
@@ -79,6 +89,15 @@ type CycleCalculationSummary = {
     }>;
     executions?: Array<Record<string, unknown>>;
     executedAt?: string;
+};
+
+type PayoutExecutionClearanceInput = {
+    cycleId: string;
+    actorId: string;
+    evidenceReference: string;
+    transactionValidationReference: string;
+    transactionValidatedAt: Date;
+    expiresAt?: Date | null;
 };
 
 function toDate(value?: string | Date | null) {
@@ -99,6 +118,12 @@ function buildCycleTotals(brands: BrandCycleSummary[]): CycleCalculationSummary 
         totalGrossPaise: brands.reduce((sum, item) => sum + item.grossSalesPaise, 0),
         totalNetPayablePaise: brands.reduce((sum, item) => sum + item.netPayablePaise, 0),
         brands,
+        controlEvidence: {
+            commissionValidation: "REN-203",
+            eligibilityGating: "REN-204",
+            paymentStateGating: "REN-204",
+            holdbackSuspension: "BIZ-15",
+        },
     };
 }
 
@@ -446,7 +471,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         const summary = summaries.get(override.brandId);
         if (!summary) continue;
 
-        if (!override.approvedBy && Math.abs(override.amountPaise) > 50_000) {
+        if (!isPayoutOverrideApproved(override)) {
             summary.metadata.pendingOverrideCount = Number(summary.metadata.pendingOverrideCount ?? 0) + 1;
             continue;
         }
@@ -566,6 +591,7 @@ async function persistCycleSummary(params: {
     status: "calculated" | "approved" | "processing" | "completed" | "failed";
     brands: BrandCycleSummary[];
     eligibilityDiagnostics?: CycleCalculationSummary["eligibilityDiagnostics"];
+    previousSummary?: CycleCalculationSummary;
     calculatedBy?: string;
     approvedBy?: string;
     executedBy?: string;
@@ -579,7 +605,9 @@ async function persistCycleSummary(params: {
         executedBy: params.executedBy,
         calculationSummary: {
             ...base,
-            eligibilityDiagnostics: params.eligibilityDiagnostics,
+            eligibilityDiagnostics:
+                params.eligibilityDiagnostics ??
+                params.previousSummary?.eligibilityDiagnostics,
             executions: params.executions,
             executedAt: params.executions?.length ? new Date().toISOString() : undefined,
         },
@@ -686,6 +714,7 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         status: "calculated",
         brands: summaries,
         eligibilityDiagnostics,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         calculatedBy: actorId,
     });
 
@@ -738,6 +767,7 @@ export async function approvePayoutCycle(
         actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         approvedBy: actorId,
     });
 
@@ -830,6 +860,162 @@ async function createRazorpayPayout(input: {
     return (await response.json()) as Record<string, unknown>;
 }
 
+function buildExecutionGateChecks(
+    cycle: { calculationSummary?: Record<string, unknown> | null },
+    clearance: {
+        clearedBy: string;
+        evidenceReference: string;
+        transactionValidationReference: string;
+        transactionValidatedAt: Date;
+        clearedAt: Date;
+        expiresAt: Date | null;
+        revokedAt: Date | null;
+    } | null
+) {
+    const summary = cycle.calculationSummary as CycleCalculationSummary | undefined;
+    const brands = summary?.brands ?? [];
+    const lineItems = brands.flatMap((brand) => brand.lineItems);
+    const controlEvidence = summary?.controlEvidence;
+
+    return {
+        commissionValidation:
+            brands.length > 0 &&
+            lineItems.every((line) => line.lineType !== "commission_blocked") &&
+            controlEvidence?.commissionValidation === "REN-203",
+        eligibilityGating:
+            Array.isArray(summary?.eligibilityDiagnostics) &&
+            controlEvidence?.eligibilityGating === "REN-204",
+        paymentStateGating:
+            Array.isArray(summary?.eligibilityDiagnostics) &&
+            controlEvidence?.paymentStateGating === "REN-204",
+        holdbackSuspension:
+            brands.length > 0 &&
+            brands.every(
+                (brand) =>
+                    (brand.metadata.holdbackPolicy as Record<string, unknown> | undefined)
+                        ?.suspended === true &&
+                    (brand.metadata.holdbackPolicy as Record<string, unknown> | undefined)
+                        ?.authority === "BIZ-15" &&
+                    controlEvidence?.holdbackSuspension === "BIZ-15"
+            ),
+        realTransactionValidation:
+            Boolean(
+                clearance?.transactionValidationReference &&
+                    clearance.transactionValidatedAt
+            ),
+        humanClearance: clearance
+            ? {
+                  clearedBy: clearance.clearedBy,
+                  evidenceReference: clearance.evidenceReference,
+                  clearedAt: clearance.clearedAt,
+                  expiresAt: clearance.expiresAt,
+                  revokedAt: clearance.revokedAt,
+              }
+            : null,
+    };
+}
+
+async function evaluateAndAuditPayoutExecutionGate(
+    cycle: { id: string; calculationSummary?: Record<string, unknown> | null },
+    actorId: string,
+    clearance: Awaited<
+        ReturnType<typeof financeComplianceQueries.getActivePayoutExecutionClearance>
+    >
+) {
+    const result = evaluatePayoutExecutionGate(
+        buildExecutionGateChecks(cycle, clearance),
+        new Date()
+    );
+    await writeFinanceAuditEvent({
+        actorId,
+        actionType: "payout_execution_gate_evaluated",
+        entityType: "payout_cycle",
+        entityId: cycle.id,
+        reason: result.allowed ? "gate_passed" : "gate_blocked",
+        afterValue: {
+            allowed: result.allowed,
+            reasons: result.reasons,
+        },
+        metadata: {
+            cycleId: cycle.id,
+            checks: buildExecutionGateChecks(cycle, clearance),
+        },
+    });
+    return result;
+}
+
+export async function recordPayoutExecutionClearance(
+    input: PayoutExecutionClearanceInput
+) {
+    const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    if (!["calculated", "approved"].includes(cycle.status)) {
+        throw new Error("Clearance can only be recorded before payout execution.");
+    }
+    if (!input.evidenceReference.trim() || !input.transactionValidationReference.trim()) {
+        throw new Error("Clearance evidence and transaction validation references are required.");
+    }
+    const now = new Date();
+    if (input.transactionValidatedAt > now) {
+        throw new Error("Transaction validation cannot be dated in the future.");
+    }
+    if (input.expiresAt && input.expiresAt <= now) {
+        throw new Error("Clearance expiry must be in the future.");
+    }
+    const row = await financeComplianceQueries.createPayoutExecutionClearance({
+        cycleId: input.cycleId,
+        clearedBy: input.actorId,
+        evidenceReference: input.evidenceReference.trim(),
+        transactionValidationReference: input.transactionValidationReference.trim(),
+        transactionValidatedAt: input.transactionValidatedAt,
+        expiresAt: input.expiresAt ?? null,
+    });
+    await writeFinanceAuditEvent({
+        actorId: input.actorId,
+        actionType: "payout_execution_clearance_recorded",
+        entityType: "payout_execution_clearance",
+        entityId: row.id,
+        reason: "biz_3_clearance_recorded",
+        afterValue: {
+            cycleId: row.cycleId,
+            clearedBy: row.clearedBy,
+            evidenceReference: row.evidenceReference,
+            transactionValidationReference: row.transactionValidationReference,
+            transactionValidatedAt: row.transactionValidatedAt,
+            expiresAt: row.expiresAt,
+        },
+    });
+    return row;
+}
+
+export async function revokePayoutExecutionClearance(
+    clearanceId: string,
+    actorId: string,
+    reason: string
+) {
+    if (!reason.trim()) throw new Error("Clearance revocation reason is required.");
+    const row = await financeComplianceQueries.revokePayoutExecutionClearance(
+        clearanceId,
+        actorId,
+        reason.trim()
+    );
+    if (!row) throw new Error("Payout execution clearance not found.");
+    await writeFinanceAuditEvent({
+        actorId,
+        actionType: "payout_execution_clearance_revoked",
+        entityType: "payout_execution_clearance",
+        entityId: row.id,
+        reason: "biz_3_clearance_revoked",
+        afterValue: {
+            cycleId: row.cycleId,
+            revokedBy: actorId,
+            revokedAt: row.revokedAt,
+            revocationReason: row.revocationReason,
+        },
+    });
+    return row;
+}
+
 export async function executePayoutCycle(
     cycleId: string,
     actorId: string,
@@ -840,6 +1026,26 @@ export async function executePayoutCycle(
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     if (!brands.length) throw new Error("Run calculation before execution.");
+
+    if (cycle.status !== "approved") {
+        throw new Error(`Payout execution blocked: cycle status is ${cycle.status}.`);
+    }
+
+    const clearance = await financeComplianceQueries.getActivePayoutExecutionClearance(
+        cycleId
+    );
+    const gate = await evaluateAndAuditPayoutExecutionGate(
+        cycle,
+        actorId,
+        clearance
+    );
+    if (!gate.allowed) {
+        throw new Error(
+            `Payout execution blocked: ${gate.reasons
+                .map((reason) => `${reason.code} — ${reason.message}`)
+                .join("; ")}`
+        );
+    }
 
     const executions: Array<Record<string, unknown>> = [];
 
@@ -982,6 +1188,7 @@ export async function executePayoutCycle(
         actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: actorId,
         executions,
     });
@@ -1038,6 +1245,7 @@ export async function completeManualBrandPayout(input: {
         actorId: input.actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: input.actorId,
     });
 
@@ -1104,10 +1312,10 @@ export async function createPayoutOverride(input: {
     if (!input.proofFileUrl) {
         throw new Error("Override proof is required.");
     }
-    if (Math.abs(input.amountPaise) > 50_000 && !input.approverId) {
-        throw new Error("Overrides above Rs. 500 require a second admin approver.");
+    if (!input.approverId) {
+        throw new Error("Every payout override requires a second admin approver.");
     }
-    if (input.approverId && input.approverId === input.actorId) {
+    if (input.approverId === input.actorId) {
         throw new Error("Checker and maker must be different admins.");
     }
 
@@ -1120,10 +1328,7 @@ export async function createPayoutOverride(input: {
         notes: input.notes,
         proofFileUrl: input.proofFileUrl,
         createdBy: input.actorId,
-        approvedBy:
-            Math.abs(input.amountPaise) > 50_000
-                ? input.approverId ?? null
-                : input.actorId,
+        approvedBy: input.approverId,
     });
 
     await auditAndAlert({
@@ -1135,7 +1340,7 @@ export async function createPayoutOverride(input: {
         reason: input.reasonCode,
         title: "Payout override recorded",
         message: `Override recorded for brand ${input.brandId}.`,
-        severity: Math.abs(input.amountPaise) > 50_000 ? "warning" : "info",
+        severity: "warning",
         ownerRole: "finance_admin",
         type: "payout_override_created",
         dedupeKey: `payout-override:${row.id}`,

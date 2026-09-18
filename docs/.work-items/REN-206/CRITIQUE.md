@@ -2,13 +2,13 @@
 
 ## Result
 
-BLOCKED pending explicit approval of the BIZ-3 part-4 clearance-record workflow. The existing gate investigation is evidenced, and the proposed gate is fail-closed, but this L3 decision controls whether a payout can ever move toward execution.
+The BIZ-3 part-4 clearance-record workflow is approved. The existing gate investigation is evidenced, and the proposed gate remains fail-closed; implementation must still not create a clearance implicitly.
 
 ## Findings
 
-### CRIT-206-001 — DESIGN_BLOCKER
+### CRIT-206-001 — DESIGN_BLOCKER — RESOLVED
 
-The specification recommends a persisted, immutable management-clearance record distinct from ordinary cycle approval, but the issue does not define the authority source, evidence format, expiry/revocation semantics, or who may record it. Treating `approvedBy` as clearance would contradict BIZ-3. Human confirmation is required before implementation.
+The specification recommends a persisted, immutable management-clearance record distinct from ordinary cycle approval. The requester approved the authority, evidence, expiry/revocation, and audit workflow before implementation. Treating `approvedBy` as clearance would still contradict BIZ-3.
 
 ### CRIT-206-002 — MAJOR
 
@@ -24,4 +24,4 @@ The current override rule is amount-sensitive. The specification correctly makes
 
 ## Recommendation
 
-Keep the task BLOCKED until the requester approves the recommended clearance-record contract. After approval, implement the centralized preflight gate and run the full non-production safety matrix before any release decision.
+Proceed with the centralized preflight gate and run the full non-production safety matrix before any release decision. The approved clearance workflow must remain explicit and fail-closed.
