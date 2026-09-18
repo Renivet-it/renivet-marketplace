@@ -57,35 +57,44 @@ export const brandAgreementsRouter = createTRPCRouter({
             });
             if (!brand) throw new TRPCError({ code: "NOT_FOUND", message: "Brand not found" });
 
-            const created = await brandAgreementQueries.createVersion({
-                brandId: input.brandId,
-                fileKey: input.file.key,
-                fileName: input.file.name,
-                contentType: input.file.type,
-                fileSizeBytes: input.file.size,
-                signedDate: input.signedDate,
-                effectiveDate: input.effectiveDate,
-                expiryDate: input.expiryDate,
-                status: input.status,
-                uploadedBy: ctx.user.id,
-            });
+            let created:
+                | Awaited<ReturnType<typeof brandAgreementQueries.createVersion>>
+                | undefined;
+            try {
+                created = await brandAgreementQueries.createVersion({
+                    brandId: input.brandId,
+                    fileKey: input.file.key,
+                    fileName: input.file.name,
+                    contentType: input.file.type,
+                    fileSizeBytes: input.file.size,
+                    signedDate: input.signedDate,
+                    effectiveDate: input.effectiveDate,
+                    expiryDate: input.expiryDate,
+                    status: input.status,
+                    uploadedBy: ctx.user.id,
+                });
 
-            await writeFinanceAuditEvent({
-                actorId: ctx.user.id,
-                actorType: "admin",
-                actionType: "brand_agreement_uploaded",
-                entityType: "brand_agreement",
-                entityId: created.id,
-                afterValue: {
-                    brandId: created.brandId,
-                    version: created.version,
-                    fileName: created.fileName,
-                    contentType: created.contentType,
-                    fileSizeBytes: created.fileSizeBytes,
-                },
-                reason: "Agreement uploaded",
-            });
-            return created;
+                await writeFinanceAuditEvent({
+                    actorId: ctx.user.id,
+                    actorType: "admin",
+                    actionType: "brand_agreement_uploaded",
+                    entityType: "brand_agreement",
+                    entityId: created.id,
+                    afterValue: {
+                        brandId: created.brandId,
+                        version: created.version,
+                        fileName: created.fileName,
+                        contentType: created.contentType,
+                        fileSizeBytes: created.fileSizeBytes,
+                    },
+                    reason: "Agreement uploaded",
+                });
+                return created;
+            } catch (error) {
+                if (created) await brandAgreementQueries.deleteById(created.id);
+                await utApi.deleteFiles([input.file.key]).catch(() => undefined);
+                throw error;
+            }
         }),
 
     updateMetadata: adminProcedure

@@ -110,6 +110,10 @@ class BrandAgreementQuery {
             .returning();
         return updated;
     }
+
+    async deleteById(id: string) {
+        await db.delete(brandAgreements).where(eq(brandAgreements.id, id));
+    }
 }
 
 export const brandAgreementQueries = new BrandAgreementQuery();
