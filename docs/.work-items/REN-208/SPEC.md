@@ -1,6 +1,6 @@
 # REN-208 — Admin Contract Management & Brand Agreement Repository
 
-Status: `BLOCKED` pending an approved private document-storage/access decision.
+Status: `READY_FOR_DEV` after approval to use UploadThing private ACLs.
 
 ## Scope and risk
 
@@ -14,7 +14,7 @@ Risk is `L3`: the feature stores commercially sensitive documents, introduces a 
 - `src/lib/trpc/trpc.ts` provides `adminProcedure`, `brandProcedure`, and permission middleware, but brand routes must still compare the requested `brandId` to the authenticated brand context to prevent IDOR.
 - `src/lib/trpc/routes/brands/media.ts` demonstrates brand scoping, but its media model is not an agreement repository and cannot be reused as a write path without separate permissions.
 - `src/lib/finance/audit.ts` and `src/lib/db/queries/audit-log.ts` provide append-only audit logging; the existing generic `attachment_url` field is not an agreement store.
-- `src/app/api/uploadthing/core.ts` returns UploadThing `file.url` values for existing uploaders. Those URLs are not sufficient evidence of private, request-authorized agreement delivery.
+- `src/app/api/uploadthing/core.ts` is the existing UploadThing integration. REN-208 adds a dedicated route with `acl: "private"`, stores only the returned file key, and requests a short-lived signed URL after authorization.
 - Existing admin brand surfaces live under `src/app/(protected)/dashboard/general/brands/`.
 
 ## Requirements
@@ -60,22 +60,22 @@ Risk is `L3`: the feature stores commercially sensitive documents, introduces a 
 - **FLOW-208-003:** Read/download -> authenticate -> load agreement by ID -> authorize against persisted brand membership/admin rights -> issue short-lived delivery or stream -> append download audit event.
 - **FLOW-208-004:** Failure -> remove newly uploaded object when the database write fails, or mark a recoverable pending state with bounded cleanup; never expose a broken active version.
 
-The schema should use a new additive agreement-version table and a private object reference (`storageKey`/provider object ID), not a public URL. The exact provider and delivery mechanism are blocked by DEC-208-001 below.
+The schema uses a new additive agreement-version table and stores the private UploadThing file key, not a public URL. Downloads use `utApi.getSignedURL` only after the persisted brand authorization check.
 
 ## Decisions and blockers
 
-- **DEC-208-001 (HUMAN_CONFIRMATION, unresolved):** Select the private storage/delivery mechanism. Current UploadThing routes return public `file.url` values and do not establish the required private-object guarantee. Options are: (a) an already-approved private object-storage provider with server-side signed delivery, or (b) a separately approved encrypted/server-managed storage implementation. Do not proceed using a public UploadThing URL or a proxy that leaves the provider URL publicly retrievable.
+- **DEC-208-001 (HUMAN_CONFIRMATION, resolved):** Use UploadThing private ACLs for agreement files, store only the UploadThing file key in PostgreSQL, and issue five-minute signed URLs after server authorization. Existing public upload routes remain unchanged; the UploadThing app must allow per-request ACL overrides.
 - **DEC-208-002 (AUTO_DECIDE):** Use append-only agreement versions with a unique `(brand_id, version)` constraint and no destructive replacement operation, consistent with the issue.
 - **DEC-208-003 (AUTO_DECIDE):** Keep agreement metadata and file references in a dedicated additive table; do not overload `brands`, `brand_confidentials`, or generic audit attachment fields.
 - **DEC-208-004 (AUTO_DECIDE):** Use existing server authorization middleware plus an explicit persisted-brand check on every agreement query and file route.
 
-REN-208 is blocked until DEC-208-001 is confirmed. The remaining design is ready to implement once the storage contract is approved.
+REN-208 is ready to implement with DEC-208-001 resolved. The implementation must keep public URLs out of database rows, list responses, and audit metadata.
 
 ## Dependencies and boundaries
 
 - **DEP-208-001:** Existing `brands`, `brandMembers`, users, and role/permission data.
 - **DEP-208-002:** Existing admin and brand authorization middleware.
-- **DEP-208-003:** Private storage provider and server-side short-lived delivery capability — unresolved.
+- **DEP-208-003:** UploadThing private ACL and signed URL capability — resolved by DEC-208-001 and the required dashboard setting.
 - **DEP-208-004:** Existing append-only audit log.
 - **DEP-208-005:** REN-209 commercial configuration, which will cite a specific agreement version but must not be implemented here.
 
