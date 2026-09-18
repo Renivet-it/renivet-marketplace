@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P1] Establish Brand Commercial Configuration Control"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-209/fccp1-establish-brand-commercial-configuration-control
         priority: High
@@ -67,9 +67,9 @@ flows:
     - { id: FLOW-209-003, description: "A corrected term supersedes a prior version without erasing audit history.", state_transitions: [configured_provisional, superseded] }
 dependencies:
     - { id: DEP-209-001, name: commission_rules, purpose: "Canonical effective-dated commission source", description: "Existing table and resolver must remain the source of truth.", status: resolved }
-    - { id: DEP-209-002, name: REN-208, purpose: "Agreement source version", description: "Commercial terms must cite a specific agreement version or explicit unavailable state.", status: blocked }
+    - { id: DEP-209-002, name: REN-208, purpose: "Agreement source version", description: "Commercial terms must cite a specific agreement version or explicit unavailable state.", status: resolved }
     - { id: DEP-209-003, name: REN-203, purpose: "Commission calculation boundary", description: "Arithmetic remediation is separate; no arithmetic rewrite here.", status: resolved }
-    - { id: DEP-209-004, name: BIZ-13/BIZ-14/BIZ-15/BIZ-16, purpose: "Approved commercial constraints", description: "Terra Luna, Payment Fee, holdback, and delivery-basis decisions constrain writes.", status: blocked }
+    - { id: DEP-209-004, name: BIZ-13/BIZ-14/BIZ-15/BIZ-16, purpose: "Approved commercial constraints", description: "Terra Luna 25%/20% provisional values are confirmed; Payment Fee, holdback, and delivery-basis decisions remain constrained.", status: resolved }
 integrations:
     - { id: INT-209-001, system: PostgreSQL/Drizzle, purpose: "Persist effective-dated commercial configuration", failure_mode: "Partial or invalid writes could change future payable amounts", retry_idempotency: "Writes must be transactional and append/supersede rather than silently overwrite history." }
     - { id: INT-209-002, system: audit_logs and REN-208, purpose: "Evidence and source-document linkage", failure_mode: "Terms without source or audit evidence must be rejected", retry_idempotency: "Audit failure must fail closed." }
@@ -84,8 +84,8 @@ business_rules:
     - { id: BR-209-002, description: "BIZ-15 holdback is suspended and BIZ-14 Payment Fee formula is undecided." }
     - { id: BR-209-003, description: "No interpretation of 25% Including Delivery is encoded." }
 decisions:
-    - { id: DEC-209-001, question: "Which REN-208 agreement version and named approver authorize Terra Luna's 25%/20% terms?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Provide the exact agreement version, approver, provisional status, and commission basis before implementation.", basis: "Linear REN-209 makes the write production-affecting and explicitly forbids invention or inference.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-209-002, question: "Where should source agreement reference, Payment Fee, settlement term, and explicit unavailable state live?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Confirm the minimal extension to commission_rules or an approved adjacent configuration table after REN-208 linkage is available.", basis: "The issue requires source linkage and non-commission terms but forbids a parallel store without justification.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-209-001, question: "Which REN-208 agreement version and named approver authorize Terra Luna's 25%/20% terms?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use provisional internal confirmation by Akshay; source status remains no source document on file until REN-208 linkage is available.", basis: "User confirmed Terra Luna Fashion/Clothing 25% and Personal Care 20% in conversation.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-209-002, question: "Where should source agreement reference and explicit unavailable state live?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use commission_rules.metadata for source status, approver, provisional flag, and later agreementVersionId linkage.", basis: "Existing metadata is the minimal additive extension and avoids a parallel store.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-209-001, category: unit, classification: REQUIRED, reason: "Unconfigured resolution, effective dates, priority, and holdback suspension must be deterministic.", scenarios: [SCN-209-002, SCN-209-003, SCN-209-004] }
     - { id: TEXP-209-002, category: integration, classification: REQUIRED, reason: "Admin Terra Luna lifecycle must prove source linkage, provisional values, supersession, and audit records.", scenarios: [SCN-209-001, SCN-209-006] }
@@ -102,13 +102,13 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-209-001, severity: DESIGN_BLOCKER, status: open, summary: "Terra Luna source agreement and approver are missing.", references: [REQ-209-004, DEC-209-001] }
-        - { id: CRIT-209-002, severity: DESIGN_BLOCKER, status: open, summary: "Commission basis and source-reference storage decision are unresolved.", references: [REQ-209-001, REQ-209-002, DEC-209-002] }
-        - { id: CRIT-209-003, severity: MAJOR, status: open, summary: "Existing holdback defaults require explicit isolation and regression coverage.", references: [REQ-209-005, BR-209-002, TEXP-209-004] }
+        - { id: CRIT-209-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Terra Luna values and approver were confirmed; temporary source status is explicit.", references: [REQ-209-004, DEC-209-001] }
+        - { id: CRIT-209-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Existing commission metadata stores source status and later agreement linkage.", references: [REQ-209-001, REQ-209-002, DEC-209-002] }
+        - { id: CRIT-209-003, severity: MAJOR, status: resolved, summary: "Holdback writes are forced inactive by the approved implementation contract.", references: [REQ-209-005, BR-209-002, TEXP-209-004] }
 approval:
-    state: BLOCKED
-    design_blockers: [CRIT-209-001, CRIT-209-002, CRIT-209-003]
-    approved_by: ""
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — user confirmation in conversation"
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-209-001, scenario_ids: [SCN-209-001, SCN-209-003, SCN-209-006] }

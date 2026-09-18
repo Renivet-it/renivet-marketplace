@@ -2,13 +2,13 @@
 
 ## Result
 
-`BLOCKED` — the design cannot safely reach `READY_FOR_DEV` until the financial source and approver are confirmed.
+`RESOLVED FOR IMPLEMENTATION` — the user confirmed the provisional values, approver, and temporary source status.
 
 ## Findings
 
-- `CRIT-209-001` — DESIGN_BLOCKER: Terra Luna’s exact agreement-version citation and named internal approver are absent from the repository and Linear comments. A 25%/20% seed would be an unverified financial production write.
-- `CRIT-209-002` — DESIGN_BLOCKER: the commission basis for the two values is not specified sufficiently to implement or audit the rule without interpreting commercial language.
-- `CRIT-209-003` — MAJOR: the existing `commission_rules` table has no first-class agreement-version column; the minimal extension and “no source document on file” representation must be confirmed against REN-208 before schema work.
-- `CRIT-209-004` — MAJOR: existing finance routes contain holdback defaults, so the implementation must be isolated from those paths and prove that BIZ-15 cannot be activated through this surface.
+- `CRIT-209-001` — DESIGN_BLOCKER: resolved by user confirmation: Terra Luna 25% Fashion/Clothing and 20% Personal Care, approved by Akshay, provisional.
+- `CRIT-209-002` — DESIGN_BLOCKER: resolved by recording the temporary source status as “no source document on file” and keeping the fields editable.
+- `CRIT-209-003` — MAJOR: the existing `commission_rules` table has no first-class agreement-version column; use its existing metadata JSON for source status/approver until REN-208 provides a version ID.
+- `CRIT-209-004` — MAJOR: existing finance routes contain holdback defaults; REN-209 must force holdback to zero and reject nonzero holdback writes.
 
 No application code, migration, production data, or tests were changed during specification.

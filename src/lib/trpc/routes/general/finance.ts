@@ -662,7 +662,7 @@ export const financeComplianceRouter = createTRPCRouter({
             return row;
         }),
 
-    listCommissionRules: protectedProcedure
+    listCommissionRules: adminProcedure
         .input(
             z.object({
                 brandId: z.string().uuid().optional(),
@@ -684,17 +684,44 @@ export const financeComplianceRouter = createTRPCRouter({
                 categoryId: z.string().uuid().optional(),
                 productTypeId: z.string().uuid().optional(),
                 commissionPercentBps: z.number().int().nonnegative(),
-                holdbackPercentBps: z.number().int().nonnegative().default(500),
+                holdbackPercentBps: z.literal(0).default(0),
                 priority: z.number().int().default(0),
                 effectiveFrom: z.string(),
                 effectiveTo: z.string().optional(),
                 isActive: z.boolean().default(true),
                 notes: z.string().optional(),
+                sourceStatus: z
+                    .enum(["agreement_version", "no_source_document_on_file"])
+                    .default("no_source_document_on_file"),
+                agreementVersionId: z.string().uuid().optional(),
+                approverName: z.string().min(1).default("Akshay"),
+                provisional: z.boolean().default(true),
+                commissionBasis: z.string().min(1),
             })
         )
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "payouts", "manage");
-            const row = await ctx.queries.financeCompliance.upsertCommissionRule(input);
+            const row = await ctx.queries.financeCompliance.upsertCommissionRule({
+                id: input.id,
+                ruleName: input.ruleName,
+                brandId: input.brandId,
+                categoryId: input.categoryId,
+                productTypeId: input.productTypeId,
+                commissionPercentBps: input.commissionPercentBps,
+                holdbackPercentBps: 0,
+                priority: input.priority,
+                effectiveFrom: input.effectiveFrom,
+                effectiveTo: input.effectiveTo,
+                isActive: input.isActive,
+                metadata: {
+                    notes: input.notes ?? null,
+                    sourceStatus: input.sourceStatus,
+                    agreementVersionId: input.agreementVersionId ?? null,
+                    approverName: input.approverName,
+                    provisional: input.provisional,
+                    commissionBasis: input.commissionBasis,
+                },
+            });
             await writeFinanceAuditEvent({
                 actorId: ctx.user.id,
                 actionType: "commission_rule.upserted",

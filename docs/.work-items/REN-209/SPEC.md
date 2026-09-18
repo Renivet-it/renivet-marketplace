@@ -2,7 +2,7 @@
 
 ## Status
 
-`BLOCKED` pending authoritative commercial-term approval.
+`READY_FOR_DEV` for the confirmed provisional Terra Luna configuration.
 
 ## Contract boundary
 
@@ -23,11 +23,12 @@ This task may create an admin-only, effective-dated configuration surface backed
 
 Terra Luna’s 25% / 20% terms are financial production configuration. Before implementation can be approved, the user must provide or confirm:
 
-1. The exact authoritative agreement version ID from REN-208.
-2. The named internal approver whose approval is recorded.
-3. Confirmation that the 25% commission and 20% Personal Care value are provisional, and the exact commission basis for each value.
+1. Terra Luna Fashion/Clothing: 25%.
+2. Terra Luna Personal Care: 20%.
+3. Named internal approver: Akshay.
+4. Source status for now: “no source document on file”; the admin surface must support later agreement-version linkage.
 
-Until those inputs exist, no migration, seed, or runtime write may populate Terra Luna or any other brand.
+No other brand or category is populated.
 
 ## Explicit exclusions
 
