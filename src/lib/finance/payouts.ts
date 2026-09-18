@@ -11,6 +11,11 @@ import {
     resolveCommissionRuleFromCandidates,
     type CommissionRuleCandidate,
 } from "./payout-commission";
+import {
+    evaluatePayoutEligibility,
+    getDeliveredAt,
+    isWithinPayoutWindow,
+} from "./payout-eligibility";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -63,6 +68,11 @@ type CycleCalculationSummary = {
     totalGrossPaise: number;
     totalNetPayablePaise: number;
     brands: BrandCycleSummary[];
+    eligibilityDiagnostics?: Array<{
+        orderId: string;
+        disposition: "excluded" | "held";
+        reason: string;
+    }>;
     executions?: Array<Record<string, unknown>>;
     executedAt?: string;
 };
@@ -86,23 +96,6 @@ function buildCycleTotals(brands: BrandCycleSummary[]): CycleCalculationSummary 
         totalNetPayablePaise: brands.reduce((sum, item) => sum + item.netPayablePaise, 0),
         brands,
     };
-}
-
-function getOrderDeliveredAt(order: {
-    createdAt?: Date | string | null;
-    updatedAt?: Date | string | null;
-    shipments?: Array<{
-        status?: string | null;
-        updatedAt?: Date | string | null;
-    }>;
-}) {
-    const shipmentDelivery = order.shipments?.find((shipment) => shipment.status === "delivered");
-    return (
-        toDate(shipmentDelivery?.updatedAt) ??
-        toDate(order.updatedAt) ??
-        toDate(order.createdAt) ??
-        new Date()
-    );
 }
 
 async function resolveCommissionRuleForItem(input: {
@@ -222,16 +215,80 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         financeComplianceQueries.listCarrierClaimsForFinanceWindow({ start, end }),
     ]);
 
+    const completedPriorCycles = previousCycles.filter(
+        (row) => row.status === "completed"
+    );
+    const priorLineItems = await Promise.all(
+        completedPriorCycles.map((row) =>
+            financeComplianceQueries.listPayoutLineItems(row.id)
+        )
+    );
+    const settledOrderIds = new Set(
+        priorLineItems
+            .flat()
+            .filter((item) => item.referenceType === "sale" && item.referenceId)
+            .map((item) => item.referenceId as string)
+    );
+    const paymentIdCounts = new Map<string, number>();
+    for (const order of orders) {
+        const deliveredAt = getDeliveredAt(order);
+        if (
+            order.status === "delivered" &&
+            isWithinPayoutWindow(deliveredAt, start, end) &&
+            order.paymentId
+        ) {
+            paymentIdCounts.set(
+                order.paymentId,
+                (paymentIdCounts.get(order.paymentId) ?? 0) + 1
+            );
+        }
+    }
+    const ambiguousPaymentIds = new Set(
+        [...paymentIdCounts.entries()]
+            .filter(([, count]) => count > 1)
+            .map(([paymentId]) => paymentId)
+    );
+
     const brandDirectory = new Map(brands.map((brand) => [brand.brandId, brand]));
     const previousSummaryMap = new Map(
         getCycleSummaryRecord(cycle).map((summary) => [summary.brandId, summary])
     );
     const summaries = new Map<string, BrandCycleSummary>();
+    const eligibilityDiagnostics: CycleCalculationSummary["eligibilityDiagnostics"] = [];
 
     for (const order of orders) {
         if (order.status !== "delivered") continue;
-        const deliveredAt = getOrderDeliveredAt(order);
-        if (deliveredAt < start || deliveredAt > end) continue;
+        const deliveredAt = getDeliveredAt(order);
+        if (!deliveredAt) {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: "excluded",
+                reason: "missing_delivery_timestamp",
+            });
+            continue;
+        }
+        if (!isWithinPayoutWindow(deliveredAt, start, end)) {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: "excluded",
+                reason: "delivery_outside_cycle",
+            });
+            continue;
+        }
+
+        const eligibility = evaluatePayoutEligibility(
+            order,
+            settledOrderIds,
+            ambiguousPaymentIds
+        );
+        if (eligibility.disposition !== "eligible") {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: eligibility.disposition,
+                reason: eligibility.reason,
+            });
+            continue;
+        }
 
         for (const item of order.items) {
             const brandId = item.product?.brandId;
@@ -493,7 +550,10 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             summary.tdsPaise;
     }
 
-    return Array.from(summaries.values());
+    return {
+        brands: Array.from(summaries.values()),
+        eligibilityDiagnostics,
+    };
 }
 
 async function persistCycleSummary(params: {
@@ -501,6 +561,7 @@ async function persistCycleSummary(params: {
     actorId: string;
     status: "calculated" | "approved" | "processing" | "completed" | "failed";
     brands: BrandCycleSummary[];
+    eligibilityDiagnostics?: CycleCalculationSummary["eligibilityDiagnostics"];
     calculatedBy?: string;
     approvedBy?: string;
     executedBy?: string;
@@ -514,6 +575,7 @@ async function persistCycleSummary(params: {
         executedBy: params.executedBy,
         calculationSummary: {
             ...base,
+            eligibilityDiagnostics: params.eligibilityDiagnostics,
             executions: params.executions,
             executedAt: params.executions?.length ? new Date().toISOString() : undefined,
         },
@@ -598,7 +660,8 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
 
-    const summaries = await buildBrandPayoutSummaries(cycleId);
+    const { brands: summaries, eligibilityDiagnostics } =
+        await buildBrandPayoutSummaries(cycleId);
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -618,6 +681,7 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         actorId,
         status: "calculated",
         brands: summaries,
+        eligibilityDiagnostics,
         calculatedBy: actorId,
     });
 
