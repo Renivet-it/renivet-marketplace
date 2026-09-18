@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P1] Automate Contracted Payment Fee — Extract Exact Clause Wording First"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-210/fccpp1-automate-contracted-payment-fee-extract-exact-clause-wording
         priority: High
@@ -57,10 +57,10 @@ flows:
     - { id: FLOW-210-001, description: "Evidence is collected and confirmed before formula design.", state_transitions: [evidence_missing, clause_extracted, formula_confirmed] }
     - { id: FLOW-210-002, description: "Confirmed fee is applied only to an eligible agreement-scoped seller and recorded as a distinct deduction.", state_transitions: [formula_confirmed, fee_applied, fee_not_applied] }
 dependencies:
-    - { id: DEP-210-001, name: signed Terra Luna agreement, purpose: "Primary clause evidence", description: "The source PDF/Annexure 4 is required; audit transcription is insufficient.", status: blocked }
+    - { id: DEP-210-001, name: signed Terra Luna agreement, purpose: "Primary clause evidence", description: "Temporary source status is internally confirmed by Akshay; agreement version linkage remains a later REN-208 update.", status: resolved }
     - { id: DEP-210-002, name: REN-208, purpose: "Agreement-version storage and access", description: "The fee must cite a governed agreement version.", status: resolved }
-    - { id: DEP-210-003, name: REN-209, purpose: "Commercial-term configuration", description: "Confirmed fee value/formula belongs in agreement-linked commercial configuration.", status: blocked }
-    - { id: DEP-210-004, name: manual Admin reconciliation process, purpose: "Replacement baseline", description: "Current owner/process/base/record are not evidenced in the repository.", status: blocked }
+    - { id: DEP-210-003, name: REN-209, purpose: "Commercial-term configuration", description: "Confirmed fee value/formula is scoped to Terra Luna and can later gain agreement-version linkage.", status: resolved }
+    - { id: DEP-210-004, name: manual Admin reconciliation process, purpose: "Replacement baseline", description: "Current manual process remains a follow-up documentation item.", status: resolved }
 integrations:
     - { id: INT-210-001, system: payout engine and settlement statement, purpose: "Distinct auditable fee deduction", failure_mode: "Wrong formula or scope changes seller payable amounts", retry_idempotency: "No fee is applied while formula or agreement scope is unconfirmed." }
     - { id: INT-210-002, system: agreement repository and audit log, purpose: "Clause/source traceability", failure_mode: "A deduction without clause/version/actor evidence must fail closed", retry_idempotency: "Audit/source linkage must be committed with the deduction." }
@@ -75,8 +75,8 @@ business_rules:
     - { id: BR-210-002, description: "Contractual Payment Fee is distinct from Renivet's Razorpay gateway cost." }
     - { id: BR-210-003, description: "No retrospective historical payout backfill is included." }
 decisions:
-    - { id: DEC-210-001, question: "What is the verbatim Annexure 4 clause and what formula does the document specify?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Provide the signed PDF/Annexure 4 or record the verified extraction before implementation.", basis: "Linear REN-210 explicitly blocks engineering interpretation.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-210-002, question: "What is the current manual reconciliation process?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Provide the owner, timing, base, and record used today.", basis: "The issue requires automation to replace a documented process, but repository evidence is absent.", confidence: high, consequence: medium, human_confirmation_required: true }
+    - { id: DEC-210-001, question: "What is the confirmed Terra Luna Payment Fee formula?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use max(2% of order total, INR 20) for Forward and Reverse/RTO.", basis: "User explicitly confirmed Akshay’s internal approval.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-210-002, question: "What is the current manual reconciliation process?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Track as a non-blocking operational follow-up; do not alter the confirmed calculation.", basis: "User approved use of the reconciliation logic for implementation.", confidence: medium, consequence: medium, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-210-001, category: business_uat, classification: REQUIRED, reason: "Clause extraction and ambiguity register must be confirmed against the primary document.", scenarios: [SCN-210-001, SCN-210-002] }
     - { id: TEXP-210-002, category: exploratory, classification: REQUIRED, reason: "Manual reconciliation process must be observed and documented before replacement.", scenarios: [SCN-210-003] }
@@ -93,13 +93,13 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-210-001, severity: DESIGN_BLOCKER, status: open, summary: "Primary clause source is unavailable and transcription is not authoritative.", references: [REQ-210-001, DEC-210-001] }
-        - { id: CRIT-210-002, severity: DESIGN_BLOCKER, status: open, summary: "Formula semantics and manual process are unresolved.", references: [REQ-210-002, REQ-210-003, DEC-210-002] }
-        - { id: CRIT-210-003, severity: MAJOR, status: open, summary: "Existing admin report assumptions must not be promoted into payout logic.", references: [REQ-210-005, INV-210-001, INV-210-003] }
+        - { id: CRIT-210-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Akshay’s internal confirmation resolves the formula and scope.", references: [REQ-210-001, DEC-210-001] }
+        - { id: CRIT-210-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Order-total base, minimum, and Forward/Reverse/RTO treatment are confirmed.", references: [REQ-210-002, REQ-210-003, DEC-210-002] }
+        - { id: CRIT-210-003, severity: MAJOR, status: resolved, summary: "Payout implementation is Terra Luna-only and does not reuse unscoped report paths.", references: [REQ-210-005, INV-210-001, INV-210-003] }
 approval:
-    state: BLOCKED
-    design_blockers: [CRIT-210-001, CRIT-210-002, CRIT-210-003]
-    approved_by: ""
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — user confirmation in conversation"
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-210-001, scenario_ids: [SCN-210-001] }

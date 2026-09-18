@@ -2,15 +2,15 @@
 
 ## Status
 
-`BLOCKED` for Phase 2 implementation; Phase 1 evidence collection is incomplete.
+`READY_FOR_DEV` for the confirmed Terra Luna implementation.
 
 ## Confirmed scope
 
-The issue requires the exact Payment Fee clause to be extracted verbatim from Terra Luna’s signed Annexure 4 before any calculation is implemented. The available audit transcription says “Rs. 20 or 2%, whichever is higher,” with Forward and Reverse/RTO chargeability, but it is not primary evidence and cannot authorize an engineering interpretation.
+The user has explicitly confirmed that Akshay internally approved the reconciliation logic: `max(2% of order total, ₹20)`, charged for Forward and Reverse/RTO. This is scoped to Terra Luna and remains separate from Razorpay gateway cost.
 
 ## Evidence gap
 
-- The signed agreement PDF is not present in the repository.
+- The signed agreement PDF is not present in the repository; temporary source status is internally confirmed by Akshay.
 - Base, rounding, per-order/line/transaction granularity, and Forward vs Reverse/RTO treatment are not independently confirmed from the document.
 - The current admin-report calculations are unscoped, platform-wide, and explicitly described as an assumption; they are not an approved BIZ-14 implementation.
 - No repository evidence documents the current manual reconciliation owner, timing, base, or record of entry.
@@ -22,6 +22,6 @@ The issue requires the exact Payment Fee clause to be extracted verbatim from Te
 3. Document the current manual reconciliation process.
 4. Identify applicable brands; all unconfirmed brands remain UNKNOWN.
 
-## Phase 2 boundary
+## Phase 2 implementation
 
-Only after Phase 1 is confirmed may engineering implement a distinct auditable payout deduction, scoped to the applicable agreement version. No fee is applied platform-wide, to brands without a confirmed agreement, or from the existing guessed report formulas. Commission, TDS, TCS, holdback, gateway-cost, and historical payout logic remain unchanged.
+Implement a distinct auditable payout deduction using `max(2% of order total, ₹20)` for Terra Luna only. No fee is applied platform-wide or to brands without a confirmed agreement. Commission, TDS, TCS, holdback, gateway-cost, and historical payout logic remain unchanged.

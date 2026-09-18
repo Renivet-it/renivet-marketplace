@@ -24,6 +24,12 @@ import {
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
+import {
+    calculateContractedPaymentFeePaise,
+    CONTRACTED_PAYMENT_FEE_METADATA,
+} from "./contracted-payment-fee";
+
+const TERRA_LUNA_BRAND_ID = "a8e54f13-228d-452c-8292-f1dd7b07dcb3";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -47,6 +53,7 @@ type BrandCycleSummary = {
     brandName: string;
     grossSalesPaise: number;
     commissionPaise: number;
+    paymentFeePaise: number;
     returnsPaise: number;
     carrierClaimsPaise: number;
     holdbackPaise: number;
@@ -284,6 +291,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
     );
     const summaries = new Map<string, BrandCycleSummary>();
     const eligibilityDiagnostics: CycleCalculationSummary["eligibilityDiagnostics"] = [];
+    const paymentFeeOrderIds = new Set<string>();
 
     for (const order of orders) {
         if (order.status !== "delivered") continue;
@@ -347,6 +355,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     brandName: brand.brandName,
                     grossSalesPaise: 0,
                     commissionPaise: 0,
+                    paymentFeePaise: 0,
                     returnsPaise: 0,
                     carrierClaimsPaise: 0,
                     holdbackPaise: 0,
@@ -410,6 +419,27 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     ruleId: rule?.ruleId,
                 },
             });
+
+            if (
+                brandId === TERRA_LUNA_BRAND_ID &&
+                !paymentFeeOrderIds.has(order.id)
+            ) {
+                const paymentFeePaise = calculateContractedPaymentFeePaise(
+                    Number(order.totalAmount)
+                );
+                paymentFeeOrderIds.add(order.id);
+                existing.paymentFeePaise += paymentFeePaise;
+                existing.lineItems.push({
+                    lineType: "payment_fee",
+                    description: "Contracted Payment Fee",
+                    amountPaise: -paymentFeePaise,
+                    referenceId: order.id,
+                    metadata: {
+                        ...CONTRACTED_PAYMENT_FEE_METADATA,
+                        amountPaise: paymentFeePaise,
+                    },
+                });
+            }
 
             summaries.set(brandId, existing);
         }
@@ -495,6 +525,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         const preHoldbackBase =
             summary.grossSalesPaise -
             summary.commissionPaise -
+            summary.paymentFeePaise -
             summary.returnsPaise -
             summary.carrierClaimsPaise;
         summary.holdbackPaise = calculateHoldbackPaise(
