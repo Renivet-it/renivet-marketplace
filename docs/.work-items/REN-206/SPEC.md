@@ -54,6 +54,6 @@ An additive, auditable clearance record may be required because `approvedBy` is 
 - Enumerate all callers, routes, cron jobs, and scripts reaching execution and prove the gate is at the shared chokepoint.
 - Use non-production fixtures only. Do not execute a payout or advance any G1–G6 audit gate.
 
-## Explicit blocker for approval
+## Approved clearance decision
 
-The exact persistence and authority workflow for management’s BIZ-3 part-4 clearance is a high-consequence human decision. This specification recommends an immutable clearance record with an external evidence reference, but implementation must remain blocked until that recommendation is explicitly approved. Engineering must not treat ordinary admin approval as clearance.
+The requester approved the immutable clearance record workflow: cycle identity, attributable management approver, external evidence reference, transaction-validation reference and timestamp, optional expiry, revocation state, and audit history. Engineering must not treat ordinary admin approval as clearance or self-issue the BIZ-3 decision.

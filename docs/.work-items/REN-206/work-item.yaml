@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P0] Add Payout Execution Safety Gate"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-206/fccpp0-add-payout-execution-safety-gate
         priority: Urgent
@@ -81,7 +81,7 @@ dependencies:
     - { id: DEP-206-001, name: payout calculation and cycle summary, purpose: "Source of REN-203/204/205 evidence and cycle state.", description: "Gate reads persisted calculation outcomes and must not reimplement those controls.", status: resolved }
     - { id: DEP-206-002, name: payout execution path, purpose: "Shared money-movement chokepoint.", description: "executePayoutCycle currently loops brands and calls Razorpay/manual instructions after per-brand approval.", status: resolved }
     - { id: DEP-206-003, name: finance audit logging, purpose: "Record every gate decision.", description: "Existing audit helpers support actor, before/after values, reasons, metadata, and dedupe keys.", status: resolved }
-    - { id: DEP-206-004, name: BIZ-3 clearance authority, purpose: "Human prerequisite for execution.", description: "Authority and evidence workflow are unresolved and block implementation approval.", status: blocked }
+    - { id: DEP-206-004, name: BIZ-3 clearance authority, purpose: "Human prerequisite for execution.", description: "Approved immutable clearance record with external evidence reference, attributable approver, timestamp, and expiry/revocation state.", status: resolved }
 integrations:
     - { id: INT-206-001, system: external payout provider, purpose: "Prevent provider calls until the complete gate passes.", failure_mode: "Any missing gate check could move money without control evidence.", retry_idempotency: "Repeated blocked attempts do not call the provider; retries after provider failure remain recoverable and deduplicated." }
     - { id: INT-206-002, system: finance audit log, purpose: "Persist pass/fail gate evidence.", failure_mode: "Audit write failure must fail closed before execution.", retry_idempotency: "Gate evaluation dedupe is cycle/attempt scoped and does not create duplicate money movement." }
@@ -99,7 +99,7 @@ business_rules:
     - { id: BR-206-004, description: "Every manual financial adjustment requires independent recorded approval." }
 decisions:
     - { id: DEC-206-001, question: "Does an adequate execution gate already exist?", class: AUTO_DECIDE, status: resolved, recommendation: "No; current approval and finance authorization do not assert the six BIZ-3 prerequisites or provide a shared all-or-nothing preflight.", basis: "payouts.ts checks only brand reviewStatus before execution; finance TRPC checks module manage permission; no clearance/precondition evaluator exists.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-206-002, question: "How is BIZ-3 part-4 management clearance represented?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Use an immutable attributable clearance record with cycle identity, external evidence reference, timestamp, status, expiry/revocation, and audit linkage, distinct from approvedBy.", basis: "The issue requires explicit clearance and forbids engineering from granting it; existing approvedBy is ordinary admin approval.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-206-002, question: "How is BIZ-3 part-4 management clearance represented?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use an immutable attributable clearance record with cycle identity, external evidence reference, timestamp, status, expiry/revocation, and audit linkage, distinct from approvedBy.", basis: "Approved by requester: separate clearance record with external evidence, attributable approver, timestamp, expiry/revocation, and audit history.", confidence: high, consequence: high, human_confirmation_required: true }
     - { id: DEC-206-003, question: "Where should the safety gate run?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Run one complete-cycle preflight at the shared executePayoutCycle boundary before brand iteration or external calls; re-check direct callers during implementation review.", basis: "This prevents brand-scoped bypass and partial execution while preserving the existing payout model.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-206-001, category: unit, classification: REQUIRED, reason: "Each of six prerequisites fails independently with stable reason and no execution.", scenarios: [SCN-206-001] }
@@ -119,15 +119,14 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-206-001, severity: DESIGN_BLOCKER, status: open, summary: "BIZ-3 part-4 clearance authority and persistence workflow require human confirmation." }
+        - { id: CRIT-206-001, severity: DESIGN_BLOCKER, status: resolved, summary: "BIZ-3 part-4 clearance authority and persistence workflow approved by requester." }
         - { id: CRIT-206-002, severity: MAJOR, status: open, summary: "Gate must preflight the complete cycle before any brand or provider call." }
         - { id: CRIT-206-003, severity: MAJOR, status: open, summary: "Dependency evidence must be live and fail closed, not static flags." }
         - { id: CRIT-206-004, severity: MINOR, status: open, summary: "Override approval must become unconditional without losing proof metadata." }
 approval:
-    state: PENDING
-    design_blockers:
-        - "CRIT-206-001: Approve the immutable management-clearance record and authority workflow before implementation."
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-206-001, scenario_ids: [SCN-206-001, SCN-206-003, SCN-206-004] }

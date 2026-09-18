@@ -6,6 +6,7 @@ import {
     gte,
     ilike,
     inArray,
+    isNull,
     lte,
     or,
     sql,
@@ -17,6 +18,7 @@ import {
     brandConfidentials,
     brandPayoutConfig,
     brandPayoutCycles,
+    payoutExecutionClearances,
     brandPayoutLineItems,
     brandPayoutOverrides,
     brands,
@@ -526,6 +528,55 @@ class FinanceComplianceQuery {
         return db.query.brandPayoutCycles.findFirst({
             where: eq(brandPayoutCycles.id, id),
         });
+    }
+
+    async createPayoutExecutionClearance(
+        values: typeof payoutExecutionClearances.$inferInsert
+    ) {
+        return db
+            .insert(payoutExecutionClearances)
+            .values(values)
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
+    async getActivePayoutExecutionClearance(cycleId: string, now = new Date()) {
+        return db.query.payoutExecutionClearances.findFirst({
+            where: and(
+                eq(payoutExecutionClearances.cycleId, cycleId),
+                isNull(payoutExecutionClearances.revokedAt),
+                or(
+                    isNull(payoutExecutionClearances.expiresAt),
+                    gte(payoutExecutionClearances.expiresAt, now)
+                )
+            ),
+            orderBy: [desc(payoutExecutionClearances.createdAt)],
+        });
+    }
+
+    async getLatestPayoutExecutionClearance(cycleId: string) {
+        return db.query.payoutExecutionClearances.findFirst({
+            where: eq(payoutExecutionClearances.cycleId, cycleId),
+            orderBy: [desc(payoutExecutionClearances.createdAt)],
+        });
+    }
+
+    async revokePayoutExecutionClearance(
+        id: string,
+        revokedBy: string,
+        revocationReason: string
+    ) {
+        return db
+            .update(payoutExecutionClearances)
+            .set({
+                revokedAt: new Date(),
+                revokedBy,
+                revocationReason,
+                updatedAt: new Date(),
+            })
+            .where(eq(payoutExecutionClearances.id, id))
+            .returning()
+            .then((rows) => rows[0]);
     }
 
     async addPayoutLineItems(
