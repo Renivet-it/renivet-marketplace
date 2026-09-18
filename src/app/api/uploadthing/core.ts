@@ -153,6 +153,59 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
+    brandAgreementUploader: f({
+        blob: {
+            maxFileSize: "16MB",
+            maxFileCount: 1,
+            acl: "private",
+            contentDisposition: "attachment",
+        },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { sitePermissions } = getUserPermissions(existingUser.roles);
+            if (!hasPermission(sitePermissions, [BitFieldSitePermission.ADMINISTRATOR]))
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "Only Renivet administrators can upload agreements",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            const allowedTypes = new Set([
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ]);
+            if (!allowedTypes.has(file.type)) {
+                await utApi.deleteFiles([file.key]);
+                throw new UploadThingError({
+                    code: "BAD_REQUEST",
+                    message: "Only PDF and Word agreement files are supported",
+                });
+            }
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                type: file.type,
+            };
+        }),
     brandRequestDemoUploader: f({
         "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })

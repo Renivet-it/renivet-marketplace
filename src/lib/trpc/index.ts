@@ -19,6 +19,7 @@ import {
     adminAnalyticsRouter,
     adminSupportRouter,
     backInStockRouter,
+    brandAgreementsRouter,
     blogsRouter,
     brandProductTypePackingRouter,
     brandsRouter,
@@ -63,6 +64,7 @@ export const appRouter = createTRPCRouter({
     general: createTRPCRouter({
         blogs: blogsRouter,
         brands: brandsRouter,
+        brandAgreements: brandAgreementsRouter,
         brandsWaitlist: brandsWaitlistRouter,
         categories: categoriesRouter,
         content: contentRouter,

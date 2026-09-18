@@ -1821,6 +1821,13 @@
             "when": 1789731000000,
             "tag": "0286_payout_execution_clearances",
             "breakpoints": true
+        },
+        {
+            "idx": 260,
+            "version": "7",
+            "when": 1789817400000,
+            "tag": "0287_brand_agreement_repository",
+            "breakpoints": true
         }
     ]
 }

@@ -1,6 +1,7 @@
 export * from "./blogs";
 export * from "./back-in-stock";
 export * from "./brands";
+export * from "./brand-agreements";
 export * from "./brands-waitlist";
 export * from "./categories";
 export * from "./content";
