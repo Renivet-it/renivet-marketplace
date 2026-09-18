@@ -2,15 +2,15 @@
 
 Reviewer: independent fresh-context critic  
 Mode: read-only  
-Result: blocked pending COD/split-payment decision
+Result: design approved with implementation-validation actions
 
 ## Findings
 
-### CRIT-204-001 — DESIGN_BLOCKER — COD/split-payment eligibility semantics are unresolved
+### CRIT-204-001 — DESIGN_BLOCKER — COD/split-payment eligibility semantics require an explicit hold
 
-The issue explicitly leaves the COD/split-payment sub-rule unspecified and identifies REN-212 as the discovery owner. Treating any COD or partial-payment state as paid could create an unauthorized payout; silently excluding it would lose explainability. The proposed hold with `cod_reconciliation_pending` is the safest bounded option, but it requires explicit approval.
+The issue explicitly leaves the COD/split-payment sub-rule unspecified and identifies REN-212 as the discovery owner. Treating any COD or partial-payment state as paid could create an unauthorized payout; silently excluding it would lose explainability. The requester approved the bounded hold with `cod_reconciliation_pending`.
 
-**Required action:** approve the hold/reason behavior or provide the authoritative reconciliation rule before `READY_FOR_DEV`.
+**Resolution:** implement the approved hold/reason behavior; REN-212 may later define the authoritative reconciliation rule.
 
 ### CRIT-204-002 — MAJOR — delivery-date source and missing-date evidence need executable coverage
 
@@ -32,4 +32,4 @@ The schema has `paymentStatus`, `paymentId`, and `paymentMethod`, while COD reco
 
 ## Review conclusion
 
-The implementation is technically actionable after CRIT-204-001 is approved. Given L3 financial impact, the contract remains blocked and no application code should be changed yet.
+The design is approved `READY_FOR_DEV`. The remaining findings are implementation and validation obligations, not design blockers.

@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P0] Enforce Payout Eligibility & Payment-State Gating"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-204/fccpp0-enforce-payout-eligibility-and-payment-state-gating
         priority: Urgent
@@ -84,7 +84,7 @@ dependencies:
     - { id: DEP-204-001, name: src/lib/finance/payouts.ts, purpose: Candidate selection and cycle calculation, description: "Current loop filters delivered orders by a created-date query and uses unsafe delivery-date fallbacks.", status: resolved }
     - { id: DEP-204-002, name: src/lib/db/queries/finance-compliance.ts, purpose: Finance order retrieval, description: "Current listOrdersForFinanceWindow restricts orders by createdAt and must support delivery-based candidate evaluation.", status: resolved }
     - { id: DEP-204-003, name: orders and orderShipments, purpose: Delivery and payment evidence, description: "Order status/payment fields and delivered shipment timestamps are the source data; no status writes are allowed.", status: resolved }
-    - { id: DEP-204-004, name: REN-212 COD reconciliation discovery, purpose: Unspecified COD/split-payment rule, description: "The approved issue text defers the paid mapping; implementation must hold these cases until the rule exists.", status: unresolved }
+    - { id: DEP-204-004, name: REN-212 COD reconciliation discovery, purpose: Unspecified COD/split-payment rule, description: "Until REN-212 defines the reconciliation rule, implementation holds COD/split-payment cases with cod_reconciliation_pending.", status: resolved }
 integrations:
     - { id: INT-204-001, system: payout-cycle calculation, purpose: Consume only deterministic eligible candidates, failure_mode: "Unauthorized or missing payout candidate", retry_idempotency: "Repeated calculation with unchanged inputs yields the same candidate evidence and does not execute a cycle." }
     - { id: INT-204-002, system: COD reconciliation, purpose: Provide future authoritative remittance/payment evidence, failure_mode: "COD payment is incorrectly assumed received", retry_idempotency: "Until reconciliation is authoritative, uncertainty remains held and visible." }
@@ -100,7 +100,7 @@ business_rules:
     - { id: BR-204-004, description: "REN-204 does not write order/payment state, alter commission/holdback, execute payouts, or change cycle approval transitions." }
 decisions:
     - { id: DEC-204-001, question: "What delivery timestamp is authoritative?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use a valid delivered shipment updatedAt; if unavailable, exclude with an explicit missing_delivery_timestamp reason and never use order timestamps or now.", basis: "The issue rejects every fallback and A06 confirms delivered orders may lack shipment rows.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-204-002, question: "How are COD and split-payment orders handled before REN-212 defines reconciliation?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Hold with cod_reconciliation_pending and expose a queryable reason; never treat uncertain states as paid.", basis: "BIZ-8 explicitly leaves this sub-rule unspecified and the issue names REN-212 as the discovery owner.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-204-002, question: "How are COD and split-payment orders handled before REN-212 defines reconciliation?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Hold with cod_reconciliation_pending and expose a queryable reason; never treat uncertain states as paid.", basis: "Approved by the requester; BIZ-8 explicitly leaves this sub-rule unspecified and REN-212 owns the future reconciliation rule.", confidence: high, consequence: high, human_confirmation_required: true }
     - { id: DEC-204-003, question: "How is duplicate protection implemented with current data?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use completed prior-cycle payout line-item referenceId matching the order ID, preserving legacy schema and avoiding a migration.", basis: "Current payout sale/commission lines already persist order.id as referenceId and the issue forbids a migration.", confidence: medium, consequence: high, human_confirmation_required: true }
     - { id: DEC-204-004, question: "What payment predicate is authoritative for prepaid orders?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Require paymentStatus = paid and a non-empty paymentId; all other states fail closed.", basis: "The issue requires confirmed paid evidence and the existing finance query uses both conditions.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
@@ -122,14 +122,14 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-204-001, severity: DESIGN_BLOCKER, status: unresolved, summary: "COD/split-payment eligibility semantics require explicit confirmation." }
+        - { id: CRIT-204-001, severity: DESIGN_BLOCKER, status: resolved, summary: "COD/split-payment cases are approved to remain held with cod_reconciliation_pending until REN-212 defines reconciliation." }
         - { id: CRIT-204-002, severity: MAJOR, status: open, summary: "Delivery-date source and missing-date evidence need executable coverage." }
         - { id: CRIT-204-003, severity: MAJOR, status: open, summary: "Duplicate protection depends on existing line-item references and legacy-row behavior." }
         - { id: CRIT-204-004, severity: MINOR, status: open, summary: "Payment evidence needs one reusable executable predicate." }
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-204-002]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-204-001, scenario_ids: [SCN-204-001, SCN-204-002, SCN-204-004] }
