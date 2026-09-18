@@ -2,7 +2,7 @@
 
 ## Status
 
-`BLOCKED` for final reconciliation-rule approval; this is a read-only discovery task.
+`BLOCKED` only for final production-evidence confirmation; this is a read-only discovery task.
 
 ## Purpose
 
@@ -15,11 +15,15 @@ Document how COD money moves from customer collection through carrier remittance
 - The populated COD family is `cod_reconciliation_runs` / `cod_reconciliation_items`; it stores expected/remitted amounts, status, AWB, and references.
 - `orders.paymentId` is not a one-order payment guarantee; the issue reports multiple orders per payment ID.
 - `src/app/api/cron/finance/cod-remittance-sync/route.ts` triggers the sync through a cron secret.
-- Production credential state and actual carrier remittance data cannot be established from repository inspection.
+- Internal confirmation: Delhivery credentials are set, but COD remittance is not currently synced automatically.
+- Internal confirmation: Finance manually reconciles COD remittance and saves the UTR against the individual COD reconciliation record.
+- Internal confirmation: an authorized finance admin may manually mark a COD record reconciled without a UTR, with a required reason and audit log.
 
 ## Proposed interim rule
 
 Until COD payment evidence is confirmed, COD orders remain held and are not mapped to paid. No payment, remittance, refund, or credential state is changed by this task. The final aging, escalation, and permanent-hold policy remains for operational decision after the facts are collected.
+
+The proposed interim release evidence is either a saved UTR or an audited finance-admin override with a mandatory reason. This does not change production state in the discovery issue.
 
 ## Required evidence before closing
 
