@@ -1,0 +1,164 @@
+schema_version: "1.0"
+task:
+    id: REN-204
+    title: "[FCCP][P0] Enforce Payout Eligibility & Payment-State Gating"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-204/fccpp0-enforce-payout-eligibility-and-payment-state-gating
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-204-fccp-p0-enforce-payout-eligibility-payment-state-gating
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Changes which orders are eligible for brand payout."
+        - "Payment-state mistakes can cause unauthorized payout or exclusion of owed funds."
+        - "The behavior is adjacent to payout execution safety and commission calculation."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-204 description, decisions, acceptance criteria, and relations
+        - payout candidate query and calculation loop
+        - delivery timestamp and shipment schema
+        - order payment status, payment method, and payment ID
+        - COD reconciliation implementation
+        - payout cycle and line-item persistence
+        - existing payout and finance tests
+    excluded_areas:
+        - order/payment status writes or production backfill
+        - commission rate or commission-base calculation owned by REN-203
+        - rolling settlement timing owned by REN-207
+        - COD/split-payment reconciliation rule owned by REN-212
+        - payout execution safety gate owned by REN-206
+        - zero-order-item root cause
+    dependencies: [DEP-204-001, DEP-204-002, DEP-204-003, DEP-204-004]
+    integrations: [INT-204-001, INT-204-002]
+    security_boundaries: [SEC-204-001]
+    state_transitions: [candidate_excluded, candidate_held, candidate_eligible, cycle_recomputed, cycle_state_unchanged]
+    related_tests: [TEXP-204-001, TEXP-204-002, TEXP-204-003, TEXP-204-004, TEXP-204-005, TEXP-204-006, TEXP-204-007, TEXP-204-008]
+    uncertainties:
+        - "The authoritative COD/split-payment paid mapping is intentionally deferred to REN-212."
+        - "Legacy completed-cycle line items may not have a dedicated settlement marker beyond referenceId."
+        - "The issue references audit-run evidence that is not stored in this repository."
+requirements:
+    - { id: REQ-204-001, description: "Select delivered orders by a defensible delivery timestamp and never use createdAt, order updatedAt, or now as a delivery fallback.", type: safety }
+    - { id: REQ-204-002, description: "Use inclusive cycle boundaries for valid delivery timestamps, including delivery before creation-window start but inside the cycle.", type: explicit }
+    - { id: REQ-204-003, description: "Require delivered status and confirmed payment evidence before an order becomes payout-eligible.", type: safety }
+    - { id: REQ-204-004, description: "Hold COD and split-payment cases with an explicit queryable reason until the approved reconciliation rule exists; never assume they are paid.", type: safety }
+    - { id: REQ-204-005, description: "Prevent an order already settled in a completed prior cycle from becoming eligible again.", type: safety }
+    - { id: REQ-204-006, description: "Make every exclusion and hold explainable without exposing customer or payment-sensitive data.", type: observability }
+    - { id: REQ-204-007, description: "Keep recomputation deterministic and idempotent without changing order/payment writes, commission, holdback, execution, or cycle approval behavior.", type: compatibility }
+    - { id: REQ-204-008, description: "Provide reproducible boundary, payment-state, COD, duplicate-protection, A02 regression, and controlled-validation evidence.", type: explicit }
+scenarios:
+    - { id: SCN-204-001, description: "An order created before the cycle but delivered inside the inclusive cycle window is selected.", requirement_ids: [REQ-204-001, REQ-204-002] }
+    - { id: SCN-204-002, description: "An order delivered after the current cycle is excluded from this cycle but remains eligible for a later cycle.", requirement_ids: [REQ-204-001, REQ-204-002] }
+    - { id: SCN-204-003, description: "Delivery exactly at cycle start and exactly at cycle end is included with explicit inclusive semantics.", requirement_ids: [REQ-204-002] }
+    - { id: SCN-204-004, description: "A delivered order without a valid shipment delivery timestamp is excluded with a recorded reason and is never dated by creation, update, or now.", requirement_ids: [REQ-204-001, REQ-204-006] }
+    - { id: SCN-204-005, description: "Each supported prepaid payment status is evaluated individually; only confirmed paid evidence is eligible.", requirement_ids: [REQ-204-003] }
+    - { id: SCN-204-006, description: "COD and split-payment orders without approved reconciliation are held with cod_reconciliation_pending and are not candidates.", requirement_ids: [REQ-204-004, REQ-204-006] }
+    - { id: SCN-204-007, description: "An order referenced by a completed prior-cycle payout cannot re-enter a later cycle.", requirement_ids: [REQ-204-005] }
+    - { id: SCN-204-008, description: "Recomputing the same cycle with unchanged inputs produces the same candidates, holds, exclusions, and amounts.", requirement_ids: [REQ-204-007] }
+    - { id: SCN-204-009, description: "The A02 reproduction includes previously excluded delivered orders when payment and other eligibility rules pass, while unconfirmed-payment orders remain excluded or held.", requirement_ids: [REQ-204-003, REQ-204-008] }
+    - { id: SCN-204-010, description: "Eligibility calculation leaves order/payment data and payout-cycle execution state unchanged.", requirement_ids: [REQ-204-007, REQ-204-008] }
+invariants:
+    - { id: INV-204-001, description: "No order can become eligible without a valid delivery timestamp inside the inclusive cycle window." }
+    - { id: INV-204-002, description: "No order with unconfirmed payment evidence can become payout-eligible." }
+    - { id: INV-204-003, description: "COD/split-payment uncertainty fails closed into a visible hold, never a paid assumption." }
+    - { id: INV-204-004, description: "A completed-cycle order reference cannot be selected again in a later cycle." }
+    - { id: INV-204-005, description: "Candidate evaluation is observational and does not mutate order/payment or cycle execution state." }
+flows:
+    - { id: FLOW-204-001, description: "Finance window query -> defensible delivery-date resolution -> inclusive window check -> payment predicate -> prior-settlement check -> eligible candidate.", state_transitions: [candidate_eligible] }
+    - { id: FLOW-204-002, description: "Finance window query -> missing/invalid delivery or unconfirmed payment -> structured exclusion reason, or COD/split uncertainty -> visible held reason.", state_transitions: [candidate_excluded, candidate_held] }
+    - { id: FLOW-204-003, description: "Cycle recomputation -> deterministic candidate evidence -> unchanged payout approval/execution state and no order/payment write.", state_transitions: [cycle_recomputed, cycle_state_unchanged] }
+dependencies:
+    - { id: DEP-204-001, name: src/lib/finance/payouts.ts, purpose: Candidate selection and cycle calculation, description: "Current loop filters delivered orders by a created-date query and uses unsafe delivery-date fallbacks.", status: resolved }
+    - { id: DEP-204-002, name: src/lib/db/queries/finance-compliance.ts, purpose: Finance order retrieval, description: "Current listOrdersForFinanceWindow restricts orders by createdAt and must support delivery-based candidate evaluation.", status: resolved }
+    - { id: DEP-204-003, name: orders and orderShipments, purpose: Delivery and payment evidence, description: "Order status/payment fields and delivered shipment timestamps are the source data; no status writes are allowed.", status: resolved }
+    - { id: DEP-204-004, name: REN-212 COD reconciliation discovery, purpose: Unspecified COD/split-payment rule, description: "The approved issue text defers the paid mapping; implementation must hold these cases until the rule exists.", status: unresolved }
+integrations:
+    - { id: INT-204-001, system: payout-cycle calculation, purpose: Consume only deterministic eligible candidates, failure_mode: "Unauthorized or missing payout candidate", retry_idempotency: "Repeated calculation with unchanged inputs yields the same candidate evidence and does not execute a cycle." }
+    - { id: INT-204-002, system: COD reconciliation, purpose: Provide future authoritative remittance/payment evidence, failure_mode: "COD payment is incorrectly assumed received", retry_idempotency: "Until reconciliation is authoritative, uncertainty remains held and visible." }
+personas:
+    - { id: PER-204-001, role: finance_operator, applicability: Investigates eligible, excluded, and held payout candidates. }
+    - { id: PER-204-002, role: brand_payee, applicability: Receives only eligible confirmed-paid delivered-order payouts. }
+security_boundaries:
+    - { id: SEC-204-001, description: "Eligibility diagnostics expose only bounded order references, statuses, and reason codes; they must not expose customer identity, payment credentials, or raw provider payloads." }
+business_rules:
+    - { id: BR-204-001, description: "Delivery-window boundaries are inclusive." }
+    - { id: BR-204-002, description: "A delivered order is eligible only with confirmed paid evidence; absence of evidence is not confirmation." }
+    - { id: BR-204-003, description: "COD and split-payment uncertainty is held, not mapped to paid." }
+    - { id: BR-204-004, description: "REN-204 does not write order/payment state, alter commission/holdback, execute payouts, or change cycle approval transitions." }
+decisions:
+    - { id: DEC-204-001, question: "What delivery timestamp is authoritative?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use a valid delivered shipment updatedAt; if unavailable, exclude with an explicit missing_delivery_timestamp reason and never use order timestamps or now.", basis: "The issue rejects every fallback and A06 confirms delivered orders may lack shipment rows.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-204-002, question: "How are COD and split-payment orders handled before REN-212 defines reconciliation?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Hold with cod_reconciliation_pending and expose a queryable reason; never treat uncertain states as paid.", basis: "BIZ-8 explicitly leaves this sub-rule unspecified and the issue names REN-212 as the discovery owner.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-204-003, question: "How is duplicate protection implemented with current data?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use completed prior-cycle payout line-item referenceId matching the order ID, preserving legacy schema and avoiding a migration.", basis: "Current payout sale/commission lines already persist order.id as referenceId and the issue forbids a migration.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-204-004, question: "What payment predicate is authoritative for prepaid orders?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Require paymentStatus = paid and a non-empty paymentId; all other states fail closed.", basis: "The issue requires confirmed paid evidence and the existing finance query uses both conditions.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-204-001, category: unit, classification: REQUIRED, reason: "Verify created-before/delivered-inside, delivered-after-window, and exact inclusive boundaries.", scenarios: [SCN-204-001, SCN-204-002, SCN-204-003] }
+    - { id: TEXP-204-002, category: unit, classification: REQUIRED, reason: "Verify missing/invalid shipment delivery timestamps are excluded with a reason and never use unsafe fallbacks.", scenarios: [SCN-204-004] }
+    - { id: TEXP-204-003, category: unit, classification: REQUIRED, reason: "Evaluate every currently producible payment status and payment-id combination individually.", scenarios: [SCN-204-005] }
+    - { id: TEXP-204-004, category: unit, classification: REQUIRED, reason: "Verify COD and split-payment uncertainty is held and never mapped to paid.", scenarios: [SCN-204-006] }
+    - { id: TEXP-204-005, category: integration, classification: REQUIRED, reason: "Verify completed-cycle order references cannot re-enter and repeated calculation is deterministic.", scenarios: [SCN-204-007, SCN-204-008] }
+    - { id: TEXP-204-006, category: regression, classification: REQUIRED, reason: "Re-run the A02 reproduction and record corrected before/after candidate counts without changing production data.", scenarios: [SCN-204-009] }
+    - { id: TEXP-204-007, category: security, classification: REQUIRED, reason: "Verify exclusion/hold diagnostics are bounded and contain no customer identity, credentials, or raw provider payloads.", scenarios: [SCN-204-004, SCN-204-006, SCN-204-010] }
+    - { id: TEXP-204-008, category: business_uat, classification: REQUIRED, reason: "Perform controlled read-only finance validation and prove no order/payment write or cycle execution transition occurs.", scenarios: [SCN-204-008, SCN-204-010] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-204-001, severity: DESIGN_BLOCKER, status: unresolved, summary: "COD/split-payment eligibility semantics require explicit confirmation." }
+        - { id: CRIT-204-002, severity: MAJOR, status: open, summary: "Delivery-date source and missing-date evidence need executable coverage." }
+        - { id: CRIT-204-003, severity: MAJOR, status: open, summary: "Duplicate protection depends on existing line-item references and legacy-row behavior." }
+        - { id: CRIT-204-004, severity: MINOR, status: open, summary: "Payment evidence needs one reusable executable predicate." }
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-204-002]
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-204-001, scenario_ids: [SCN-204-001, SCN-204-002, SCN-204-004] }
+        - { requirement_id: REQ-204-002, scenario_ids: [SCN-204-001, SCN-204-002, SCN-204-003] }
+        - { requirement_id: REQ-204-003, scenario_ids: [SCN-204-005, SCN-204-009] }
+        - { requirement_id: REQ-204-004, scenario_ids: [SCN-204-006] }
+        - { requirement_id: REQ-204-005, scenario_ids: [SCN-204-007] }
+        - { requirement_id: REQ-204-006, scenario_ids: [SCN-204-004, SCN-204-006] }
+        - { requirement_id: REQ-204-007, scenario_ids: [SCN-204-008, SCN-204-010] }
+        - { requirement_id: REQ-204-008, scenario_ids: [SCN-204-009, SCN-204-010] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-204-001, invariant_ids: [INV-204-001, INV-204-002] }
+        - { scenario_id: SCN-204-002, invariant_ids: [INV-204-001] }
+        - { scenario_id: SCN-204-003, invariant_ids: [INV-204-001] }
+        - { scenario_id: SCN-204-004, invariant_ids: [INV-204-001, INV-204-005] }
+        - { scenario_id: SCN-204-005, invariant_ids: [INV-204-002] }
+        - { scenario_id: SCN-204-006, invariant_ids: [INV-204-002, INV-204-003] }
+        - { scenario_id: SCN-204-007, invariant_ids: [INV-204-004] }
+        - { scenario_id: SCN-204-008, invariant_ids: [INV-204-001, INV-204-005] }
+        - { scenario_id: SCN-204-009, invariant_ids: [INV-204-001, INV-204-002, INV-204-003] }
+        - { scenario_id: SCN-204-010, invariant_ids: [INV-204-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-204-001, test_expectation_ids: [TEXP-204-001] }
+        - { scenario_id: SCN-204-002, test_expectation_ids: [TEXP-204-001] }
+        - { scenario_id: SCN-204-003, test_expectation_ids: [TEXP-204-001] }
+        - { scenario_id: SCN-204-004, test_expectation_ids: [TEXP-204-002, TEXP-204-007] }
+        - { scenario_id: SCN-204-005, test_expectation_ids: [TEXP-204-003] }
+        - { scenario_id: SCN-204-006, test_expectation_ids: [TEXP-204-004, TEXP-204-007] }
+        - { scenario_id: SCN-204-007, test_expectation_ids: [TEXP-204-005] }
+        - { scenario_id: SCN-204-008, test_expectation_ids: [TEXP-204-005, TEXP-204-008] }
+        - { scenario_id: SCN-204-009, test_expectation_ids: [TEXP-204-006] }
+        - { scenario_id: SCN-204-010, test_expectation_ids: [TEXP-204-007, TEXP-204-008] }
