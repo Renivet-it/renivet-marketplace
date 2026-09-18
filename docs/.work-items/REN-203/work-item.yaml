@@ -4,7 +4,7 @@ task:
     title: "[FCCP][P0] Remediate Commission Calculation & Validate Payout Amounts"
     source: linear
     branch: feat/ren-203-spec
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-203
         priority: Urgent
@@ -80,7 +80,7 @@ flows:
 dependencies:
     - { id: DEP-203-001, name: commission_rules.commission_percent_bps, purpose: Canonical persisted commission unit, description: "Existing integer basis-point field with effective dates and scope; no production population in REN-203.", status: resolved }
     - { id: DEP-203-002, name: src/lib/finance/payouts.ts, purpose: Commission rule resolution and payout arithmetic, description: "Current implementation contains the mixed-unit fallback and /10000 arithmetic boundary.", status: resolved }
-    - { id: DEP-203-003, name: order and order-item discount data, purpose: Commission base, description: "Only order-level discount fields are present; seller/platform attribution is absent.", status: unresolved }
+    - { id: DEP-203-003, name: order and order-item discount data, purpose: Commission base, description: "Only order-level discount fields are present; seller/platform attribution is absent; REN-203 preserves the bounded schema-gap behavior and does not infer ownership.", status: resolved }
     - { id: DEP-203-004, name: REN-204/REN-205/REN-206/REN-209, purpose: Adjacent payout and commercial controls, description: "Eligibility, holdback, safety gate, and production commercial configuration are separate ownership boundaries.", status: resolved }
 integrations:
     - { id: INT-203-001, system: payout-cycle calculation, purpose: Consume corrected commission amounts, failure_mode: "Incorrect financial statement or payable amount", retry_idempotency: "Repeated recomputation for the same delivered inputs yields the same result and does not execute a cycle." }
@@ -97,9 +97,9 @@ business_rules:
     - { id: BR-203-004, description: "REN-203 does not change holdback, eligibility, payout execution, production rule population, or historical payout line items." }
 decisions:
     - { id: DEC-203-001, question: "What is the canonical commission rate unit?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use integer basis points end-to-end with explicit names/types and one conversion boundary.", basis: "Existing finance schema and tax calculations already use bps; this removes the current percent/bps mix.", confidence: high, consequence: high, human_confirmation_required: true }
-    - { id: DEC-203-002, question: "How should missing/unapproved rates be represented?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Fail closed and choose either omitted commission output or an explicitly blocked/flagged zero-payable line.", basis: "The issue permits both outcomes but their reconciliation semantics differ.", confidence: medium, consequence: high, human_confirmation_required: true }
-    - { id: DEC-203-003, question: "Where do Terra Luna’s approved rates live at runtime?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Use the approved commercial configuration source owned by REN-209; REN-203 must remain fail-closed if it is absent.", basis: "Production commission-rule population is explicitly out of scope and local FCCP decision files are unavailable.", confidence: medium, consequence: high, human_confirmation_required: true }
-    - { id: DEC-203-004, question: "How are seller/platform discounts distinguished?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Do not infer ownership from order-level fields; approve a schema-gap behavior and track authoritative allocation separately.", basis: "Current order-item schema has no funding attribution.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-002, question: "How should missing/unapproved rates be represented?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Fail closed with an explicitly blocked/flagged zero-payable commission result; never silently omit or calculate an unapproved rate.", basis: "Approved by the requester; this preserves reconciliation visibility while preventing payable commission leakage.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-003, question: "Where do Terra Luna’s approved rates live at runtime?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use only the approved commercial configuration source owned by REN-209; REN-203 must remain fail-closed if it is absent.", basis: "Approved by the requester; production commission-rule population remains outside REN-203.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-004, question: "How are seller/platform discounts distinguished?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Do not infer ownership from order-level fields; preserve the current commission-base behavior and explicitly surface the schema gap until authoritative allocation exists.", basis: "Approved by the requester; current order-item schema has no funding attribution.", confidence: high, consequence: high, human_confirmation_required: true }
     - { id: DEC-203-005, question: "May this task alter holdback or payout-cycle state?", class: AUTO_DECIDE, status: resolved, recommendation: "No; preserve those controls and keep REN-206 blocked.", basis: "Explicit ownership boundaries in REN-203 requirements.", confidence: high, consequence: high, human_confirmation_required: true }
 test_expectations:
     - { id: TEXP-203-001, category: unit, classification: REQUIRED, reason: "Verify percent-to-bps conversion, bps arithmetic, rounding, and regression against the defective mixed-unit path.", scenarios: [SCN-203-001, SCN-203-002, SCN-203-003] }
@@ -119,17 +119,14 @@ critic:
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - { id: CRIT-203-001, severity: DESIGN_BLOCKER, status: unresolved, summary: "Authoritative Terra Luna runtime source is unresolved." }
-        - { id: CRIT-203-002, severity: DESIGN_BLOCKER, status: unresolved, summary: "Unconfigured-brand output semantics are unresolved." }
-        - { id: CRIT-203-003, severity: DESIGN_BLOCKER, status: unresolved, summary: "Seller/platform discount attribution is absent from the current schema." }
+        - { id: CRIT-203-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Authoritative Terra Luna runtime source is resolved to the approved REN-209 commercial configuration; REN-203 remains fail-closed when absent." }
+        - { id: CRIT-203-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Unconfigured-brand output is resolved to an explicitly blocked/flagged zero-payable result." }
+        - { id: CRIT-203-003, severity: DESIGN_BLOCKER, status: resolved, summary: "Seller/platform discount attribution remains a documented schema gap; REN-203 will not infer ownership." }
         - { id: CRIT-203-004, severity: MAJOR, status: open, summary: "Effective-date examples, safety regression coverage, and bounded observability must be made executable." }
 approval:
-    state: BLOCKED
-    design_blockers:
-        - DEC-203-002
-        - DEC-203-003
-        - DEC-203-004
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-203-001, scenario_ids: [SCN-203-001, SCN-203-006] }

@@ -36,6 +36,6 @@ Commission recalculation is adjacent to payout-cycle state handling. Tests must 
 
 The current resolver loads active rules then filters in memory. The implementation should preserve deterministic selection, avoid exposing customer data in diagnostics, and record an auditable reason for unconfigured results without leaking transaction details.
 
-## Review conclusion
+## Resolution
 
-The scope is technically actionable after the three design blockers are resolved. Given L3 financial impact, this critique does not approve `READY_FOR_DEV`.
+The requester approved the three design blockers. Terra Luna uses only the approved REN-209 commercial configuration and remains fail-closed when absent; missing or unapproved rates produce an explicitly blocked/flagged zero-payable result; and seller/platform discount ownership is not inferred from current order-level fields. The remaining findings are implementation and test obligations, not design blockers. The contract is approved `READY_FOR_DEV` subject to controlled validation and regression evidence.
