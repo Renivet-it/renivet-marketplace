@@ -1,4 +1,4 @@
-import { orderQueries } from "@/lib/db/queries";
+import { orderQueries, refundQueries } from "@/lib/db/queries";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { db } from "@/lib/db";
 import { orderItems, orderShipments, returnExchangePolicy, users } from "@/lib/db/schema";
@@ -648,8 +648,18 @@ export async function executeApprovedRefund(refundId: string, actorId: string) {
             : razorpayRefund.status === "failed"
               ? "failed"
               : "pending";
-    const updated = await financeComplianceQueries.updateRefund(refund.id, {
+    await refundQueries.recordRefundEvent({
+        refundId: refund.id,
+        gatewayRefundId: razorpayRefund.id,
+        userId: refund.userId,
+        orderId: refund.orderId,
+        paymentId,
+        amount: refund.amount,
         status: nextStatus,
+        paymentMethod: order.paymentMethod,
+    });
+
+    const updated = await financeComplianceQueries.updateRefund(refund.id, {
         processedBy: actorId,
         razorpayRefundId: razorpayRefund.id,
         escalationStatus: razorpayRefund.status === "failed" ? "raised" : "none",
