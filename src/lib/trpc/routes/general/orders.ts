@@ -1850,13 +1850,15 @@ export const ordersRouter = createTRPCRouter({
                         }
                     );
 
-                    await refundQueries.createRefund({
-                        id: rzpRefund.id,
+                    await refundQueries.recordRefundEvent({
+                        refundId: rzpRefund.id,
+                        gatewayRefundId: rzpRefund.id,
                         userId: existingOrder.userId,
                         orderId: existingOrder.id,
                         paymentId: existingOrder.paymentId,
                         status: "pending",
                         amount: existingOrder.totalAmount,
+                        paymentMethod: existingOrder.paymentMethod,
                     });
 
                     // Update payment status
