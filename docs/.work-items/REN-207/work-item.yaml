@@ -1,0 +1,126 @@
+schema_version: "1.0"
+task:
+    id: REN-207
+    title: "[FCCP][P1] Rolling 15-Day Settlement — Design & Impact Assessment (BIZ-17)"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-207/fccp1-rolling-15-day-settlement-design-and-impact-assessment-biz-17
+        priority: High
+        labels: [Doc]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganganguly333/ren-207-fccp1-rolling-15-day-settlement-design-impact-assessment
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Settlement timing controls seller money and contractual exposure."
+        - "The selected direction affects eligibility, payout execution, statements, reports, and migration."
+        - "BIZ-4 scope and implementation authorization remain unresolved."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, payout cycle schema, payout cycle creation, payout calculation, delivery-date resolution, eligibility controls, cycle alerting, refunds/returns, statements/reports]
+    excluded_areas: [rolling settlement code, schedule changes, schema migration, production data, seller message copy, BIZ-4 conclusion, payout execution]
+    dependencies: [DEP-207-001, DEP-207-002, DEP-207-003]
+    integrations: [INT-207-001, INT-207-002]
+    security_boundaries: [SEC-207-001, SEC-207-002]
+    state_transitions: [delivered, due, held, excluded, eligible, paid, recovered]
+    related_tests: [TEXP-207-001, TEXP-207-002]
+    uncertainties: ["BIZ-4 agreement universe.", "Business/Legal communication wording.", "Future implementation authorization and due-date banking-day policy."]
+requirements:
+    - { id: REQ-207-001, description: "Document current fixed-window timing from repository behavior.", type: discovery }
+    - { id: REQ-207-002, description: "Define the proposed per-order 15-day timing and REN-204 delivery anchor without implementing it.", type: design }
+    - { id: REQ-207-003, description: "Cover eligibility dependencies and cancellation, RTO/return, refund, COD/split, and missing-delivery exceptions.", type: financial_control }
+    - { id: REQ-207-004, description: "Assess existing calculated cycles, migration, backward compatibility, statements, reports, and audit logs.", type: compatibility }
+    - { id: REQ-207-005, description: "Document the interim seller-communication trigger without drafting legal-sensitive copy.", type: operations }
+    - { id: REQ-207-006, description: "Explicitly show how every area changes if BIZ-4 expands scope beyond Terra Luna.", type: governance }
+    - { id: REQ-207-007, description: "Make no production code, schema, schedule, data, or payout changes.", type: safety }
+scenarios:
+    - { id: SCN-207-001, description: "Assessment compares fixed half-month timing with rolling delivery-plus-15-days timing.", requirement_ids: [REQ-207-001, REQ-207-002] }
+    - { id: SCN-207-002, description: "Assessment reuses REN-204 delivery resolution and preserves payment-state controls.", requirement_ids: [REQ-207-002, REQ-207-003] }
+    - { id: SCN-207-003, description: "Assessment covers cancelled, returned/RTO, refunded, COD/split, and missing-delivery cases.", requirement_ids: [REQ-207-003] }
+    - { id: SCN-207-004, description: "Assessment preserves the two calculated legacy cycles and identifies migration/consumer impact.", requirement_ids: [REQ-207-004] }
+    - { id: SCN-207-005, description: "Assessment defines communication requirement and trigger but no message wording.", requirement_ids: [REQ-207-005] }
+    - { id: SCN-207-006, description: "Assessment provides Terra-Luna-only and multi-brand BIZ-4-sensitive paths without choosing one.", requirement_ids: [REQ-207-006] }
+    - { id: SCN-207-007, description: "No application or production state changes occur.", requirement_ids: [REQ-207-007] }
+invariants:
+    - { id: INV-207-001, description: "Terra Luna's term is never generalized platform-wide without BIZ-4 scope." }
+    - { id: INV-207-002, description: "Rolling due status never bypasses REN-204 payment, COD, split, refund, or missing-delivery controls." }
+    - { id: INV-207-003, description: "Historical fixed-window cycles and audit artifacts remain immutable." }
+    - { id: INV-207-004, description: "Design assessment does not create seller communication copy or production behavior." }
+flows:
+    - { id: FLOW-207-001, description: "Delivery anchor -> future due date -> eligibility/exception handling -> payout execution.", state_transitions: [delivered, due, held, eligible, paid] }
+    - { id: FLOW-207-002, description: "Post-payout return/refund -> recovery/adjustment path.", state_transitions: [paid, recovered] }
+dependencies:
+    - { id: DEP-207-001, name: REN-204, purpose: "Delivery and payment-state anchor", description: "Rolling design must reuse the existing delivery and eligibility controls.", status: resolved }
+    - { id: DEP-207-002, name: BIZ-4, purpose: "Agreement universe", description: "Undecided whether the timing redesign applies only to Terra Luna or multiple brands; assessment records both paths.", status: unresolved }
+    - { id: DEP-207-003, name: implementation authorization, purpose: "Future code change", description: "This issue explicitly forbids implementation until the assessment is reviewed and separately authorized.", status: blocked }
+integrations:
+    - { id: INT-207-001, system: finance payout cycle and reporting, purpose: "Preserve cycle, statement, audit, TDS, and export compatibility", failure_mode: "Changing window assumptions can misstate historical or future financial reports.", retry_idempotency: "Future implementation must be idempotent per order/settlement obligation." }
+    - { id: INT-207-002, system: seller communication operations, purpose: "Notify on held/overdue settlement obligations", failure_mode: "Missing or duplicated notice can create contractual and support risk.", retry_idempotency: "Future notices require dedupe by obligation and trigger." }
+personas:
+    - { id: PER-207-001, role: finance_admin, applicability: "Owns payout timing and exception operations." }
+    - { id: PER-207-002, role: seller, applicability: "Affected by settlement timing and held/overdue communication." }
+    - { id: PER-207-003, role: business_legal, applicability: "Owns contract scope and communication wording." }
+security_boundaries:
+    - { id: SEC-207-001, description: "Financial timing and payout state are finance-admin controlled; no schedule change is made by this assessment." }
+    - { id: SEC-207-002, description: "Seller/order/payment identifiers remain within authorized finance and operational systems." }
+business_rules:
+    - { id: BR-207-001, description: "A rolling due date does not make an otherwise ineligible order payable." }
+    - { id: BR-207-002, description: "BIZ-4 determines whether the 15-day policy is Terra-Luna-only or multi-brand." }
+    - { id: BR-207-003, description: "This issue produces an assessment, not rolling settlement implementation." }
+decisions:
+    - { id: DEC-207-001, question: "Does the future design use REN-204's delivered shipment updatedAt as the delivery anchor?", class: AUTO_DECIDE, status: resolved, recommendation: "Yes; do not introduce a second resolver.", basis: "Repository and Linear explicitly require reuse of REN-204 delivery-date resolution.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-207-002, question: "Does this issue implement rolling settlement?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "No; produce the assessment and wait for separate implementation authorization.", basis: "Linear explicitly states implementation is out of scope.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-207-001, category: exploratory, classification: REQUIRED, reason: "Review the assessment against payout code, delivery resolution, exceptions, and all eight required sections.", scenarios: [SCN-207-001, SCN-207-002, SCN-207-003, SCN-207-004, SCN-207-005, SCN-207-006] }
+    - { id: TEXP-207-002, category: regression, classification: REQUIRED, reason: "Verify no application, schema, schedule, data, or payout behavior changed.", scenarios: [SCN-207-007] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-207-001, severity: DESIGN_BLOCKER, status: open, summary: "BIZ-4 agreement scope is unresolved and must not be generalized.", references: [REQ-207-006, DEP-207-002, INV-207-001] }
+        - { id: CRIT-207-002, severity: DESIGN_BLOCKER, status: open, summary: "Rolling settlement implementation requires separate authorization after this assessment.", references: [REQ-207-007, DEP-207-003, BR-207-003] }
+        - { id: CRIT-207-003, severity: MAJOR, status: mitigated, summary: "The assessment preserves existing eligibility and historical-cycle controls.", references: [REQ-207-003, REQ-207-004, INV-207-002, INV-207-003] }
+approval:
+    state: BLOCKED
+    design_blockers: [CRIT-207-001, CRIT-207-002]
+    approved_by: ""
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-207-001, scenario_ids: [SCN-207-001] }
+        - { requirement_id: REQ-207-002, scenario_ids: [SCN-207-001, SCN-207-002] }
+        - { requirement_id: REQ-207-003, scenario_ids: [SCN-207-002, SCN-207-003] }
+        - { requirement_id: REQ-207-004, scenario_ids: [SCN-207-004] }
+        - { requirement_id: REQ-207-005, scenario_ids: [SCN-207-005] }
+        - { requirement_id: REQ-207-006, scenario_ids: [SCN-207-006] }
+        - { requirement_id: REQ-207-007, scenario_ids: [SCN-207-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-207-001, invariant_ids: [INV-207-001] }
+        - { scenario_id: SCN-207-002, invariant_ids: [INV-207-002] }
+        - { scenario_id: SCN-207-003, invariant_ids: [INV-207-002] }
+        - { scenario_id: SCN-207-004, invariant_ids: [INV-207-003] }
+        - { scenario_id: SCN-207-005, invariant_ids: [INV-207-004] }
+        - { scenario_id: SCN-207-006, invariant_ids: [INV-207-001] }
+        - { scenario_id: SCN-207-007, invariant_ids: [INV-207-004] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-207-001, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-002, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-003, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-004, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-005, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-006, test_expectation_ids: [TEXP-207-001] }
+        - { scenario_id: SCN-207-007, test_expectation_ids: [TEXP-207-002] }
