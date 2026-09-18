@@ -1,0 +1,172 @@
+schema_version: "1.0"
+task:
+    id: REN-225
+    title: "[FCCP][P1] Invoice-Numbering & Commission-Percentage Canonical Source (BIZ-6a / BIZ-6b)"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-225/fccp1-invoice-numbering-and-commission-percentage-canonical-source
+        priority: Medium
+        labels: [Improvement]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-224
+        linear_branch: ayanganguly333/ren-225-fccp1-invoice-numbering-commission-percentage-canonical
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Defines customer/legal invoice identity and finance export behavior."
+        - "Touches financial reporting and commission presentation across multiple document paths."
+        - "Historical-data compatibility and non-predictable identifier requirements create high-consequence failure modes."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-225 description, acceptance criteria, dependencies, and decision register references
+        - order invoice schema, issuance transaction, sequence migration, and invoice consumers
+        - customer invoice PDF, delivery invoice, GST export, admin, customer, and corporate document paths
+        - marketplace commission_rules resolution and commission presentation consumers
+        - corporate order commission snapshot and settlement document consumers
+        - existing tests and migration/index conventions
+    excluded_areas:
+        - production order creation, invoice issuance, or GST export
+        - historical invoice backfill or renumbering
+        - payout execution, commission rate resolution, or commission amount redesign
+        - corporate tax-invoice/proforma/settlement numbering redesign
+        - Linear workflow/status mutation
+    dependencies: [DEP-225-001, DEP-225-002, DEP-225-003, DEP-225-004, DEP-225-005]
+    integrations: [INT-225-001, INT-225-002, INT-225-003, INT-225-004]
+    security_boundaries: [SEC-225-001, SEC-225-002, SEC-225-003, SEC-225-004]
+    state_transitions: [invoice_missing, invoice_issuing, invoice_issued, invoice_legacy_read, invoice_issue_failed]
+    related_tests: [TEXP-225-001, TEXP-225-002, TEXP-225-003, TEXP-225-004, TEXP-225-005, TEXP-225-006, TEXP-225-007, TEXP-225-008]
+    uncertainties:
+        - "The exact random token alphabet and length should be finalized during implementation against existing document layout constraints."
+        - "The product decision for historical orders without invoice_number must be implemented as explicit fail-closed handling or a separately labeled reference, never silent generation."
+requirements:
+    - { id: REQ-225-001, description: "All marketplace commission-percentage display/export paths derive from the resolved commission_rules rate through one canonical boundary.", type: financial_integrity }
+    - { id: REQ-225-002, description: "REN-225 does not alter commission-rate resolution, bps calculation, payout amount calculation, or payout execution behavior.", type: compatibility }
+    - { id: REQ-225-003, description: "New storefront orders receive one unique authoritative customer/legal invoice number in orders.invoice_number through a transaction-safe idempotent generator.", type: financial_integrity }
+    - { id: REQ-225-004, description: "Generated invoice numbers are professional, non-predictable, non-trivially decodable, and collision-safe.", type: security }
+    - { id: REQ-225-005, description: "Customer/legal documents and GST exports use the stored authoritative invoice number; every other identifier is explicitly labeled as a reference.", type: reporting }
+    - { id: REQ-225-006, description: "Historical invoice values remain unchanged and historical orders with old-format values continue to render/export without regeneration.", type: compatibility }
+    - { id: REQ-225-007, description: "The forward-only cutover boundary and legacy compatibility behavior are documented and tested.", type: migration }
+    - { id: REQ-225-008, description: "Untrusted clients cannot supply or replace invoice numbers or commission percentages, and failures are bounded and auditable.", type: security }
+scenarios:
+    - { id: SCN-225-001, description: "Configured marketplace scope displays and exports the exact commission percentage derived from commission_rules basis points.", requirement_ids: [REQ-225-001] }
+    - { id: SCN-225-002, description: "Unconfigured marketplace scope shows an explicit unconfigured state instead of a stale or guessed percentage.", requirement_ids: [REQ-225-001, REQ-225-008] }
+    - { id: SCN-225-003, description: "Corporate settlement documents retain order-specific agreed commission snapshots and explicitly identify their source as corporate settlement data.", requirement_ids: [REQ-225-001, REQ-225-002] }
+    - { id: SCN-225-004, description: "Concurrent invoice issuance for one order returns one committed value and cannot create duplicate values.", requirement_ids: [REQ-225-003, REQ-225-004] }
+    - { id: SCN-225-005, description: "Generated invoice values conform to the documented format and reveal no reversible order, sequence, brand, or timestamp mapping.", requirement_ids: [REQ-225-003, REQ-225-004] }
+    - { id: SCN-225-006, description: "Customer PDF, delivery flow, order/admin surface, and GST export use the stored invoice and label other identifiers as references.", requirement_ids: [REQ-225-005] }
+    - { id: SCN-225-007, description: "Historical orders with old invoice values remain unchanged and readable/exportable.", requirement_ids: [REQ-225-006, REQ-225-007] }
+    - { id: SCN-225-008, description: "Historical orders without an invoice value are handled explicitly without read-side invoice generation.", requirement_ids: [REQ-225-006, REQ-225-007] }
+    - { id: SCN-225-009, description: "A forced token collision or persistence failure never returns an uncommitted, overwritten, or client-supplied invoice.", requirement_ids: [REQ-225-003, REQ-225-004, REQ-225-008] }
+    - { id: SCN-225-010, description: "Client input cannot override authoritative invoice or commission values.", requirement_ids: [REQ-225-008] }
+invariants:
+    - { id: INV-225-001, description: "An order has at most one authoritative invoice number after issuance." }
+    - { id: INV-225-002, description: "No legal invoice surface presents an order ID, receipt ID, export reference, or settlement reference as the invoice number." }
+    - { id: INV-225-003, description: "Marketplace commission labels are a pure representation of the resolved commission_rules basis-point value." }
+    - { id: INV-225-004, description: "Historical invoice numbers are never changed and read/export paths have no invoice-generation side effect." }
+    - { id: INV-225-005, description: "Invoice issuance is idempotent under retry and safe under concurrent requests." }
+    - { id: INV-225-006, description: "Generation or persistence failure fails closed without a predictable or client-supplied substitute." }
+    - { id: INV-225-007, description: "Corporate order-specific commission snapshots remain separate from marketplace commission-rule resolution unless separately approved." }
+flows:
+    - { id: FLOW-225-001, description: "Resolve marketplace commission rule -> canonical percentage presentation -> display/export." , state_transitions: [invoice_legacy_read] }
+    - { id: FLOW-225-002, description: "New order invoice request -> transaction lock/existing check -> secure generation -> unique persistence -> document/export consumption.", state_transitions: [invoice_missing, invoice_issuing, invoice_issued, invoice_issue_failed] }
+    - { id: FLOW-225-003, description: "Historical read -> stored legacy value or explicit missing-value handling -> labeled reference fields.", state_transitions: [invoice_legacy_read, invoice_issue_failed] }
+    - { id: FLOW-225-004, description: "Concurrent issuance/retry -> existing-value return or bounded collision retry -> fail closed.", state_transitions: [invoice_issuing, invoice_issued, invoice_issue_failed] }
+dependencies:
+    - { id: DEP-225-001, name: REN-203 and REN-209 commission rule resolution, purpose: "Canonical source for marketplace commission percentage presentation.", description: "Consumed without changing rate selection or payout calculation.", status: resolved }
+    - { id: DEP-225-002, name: orders.invoice_number, purpose: "Existing authoritative customer/legal invoice field.", description: "Unique nullable field already consumed by invoice APIs and documents.", status: resolved }
+    - { id: DEP-225-003, name: order invoice and GST export consumers, purpose: "All paths that display or export invoice identity.", description: "Must be routed to the stored invoice or explicit reference labels.", status: resolved }
+    - { id: DEP-225-004, name: corporate document model, purpose: "Order-specific commercial commission snapshots and document numbers.", description: "Must remain a separately classified domain.", status: resolved }
+    - { id: DEP-225-005, name: historical invoice data, purpose: "Forward-only compatibility boundary.", description: "Existing old-format values remain unchanged; missing values cannot be silently minted during reads.", status: resolved }
+integrations:
+    - { id: INT-225-001, system: database transaction and unique index, purpose: "Ensure one committed invoice per order and collision safety.", failure_mode: "Collision or persistence failure must not return an uncommitted value.", retry_idempotency: "Existing-value check and bounded retry preserve one value." }
+    - { id: INT-225-002, system: GST export, purpose: "Use authoritative invoice number and explicit order/reference fields.", failure_mode: "Synthetic invoice could be treated as legal invoice.", retry_idempotency: "Read-only export never creates invoice numbers." }
+    - { id: INT-225-003, system: customer PDF and delivery invoice paths, purpose: "Use authoritative order invoice number.", failure_mode: "Fallback could mislabel a reference as an invoice.", retry_idempotency: "Repeated downloads do not issue new numbers." }
+    - { id: INT-225-004, system: admin/customer/brand document views, purpose: "Classify invoice and reference identifiers accurately.", failure_mode: "Users could rely on an internal reference as a legal invoice.", retry_idempotency: "Views are read-only and derive from persisted sources." }
+personas:
+    - { id: PER-225-001, role: finance_operator, applicability: "Reviews commission source and invoice/reference reporting." }
+    - { id: PER-225-002, role: customer_or_brand_recipient, applicability: "Consumes customer/legal invoice and labeled references." }
+    - { id: PER-225-003, role: marketplace_order_service, applicability: "Trusted server-side issuer of new storefront invoice numbers." }
+security_boundaries:
+    - { id: SEC-225-001, description: "Only trusted server-side issuance code can create or persist an invoice number." }
+    - { id: SEC-225-002, description: "Invoice token entropy does not reveal order, customer, brand, or timestamp identity." }
+    - { id: SEC-225-003, description: "Document/export authorization remains enforced and internal IDs are not exposed under an invoice label." }
+    - { id: SEC-225-004, description: "Commission labels are derived data and cannot be set through client input." }
+business_rules:
+    - { id: BR-225-001, description: "BIZ-6(a) has one canonical marketplace commission-percentage source." }
+    - { id: BR-225-002, description: "BIZ-6(b) has one authoritative customer/legal invoice number; all other IDs are references." }
+    - { id: BR-225-003, description: "Historical invoice numbering remains valid and unchanged." }
+    - { id: BR-225-004, description: "Forward-only cutover separates old-format historical values from new-format values." }
+    - { id: BR-225-005, description: "Corporate order-specific commission snapshots are not silently replaced by marketplace rule values." }
+decisions:
+    - { id: DEC-225-001, question: "Which existing field is authoritative for storefront customer/legal invoices?", class: AUTO_DECIDE, status: resolved, recommendation: "Keep orders.invoice_number.", basis: "Existing unique field is already consumed by customer invoice APIs and document issuance.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-225-002, question: "What invoice format satisfies non-predictability?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use a fixed INV-prefixed cryptographically random human-safe token with database uniqueness and bounded retry.", basis: "Avoids order, brand, sequence, and timestamp disclosure while remaining document-friendly.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-225-003, question: "Should corporate settlement commission snapshots be forced through marketplace commission_rules?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "No; preserve and explicitly label the corporate order-specific source.", basis: "Corporate settlement data records agreed commercial terms and is a separate document domain.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-225-004, question: "Should historical invoice values be migrated?", class: AUTO_DECIDE, status: resolved, recommendation: "No; forward-only cutover with compatibility reads.", basis: "Explicit REN-225 production-safety rule forbids backfill.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-225-001, category: unit, classification: REQUIRED, reason: "Canonical commission formatting and configured/unconfigured behavior must be deterministic.", scenarios: [SCN-225-001, SCN-225-002] }
+    - { id: TEXP-225-002, category: regression, classification: REQUIRED, reason: "REN-203 commission resolution and amount calculation must remain unchanged.", scenarios: [SCN-225-001, SCN-225-003] }
+    - { id: TEXP-225-003, category: unit, classification: REQUIRED, reason: "Invoice format, token non-decodability, and uniqueness contract require deterministic tests.", scenarios: [SCN-225-004, SCN-225-005] }
+    - { id: TEXP-225-004, category: integration, classification: REQUIRED, reason: "Concurrent issuance and forced collision/persistence failure must be safe and idempotent.", scenarios: [SCN-225-004, SCN-225-009] }
+    - { id: TEXP-225-005, category: integration, classification: REQUIRED, reason: "Customer documents and GST export must consume the authoritative invoice and explicit references.", scenarios: [SCN-225-006, SCN-225-007, SCN-225-008] }
+    - { id: TEXP-225-006, category: security, classification: REQUIRED, reason: "Client input must not override invoice or commission sources and document APIs must preserve authorization.", scenarios: [SCN-225-009, SCN-225-010] }
+    - { id: TEXP-225-007, category: business_uat, classification: REQUIRED, reason: "Finance/customer/brand walkthrough must verify source labels, legacy compatibility, and forward-only behavior.", scenarios: [SCN-225-001, SCN-225-003, SCN-225-006, SCN-225-007, SCN-225-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-225-001, severity: MAJOR, status: open, summary: "Commission source boundary must preserve corporate order-specific settlement snapshot semantics while canonicalizing marketplace displays." }
+        - { id: CRIT-225-002, severity: MAJOR, status: open, summary: "Invoice issuance must be transactionally idempotent under collision and concurrency." }
+        - { id: CRIT-225-003, severity: MAJOR, status: open, summary: "GST export needs explicit fail-closed handling for historical orders without an authoritative invoice." }
+        - { id: CRIT-225-004, severity: MINOR, status: open, summary: "Operational cutover boundary and bounded observability should be recorded." }
+        - { id: CRIT-225-005, severity: MINOR, status: open, summary: "Existing PDF fallback must not mislabel a reference as a legal invoice." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-225-001, scenario_ids: [SCN-225-001, SCN-225-002, SCN-225-003] }
+        - { requirement_id: REQ-225-002, scenario_ids: [SCN-225-001, SCN-225-003] }
+        - { requirement_id: REQ-225-003, scenario_ids: [SCN-225-004, SCN-225-005, SCN-225-009] }
+        - { requirement_id: REQ-225-004, scenario_ids: [SCN-225-004, SCN-225-005, SCN-225-009] }
+        - { requirement_id: REQ-225-005, scenario_ids: [SCN-225-006] }
+        - { requirement_id: REQ-225-006, scenario_ids: [SCN-225-007, SCN-225-008] }
+        - { requirement_id: REQ-225-007, scenario_ids: [SCN-225-007, SCN-225-008] }
+        - { requirement_id: REQ-225-008, scenario_ids: [SCN-225-002, SCN-225-009, SCN-225-010] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-225-001, invariant_ids: [INV-225-003] }
+        - { scenario_id: SCN-225-002, invariant_ids: [INV-225-003, INV-225-006] }
+        - { scenario_id: SCN-225-003, invariant_ids: [INV-225-007] }
+        - { scenario_id: SCN-225-004, invariant_ids: [INV-225-001, INV-225-005] }
+        - { scenario_id: SCN-225-005, invariant_ids: [INV-225-001, INV-225-006] }
+        - { scenario_id: SCN-225-006, invariant_ids: [INV-225-002, INV-225-003] }
+        - { scenario_id: SCN-225-007, invariant_ids: [INV-225-004, INV-225-007] }
+        - { scenario_id: SCN-225-008, invariant_ids: [INV-225-004, INV-225-006] }
+        - { scenario_id: SCN-225-009, invariant_ids: [INV-225-005, INV-225-006] }
+        - { scenario_id: SCN-225-010, invariant_ids: [INV-225-002, INV-225-003] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-225-001, test_expectation_ids: [TEXP-225-001, TEXP-225-002, TEXP-225-007] }
+        - { scenario_id: SCN-225-002, test_expectation_ids: [TEXP-225-001, TEXP-225-006] }
+        - { scenario_id: SCN-225-003, test_expectation_ids: [TEXP-225-002, TEXP-225-007] }
+        - { scenario_id: SCN-225-004, test_expectation_ids: [TEXP-225-003, TEXP-225-004] }
+        - { scenario_id: SCN-225-005, test_expectation_ids: [TEXP-225-003] }
+        - { scenario_id: SCN-225-006, test_expectation_ids: [TEXP-225-005] }
+        - { scenario_id: SCN-225-007, test_expectation_ids: [TEXP-225-005, TEXP-225-007] }
+        - { scenario_id: SCN-225-008, test_expectation_ids: [TEXP-225-005, TEXP-225-007] }
+        - { scenario_id: SCN-225-009, test_expectation_ids: [TEXP-225-004, TEXP-225-006] }
+        - { scenario_id: SCN-225-010, test_expectation_ids: [TEXP-225-006] }
