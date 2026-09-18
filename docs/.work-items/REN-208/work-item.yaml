@@ -1,0 +1,156 @@
+schema_version: "1.0"
+task:
+    id: REN-208
+    title: "[FCCP][P1] Build Admin Contract Management & Brand Agreement Repository"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-208/fccpp1-build-admin-contract-management-and-brand-agreement-repository
+        priority: High
+        labels: [Feature]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganganguly333/ren-208-fccp1-build-admin-contract-management-brand-agreement
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The feature stores commercially sensitive brand agreements and introduces a new tenant authorization boundary."
+        - "A public or guessable file URL would bypass the required brand isolation and create a security defect."
+        - "Upload/database failure ordering can leave sensitive orphaned files or broken agreement mappings."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, brand schema and relations, brand member and role authorization, admin brand surfaces, UploadThing upload routes, audit log schema/query, existing brand media patterns, existing migrations and tests]
+    excluded_areas: [application source changes, schema changes, migrations, production data, contract backfill, commercial-term extraction, private provider implementation pending decision]
+    dependencies: [DEP-208-001, DEP-208-002, DEP-208-003, DEP-208-004, DEP-208-005]
+    integrations: [INT-208-001, INT-208-002]
+    security_boundaries: [SEC-208-001, SEC-208-002, SEC-208-003]
+    state_transitions: [not_on_file, upload_pending, version_active, version_replaced, download_authorized, access_denied, cleanup_required]
+    related_tests: [TEXP-208-001, TEXP-208-002, TEXP-208-003, TEXP-208-004, TEXP-208-005, TEXP-208-006, TEXP-208-007, TEXP-208-008]
+    uncertainties: ["Private storage provider and signed-delivery contract are not established in the repository.", "Brand-owner versus brand-member read scope must follow the approved brand membership policy once storage is selected.", "The exact failed-upload cleanup mechanism depends on the chosen provider API."]
+requirements:
+    - { id: REQ-208-001, description: "Admin can create an agreement version with brand mapping and required metadata.", type: explicit }
+    - { id: REQ-208-002, description: "Agreement replacement is append-only and retains prior versions.", type: safety }
+    - { id: REQ-208-003, description: "Authorized admins can view and download any agreement.", type: explicit }
+    - { id: REQ-208-004, description: "Brand users have read-only access to their own brand agreement and no write access.", type: authorization }
+    - { id: REQ-208-005, description: "Every agreement route authorizes against the persisted agreement brand and prevents IDOR.", type: security }
+    - { id: REQ-208-006, description: "Agreement files remain private and use short-lived authorized delivery without public or guessable URLs.", type: security }
+    - { id: REQ-208-007, description: "All upload, replacement, metadata-edit, and download actions are append-only audited.", type: auditability }
+    - { id: REQ-208-008, description: "Brand-to-version-to-effective-date mapping is queryable for future commercial-term citations.", type: compatibility }
+    - { id: REQ-208-009, description: "Missing agreements display as Not on file and never as evidence of non-existence.", type: explicit }
+    - { id: REQ-208-010, description: "Existing brand contract fields, terms acceptance, and commercial values remain untouched.", type: compatibility }
+    - { id: REQ-208-011, description: "Failed upload/database operations do not leave broken active mappings or unrecoverable orphaned files.", type: recovery }
+scenarios:
+    - { id: SCN-208-001, description: "Admin uploads a valid agreement and metadata and receives one active audited version.", requirement_ids: [REQ-208-001, REQ-208-006, REQ-208-007] }
+    - { id: SCN-208-002, description: "Invalid metadata, type, size, or brand input is rejected without a partial record.", requirement_ids: [REQ-208-001, REQ-208-011] }
+    - { id: SCN-208-003, description: "Replacement creates a new version while the prior version remains retrievable.", requirement_ids: [REQ-208-002, REQ-208-008] }
+    - { id: SCN-208-004, description: "Admin can access authorized agreement metadata and file delivery.", requirement_ids: [REQ-208-003, REQ-208-005, REQ-208-006] }
+    - { id: SCN-208-005, description: "Owning brand users can read only their own agreement and cannot mutate it; another brand is denied.", requirement_ids: [REQ-208-004, REQ-208-005] }
+    - { id: SCN-208-006, description: "Unauthenticated, guessed-ID, guessed-key, stale-grant, and direct-provider access is denied.", requirement_ids: [REQ-208-005, REQ-208-006] }
+    - { id: SCN-208-007, description: "All required actions create safe append-only audit events.", requirement_ids: [REQ-208-007] }
+    - { id: SCN-208-008, description: "Storage/database failures follow cleanup or recoverable-pending behavior without broken active mappings.", requirement_ids: [REQ-208-011] }
+    - { id: SCN-208-009, description: "Existing brand data is unchanged and an empty repository displays Not on file.", requirement_ids: [REQ-208-009, REQ-208-010] }
+invariants:
+    - { id: INV-208-001, description: "Every active version references exactly one existing brand and private storage object." }
+    - { id: INV-208-002, description: "Agreement versions are immutable and replacement is append-only." }
+    - { id: INV-208-003, description: "Every operation authorizes against persisted agreement brand scope." }
+    - { id: INV-208-004, description: "Cross-brand metadata and file access is impossible through IDs, keys, URLs, or alternate routes." }
+    - { id: INV-208-005, description: "Stored file references are private and insufficient for unauthenticated retrieval." }
+    - { id: INV-208-006, description: "Agreement audit events are append-only and cannot be bypassed." }
+    - { id: INV-208-007, description: "Existing brand contract fields, terms acceptance, and commercial values are unchanged." }
+flows:
+    - { id: FLOW-208-001, description: "Authorized admin validates metadata, uploads private object, inserts version, and writes audit evidence." , state_transitions: [not_on_file, upload_pending, version_active] }
+    - { id: FLOW-208-002, description: "Authorized replacement allocates a new version while preserving prior versions and audit history.", state_transitions: [version_active, version_replaced] }
+    - { id: FLOW-208-003, description: "Authenticated read loads persisted agreement, verifies brand scope, and issues short-lived delivery before logging download.", state_transitions: [version_active, download_authorized, access_denied] }
+    - { id: FLOW-208-004, description: "Storage/database failure cleans up or records bounded recovery state without an active broken mapping.", state_transitions: [upload_pending, cleanup_required] }
+dependencies:
+    - { id: DEP-208-001, name: brands and brand_members, purpose: "Authoritative brand tenancy and membership", description: "Existing brand and membership rows determine agreement ownership.", status: resolved }
+    - { id: DEP-208-002, name: authorization middleware, purpose: "Admin and brand permission enforcement", description: "Existing tRPC permission middleware must be supplemented with persisted agreement-brand checks.", status: resolved }
+    - { id: DEP-208-003, name: private storage provider, purpose: "Private object storage and short-lived delivery", description: "Required capability is not established; current UploadThing URL patterns are public-link patterns.", status: blocked }
+    - { id: DEP-208-004, name: audit_logs, purpose: "Append-only action evidence", description: "Existing audit log query and schema can record safe agreement events.", status: resolved }
+    - { id: DEP-208-005, name: REN-209, purpose: "Future commercial-term citation", description: "Commercial configuration will cite agreement versions; no terms are stored here.", status: resolved }
+integrations:
+    - { id: INT-208-001, system: private object storage, purpose: "Sensitive agreement file persistence and delivery", failure_mode: "Upload, deletion, signing, or provider outage must not create a broken active mapping or public fallback." }
+    - { id: INT-208-002, system: Renivet authorization and audit, purpose: "Tenant isolation and evidence", failure_mode: "Unauthorized access or audit write failure must fail closed according to the approved policy." }
+personas:
+    - { id: PER-208-001, role: renivet_admin, applicability: "Manages agreement repository and can access authorized brand records." }
+    - { id: PER-208-002, role: brand_user, applicability: "Reads only agreements belonging to the user's persisted brand." }
+    - { id: PER-208-003, role: unauthenticated_user, applicability: "Must receive no metadata or file access." }
+security_boundaries:
+    - { id: SEC-208-001, description: "Every agreement metadata and file route authenticates and authorizes server-side." }
+    - { id: SEC-208-002, description: "Private storage never exposes permanent public or guessable agreement URLs." }
+    - { id: SEC-208-003, description: "Logs exclude file contents, provider secrets, signed URLs, and unnecessary contract text." }
+business_rules:
+    - { id: BR-208-001, description: "Not on file is absence of repository evidence, not a conclusion that no agreement exists." }
+    - { id: BR-208-002, description: "Brands do not upload, edit, replace, or delete agreements." }
+    - { id: BR-208-003, description: "This issue stores documents and metadata, not commercial rates or extracted terms." }
+    - { id: BR-208-004, description: "Existing contract timestamps and terms acceptance are not agreement evidence and are not modified." }
+decisions:
+    - { id: DEC-208-001, question: "Which private storage and short-lived delivery mechanism should hold agreement files?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Approve an existing private object-storage provider with server-side signed delivery, or explicitly approve a separate encrypted storage implementation; reject public UploadThing URLs.", basis: "Repository inspection found only public UploadThing file URL patterns; the issue requires private, non-guessable, authorized delivery.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-208-002, question: "Should agreement replacement overwrite the prior version?", class: AUTO_DECIDE, status: resolved, recommendation: "No; append a new immutable version.", basis: "Explicit issue requirement and auditability.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-208-003, question: "Where should agreement metadata live?", class: AUTO_DECIDE, status: resolved, recommendation: "A dedicated additive agreement-version table with brand FK and private storage reference.", basis: "Avoids conflating brand profile fields, confidential data, and generic audit attachments.", confidence: high, consequence: medium, human_confirmation_required: false }
+test_expectations:
+    - { id: TEXP-208-001, category: unit, classification: REQUIRED, reason: "Metadata, dates, versions, file limits, and absence semantics must be deterministic.", scenarios: [SCN-208-001, SCN-208-002, SCN-208-003, SCN-208-009] }
+    - { id: TEXP-208-002, category: integration, classification: REQUIRED, reason: "Additive schema, foreign key, unique version allocation, append-only replacement, rollback, and recovery require database evidence.", scenarios: [SCN-208-001, SCN-208-003, SCN-208-008] }
+    - { id: TEXP-208-003, category: integration, classification: REQUIRED, reason: "Admin upload/view/download/replace lifecycle must be proven end to end.", scenarios: [SCN-208-001, SCN-208-003, SCN-208-004] }
+    - { id: TEXP-208-004, category: security, classification: REQUIRED, reason: "The issue explicitly requires role matrix, IDOR, direct file-route, provider-key, and cross-brand denial tests.", scenarios: [SCN-208-005, SCN-208-006] }
+    - { id: TEXP-208-005, category: integration, classification: REQUIRED, reason: "Every mutation and download must create safe append-only audit evidence.", scenarios: [SCN-208-001, SCN-208-003, SCN-208-007] }
+    - { id: TEXP-208-006, category: integration, classification: REQUIRED, reason: "Provider/database failure and duplicate-version races must not create broken active mappings or unrecoverable orphan files.", scenarios: [SCN-208-002, SCN-208-008] }
+    - { id: TEXP-208-007, category: regression, classification: REQUIRED, reason: "Existing brand data and contract fields must remain unchanged and current brand surfaces must continue working.", scenarios: [SCN-208-009] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-208-001, severity: DESIGN_BLOCKER, status: open, summary: "Private storage and signed delivery are not available in the current UploadThing pattern and must be approved before implementation.", references: [REQ-208-006, DEC-208-001] }
+        - { id: CRIT-208-002, severity: MAJOR, status: open, summary: "Every read/download path must authorize against the persisted agreement brand to prevent IDOR.", references: [REQ-208-005, INV-208-003, INV-208-004] }
+        - { id: CRIT-208-003, severity: MAJOR, status: open, summary: "Upload/database failure cleanup must be implemented and tested.", references: [REQ-208-011, FLOW-208-004] }
+        - { id: CRIT-208-004, severity: MINOR, status: open, summary: "Agreement metadata must not overload generic audit attachment storage or existing brand contract fields.", references: [REQ-208-007, REQ-208-010] }
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-208-001, CRIT-208-001]
+    approved_by: user-requested-spec-pending-storage-decision
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-208-001, scenario_ids: [SCN-208-001, SCN-208-002] }
+        - { requirement_id: REQ-208-002, scenario_ids: [SCN-208-003] }
+        - { requirement_id: REQ-208-003, scenario_ids: [SCN-208-004] }
+        - { requirement_id: REQ-208-004, scenario_ids: [SCN-208-005] }
+        - { requirement_id: REQ-208-005, scenario_ids: [SCN-208-004, SCN-208-005, SCN-208-006] }
+        - { requirement_id: REQ-208-006, scenario_ids: [SCN-208-001, SCN-208-004, SCN-208-006] }
+        - { requirement_id: REQ-208-007, scenario_ids: [SCN-208-001, SCN-208-003, SCN-208-007] }
+        - { requirement_id: REQ-208-008, scenario_ids: [SCN-208-003] }
+        - { requirement_id: REQ-208-009, scenario_ids: [SCN-208-009] }
+        - { requirement_id: REQ-208-010, scenario_ids: [SCN-208-009] }
+        - { requirement_id: REQ-208-011, scenario_ids: [SCN-208-002, SCN-208-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-208-001, invariant_ids: [INV-208-001, INV-208-005, INV-208-006] }
+        - { scenario_id: SCN-208-002, invariant_ids: [INV-208-001, INV-208-005] }
+        - { scenario_id: SCN-208-003, invariant_ids: [INV-208-001, INV-208-002, INV-208-006] }
+        - { scenario_id: SCN-208-004, invariant_ids: [INV-208-003, INV-208-004, INV-208-005] }
+        - { scenario_id: SCN-208-005, invariant_ids: [INV-208-003, INV-208-004, INV-208-006] }
+        - { scenario_id: SCN-208-006, invariant_ids: [INV-208-003, INV-208-004, INV-208-005] }
+        - { scenario_id: SCN-208-007, invariant_ids: [INV-208-006] }
+        - { scenario_id: SCN-208-008, invariant_ids: [INV-208-001, INV-208-002, INV-208-005] }
+        - { scenario_id: SCN-208-009, invariant_ids: [INV-208-007] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-208-001, test_expectation_ids: [TEXP-208-001, TEXP-208-002, TEXP-208-003, TEXP-208-005] }
+        - { scenario_id: SCN-208-002, test_expectation_ids: [TEXP-208-001, TEXP-208-006] }
+        - { scenario_id: SCN-208-003, test_expectation_ids: [TEXP-208-001, TEXP-208-002, TEXP-208-003, TEXP-208-005] }
+        - { scenario_id: SCN-208-004, test_expectation_ids: [TEXP-208-003, TEXP-208-004] }
+        - { scenario_id: SCN-208-005, test_expectation_ids: [TEXP-208-004] }
+        - { scenario_id: SCN-208-006, test_expectation_ids: [TEXP-208-004] }
+        - { scenario_id: SCN-208-007, test_expectation_ids: [TEXP-208-005] }
+        - { scenario_id: SCN-208-008, test_expectation_ids: [TEXP-208-002, TEXP-208-006] }
+        - { scenario_id: SCN-208-009, test_expectation_ids: [TEXP-208-001, TEXP-208-007] }
