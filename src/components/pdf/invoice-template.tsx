@@ -999,7 +999,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         ["Order number", order.id],
                         [
                             "Invoice number",
-                            order.invoiceNumber ?? order.receiptId ?? order.id,
+                            order.invoiceNumber ?? "Not issued",
                         ],
                         ...(order.poReference
                             ? [["PO reference", order.poReference]]

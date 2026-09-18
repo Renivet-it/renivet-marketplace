@@ -378,7 +378,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                 ? `/api/corporate-orders/${order.id}/settlement-statement.pdf`
                 : null,
             optionalNote: chain?.settlementStatement
-                ? `Net: ₹${((chain.settlementStatement.netRemittancePaise ?? calculatedNetRemittancePaise) / 100).toFixed(2)} (${chain.settlementStatement.commissionPercentBps / 100}% comm.)`
+                ? `Net: ₹${((chain.settlementStatement.netRemittancePaise ?? calculatedNetRemittancePaise) / 100).toFixed(2)} (agreed corporate commission: ${chain.settlementStatement.commissionPercentBps / 100}%)`
                 : "Doc 7 waterfall settlement",
         },
     ];

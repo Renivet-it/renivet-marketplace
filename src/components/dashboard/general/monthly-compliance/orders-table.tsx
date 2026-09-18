@@ -280,7 +280,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
                 const grossSale = Number(
                     convertPaiseToRupees(order.totalAmount)
                 );
-                let commissionRate = item.product.category?.commissionRate || 0;
+                let commissionRate = (item.commissionPercentBps ?? 0) / 100;
                 // Apply 5% adjustment if flag is set
                 if (applyShipmentFlag) {
                     commissionRate += 5; // Increase commission by 5%

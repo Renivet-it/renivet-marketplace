@@ -438,7 +438,7 @@ export function CorporateSettlementStatementTemplate({
 
                     <View style={styles.waterfallRow}>
                         <Text>
-                            - Platform Commission ({data.commissionPercent.toFixed(1)}% of Taxable Value)
+                            - Agreed Corporate Commission ({data.commissionPercent.toFixed(1)}% of Taxable Value)
                         </Text>
                         <Text style={styles.deductionValue}>
                             -{formatInr(data.commissionAmountPaise)}
