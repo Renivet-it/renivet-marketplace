@@ -5,6 +5,14 @@ export type RefundReconciliationRow = {
     status: string;
 };
 
+export function getClearedReconciliationDedupeKeys(
+    activeDedupeKeys: string[],
+    currentDedupeKeys: string[]
+) {
+    const current = new Set(currentDedupeKeys);
+    return activeDedupeKeys.filter((key) => !current.has(key));
+}
+
 export function summarizeRefundReconciliation(input: {
     orderId: string;
     paymentStatus: string;
@@ -30,10 +38,11 @@ export async function runRefundReconciliation(input?: {
     actorId?: string | null;
     orderIds?: string[];
 }) {
-    const [{ refundQueries }, { createOperationalAlert }] = await Promise.all([
-        import("@/lib/db/queries"),
-        import("@/lib/monitoring-sla/audit"),
-    ]);
+    const [{ refundQueries, monitoringSlaQueries }, { createOperationalAlert }] =
+        await Promise.all([
+            import("@/lib/db/queries"),
+            import("@/lib/monitoring-sla/audit"),
+        ]);
     const rows = await refundQueries.listRefundReconciliationRows(
         input?.orderIds
     );
@@ -83,6 +92,14 @@ export async function runRefundReconciliation(input?: {
             })
         )
     );
+
+    await monitoringSlaQueries.resolveOpenAlertsByDedupePrefix({
+        prefix: "refund:source-of-truth:",
+        activeDedupeKeys: mismatches.map(
+            (mismatch) => `refund:source-of-truth:${mismatch.orderId}`
+        ),
+        actorId: input?.actorId,
+    });
 
     return { results, mismatches };
 }
