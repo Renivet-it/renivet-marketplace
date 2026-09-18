@@ -25,6 +25,7 @@ import {
     inArray,
     isNotNull,
     isNull,
+    like,
     lt,
     lte,
     ne,
@@ -927,6 +928,38 @@ class MonitoringSlaQuery {
         }
 
         return alert;
+    }
+
+    async resolveOpenAlertsByDedupePrefix(input: {
+        prefix: string;
+        activeDedupeKeys: string[];
+        actorId?: string | null;
+    }) {
+        const activeKeys = new Set(input.activeDedupeKeys);
+        const alerts = await db.query.monitoringAlerts.findMany({
+            where: and(
+                like(monitoringAlerts.dedupeKey, `${input.prefix}%`),
+                inArray(monitoringAlerts.status, [
+                    "open",
+                    "acknowledged",
+                    "escalated",
+                ])
+            ),
+        });
+
+        const resolved = [];
+        for (const alert of alerts) {
+            if (activeKeys.has(alert.dedupeKey)) continue;
+            const updated = await this.updateAlertStatus("resolved", {
+                alertId: alert.id,
+                actorId: input.actorId,
+                reasonCode: "refund_reconciliation_resolved",
+                notes: "Refund source-of-truth mismatch is no longer present.",
+            });
+            if (updated) resolved.push(updated);
+        }
+
+        return resolved;
     }
 
     async getActiveAlerts(limit = 50, offset = 0, severity?: AlertSeverity) {
