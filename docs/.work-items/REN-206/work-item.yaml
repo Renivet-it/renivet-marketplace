@@ -1,0 +1,159 @@
+schema_version: "1.0"
+task:
+    id: REN-206
+    title: "[FCCP][P0] Add Payout Execution Safety Gate"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-206/fccpp0-add-payout-execution-safety-gate
+        priority: Urgent
+        labels: [Improvement]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-206-fccp-p0-add-payout-execution-safety-gate
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Controls external money movement and payout statement issuance."
+        - "A bypass or partial gate could pay brands without validated financial controls."
+        - "BIZ-3 human clearance is a high-consequence decision that engineering cannot self-issue."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-206 description, dependencies, acceptance criteria, and BIZ-3 constraint
+        - payout calculation, approval, execution, manual completion, and override paths
+        - finance TRPC authorization and execution routes
+        - finance audit logging conventions
+        - payout cycle, summary, line-item, and override schemas
+        - existing REN-203, REN-204, and REN-205 contracts on this branch
+    excluded_areas:
+        - payout execution against production
+        - reimplementation of commission, eligibility, or holdback logic
+        - settlement timing or statement policy redesign
+        - advancing G1-G6 audit gates or recording management clearance
+        - production data/configuration mutation
+    dependencies: [DEP-206-001, DEP-206-002, DEP-206-003, DEP-206-004]
+    integrations: [INT-206-001, INT-206-002, INT-206-003]
+    security_boundaries: [SEC-206-001, SEC-206-002]
+    state_transitions: [gate_failed, gate_passed_pending_clearance, execution_blocked, execution_allowed_after_clearance]
+    related_tests: [TEXP-206-001, TEXP-206-002, TEXP-206-003, TEXP-206-004, TEXP-206-005, TEXP-206-006, TEXP-206-007]
+    uncertainties:
+        - "Management clearance authority, evidence reference, expiry, and revocation semantics are not defined and require explicit approval."
+        - "Whether an additive clearance table or an existing auditable JSON boundary is preferred must follow the approved authority contract."
+requirements:
+    - { id: REQ-206-001, description: "An explicit centralized gate must run before any payout execution or statement issuance can begin.", type: safety }
+    - { id: REQ-206-002, description: "The gate must individually verify commission validation, eligibility gating, payment-state gating, BIZ-15 holdback suspension, real-transaction validation, and attributable human clearance.", type: safety }
+    - { id: REQ-206-003, description: "Missing, stale, unknown, or failed evidence blocks execution with stable readable reason codes and leaves cycle/brand state unchanged.", type: safety }
+    - { id: REQ-206-004, description: "The gate must preflight the complete cycle before a brand-specific request or any external money movement, preventing partial execution.", type: safety }
+    - { id: REQ-206-005, description: "Every gate pass/fail evaluation is audit-logged with actor, timestamp, cycle, and bounded check results.", type: observability }
+    - { id: REQ-206-006, description: "Every manual payout override requires a recorded approver regardless of amount and cannot be self-approved.", type: safety }
+    - { id: REQ-206-007, description: "The gate cannot be bypassed by another route, cron, script, direct caller, or ordinary cycle approval.", type: security }
+    - { id: REQ-206-008, description: "No payout is executed, no BIZ-3 clearance is created by engineering, and no unrelated payout model or deduction is redesigned.", type: compatibility }
+    - { id: REQ-206-009, description: "Provide non-production unit, integration, route-inventory, failure-recovery, security, and manual walkthrough evidence.", type: explicit }
+scenarios:
+    - { id: SCN-206-001, description: "Each individual prerequisite failure blocks execution with its own reason code.", requirement_ids: [REQ-206-001, REQ-206-002, REQ-206-003] }
+    - { id: SCN-206-002, description: "All technical prerequisites pass but no recorded human clearance exists; execution remains blocked.", requirement_ids: [REQ-206-002, REQ-206-003, REQ-206-008] }
+    - { id: SCN-206-003, description: "A valid attributable clearance and all current prerequisite evidence allow the gate to pass without the gate itself executing payout.", requirement_ids: [REQ-206-001, REQ-206-002] }
+    - { id: SCN-206-004, description: "A brand-specific execution request cannot bypass the full-cycle preflight or execute another brand first.", requirement_ids: [REQ-206-004, REQ-206-007] }
+    - { id: SCN-206-005, description: "A failure before or during simulated multi-brand execution leaves recoverable state and repeated attempts do not double-pay.", requirement_ids: [REQ-206-003, REQ-206-004, REQ-206-009] }
+    - { id: SCN-206-006, description: "Calculated, approved, processing, completed, and failed cycle statuses are handled deterministically and idempotently.", requirement_ids: [REQ-206-003, REQ-206-009] }
+    - { id: SCN-206-007, description: "An override without an approver is rejected below and above ₹50,000; an approver cannot approve their own override.", requirement_ids: [REQ-206-006] }
+    - { id: SCN-206-008, description: "Every known route, job, and direct caller reaches the gate and failed evaluations are audit-visible.", requirement_ids: [REQ-206-005, REQ-206-007] }
+invariants:
+    - { id: INV-206-001, description: "No external payout call or statement issuance occurs before a successful complete-cycle gate evaluation." }
+    - { id: INV-206-002, description: "No human clearance means no execution, even when every technical check passes." }
+    - { id: INV-206-003, description: "A gate failure does not mutate cycle or brand execution state and is explainable by stable reason codes." }
+    - { id: INV-206-004, description: "A brand-scoped request cannot weaken the cycle-wide gate or enable partial execution." }
+    - { id: INV-206-005, description: "Manual financial adjustments cannot enter a payout without independent recorded approval." }
+    - { id: INV-206-006, description: "Gate evidence and audit records contain bounded operational data only and never credentials or customer identity." }
+flows:
+    - { id: FLOW-206-001, description: "Execution request -> full-cycle gate -> per-check result -> blocked or explicitly eligible execution boundary.", state_transitions: [gate_failed, gate_passed_pending_clearance, execution_blocked, execution_allowed_after_clearance] }
+    - { id: FLOW-206-002, description: "Override creation/approval -> unconditional approver validation -> calculation inclusion or rejection.", state_transitions: [gate_failed, execution_blocked] }
+    - { id: FLOW-206-003, description: "Gate evaluation -> finance audit event with actor, timestamp, checks, and reason codes.", state_transitions: [gate_failed, gate_passed_pending_clearance] }
+dependencies:
+    - { id: DEP-206-001, name: payout calculation and cycle summary, purpose: "Source of REN-203/204/205 evidence and cycle state.", description: "Gate reads persisted calculation outcomes and must not reimplement those controls.", status: resolved }
+    - { id: DEP-206-002, name: payout execution path, purpose: "Shared money-movement chokepoint.", description: "executePayoutCycle currently loops brands and calls Razorpay/manual instructions after per-brand approval.", status: resolved }
+    - { id: DEP-206-003, name: finance audit logging, purpose: "Record every gate decision.", description: "Existing audit helpers support actor, before/after values, reasons, metadata, and dedupe keys.", status: resolved }
+    - { id: DEP-206-004, name: BIZ-3 clearance authority, purpose: "Human prerequisite for execution.", description: "Authority and evidence workflow are unresolved and block implementation approval.", status: blocked }
+integrations:
+    - { id: INT-206-001, system: external payout provider, purpose: "Prevent provider calls until the complete gate passes.", failure_mode: "Any missing gate check could move money without control evidence.", retry_idempotency: "Repeated blocked attempts do not call the provider; retries after provider failure remain recoverable and deduplicated." }
+    - { id: INT-206-002, system: finance audit log, purpose: "Persist pass/fail gate evidence.", failure_mode: "Audit write failure must fail closed before execution.", retry_idempotency: "Gate evaluation dedupe is cycle/attempt scoped and does not create duplicate money movement." }
+    - { id: INT-206-003, system: finance admin TRPC routes and jobs, purpose: "Ensure every caller uses the shared gate.", failure_mode: "An alternate caller could bypass the safety control.", retry_idempotency: "All callers receive the same deterministic result." }
+personas:
+    - { id: PER-206-001, role: finance_operator, applicability: "Reviews gate checks, blocked reasons, and audit evidence." }
+    - { id: PER-206-002, role: management_clearance_authority, applicability: "Provides attributable external clearance; engineering cannot impersonate this role." }
+security_boundaries:
+    - { id: SEC-206-001, description: "Gate authority and audit records must be attributable, access-controlled, immutable/auditable, and cannot be supplied through an untrusted client flag." }
+    - { id: SEC-206-002, description: "Gate diagnostics expose only cycle/check/reason data and no credentials, bank details, customer identity, or raw provider payloads." }
+business_rules:
+    - { id: BR-206-001, description: "BIZ-3 requires corrected defects, approved rule implementation, one validated real transaction, and explicit clearance before execution." }
+    - { id: BR-206-002, description: "Engineering must not create, infer, or simulate the management clearance prerequisite." }
+    - { id: BR-206-003, description: "The safe failure mode is no execution and no partial movement." }
+    - { id: BR-206-004, description: "Every manual financial adjustment requires independent recorded approval." }
+decisions:
+    - { id: DEC-206-001, question: "Does an adequate execution gate already exist?", class: AUTO_DECIDE, status: resolved, recommendation: "No; current approval and finance authorization do not assert the six BIZ-3 prerequisites or provide a shared all-or-nothing preflight.", basis: "payouts.ts checks only brand reviewStatus before execution; finance TRPC checks module manage permission; no clearance/precondition evaluator exists.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-206-002, question: "How is BIZ-3 part-4 management clearance represented?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Use an immutable attributable clearance record with cycle identity, external evidence reference, timestamp, status, expiry/revocation, and audit linkage, distinct from approvedBy.", basis: "The issue requires explicit clearance and forbids engineering from granting it; existing approvedBy is ordinary admin approval.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-206-003, question: "Where should the safety gate run?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Run one complete-cycle preflight at the shared executePayoutCycle boundary before brand iteration or external calls; re-check direct callers during implementation review.", basis: "This prevents brand-scoped bypass and partial execution while preserving the existing payout model.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-206-001, category: unit, classification: REQUIRED, reason: "Each of six prerequisites fails independently with stable reason and no execution.", scenarios: [SCN-206-001] }
+    - { id: TEXP-206-002, category: unit, classification: REQUIRED, reason: "All technical checks pass without human clearance and execution remains blocked.", scenarios: [SCN-206-002] }
+    - { id: TEXP-206-003, category: unit, classification: REQUIRED, reason: "Override approval is required at every amount and self-approval is rejected.", scenarios: [SCN-206-007] }
+    - { id: TEXP-206-004, category: integration, classification: REQUIRED, reason: "Cycle statuses and repeated attempts are deterministic and idempotent.", scenarios: [SCN-206-005, SCN-206-006] }
+    - { id: TEXP-206-005, category: integration, classification: REQUIRED, reason: "A simulated mid-execution failure is recoverable and cannot double-pay.", scenarios: [SCN-206-005] }
+    - { id: TEXP-206-006, category: security, classification: REQUIRED, reason: "Every route/job/direct caller is gated and no client-supplied flag bypasses the gate.", scenarios: [SCN-206-008] }
+    - { id: TEXP-206-007, category: business_uat, classification: REQUIRED, reason: "Admin walkthrough shows blocked cycle, named reason, audit evidence, and outstanding clearance.", scenarios: [SCN-206-002, SCN-206-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-206-001, severity: DESIGN_BLOCKER, status: open, summary: "BIZ-3 part-4 clearance authority and persistence workflow require human confirmation." }
+        - { id: CRIT-206-002, severity: MAJOR, status: open, summary: "Gate must preflight the complete cycle before any brand or provider call." }
+        - { id: CRIT-206-003, severity: MAJOR, status: open, summary: "Dependency evidence must be live and fail closed, not static flags." }
+        - { id: CRIT-206-004, severity: MINOR, status: open, summary: "Override approval must become unconditional without losing proof metadata." }
+approval:
+    state: PENDING
+    design_blockers:
+        - "CRIT-206-001: Approve the immutable management-clearance record and authority workflow before implementation."
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-206-001, scenario_ids: [SCN-206-001, SCN-206-003, SCN-206-004] }
+        - { requirement_id: REQ-206-002, scenario_ids: [SCN-206-001, SCN-206-002, SCN-206-003] }
+        - { requirement_id: REQ-206-003, scenario_ids: [SCN-206-001, SCN-206-002, SCN-206-005, SCN-206-006] }
+        - { requirement_id: REQ-206-004, scenario_ids: [SCN-206-004, SCN-206-005] }
+        - { requirement_id: REQ-206-005, scenario_ids: [SCN-206-008] }
+        - { requirement_id: REQ-206-006, scenario_ids: [SCN-206-007] }
+        - { requirement_id: REQ-206-007, scenario_ids: [SCN-206-004, SCN-206-008] }
+        - { requirement_id: REQ-206-008, scenario_ids: [SCN-206-002, SCN-206-003] }
+        - { requirement_id: REQ-206-009, scenario_ids: [SCN-206-005, SCN-206-006, SCN-206-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-206-001, invariant_ids: [INV-206-001, INV-206-003] }
+        - { scenario_id: SCN-206-002, invariant_ids: [INV-206-001, INV-206-002] }
+        - { scenario_id: SCN-206-003, invariant_ids: [INV-206-001] }
+        - { scenario_id: SCN-206-004, invariant_ids: [INV-206-004] }
+        - { scenario_id: SCN-206-005, invariant_ids: [INV-206-003, INV-206-004] }
+        - { scenario_id: SCN-206-006, invariant_ids: [INV-206-003] }
+        - { scenario_id: SCN-206-007, invariant_ids: [INV-206-005] }
+        - { scenario_id: SCN-206-008, invariant_ids: [INV-206-001, INV-206-006] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-206-001, test_expectation_ids: [TEXP-206-001] }
+        - { scenario_id: SCN-206-002, test_expectation_ids: [TEXP-206-002, TEXP-206-007] }
+        - { scenario_id: SCN-206-003, test_expectation_ids: [TEXP-206-004] }
+        - { scenario_id: SCN-206-004, test_expectation_ids: [TEXP-206-006] }
+        - { scenario_id: SCN-206-005, test_expectation_ids: [TEXP-206-004, TEXP-206-005] }
+        - { scenario_id: SCN-206-006, test_expectation_ids: [TEXP-206-004] }
+        - { scenario_id: SCN-206-007, test_expectation_ids: [TEXP-206-003] }
+        - { scenario_id: SCN-206-008, test_expectation_ids: [TEXP-206-006, TEXP-206-007] }
