@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { summarizeRefundReconciliation } from "./refund-reconciliation";
+import {
+    getClearedReconciliationDedupeKeys,
+    summarizeRefundReconciliation,
+} from "./refund-reconciliation";
 
 describe("refund reconciliation reporting", () => {
     test("reports a refunded order with no backing event without proposing a repair", () => {
@@ -25,5 +28,17 @@ describe("refund reconciliation reporting", () => {
                 refunds: [{ id: "rfnd_1", status: "processed" }],
             }).classification
         ).toBe("consistent");
+    });
+
+    test("identifies previously active mismatch alerts that are now clear", () => {
+        expect(
+            getClearedReconciliationDedupeKeys(
+                [
+                    "refund:source-of-truth:order-1",
+                    "refund:source-of-truth:order-2",
+                ],
+                ["refund:source-of-truth:order-2"]
+            )
+        ).toEqual(["refund:source-of-truth:order-1"]);
     });
 });
