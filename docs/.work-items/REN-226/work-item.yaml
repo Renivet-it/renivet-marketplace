@@ -3,7 +3,7 @@ task:
     id: REN-226
     title: "[FCCP][P1] Implement Refund Source-of-Truth & Reconciliation (BIZ-9)"
     source: linear
-    branch: feat/ren-229-spec
+    branch: feat/ren-203-spec
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-226/fccpp1-implement-refund-source-of-truth-and-reconciliation-biz-9
@@ -163,7 +163,7 @@ traceability:
 implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: feat/ren-229-spec
+    base_branch: feat/ren-203-spec
     base_commit: "004e7e93fb037a7ff4583ca6504548302aad0800"
     head_commit: "ab5706c4669ac689e95c0973027dc0ba225c4b93"
     pr_url: null
