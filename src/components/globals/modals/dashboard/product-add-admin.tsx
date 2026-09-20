@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
+import { createProductImportBatches } from "@/lib/product-import/batching";
 import {
     convertPriceToPaise,
     generateSKU,
@@ -126,10 +127,24 @@ export function ProductAddAdminModal({
         },
         mutationFn: async (products: CreateProduct[]) => {
             if (!products.length) throw new Error("No products to import");
-            await importProuductsAsync({
-                brandId: brandId!,
-                products,
-            });
+            const batches = createProductImportBatches(products);
+
+            for (const [index, batch] of batches.entries()) {
+                try {
+                    await importProuductsAsync({
+                        brandId: brandId!,
+                        products: batch,
+                    });
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown import error";
+                    throw new Error(
+                        `Import batch ${index + 1} of ${batches.length} failed: ${message}`
+                    );
+                }
+            }
         },
         onSuccess: (_, __, { toastId }) => {
             setIsAddModalOpen(false);

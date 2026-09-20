@@ -477,7 +477,11 @@ export const productReviewsRouter = createTRPCRouter({
                 },
             });
 
-            return newData;
+            return {
+                success: true,
+                createdCount: newData.length,
+                updatedCount: touchedExistingProductIds.size,
+            };
         }),
     approveProduct: protectedProcedure
         .input(

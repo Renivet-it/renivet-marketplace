@@ -30,6 +30,7 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { createProductImportBatches } from "@/lib/product-import/batching";
 import {
     Table,
     TableBody,
@@ -117,7 +118,19 @@ export function ProductImportButton({
         },
         mutationFn: async (products: CreateProduct[]) => {
             if (!products.length) throw new Error("No products to import");
-            await importProuductsAsync(products);
+
+            const batches = createProductImportBatches(products);
+            for (const [index, batch] of batches.entries()) {
+                try {
+                    await importProuductsAsync(batch);
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Unknown error";
+                    throw new Error(
+                        `Import failed in batch ${index + 1} of ${batches.length}: ${message}`
+                    );
+                }
+            }
         },
         onSuccess: (_, __, { toastId }) => {
             refetch();
