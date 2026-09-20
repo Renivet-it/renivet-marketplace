@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
+import { createProductImportBatches } from "@/lib/product-import/batching";
 import {
     convertPriceToPaise,
     generateSKU,
@@ -108,6 +109,13 @@ export function ProductAddAdminModal({
     const [file, setFile] = useState<File | null>(null);
     const [errorMessages, setErrorMessages] = useState<string[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [importProgress, setImportProgress] = useState<{
+        completed: number;
+        total: number;
+    } | null>(null);
+    const importToastIdRef = useRef<
+        ReturnType<typeof toast.loading> | undefined
+    >(undefined);
     useEffect(() => {
         if (isAddModalOpen) {
             setBrandId(null);
@@ -120,18 +128,45 @@ export function ProductAddAdminModal({
         trpc.general.productReviews.addBulkProducts.useMutation();
 
     const { mutate: createBulkProducts, isPending: isCreating } = useMutation({
-        onMutate: () => {
+        onMutate: (products) => {
+            setImportProgress({ completed: 0, total: products.length });
             const toastId = toast.loading("Importing products...");
+            importToastIdRef.current = toastId;
             return { toastId };
         },
         mutationFn: async (products: CreateProduct[]) => {
             if (!products.length) throw new Error("No products to import");
-            await importProuductsAsync({
-                brandId: brandId!,
-                products,
-            });
+            const batches = createProductImportBatches(products);
+            let completedProducts = 0;
+
+            for (const [index, batch] of batches.entries()) {
+                try {
+                    await importProuductsAsync({
+                        brandId: brandId!,
+                        products: batch,
+                    });
+                    completedProducts += batch.length;
+                    setImportProgress({
+                        completed: completedProducts,
+                        total: products.length,
+                    });
+                    toast.loading(
+                        `Imported ${completedProducts} of ${products.length} products`,
+                        { id: importToastIdRef.current }
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown import error";
+                    throw new Error(
+                        `Import batch ${index + 1} of ${batches.length} failed: ${message}`
+                    );
+                }
+            }
         },
         onSuccess: (_, __, { toastId }) => {
+            setImportProgress(null);
             setIsAddModalOpen(false);
             window.location.reload();
             return toast.success("Imported products successfully", {
@@ -1069,7 +1104,13 @@ const processFile = async (file: File) => {
                             }
                             onClick={handleFileUpload}
                         >
-                            Process
+                            {isCreating && importProgress ? (
+                                <>
+                                    Imported {importProgress.completed} of {importProgress.total} products
+                                </>
+                            ) : (
+                                "Process"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

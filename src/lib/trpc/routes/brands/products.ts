@@ -1144,7 +1144,11 @@ export const productsRouter = createTRPCRouter({
                 },
             });
 
-            return newData;
+            return {
+                success: true,
+                createdCount: newData.length,
+                updatedCount: touchedExistingProductIds.size,
+            };
         }),
     updateProduct: protectedProcedure
         .input(
