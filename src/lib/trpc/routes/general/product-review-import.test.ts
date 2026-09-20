@@ -25,4 +25,16 @@ describe("admin bulk product import", () => {
         );
         expect(source).not.toContain("return newData;");
     });
+
+    test("shows completed product progress after every successful batch", async () => {
+        const source = await readFile(
+            "src/components/globals/modals/dashboard/product-add-admin.tsx",
+            "utf8"
+        );
+
+        expect(source).toContain("setImportProgress({ completed: 0, total: products.length })");
+        expect(source).toContain("completedProducts += batch.length");
+        expect(source).toContain("Imported ${completedProducts} of ${products.length} products");
+        expect(source).toContain("Imported {importProgress.completed} of {importProgress.total} products");
+    });
 });
