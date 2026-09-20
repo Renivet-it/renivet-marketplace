@@ -98,7 +98,7 @@ test_expectations:
     - { id: TEXP-205-001, category: unit, classification: REQUIRED, reason: "Verify null/missing and configured holdback values both produce zero under suspension.", scenarios: [SCN-205-001, SCN-205-002] }
     - { id: TEXP-205-002, category: unit, classification: REQUIRED, reason: "Verify the explicitly enabled branch still calculates holdback correctly in isolation.", scenarios: [SCN-205-003] }
     - { id: TEXP-205-003, category: unit, classification: REQUIRED, reason: "Verify no prior holdback line yields zero release without error or positive adjustment.", scenarios: [SCN-205-004] }
-    - { id: TEXP-205-004, category: integration, classification: REQUIRED, reason: "Recalculate the 2026-06-H2 fixture and assert no new holdback line appears while BIZ-15 metadata is present.", scenarios: [SCN-205-005, SCN-205-007] }
+    - { id: TEXP-205-004, category: integration, classification: REQUIRED, reason: "Recalculate an equivalent synthetic/non-production payout-cycle fixture (management decision, 2026-09-20 — the real 2026-06-H2 cycle must not be recalculated) and assert no new holdback line appears while BIZ-15 metadata is present. 2026-06-H2 was the originally-referenced fixture in this ticket's design; it remains cited here only as historical context, not as the current validation target.", scenarios: [SCN-205-005, SCN-205-007] }
     - { id: TEXP-205-005, category: regression, classification: REQUIRED, reason: "Verify historical holdback lines remain representable and unrelated deductions/state are unchanged.", scenarios: [SCN-205-006, SCN-205-007] }
     - { id: TEXP-205-006, category: ui_ux, classification: REQUIRED, reason: "Verify statements do not show a holdback line when no holdback was taken and expose the suspension context where appropriate.", scenarios: [SCN-205-005] }
     - { id: TEXP-205-007, category: security, classification: REQUIRED, reason: "Verify controlled configuration inspection is read-only and bounded.", scenarios: [SCN-205-008] }
@@ -166,7 +166,7 @@ implementation_review:
     blocking_findings: []
     required_actions:
         - "REV-205-001: Run controlled read-only inspection of current production holdback configuration and record the result before release validation."
-        - "REV-205-002: Run the approved 2026-06-H2 integration fixture and statement regression in a controlled environment."
+        - "REV-205-002 (superseded 2026-09-20 by management decision — see note below): Run the approved synthetic/non-production integration fixture (not the real 2026-06-H2 cycle) and statement regression in a controlled environment. Originally worded as \"Run the approved 2026-06-H2 integration fixture...\"; the real 2026-06-H2 cycle must not be recalculated for this validation. 2026-06-H2 is preserved here only as historical context for why that cycle was originally chosen as the reference fixture."
     evidence:
         - "Compared the approved REN-205 contract with origin/master..43c3ba9ca2825bf85f5fbaf940bb08183f285c1e."
         - "src/lib/finance/payout-holdback.ts provides the BIZ-15 suspension gate, bounded authority metadata, and an isolated enabled arithmetic branch."

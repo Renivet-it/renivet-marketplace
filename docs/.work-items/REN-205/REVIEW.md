@@ -1,5 +1,9 @@
 # REVIEW: REN-205 — [FCCP][P0] Suspend the Unauthorized 5% Holdback Deduction (BIZ-15)
 
+## Management Decision Addendum (2026-09-20)
+
+**The real `2026-06-H2` payout cycle must not be recalculated to satisfy this review's outstanding items.** Management has directed that REN-205's remaining validation (REV-205-002 below, and the related TEXP-205-004/005/006 items) be completed against an **equivalent synthetic/non-production payout-cycle fixture** instead — one with the same structural characteristics (line-item types, brand summaries, metadata fields) as a real cycle. This addendum does not change any PASS/PARTIAL verdict recorded below; it changes only which fixture satisfies the still-open findings. The original text's references to `2026-06-H2` are preserved unedited below as historical context — they reflect what was approved at the time this review was written, not the current instruction.
+
 ## Executive Result
 
 REVIEW_PASSED_WITH_FINDINGS. The implementation is within the approved REN-205 contract with NO_DRIFT. The real payout path suspends holdback regardless of configuration, preserves the capability and historical line representation, exposes BIZ-15 metadata, and avoids a release adjustment when no current holdback was taken. Controlled production configuration inspection and the approved 2026-06-H2 fixture still need to be run before release validation. Governance re-entry is not required.

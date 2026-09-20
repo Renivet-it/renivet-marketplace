@@ -27,7 +27,9 @@ REN-205 makes the BIZ-15 holdback suspension binding in payout calculation. No r
 
 ## Required validation
 
-In a controlled read-only environment, inspect current brand holdback configuration and report it without mutation. Recalculate the `2026-06-H2` fixture and verify no new `holdback` line is produced, the BIZ-15 metadata is visible, the enabled test branch still computes correctly, and no other deduction changes.
+In a controlled read-only environment, inspect current brand holdback configuration and report it without mutation. Recalculate a **synthetic/non-production payout-cycle fixture** with structural characteristics equivalent to a real cycle (same line-item types, brand summaries, and metadata fields) and verify no new `holdback` line is produced, the BIZ-15 metadata is visible, the enabled test branch still computes correctly, and no other deduction changes.
+
+**Management decision, 2026-09-20: the real `2026-06-H2` cycle must not be recalculated for this validation.** This SPEC originally named `2026-06-H2` as the reference fixture (kept here as historical context only, not as the current instruction) because it was the only populated real cycle available at the time this contract was approved. That choice is superseded — use an equivalent synthetic/non-production fixture instead.
 
 ## Approval gate
 
