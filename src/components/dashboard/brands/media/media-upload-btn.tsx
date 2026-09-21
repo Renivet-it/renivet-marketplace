@@ -3,11 +3,12 @@
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
+import { uploadFilesInBatches } from "@/lib/uploadthing/batch-upload";
 import { useUploadThing } from "@/lib/uploadthing";
 import { handleClientError } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { generatePermittedFileTypes } from "uploadthing/client";
 
@@ -19,6 +20,13 @@ export function BrandMediaUpload({ brandId }: PageProps) {
     const router = useRouter();
 
     const inputRef = useRef<HTMLInputElement>(null!);
+    const uploadToastIdRef = useRef<ReturnType<typeof toast.loading> | undefined>(
+        undefined
+    );
+    const [uploadProgress, setUploadProgress] = useState<{
+        completed: number;
+        total: number;
+    } | null>(null);
 
     const { startUpload, routeConfig } = useUploadThing("brandMediaUploader", {
         onUploadError(e) {
@@ -33,24 +41,49 @@ export function BrandMediaUpload({ brandId }: PageProps) {
             const toastId = toast.loading(
                 "Uploading media, please do not close or refresh the page..."
             );
+            uploadToastIdRef.current = toastId;
             return { toastId };
         },
         mutationFn: async (files: File[]) => {
-            const res = await startUpload(files);
-            if (!res?.length) throw new Error("Failed to upload media");
+            setUploadProgress({ completed: 0, total: files.length });
+            const res = await uploadFilesInBatches(
+                files,
+                async (batch) => {
+                    const uploaded = await startUpload(batch);
+                    if (!uploaded?.length)
+                        throw new Error("Upload batch returned no files");
+                    return uploaded;
+                },
+                {
+                    onBatchComplete: async (uploaded) => {
+                        await createAsync({
+                            id: brandId,
+                            values: uploaded.map((file) => ({
+                                name: file.name,
+                                url: file.appUrl,
+                                type: file.type,
+                                size: file.size,
+                                brandId,
+                            })),
+                        });
+                    },
+                    onProgress: (completed) => {
+                        setUploadProgress({
+                            completed,
+                            total: files.length,
+                        });
+                        toast.loading(
+                            `Uploaded ${completed} of ${files.length} images`,
+                            { id: uploadToastIdRef.current }
+                        );
+                    },
+                }
+            );
 
-            return await createAsync({
-                id: brandId,
-                values: res.map((file) => ({
-                    name: file.name,
-                    url: file.appUrl,
-                    type: file.type,
-                    size: file.size,
-                    brandId,
-                })),
-            });
+            return res;
         },
         onSuccess: (_, __, { toastId }) => {
+            setUploadProgress(null);
             toast.success("Media uploaded successfully", { id: toastId });
             router.refresh();
         },
@@ -67,7 +100,9 @@ export function BrandMediaUpload({ brandId }: PageProps) {
                 onClick={() => inputRef.current.click()}
             >
                 <Icons.CloudUpload className="size-5" />
-                Upload Media
+                {isUploading && uploadProgress
+                    ? `Uploaded ${uploadProgress.completed} of ${uploadProgress.total} images`
+                    : "Upload Media"}
             </Button>
 
             <input
