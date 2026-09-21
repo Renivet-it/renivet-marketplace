@@ -403,7 +403,7 @@ export function NavbarHome({
                         <Icons.Menu className="size-6" />
                     </button>
 
-                    <div className="flex min-w-0 items-center gap-2 max-[380px]:gap-1 md:gap-8 xl:gap-12">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 max-[380px]:gap-1 md:gap-6 xl:gap-8">
                         {customLogo ? (
                             customLogo
                         ) : (
@@ -420,7 +420,7 @@ export function NavbarHome({
                             </Link>
                         )}
 
-                        <div className="hidden items-center gap-1 lg:flex">
+                        <div className="hidden min-w-0 items-center gap-1 overflow-hidden lg:flex">
                             <NavigationMenu className="static h-full max-w-none">
                                 {/* <NavigationMenuList>
                                 {isCategoriesLoading ? (
@@ -810,12 +810,12 @@ export function NavbarHome({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-3 xl:gap-4">
+                    <div className="flex shrink-0 items-center gap-1 sm:gap-3 xl:gap-4">
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
                                 wrapper:
-                                    "hidden min-w-[280px] xl:flex xl:min-w-[360px] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                    "hidden min-w-0 xl:flex xl:w-[clamp(220px,24vw,360px)] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
                             }}
                         />
                         {/* âœ… Guest-only Wishlist & Cart */}
