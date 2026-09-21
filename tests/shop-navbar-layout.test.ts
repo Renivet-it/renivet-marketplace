@@ -21,7 +21,7 @@ describe("shop desktop layout", () => {
         );
 
         expect(source).toContain(
-            'classNames={{ innerWrapper: "py-4 md:py-4" }}'
+            'classNames={{ innerWrapper: "py-2 md:py-2" }}'
         );
     });
 });
