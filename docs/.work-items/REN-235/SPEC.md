@@ -33,6 +33,10 @@ The approved pricing behavior is: use the current selling price as the discount 
 7. UI reports progress, failures, and a downloadable error result.
 8. Admin can roll back the latest completed import.
 
+## Admin location
+
+Add a new **Product Discounts** menu item under **Dashboard -> General -> Platform Settings**. The page is restricted to authorized catalog/finance administrators and contains the upload control, preview table, apply action, progress state, import history, error download, and rollback action.
+
 ## Price calculation
 
 For current price `P` and discount fraction `D` (for example `0.45`), calculate:

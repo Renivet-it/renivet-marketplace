@@ -49,6 +49,7 @@ requirements:
     - { id: REQ-235-005, description: "Require authorized explicit confirmation before production mutation.", type: safety }
     - { id: REQ-235-006, description: "Apply changes idempotently in batches with progress, retry, per-row outcomes, and partial-failure recovery.", type: explicit }
     - { id: REQ-235-007, description: "Persist import audit data and support rollback with later-change conflict detection.", type: safety }
+    - { id: REQ-235-008, description: "Expose the workflow as Product Discounts under Dashboard -> General -> Platform Settings for authorized administrators.", type: explicit }
 scenarios:
     - { id: SCN-235-001, description: "A valid product SKU appears in preview with current price, 45% discount, preserved compare-at price, and calculated new price.", requirement_ids: [REQ-235-001, REQ-235-002, REQ-235-003] }
     - { id: SCN-235-002, description: "A valid variant SKU updates only the variant price and compare-at price, not the parent product price.", requirement_ids: [REQ-235-001, REQ-235-003] }
@@ -57,6 +58,7 @@ scenarios:
     - { id: SCN-235-005, description: "Confirmed apply updates valid rows in batches and retrying the same import does not change values twice.", requirement_ids: [REQ-235-005, REQ-235-006] }
     - { id: SCN-235-006, description: "A failed batch reports row outcomes, permits retry, and does not duplicate successful rows.", requirement_ids: [REQ-235-006] }
     - { id: SCN-235-007, description: "Rollback restores the import's before-values and blocks conflicting later edits with a report.", requirement_ids: [REQ-235-007] }
+    - { id: SCN-235-008, description: "An authorized administrator opens Product Discounts from Platform Settings and can upload, preview, apply, inspect history, and roll back imports.", requirement_ids: [REQ-235-005, REQ-235-008] }
 invariants:
     - { id: INV-235-001, description: "No preview operation mutates product or variant prices." }
     - { id: INV-235-002, description: "Every applied row has exactly one unambiguous catalog target." }
@@ -115,6 +117,7 @@ traceability:
         - { requirement_id: REQ-235-005, scenario_ids: [SCN-235-004, SCN-235-005] }
         - { requirement_id: REQ-235-006, scenario_ids: [SCN-235-005, SCN-235-006] }
         - { requirement_id: REQ-235-007, scenario_ids: [SCN-235-007] }
+        - { requirement_id: REQ-235-008, scenario_ids: [SCN-235-008] }
     scenario_to_invariants:
         - { scenario_id: SCN-235-001, invariant_ids: [INV-235-001, INV-235-002] }
         - { scenario_id: SCN-235-002, invariant_ids: [INV-235-002] }
@@ -123,6 +126,7 @@ traceability:
         - { scenario_id: SCN-235-005, invariant_ids: [INV-235-002, INV-235-003] }
         - { scenario_id: SCN-235-006, invariant_ids: [INV-235-003] }
         - { scenario_id: SCN-235-007, invariant_ids: [INV-235-004] }
+        - { scenario_id: SCN-235-008, invariant_ids: [INV-235-001] }
     scenario_to_test_expectations:
         - { scenario_id: SCN-235-001, test_expectation_ids: [TEXP-235-001, TEXP-235-002] }
         - { scenario_id: SCN-235-002, test_expectation_ids: [TEXP-235-001, TEXP-235-005] }
@@ -131,3 +135,4 @@ traceability:
         - { scenario_id: SCN-235-005, test_expectation_ids: [TEXP-235-004, TEXP-235-005] }
         - { scenario_id: SCN-235-006, test_expectation_ids: [TEXP-235-004] }
         - { scenario_id: SCN-235-007, test_expectation_ids: [TEXP-235-006] }
+        - { scenario_id: SCN-235-008, test_expectation_ids: [TEXP-235-002, TEXP-235-003] }
