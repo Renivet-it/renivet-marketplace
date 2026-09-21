@@ -18,6 +18,7 @@ import {
     uniqueSelectedMedia,
 } from "@/lib/product-media-selection";
 import { trpc } from "@/lib/trpc/client";
+import { uploadFilesInBatches } from "@/lib/uploadthing/batch-upload";
 import { useUploadThing } from "@/lib/uploadthing";
 import { handleClientError } from "@/lib/utils";
 import { BrandMediaItem } from "@/lib/validations";
@@ -55,6 +56,10 @@ export function MediaSelectModal({
     onSelectionComplete,
 }: PageProps) {
     const [search, setSearch] = useState("");
+    const [uploadProgress, setUploadProgress] = useState<{
+        completed: number;
+        total: number;
+    } | null>(null);
     const [selectedItems, setSelectedItems] = useState<BrandMediaItem[]>(() =>
         uniqueSelectedMedia(selectedMedia)
     );
@@ -64,6 +69,9 @@ export function MediaSelectModal({
     }, [isOpen, selectedMedia]);
 
     const inputRef = useRef<HTMLInputElement>(null!);
+    const uploadToastIdRef = useRef<ReturnType<typeof toast.loading> | undefined>(
+        undefined
+    );
 
     const itemsToMap = useMemo(() => {
         if (search.length === 0) return allMedia;
@@ -90,24 +98,49 @@ export function MediaSelectModal({
             const toastId = toast.loading(
                 "Uploading media, please do not close or refresh the page..."
             );
+            uploadToastIdRef.current = toastId;
             return { toastId };
         },
         mutationFn: async (files: File[]) => {
-            const res = await startUpload(files);
-            if (!res?.length) throw new Error("Failed to upload media");
+            setUploadProgress({ completed: 0, total: files.length });
+            const res = await uploadFilesInBatches(
+                files,
+                async (batch) => {
+                    const uploaded = await startUpload(batch);
+                    if (!uploaded?.length)
+                        throw new Error("Upload batch returned no files");
+                    return uploaded;
+                },
+                {
+                    onBatchComplete: async (uploaded) => {
+                        await createAsync({
+                            id: brandId,
+                            values: uploaded.map((file) => ({
+                                name: file.name,
+                                url: file.appUrl,
+                                type: file.type,
+                                size: file.size,
+                                brandId,
+                            })),
+                        });
+                    },
+                    onProgress: (completed) => {
+                        setUploadProgress({
+                            completed,
+                            total: files.length,
+                        });
+                        toast.loading(
+                            `Uploaded ${completed} of ${files.length} images`,
+                            { id: uploadToastIdRef.current }
+                        );
+                    },
+                }
+            );
 
-            return await createAsync({
-                id: brandId,
-                values: res.map((file) => ({
-                    name: file.name,
-                    url: file.appUrl,
-                    type: file.type,
-                    size: file.size,
-                    brandId,
-                })),
-            });
+            return res;
         },
         onSuccess: (_, __, { toastId }) => {
+            setUploadProgress(null);
             toast.success("Media uploaded successfully", { id: toastId });
             refetch();
         },
@@ -149,7 +182,9 @@ export function MediaSelectModal({
                         onClick={() => inputRef.current.click()}
                     >
                         <Icons.CloudUpload className="size-5" />
-                        Upload Media
+                        {isUploading && uploadProgress
+                            ? `Uploaded ${uploadProgress.completed} of ${uploadProgress.total} images`
+                            : "Upload Media"}
                     </Button>
 
                     <input
