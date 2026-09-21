@@ -1,0 +1,133 @@
+schema_version: "1.0"
+task:
+    id: REN-235
+    title: "Add safe one-click product discount import with preview and rollback"
+    source: linear
+    branch: feat/ren-235-spec
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-235
+        priority: High
+        status: Backlog
+        assignee: Ayan Ganguly
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Bulk production price mutation changes customer-facing catalog prices."
+        - "Product and variant SKU matching can cause incorrect financial and inventory-facing prices if ambiguous."
+        - "Rollback, authorization, idempotency, and partial failure are required for safe production operation."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - supplied CSV/XLSX schemas and SKU overlap
+        - product and product-variant price schema
+        - existing product import and update flows
+        - existing SKU indexes and price display calculations
+        - admin authorization boundaries
+        - audit and batch-operation patterns
+    excluded_areas:
+        - production mutation
+        - order discount or coupon behavior
+        - inventory updates
+        - EAN fallback policy beyond explicit opt-in
+    dependencies: [DEP-235-001, DEP-235-002, DEP-235-003]
+    integrations: [INT-235-001, INT-235-002]
+    security_boundaries: [SEC-235-001, SEC-235-002]
+    state_transitions: [preview_created, preview_confirmed, import_running, import_completed, import_partial, import_rolled_back]
+    related_tests: [TEXP-235-001, TEXP-235-002, TEXP-235-003, TEXP-235-004, TEXP-235-005, TEXP-235-006]
+    uncertainties:
+        - "Whether product-level SKU and variant-level SKU collisions exist in the live catalog must be reported by preview, not guessed."
+requirements:
+    - { id: REQ-235-001, description: "Match imported unique product codes against product and variant SKU/native-SKU fields before any write.", type: explicit }
+    - { id: REQ-235-002, description: "Show current price, discount, calculated price, compare-at price, and exact target before apply.", type: explicit }
+    - { id: REQ-235-003, description: "Calculate discounted price from current selling price, preserve current price as compare-at price, and store integer paise values.", type: explicit }
+    - { id: REQ-235-004, description: "Block unmatched, duplicate, conflicting, ambiguous, invalid, inactive, or deleted rows from mutation.", type: safety }
+    - { id: REQ-235-005, description: "Require authorized explicit confirmation before production mutation.", type: safety }
+    - { id: REQ-235-006, description: "Apply changes idempotently in batches with progress, retry, per-row outcomes, and partial-failure recovery.", type: explicit }
+    - { id: REQ-235-007, description: "Persist import audit data and support rollback with later-change conflict detection.", type: safety }
+scenarios:
+    - { id: SCN-235-001, description: "A valid product SKU appears in preview with current price, 45% discount, preserved compare-at price, and calculated new price.", requirement_ids: [REQ-235-001, REQ-235-002, REQ-235-003] }
+    - { id: SCN-235-002, description: "A valid variant SKU updates only the variant price and compare-at price, not the parent product price.", requirement_ids: [REQ-235-001, REQ-235-003] }
+    - { id: SCN-235-003, description: "A product/variant collision, duplicate input, missing SKU, invalid percentage, or missing catalog row is visible and blocked.", requirement_ids: [REQ-235-001, REQ-235-004] }
+    - { id: SCN-235-004, description: "An unauthorized user cannot preview sensitive catalog pricing or apply the import.", requirement_ids: [REQ-235-005] }
+    - { id: SCN-235-005, description: "Confirmed apply updates valid rows in batches and retrying the same import does not change values twice.", requirement_ids: [REQ-235-005, REQ-235-006] }
+    - { id: SCN-235-006, description: "A failed batch reports row outcomes, permits retry, and does not duplicate successful rows.", requirement_ids: [REQ-235-006] }
+    - { id: SCN-235-007, description: "Rollback restores the import's before-values and blocks conflicting later edits with a report.", requirement_ids: [REQ-235-007] }
+invariants:
+    - { id: INV-235-001, description: "No preview operation mutates product or variant prices." }
+    - { id: INV-235-002, description: "Every applied row has exactly one unambiguous catalog target." }
+    - { id: INV-235-003, description: "A repeated import with the same source hash and row values is idempotent." }
+    - { id: INV-235-004, description: "Rollback never overwrites a later price change without explicit conflict handling." }
+flows:
+    - { id: FLOW-235-001, description: "Upload -> parse -> normalize -> match product/variant -> validate -> preview.", state_transitions: [preview_created] }
+    - { id: FLOW-235-002, description: "Confirm -> create import job -> batch update -> record audit -> complete or partial failure.", state_transitions: [preview_confirmed, import_running, import_completed, import_partial] }
+    - { id: FLOW-235-003, description: "Select import -> check current values -> restore before-values or report conflicts.", state_transitions: [import_rolled_back] }
+dependencies:
+    - { id: DEP-235-001, name: product and variant SKU fields, purpose: Catalog target identity, description: "Existing product and variant SKU/native-SKU fields and indexes provide the primary match surface.", status: resolved }
+    - { id: DEP-235-002, name: product import/update authorization, purpose: Reuse admin access boundaries, description: "Existing protected product routes provide authorization patterns that must be reused or extended.", status: needs_confirmation }
+    - { id: DEP-235-003, name: audit and background job storage, purpose: Attribution, retry, progress, and rollback, description: "The implementation must identify existing audit/job storage or add a bounded task-local persistence mechanism.", status: needs_investigation }
+integrations:
+    - { id: INT-235-001, system: products and product_variants, purpose: Apply catalog prices, failure_mode: "Wrong product price or partial catalog update", retry_idempotency: "Import row identity and source hash prevent duplicate mutation." }
+    - { id: INT-235-002, system: CSV/XLSX parser, purpose: Read discount source files, failure_mode: "Malformed or misinterpreted discount data", retry_idempotency: "Normalized source hash identifies the import." }
+personas:
+    - { id: PER-235-001, role: catalog_admin, applicability: Uploads, reviews, confirms, and rolls back discount imports. }
+security_boundaries:
+    - { id: SEC-235-001, description: "Only authorized catalog/finance administrators may preview, apply, or roll back production price changes." }
+    - { id: SEC-235-002, description: "Import audit and error reports contain catalog data only and must not expose unrelated customer/payment data." }
+business_rules:
+    - { id: BR-235-001, description: "Discount fractions such as 0.45 represent 45%." }
+    - { id: BR-235-002, description: "Current selling price is the discount basis; the old selling price becomes compare-at price." }
+    - { id: BR-235-003, description: "All stored prices are integer paise and rounded deterministically." }
+decisions:
+    - { id: DEC-235-001, question: "What price is the discount applied to?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Apply to current selling price and preserve that value as compare-at price.", basis: "User confirmed this behavior in conversation.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-235-002, question: "Which identifier is primary?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use SKU/unique product code first; use EAN only as explicit fallback.", basis: "The user confirmed the workbook unique product code is the catalog SKU.", confidence: high, consequence: medium, human_confirmation_required: false }
+test_expectations:
+    - { id: TEXP-235-001, category: unit, classification: REQUIRED, reason: "Validate matching and price calculation across product and variant targets.", scenarios: [SCN-235-001, SCN-235-002, SCN-235-003] }
+    - { id: TEXP-235-002, category: component, classification: REQUIRED, reason: "Verify preview values, target labels, counts, and blocked-row reasons.", scenarios: [SCN-235-001, SCN-235-003] }
+    - { id: TEXP-235-003, category: api, classification: REQUIRED, reason: "Verify authorization and preview-before-write behavior.", scenarios: [SCN-235-003, SCN-235-004] }
+    - { id: TEXP-235-004, category: integration, classification: REQUIRED, reason: "Verify batched apply, idempotency, partial failure, and retry.", scenarios: [SCN-235-005, SCN-235-006] }
+    - { id: TEXP-235-005, category: regression, classification: REQUIRED, reason: "Verify product and variant prices, compare-at values, inventory, and order pricing behavior remain correctly scoped.", scenarios: [SCN-235-002, SCN-235-005] }
+    - { id: TEXP-235-006, category: security, classification: REQUIRED, reason: "Verify only authorized roles can apply or roll back and audit data is bounded.", scenarios: [SCN-235-004, SCN-235-007] }
+critic:
+    required: true
+    completed: false
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: []
+    findings: []
+approval:
+    state: PENDING
+    design_blockers: []
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-235-001, scenario_ids: [SCN-235-001, SCN-235-002, SCN-235-003] }
+        - { requirement_id: REQ-235-002, scenario_ids: [SCN-235-001, SCN-235-003] }
+        - { requirement_id: REQ-235-003, scenario_ids: [SCN-235-001, SCN-235-002] }
+        - { requirement_id: REQ-235-004, scenario_ids: [SCN-235-003] }
+        - { requirement_id: REQ-235-005, scenario_ids: [SCN-235-004, SCN-235-005] }
+        - { requirement_id: REQ-235-006, scenario_ids: [SCN-235-005, SCN-235-006] }
+        - { requirement_id: REQ-235-007, scenario_ids: [SCN-235-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-235-001, invariant_ids: [INV-235-001, INV-235-002] }
+        - { scenario_id: SCN-235-002, invariant_ids: [INV-235-002] }
+        - { scenario_id: SCN-235-003, invariant_ids: [INV-235-001, INV-235-002] }
+        - { scenario_id: SCN-235-004, invariant_ids: [INV-235-001] }
+        - { scenario_id: SCN-235-005, invariant_ids: [INV-235-002, INV-235-003] }
+        - { scenario_id: SCN-235-006, invariant_ids: [INV-235-003] }
+        - { scenario_id: SCN-235-007, invariant_ids: [INV-235-004] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-235-001, test_expectation_ids: [TEXP-235-001, TEXP-235-002] }
+        - { scenario_id: SCN-235-002, test_expectation_ids: [TEXP-235-001, TEXP-235-005] }
+        - { scenario_id: SCN-235-003, test_expectation_ids: [TEXP-235-001, TEXP-235-002, TEXP-235-003] }
+        - { scenario_id: SCN-235-004, test_expectation_ids: [TEXP-235-003, TEXP-235-006] }
+        - { scenario_id: SCN-235-005, test_expectation_ids: [TEXP-235-004, TEXP-235-005] }
+        - { scenario_id: SCN-235-006, test_expectation_ids: [TEXP-235-004] }
+        - { scenario_id: SCN-235-007, test_expectation_ids: [TEXP-235-006] }
