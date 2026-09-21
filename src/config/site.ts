@@ -546,6 +546,14 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.ADMINISTRATOR,
             },
             {
+                title: "Product Discounts",
+                url: "/dashboard/general/settings/product-discounts",
+                permissions:
+                    BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.ADMINISTRATOR,
+            },
+            {
                 title: "Legal & Compliance",
                 url: "/dashboard/general/finance/legal-compliance",
                 permissions:

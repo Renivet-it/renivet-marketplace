@@ -56,7 +56,8 @@ import {
 } from "@/lib/finance/refunds";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 import type { Context } from "@/lib/trpc/context";
-import { getUserPermissions } from "@/lib/utils";
+import { getUserPermissions, hasPermission } from "@/lib/utils";
+import { BitFieldSitePermission } from "@/config/permissions";
 import {
     adminProcedure,
     createTRPCRouter,
@@ -65,6 +66,8 @@ import {
 } from "@/lib/trpc/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { inArray, eq, and, or } from "drizzle-orm";
+import { products, productVariants } from "@/lib/db/schema";
 
 const financeModuleEnum = z.enum(financeModules);
 
@@ -96,7 +99,62 @@ async function assertFinanceAccess(
     }
 }
 
+async function assertCatalogDiscountAccess(ctx: Context, mode: "view" | "manage") {
+    if (!ctx.user?.id) throw new TRPCError({ code: "UNAUTHORIZED", message: "You're not authorized" });
+    const permissions = getUserPermissions(ctx.user.roles ?? []).sitePermissions;
+    const allowed = hasPermission(permissions, [
+        BitFieldSitePermission.ADMINISTRATOR,
+        BitFieldSitePermission.MANAGE_PRODUCTS,
+        BitFieldSitePermission.MANAGE_SETTINGS,
+    ], "any");
+    if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: `You do not have ${mode} access for product discounts.` });
+}
+
 export const financeComplianceRouter = createTRPCRouter({
+    previewProductDiscounts: protectedProcedure
+        .input(z.object({ rows: z.array(z.object({ sku: z.string().min(1), discount: z.number().min(0).max(1) })).min(1).max(20000) }))
+        .mutation(async ({ ctx, input }) => {
+            await assertCatalogDiscountAccess(ctx, "view");
+            const skus = [...new Set(input.rows.map((row) => row.sku.trim()).filter(Boolean))];
+            const [productRows, variantRows] = await Promise.all([
+                ctx.db.query.products.findMany({ where: or(inArray(products.nativeSku, skus), inArray(products.sku, skus)), columns: { id: true, title: true, nativeSku: true, sku: true, price: true, compareAtPrice: true } }),
+                ctx.db.query.productVariants.findMany({ where: and(or(inArray(productVariants.nativeSku, skus), inArray(productVariants.sku, skus)), eq(productVariants.isDeleted, false)), columns: { id: true, productId: true, nativeSku: true, sku: true, price: true, compareAtPrice: true } }),
+            ]);
+            const productMap = new Map(productRows.flatMap((row) => [row.nativeSku, row.sku].filter((sku): sku is string => Boolean(sku?.trim())).map((sku) => [sku.trim(), { ...row, targetType: "product" as const }])));
+            const variantMap = new Map(variantRows.flatMap((row) => [row.nativeSku, row.sku].filter((sku): sku is string => Boolean(sku?.trim())).map((sku) => [sku.trim(), { ...row, title: null, targetType: "variant" as const }])));
+            return input.rows.map((row, index) => {
+                const sku = row.sku.trim();
+                const product = productMap.get(sku);
+                const variant = variantMap.get(sku);
+                const target = product && variant ? undefined : (variant ?? product);
+                const currentPrice = target?.price ?? null;
+                const discountedPrice = currentPrice == null ? null : Math.max(0, Math.round(currentPrice * (1 - row.discount)));
+                return {
+                    rowNumber: index + 2, sku, discount: row.discount, targetType: target?.targetType ?? null,
+                    targetId: target?.id ?? null, title: target?.title ?? null, currentPrice,
+                    compareAtPrice: target?.compareAtPrice ?? null, discountedPrice,
+                    status: product && variant ? "conflict" : !target ? "unmatched" : currentPrice == null ? "invalid" : discountedPrice === currentPrice ? "unchanged" : "ready",
+                };
+            });
+        }),
+    applyProductDiscounts: protectedProcedure
+        .input(z.object({ rows: z.array(z.object({ targetType: z.enum(["product", "variant"]), targetId: z.string().uuid(), currentPrice: z.number().int(), discountedPrice: z.number().int(), compareAtPrice: z.number().int().nullable() })).min(1).max(20000) }))
+        .mutation(async ({ ctx, input }) => {
+            await assertCatalogDiscountAccess(ctx, "manage");
+            let updated = 0;
+            let stale = 0;
+            for (let offset = 0; offset < input.rows.length; offset += 100) {
+                const batch = input.rows.slice(offset, offset + 100);
+                await ctx.db.transaction(async (tx) => {
+                    for (const row of batch) {
+                        const table = row.targetType === "product" ? products : productVariants;
+                        const result = await tx.update(table).set({ price: row.discountedPrice, compareAtPrice: row.currentPrice, updatedAt: new Date() }).where(and(eq(table.id, row.targetId), eq(table.price, row.currentPrice))).returning({ id: table.id });
+                        if (result.length) updated += 1; else stale += 1;
+                    }
+                });
+            }
+            return { updated, stale, total: input.rows.length };
+        }),
     health: publicProcedure.query(() => ({
         ok: true,
         modules: financeModules,
