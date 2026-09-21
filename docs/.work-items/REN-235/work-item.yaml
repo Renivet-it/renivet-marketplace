@@ -96,14 +96,14 @@ test_expectations:
     - { id: TEXP-235-006, category: security, classification: REQUIRED, reason: "Verify only authorized roles can apply or roll back and audit data is bounded.", scenarios: [SCN-235-004, SCN-235-007] }
 critic:
     required: true
-    completed: false
+    completed: true
     artifact: CRITIQUE.md
     reviewer: independent fresh-context critic
     fresh_context: true
     read_only: true
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    categories_reviewed: []
-    findings: []
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings: [CRIT-235-001, CRIT-235-002, CRIT-235-003, CRIT-235-004, CRIT-235-005, CRIT-235-006, CRIT-235-007, CRIT-235-008, CRIT-235-009, CRIT-235-010, CRIT-235-011, CRIT-235-012, CRIT-235-013, CRIT-235-014, CRIT-235-015, CRIT-235-016, CRIT-235-017, CRIT-235-018]
 approval:
     state: PENDING
     design_blockers: []
