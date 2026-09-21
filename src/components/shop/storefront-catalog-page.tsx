@@ -181,7 +181,7 @@ export async function StorefrontCatalogPage({
     const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
 
     return (
-        <GeneralShell>
+        <GeneralShell classNames={{ innerWrapper: "py-4 md:py-4" }}>
             <div className="space-y-4 md:space-y-6">
                 {pageHeading || editorialIntro ? (
                     <div
