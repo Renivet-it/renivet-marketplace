@@ -29,6 +29,7 @@ import {
     verifyDeletionRequest,
 } from "@/lib/finance/dpdp";
 import { generateGstExport, previewGstExport } from "@/lib/finance/gst";
+import { analyzeCommissionRulePreview } from "@/lib/finance/commission-rule-admin";
 import { buildMonthlyPl, lockMonthlyPl, refreshMonthlyPl, unlockMonthlyPl } from "@/lib/finance/pl";
 import {
     approvePayoutCycle,
@@ -775,7 +776,7 @@ export const financeComplianceRouter = createTRPCRouter({
             return row;
         }),
 
-    listCommissionRules: adminProcedure
+    listCommissionRules: protectedProcedure
         .input(
             z.object({
                 brandId: z.string().uuid().optional(),
@@ -788,7 +789,62 @@ export const financeComplianceRouter = createTRPCRouter({
             return ctx.queries.financeCompliance.listCommissionRules(input);
         }),
 
-    upsertCommissionRule: adminProcedure
+    listCommissionRuleAdminRows: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid().optional(),
+                categoryId: z.string().uuid().optional(),
+                isActive: z.boolean().optional(),
+            }).optional()
+        )
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "view");
+            return ctx.queries.financeCompliance.listCommissionRuleAdminRows(input);
+        }),
+
+    listCommissionRuleLookups: protectedProcedure.query(async ({ ctx }) => {
+        await assertFinanceAccess(ctx, "payouts", "view");
+        return ctx.queries.financeCompliance.listCommissionRuleLookups();
+    }),
+
+    previewCommissionRule: protectedProcedure
+        .input(
+            z.object({
+                id: z.string().uuid().optional(),
+                ruleName: z.string().min(2),
+                brandId: z.string().uuid().optional(),
+                categoryId: z.string().uuid().optional(),
+                productTypeId: z.string().uuid().optional(),
+                commissionPercentBps: z.number().int().nonnegative(),
+                priority: z.number().int(),
+                effectiveFrom: z.string(),
+                effectiveTo: z.string().optional(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "view");
+            const rules = await ctx.queries.financeCompliance.listCommissionRules({
+                isActive: true,
+            });
+            return analyzeCommissionRulePreview({
+                candidate: {
+                    ...input,
+                    holdbackPercentBps: 0,
+                    effectiveTo: input.effectiveTo ?? null,
+                    isActive: true,
+                },
+                rules,
+            });
+        }),
+
+    listCommissionRuleHistory: protectedProcedure
+        .input(z.object({ ruleId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "payouts", "view");
+            return ctx.queries.financeCompliance.listCommissionRuleHistory(input.ruleId);
+        }),
+
+    upsertCommissionRule: protectedProcedure
         .input(
             z.object({
                 id: z.string().uuid().optional(),

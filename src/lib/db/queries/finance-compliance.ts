@@ -45,6 +45,7 @@ import {
     plManualEntries,
     plSnapshots,
     products,
+    productTypes,
     productVariants,
     reasonMasters,
     refunds,
@@ -708,6 +709,72 @@ class FinanceComplianceQuery {
                 asc(commissionRules.priority),
                 desc(commissionRules.createdAt),
             ],
+        });
+    }
+
+    async listCommissionRuleAdminRows(filters?: {
+        brandId?: string;
+        categoryId?: string;
+        isActive?: boolean;
+    }) {
+        const rows = await db
+            .select({
+                rule: commissionRules,
+                brandName: brands.name,
+                categoryName: categories.name,
+                productTypeName: productTypes.name,
+            })
+            .from(commissionRules)
+            .leftJoin(brands, eq(commissionRules.brandId, brands.id))
+            .leftJoin(categories, eq(commissionRules.categoryId, categories.id))
+            .leftJoin(productTypes, eq(commissionRules.productTypeId, productTypes.id))
+            .where(
+                and(
+                    filters?.brandId
+                        ? eq(commissionRules.brandId, filters.brandId)
+                        : undefined,
+                    filters?.categoryId
+                        ? eq(commissionRules.categoryId, filters.categoryId)
+                        : undefined,
+                    filters?.isActive !== undefined
+                        ? eq(commissionRules.isActive, filters.isActive)
+                        : undefined
+                )
+            )
+            .orderBy(asc(commissionRules.priority), desc(commissionRules.createdAt));
+
+        return rows;
+    }
+
+    async listCommissionRuleLookups() {
+        const [brandRows, categoryRows, productTypeRows] = await Promise.all([
+            db.query.brands.findMany({
+                columns: { id: true, name: true },
+                where: eq(brands.isActive, true),
+                orderBy: asc(brands.name),
+            }),
+            db.query.categories.findMany({
+                columns: { id: true, name: true },
+                orderBy: asc(categories.name),
+            }),
+            db.query.productTypes.findMany({
+                columns: { id: true, name: true, categoryId: true },
+                orderBy: asc(productTypes.name),
+            }),
+        ]);
+
+        return {
+            brands: brandRows,
+            categories: categoryRows,
+            productTypes: productTypeRows,
+        };
+    }
+
+    async listCommissionRuleHistory(ruleId: string) {
+        return this.listFinanceAuditLogs({
+            entityType: "commission_rule",
+            entityId: ruleId,
+            limit: 100,
         });
     }
 
