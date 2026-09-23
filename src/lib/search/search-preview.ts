@@ -44,6 +44,7 @@ export function toSearchPreviewProducts(data: unknown) {
             title?: unknown;
             price?: unknown;
             media?: unknown;
+            variants?: unknown;
             brand?: { name?: unknown } | null;
         };
         const mediaRows = Array.isArray(product.media)
@@ -75,13 +76,28 @@ export function toSearchPreviewProducts(data: unknown) {
 
         if (!id || !name) return [];
 
+        const variantPrice = Array.isArray(product.variants)
+            ? product.variants.find(
+                  (variant) =>
+                      variant &&
+                      typeof variant === "object" &&
+                      typeof (variant as { price?: unknown }).price ===
+                          "number"
+              )
+            : undefined;
+        const price =
+            typeof product.price === "number"
+                ? product.price
+                : variantPrice && typeof variantPrice === "object"
+                  ? ((variantPrice as { price?: number }).price ?? 0)
+                  : 0;
+
         return [
             {
                 id,
                 slug: typeof product.slug === "string" ? product.slug : id,
                 name,
-                price:
-                    typeof product.price === "number" ? product.price : 0,
+                price,
                 media: mediaUrl ? { url: mediaUrl } : null,
                 ...(typeof product.brand?.name === "string"
                     ? { brand: { name: product.brand.name } }
