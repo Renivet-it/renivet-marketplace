@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    buildReturnAttributionUpdate,
     isPayoutAttributionLocked,
     requiresReturnAttributionNotes,
     payoutLineItemReferencesCase,
@@ -24,5 +25,22 @@ describe("return attribution rules", () => {
         expect(payoutLineItemReferencesCase({ referenceId: "refund-1", orderId: "order-1" }, "refund-1")).toBe(true);
         expect(payoutLineItemReferencesCase({ referenceId: "order-1", orderId: "order-1" }, "refund-1")).toBe(false);
         expect(payoutLineItemReferencesCase({ referenceId: null, orderId: "order-1" }, "order-1")).toBe(true);
+    });
+
+    test("builds a synchronized return update and rejects unnoted reclassification", () => {
+        expect(buildReturnAttributionUpdate({
+            previous: null,
+            next: "brand_fault",
+            notes: "Reviewed evidence",
+        })).toMatchObject({
+            costAllocation: "brand_fault",
+            policyBucket: "brand_fault",
+        });
+
+        expect(() => buildReturnAttributionUpdate({
+            previous: "customer_fault",
+            next: "brand_fault",
+            notes: "",
+        })).toThrow("Notes are required");
     });
 });
