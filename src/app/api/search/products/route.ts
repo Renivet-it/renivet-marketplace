@@ -1,5 +1,26 @@
 import { NextResponse } from "next/server";
 import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
+import { productQueries } from "@/lib/db/queries";
+import { toSearchPreviewProducts } from "@/lib/search/search-preview";
+
+async function getDatabaseProductPreviews(query: string) {
+    try {
+        const result = await productQueries.getProducts({
+            page: 1,
+            limit: 4,
+            search: query,
+            isActive: true,
+            isAvailable: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            requireMedia: true,
+        });
+        return toSearchPreviewProducts(result);
+    } catch {
+        return [];
+    }
+}
 
 
 export async function GET(request: Request) {
@@ -11,7 +32,9 @@ export async function GET(request: Request) {
     }
 
     const upstreamUrl = buildEmbeddingServiceUrl("/search/advanced-rag");
-    if (!upstreamUrl) return NextResponse.json([]);
+    if (!upstreamUrl) {
+        return NextResponse.json(await getDatabaseProductPreviews(query));
+    }
     upstreamUrl.searchParams.set("query", query);
     upstreamUrl.searchParams.set("limit", "4");
 
@@ -26,16 +49,22 @@ export async function GET(request: Request) {
         });
 
         if (!response.ok) {
-            return NextResponse.json([], { status: 200 });
+            return NextResponse.json(await getDatabaseProductPreviews(query));
         }
 
         const data = await response.json();
-        return NextResponse.json(Array.isArray(data) ? data.slice(0, 4) : [], {
-            headers: {
-                "Cache-Control": "private, max-age=15",
-            },
-        });
+        const products = toSearchPreviewProducts(data);
+        return NextResponse.json(
+            products.length > 0
+                ? products
+                : await getDatabaseProductPreviews(query),
+            {
+                headers: {
+                    "Cache-Control": "private, max-age=15",
+                },
+            }
+        );
     } catch {
-        return NextResponse.json([], { status: 200 });
+        return NextResponse.json(await getDatabaseProductPreviews(query));
     }
 }
