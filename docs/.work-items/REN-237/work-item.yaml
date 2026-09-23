@@ -1,0 +1,165 @@
+schema_version: "1.0"
+task:
+    id: REN-237
+    title: "[FCCP][P1] Return/RTO Fault Attribution & Review"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-237/fccpp1-returnrto-fault-attribution-review
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-226
+        linear_branch: ayanganganguly333/ren-237-fccpp1-returnrto-fault-attribution-review
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Financial attribution changes return deductions and future RTO fee allocation."
+        - "The workflow crosses refund, RTO, payout lifecycle, authorization, evidence, and audit boundaries."
+        - "Customer reason must not silently produce a brand financial deduction."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [latest Linear description/comments, returnReplace router, return-replace page/modal, refund schema/queries/policy helpers, RTO disposition schema/router, payout cycle schema/line items/calculation, finance audit writer, existing tests]
+    excluded_areas: [implementation source changes, schema/migrations unless proven necessary, Flow A dormant Shiprocket return wizard, REN-236 fee allocation logic, new evidence storage, post-settlement correction mechanism]
+    dependencies: [DEP-237-001, DEP-237-002, DEP-237-003, DEP-237-004, DEP-237-005, DEP-237-006]
+    integrations: [INT-237-001, INT-237-002, INT-237-003, INT-237-004]
+    security_boundaries: [SEC-237-001, SEC-237-002, SEC-237-003]
+    state_transitions: [pending_attribution, reviewed, reclassified, locked, denied, evidence_unavailable]
+    related_tests: [TEXP-237-001, TEXP-237-002, TEXP-237-003, TEXP-237-004, TEXP-237-005, TEXP-237-006, TEXP-237-007]
+    uncertainties: ["Whether existing audit records have all before/after fields must be confirmed during implementation; no fields may be fabricated.", "Whether current database transaction helpers cover the payout-lock lookup and synchronized refund update without a schema change."]
+requirements:
+    - { id: REQ-237-001, description: "Display customer reason, evidence, current attribution, and linked shipment/RTO context in the existing review modal.", type: ui }
+    - { id: REQ-237-002, description: "Provide explicit reviewer attribution using existing return/RTO enums, separate from approve/reject.", type: behavior }
+    - { id: REQ-237-003, description: "Persist customer return costAllocation plus synchronized policyBucket, or RTO faultOwner for carrier cases.", type: financial_control }
+    - { id: REQ-237-004, description: "Require reclassification notes and reject changes after approved-or-later payout inclusion.", type: financial_control }
+    - { id: REQ-237-005, description: "Audit each attribution decision with actor, time, previous value, and new value using existing audit infrastructure.", type: auditability }
+    - { id: REQ-237-006, description: "Preserve evidence flow and distinguish missing evidence from evidence that failed to load.", type: ui }
+    - { id: REQ-237-007, description: "Enforce refunds view/manage and existing MANAGE_ORDERS authorization boundaries.", type: security }
+    - { id: REQ-237-008, description: "Do not create brand-chargeable attribution from customer reason alone; explicit review is required.", type: compatibility }
+    - { id: REQ-237-009, description: "Keep attribution mutation separate from approval/rejection and preserve prior value on failure.", type: behavior }
+    - { id: REQ-237-010, description: "Expose final persisted attribution for REN-236 without implementing REN-236 fee/allocation logic.", type: integration }
+scenarios:
+    - { id: SCN-237-001, description: "Pending return has no financial attribution before reviewer action.", requirement_ids: [REQ-237-001, REQ-237-008] }
+    - { id: SCN-237-002, description: "Reviewer confirms or overrides a valid return attribution explicitly.", requirement_ids: [REQ-237-002, REQ-237-003] }
+    - { id: SCN-237-003, description: "Pre-lock reclassification requires notes and records history.", requirement_ids: [REQ-237-004, REQ-237-005] }
+    - { id: SCN-237-004, description: "Post-lock reclassification fails without changing attribution fields.", requirement_ids: [REQ-237-004, REQ-237-009] }
+    - { id: SCN-237-005, description: "Carrier RTO review displays and writes the authoritative disposition faultOwner.", requirement_ids: [REQ-237-001, REQ-237-003, REQ-237-010] }
+    - { id: SCN-237-006, description: "Missing RTO disposition is displayed as absent, not fabricated.", requirement_ids: [REQ-237-001] }
+    - { id: SCN-237-007, description: "Missing or broken evidence remains reviewable with clear state.", requirement_ids: [REQ-237-006] }
+    - { id: SCN-237-008, description: "View-only and unauthorized users cannot mutate or access beyond their permission.", requirement_ids: [REQ-237-007] }
+    - { id: SCN-237-009, description: "Save failure preserves prior saved attribution and shows an inline error.", requirement_ids: [REQ-237-009] }
+    - { id: SCN-237-010, description: "Approval/rejection and attribution are separate auditable decisions.", requirement_ids: [REQ-237-005, REQ-237-009] }
+invariants:
+    - { id: INV-237-001, description: "Customer reason/evidence never directly determines attribution." }
+    - { id: INV-237-002, description: "Return costAllocation and policyBucket remain synchronized." }
+    - { id: INV-237-003, description: "RTO faultOwner is not copied into refund attribution fields." }
+    - { id: INV-237-004, description: "Approved-or-later payout inclusion locks attribution changes." }
+    - { id: INV-237-005, description: "Attribution decisions are explicit and auditable." }
+    - { id: INV-237-006, description: "Evidence failure never crashes review or invents evidence." }
+    - { id: INV-237-007, description: "Server-side authorization protects every path." }
+flows:
+    - { id: FLOW-237-001, description: "Existing request list and modal provide context and explicit attribution review.", state_transitions: [pending_attribution, reviewed, reclassified] }
+    - { id: FLOW-237-002, description: "Return attribution synchronizes refund fields and writes audit evidence.", state_transitions: [pending_attribution, reviewed, locked] }
+    - { id: FLOW-237-003, description: "RTO attribution uses the existing disposition mutation and final faultOwner.", state_transitions: [pending_attribution, reviewed] }
+    - { id: FLOW-237-004, description: "Payout lifecycle lookup rejects locked changes before mutation.", state_transitions: [reviewed, locked, denied] }
+    - { id: FLOW-237-005, description: "Broken evidence URL becomes an unavailable-image state.", state_transitions: [evidence_unavailable] }
+dependencies:
+    - { id: DEP-237-001, name: return-replace review surface, purpose: "Existing UI and request lifecycle", description: "Extend current page/modal instead of creating a parallel screen.", status: resolved }
+    - { id: DEP-237-002, name: refund attribution fields, purpose: "Customer return authority", description: "Use refunds.costAllocation and policyBucket.", status: resolved }
+    - { id: DEP-237-003, name: RTO dispositions, purpose: "Carrier RTO authority", description: "Use rto_dispositions.faultOwner and existing order-ops mutation.", status: resolved }
+    - { id: DEP-237-004, name: payout lifecycle, purpose: "Financial lock", description: "Inspect line-item inclusion in approved-or-later cycles.", status: resolved }
+    - { id: DEP-237-005, name: finance audit log, purpose: "Attribution history", description: "Use writeFinanceAuditEvent and existing audit rows.", status: resolved }
+    - { id: DEP-237-006, name: REN-236, purpose: "Downstream consumer", description: "Consume persisted attribution and do not infer fault independently.", status: resolved }
+integrations:
+    - { id: INT-237-001, system: tRPC return/finance/order-ops routes, purpose: "Review reads and writes", failure_mode: "Permission, validation, lock, and mutation errors remain visible and fail closed." }
+    - { id: INT-237-002, system: PostgreSQL refund/payout records, purpose: "Atomic financial state", failure_mode: "No partial costAllocation/policyBucket update or locked rewrite." }
+    - { id: INT-237-003, system: REN-236, purpose: "Final attribution consumption", failure_mode: "REN-236 reads persisted fields and never duplicates inference." }
+    - { id: INT-237-004, system: UploadThing evidence URLs, purpose: "Existing evidence display", failure_mode: "Broken delivery has a distinct placeholder." }
+personas:
+    - { id: PER-237-001, role: refunds_manager, applicability: "Can review and mutate return attribution." }
+    - { id: PER-237-002, role: refunds_viewer, applicability: "Can view attribution/history only." }
+    - { id: PER-237-003, role: order_operations_manager, applicability: "Can use existing RTO disposition capability." }
+    - { id: PER-237-004, role: unauthorized_user, applicability: "Cannot access review surface." }
+security_boundaries:
+    - { id: SEC-237-001, description: "Refund review reads/mutations use refunds finance-module access." }
+    - { id: SEC-237-002, description: "RTO mutation retains MANAGE_ORDERS authorization." }
+    - { id: SEC-237-003, description: "Sensitive attribution/audit data remains server-protected." }
+business_rules:
+    - { id: BR-237-001, description: "Customer reason is advisory, not adjudication." }
+    - { id: BR-237-002, description: "Return attribution uses existing four-value refund enum." }
+    - { id: BR-237-003, description: "RTO attribution uses existing five-value faultOwner enum." }
+    - { id: BR-237-004, description: "Attribution lock starts at approved payout status." }
+    - { id: BR-237-005, description: "Post-settlement correction is out of scope." }
+decisions:
+    - { id: DEC-237-001, question: "Which UI surface owns review?", class: AUTO_DECIDE, status: resolved, recommendation: "Extend existing return-replace page/modal.", basis: "Latest Linear UI specification and existing repository flow.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-237-002, question: "Which attribution fields are authoritative?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "costAllocation/policyBucket for returns and faultOwner for RTO.", basis: "Latest Linear decision and direct schema/consumer evidence; confirmed by Akshay.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-237-003, question: "How are post-payout reclassifications handled?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Reject after approved-or-later inclusion; no correction flow.", basis: "Latest Linear remediation decision; confirmed by Akshay.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-237-004, question: "Which permission keys apply?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "refunds view/manage for returns and existing MANAGE_ORDERS for RTO.", basis: "Latest Linear permission correction; confirmed by Akshay.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-237-001, category: unit, classification: REQUIRED, reason: "Attribution suggestions, notes rules, taxonomy, and evidence states must be deterministic.", scenarios: [SCN-237-002, SCN-237-003, SCN-237-007] }
+    - { id: TEXP-237-002, category: api, classification: REQUIRED, reason: "Authorization, explicit-only writes, validation, lock, and failure behavior require route coverage.", scenarios: [SCN-237-001, SCN-237-004, SCN-237-008, SCN-237-009] }
+    - { id: TEXP-237-003, category: integration, classification: REQUIRED, reason: "Refund field synchronization and audit history are financial state transitions.", scenarios: [SCN-237-002, SCN-237-003, SCN-237-010] }
+    - { id: TEXP-237-004, category: integration, classification: REQUIRED, reason: "Payout inclusion lock must be verified at database boundary.", scenarios: [SCN-237-003, SCN-237-004] }
+    - { id: TEXP-237-005, category: integration, classification: REQUIRED, reason: "RTO disposition authority and REN-236 consumer shape must remain correct.", scenarios: [SCN-237-005, SCN-237-006] }
+    - { id: TEXP-237-006, category: component, classification: REQUIRED, reason: "Modal must distinguish reason, attribution, RTO context, permissions, evidence, and error states.", scenarios: [SCN-237-001, SCN-237-005, SCN-237-007, SCN-237-008, SCN-237-009] }
+    - { id: TEXP-237-007, category: regression, classification: REQUIRED, reason: "Existing return/replacement, refund, payout, evidence, and order-ops behavior must remain compatible.", scenarios: [SCN-237-010] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-237-001, severity: MAJOR, status: open, summary: "Current return create/approve paths infer financial attribution before review and must be changed to pending-until-explicit-review.", references: [REQ-237-008, INV-237-001] }
+        - { id: CRIT-237-002, severity: MAJOR, status: open, summary: "Refund field synchronization and payout lock require one fail-closed server boundary.", references: [REQ-237-003, REQ-237-004, INV-237-002, INV-237-004] }
+        - { id: CRIT-237-003, severity: MAJOR, status: open, summary: "RTO disposition integration and linked-context read path do not exist in the current review UI.", references: [REQ-237-001, REQ-237-003, SEC-237-002] }
+        - { id: CRIT-237-004, severity: MINOR, status: open, summary: "Broken evidence image state is missing from the current modal.", references: [REQ-237-006, INV-237-006] }
+        - { id: CRIT-237-005, severity: MINOR, status: open, summary: "Attribution-specific audit history is not currently exposed by the return review flow.", references: [REQ-237-005, INV-237-005] }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — Linear remediation comments 2026-09-22; latest ticket content is READY"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-237-001, scenario_ids: [SCN-237-001, SCN-237-005, SCN-237-006] }
+        - { requirement_id: REQ-237-002, scenario_ids: [SCN-237-002] }
+        - { requirement_id: REQ-237-003, scenario_ids: [SCN-237-002, SCN-237-005] }
+        - { requirement_id: REQ-237-004, scenario_ids: [SCN-237-003, SCN-237-004] }
+        - { requirement_id: REQ-237-005, scenario_ids: [SCN-237-003, SCN-237-010] }
+        - { requirement_id: REQ-237-006, scenario_ids: [SCN-237-007] }
+        - { requirement_id: REQ-237-007, scenario_ids: [SCN-237-008] }
+        - { requirement_id: REQ-237-008, scenario_ids: [SCN-237-001] }
+        - { requirement_id: REQ-237-009, scenario_ids: [SCN-237-004, SCN-237-009, SCN-237-010] }
+        - { requirement_id: REQ-237-010, scenario_ids: [SCN-237-005] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-237-001, invariant_ids: [INV-237-001, INV-237-006] }
+        - { scenario_id: SCN-237-002, invariant_ids: [INV-237-002, INV-237-005] }
+        - { scenario_id: SCN-237-003, invariant_ids: [INV-237-002, INV-237-004, INV-237-005] }
+        - { scenario_id: SCN-237-004, invariant_ids: [INV-237-004, INV-237-005] }
+        - { scenario_id: SCN-237-005, invariant_ids: [INV-237-003, INV-237-005] }
+        - { scenario_id: SCN-237-006, invariant_ids: [INV-237-006] }
+        - { scenario_id: SCN-237-007, invariant_ids: [INV-237-006] }
+        - { scenario_id: SCN-237-008, invariant_ids: [INV-237-007] }
+        - { scenario_id: SCN-237-009, invariant_ids: [INV-237-002, INV-237-005] }
+        - { scenario_id: SCN-237-010, invariant_ids: [INV-237-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-237-001, test_expectation_ids: [TEXP-237-002, TEXP-237-006] }
+        - { scenario_id: SCN-237-002, test_expectation_ids: [TEXP-237-001, TEXP-237-003, TEXP-237-006] }
+        - { scenario_id: SCN-237-003, test_expectation_ids: [TEXP-237-001, TEXP-237-003, TEXP-237-004] }
+        - { scenario_id: SCN-237-004, test_expectation_ids: [TEXP-237-002, TEXP-237-004] }
+        - { scenario_id: SCN-237-005, test_expectation_ids: [TEXP-237-005, TEXP-237-006] }
+        - { scenario_id: SCN-237-006, test_expectation_ids: [TEXP-237-005] }
+        - { scenario_id: SCN-237-007, test_expectation_ids: [TEXP-237-001, TEXP-237-006] }
+        - { scenario_id: SCN-237-008, test_expectation_ids: [TEXP-237-002, TEXP-237-006] }
+        - { scenario_id: SCN-237-009, test_expectation_ids: [TEXP-237-002, TEXP-237-006] }
+        - { scenario_id: SCN-237-010, test_expectation_ids: [TEXP-237-003, TEXP-237-007] }
