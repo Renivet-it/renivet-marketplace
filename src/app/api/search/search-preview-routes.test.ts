@@ -29,7 +29,8 @@ mock.module("@/lib/db/queries", () => ({
                     id: "product-1",
                     slug: "blue-shirt",
                     title: "Blue Shirt",
-                    price: 125000,
+                    price: null,
+                    variants: [{ price: 125000 }],
                     media: [
                         {
                             id: "media-1",
