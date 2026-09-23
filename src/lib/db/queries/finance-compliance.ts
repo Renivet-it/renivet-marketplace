@@ -712,6 +712,28 @@ class FinanceComplianceQuery {
         });
     }
 
+    async findLockedPayoutCycleForReferences(references: string[]) {
+        const normalizedReferences = [...new Set(references.filter(Boolean))];
+        if (!normalizedReferences.length) return null;
+
+        const rows = await db
+            .select({ cycle: brandPayoutCycles, lineItem: brandPayoutLineItems })
+            .from(brandPayoutLineItems)
+            .innerJoin(
+                brandPayoutCycles,
+                eq(brandPayoutCycles.id, brandPayoutLineItems.cycleId)
+            )
+            .where(
+                and(
+                    inArray(brandPayoutCycles.status, ["approved", "processing", "completed"]),
+                    inArray(brandPayoutLineItems.referenceId, normalizedReferences)
+                )
+            )
+            .orderBy(desc(brandPayoutCycles.updatedAt));
+
+        return rows[0] ?? null;
+    }
+
     async listCommissionRuleAdminRows(filters?: {
         brandId?: string;
         categoryId?: string;
