@@ -776,7 +776,7 @@ export const financeComplianceRouter = createTRPCRouter({
             return row;
         }),
 
-    listCommissionRules: protectedProcedure
+    listCommissionRules: adminProcedure
         .input(
             z.object({
                 brandId: z.string().uuid().optional(),
@@ -829,6 +829,9 @@ export const financeComplianceRouter = createTRPCRouter({
             return analyzeCommissionRulePreview({
                 candidate: {
                     ...input,
+                    brandId: input.brandId ?? null,
+                    categoryId: input.categoryId ?? null,
+                    productTypeId: input.productTypeId ?? null,
                     holdbackPercentBps: 0,
                     effectiveTo: input.effectiveTo ?? null,
                     isActive: true,
@@ -844,7 +847,7 @@ export const financeComplianceRouter = createTRPCRouter({
             return ctx.queries.financeCompliance.listCommissionRuleHistory(input.ruleId);
         }),
 
-    upsertCommissionRule: protectedProcedure
+    upsertCommissionRule: adminProcedure
         .input(
             z.object({
                 id: z.string().uuid().optional(),

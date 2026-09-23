@@ -1202,8 +1202,8 @@ class FinanceComplianceQuery {
             returning id
         `);
 
-        const insertedRows = Array.isArray((result as { rows?: unknown }).rows)
-            ? ((result as { rows: Array<{ id?: string }> }).rows ?? [])
+        const insertedRows = Array.isArray((result as unknown as { rows?: unknown }).rows)
+            ? ((result as unknown as { rows: Array<{ id?: string }> }).rows ?? [])
             : Array.isArray(result)
               ? (result as Array<{ id?: string }>)
               : [];
