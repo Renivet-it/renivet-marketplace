@@ -49,6 +49,7 @@ import {
     productVariants,
     reasonMasters,
     refunds,
+    rtoDispositions,
     userConsents,
     users,
 } from "../schema";
@@ -1515,6 +1516,13 @@ class FinanceComplianceQuery {
         if (!orderIds.length) return [];
         return db.query.orderShipments.findMany({
             where: inArray(orderShipments.orderId, orderIds),
+        });
+    }
+
+    async listRtoDispositionsForOrderIds(orderIds: string[]) {
+        if (!orderIds.length) return [];
+        return db.query.rtoDispositions.findMany({
+            where: inArray(rtoDispositions.orderId, orderIds),
         });
     }
 

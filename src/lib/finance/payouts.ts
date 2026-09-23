@@ -28,6 +28,10 @@ import {
     calculateContractedPaymentFeePaise,
     CONTRACTED_PAYMENT_FEE_METADATA,
 } from "./contracted-payment-fee";
+import {
+    describePaymentFeeOutcome,
+    resolvePaymentFeeOutcome,
+} from "./payment-fee-allocation";
 
 const TERRA_LUNA_BRAND_ID = "a8e54f13-228d-452c-8292-f1dd7b07dcb3";
 
@@ -250,6 +254,10 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         financeComplianceQueries.listBrandsForPayout(),
         financeComplianceQueries.listCarrierClaimsForFinanceWindow({ start, end }),
     ]);
+    const rtoDispositions = await financeComplianceQueries.listRtoDispositionsForOrderIds(
+        orders.map((order) => order.id)
+    );
+    const rtoByOrderId = new Map(rtoDispositions.map((disposition) => [disposition.orderId, disposition]));
 
     const completedPriorCycles = previousCycles.filter(
         (row) => row.status === "completed"
@@ -428,17 +436,27 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     Number(order.totalAmount)
                 );
                 paymentFeeOrderIds.add(order.id);
-                existing.paymentFeePaise += paymentFeePaise;
-                existing.lineItems.push({
-                    lineType: "payment_fee",
-                    description: "Contracted Payment Fee",
-                    amountPaise: -paymentFeePaise,
-                    referenceId: order.id,
-                    metadata: {
-                        ...CONTRACTED_PAYMENT_FEE_METADATA,
-                        amountPaise: paymentFeePaise,
-                    },
-                });
+                if (paymentFeePaise > 0) {
+                    const disposition = rtoByOrderId.get(order.id);
+                    const outcome = resolvePaymentFeeOutcome({
+                        isRto: Boolean(disposition),
+                        faultOwner: disposition?.faultOwner,
+                    });
+                    if (outcome.brandChargeable) existing.paymentFeePaise += paymentFeePaise;
+                    existing.lineItems.push({
+                        lineType: "payment_fee",
+                        description: describePaymentFeeOutcome(outcome),
+                        amountPaise: outcome.brandChargeable ? -paymentFeePaise : 0,
+                        referenceId: order.id,
+                        metadata: {
+                            ...CONTRACTED_PAYMENT_FEE_METADATA,
+                            amountPaise: paymentFeePaise,
+                            shipmentType: outcome.shipmentType,
+                            chargedTo: outcome.chargedTo,
+                            faultOwner: outcome.faultOwner,
+                        },
+                    });
+                }
             }
 
             summaries.set(brandId, existing);

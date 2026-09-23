@@ -1,0 +1,145 @@
+schema_version: "1.0"
+task:
+    id: REN-236
+    title: "[FCCP][P1] RTO Payment Fee & Fault-Based Payout Allocation"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-236/fccpp1-rto-payment-fee-and-fault-based-payout-allocation
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-210
+        linear_branch: ayanganguly333/ren-236-fccpp1-rto-payment-fee-fault-based-payout-allocation
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Payout chargeability changes brand deductions and platform financial exposure."
+        - "The change crosses payout calculation, RTO attribution, statements, and admin visibility."
+        - "The implementation must fail safe when attribution or order totals are unresolved."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [latest Linear content, contracted payment fee helper, payout calculation, payout line-item persistence, RTO disposition schema, payout statement, admin payout workspace, REN-237 attribution output, existing tests]
+    excluded_areas: [new schema/migrations, fee formula redesign, commission/TDS/TCS/holdback changes, customer return review, new report/dashboard]
+    dependencies: [DEP-236-001, DEP-236-002, DEP-236-003, DEP-236-004]
+    integrations: [INT-236-001, INT-236-002, INT-236-003]
+    security_boundaries: [SEC-236-001, SEC-236-002]
+    state_transitions: [forward_fee, rto_absorbed, rto_brand_chargeable, unresolved_rto, invalid_basis]
+    related_tests: [TEXP-236-001, TEXP-236-002, TEXP-236-003, TEXP-236-004, TEXP-236-005, TEXP-236-006]
+    uncertainties: ["Exact shipment status/disposition lookup shape must be confirmed while tracing calculatePayoutCycle callers."]
+requirements:
+    - { id: REQ-236-001, description: "Apply existing contracted payment fee to forward and RTO shipments.", type: financial_control }
+    - { id: REQ-236-002, description: "Charge RTO fee to brand only for adjudicated brand fault.", type: financial_control }
+    - { id: REQ-236-003, description: "Absorb missing or unresolved RTO attribution at Renivet.", type: safety }
+    - { id: REQ-236-004, description: "Preserve non-RTO payout and unrelated financial behavior.", type: compatibility }
+    - { id: REQ-236-005, description: "Produce no fee line for invalid order totals.", type: financial_control }
+    - { id: REQ-236-006, description: "Preserve replacement recalculation and one fee line per order per cycle.", type: idempotency }
+    - { id: REQ-236-007, description: "Describe forward, absorbed RTO, and brand-chargeable RTO outcomes.", type: ui }
+    - { id: REQ-236-008, description: "Render payment fees in the existing statement deductions bucket.", type: ui }
+    - { id: REQ-236-009, description: "Never infer fee chargeability from customer-supplied reasons.", type: security }
+scenarios:
+    - { id: SCN-236-001, description: "Forward order receives the existing fee.", requirement_ids: [REQ-236-001, REQ-236-004] }
+    - { id: SCN-236-002, description: "Brand-fault RTO is charged to the brand.", requirement_ids: [REQ-236-001, REQ-236-002] }
+    - { id: SCN-236-003, description: "Non-brand RTO faults are absorbed by Renivet.", requirement_ids: [REQ-236-002, REQ-236-003] }
+    - { id: SCN-236-004, description: "Missing disposition fails safe to Renivet absorption.", requirement_ids: [REQ-236-003] }
+    - { id: SCN-236-005, description: "Invalid totals produce no fee line.", requirement_ids: [REQ-236-005] }
+    - { id: SCN-236-006, description: "Recalculation does not duplicate payment fees.", requirement_ids: [REQ-236-006] }
+    - { id: SCN-236-007, description: "Existing payout lines remain unchanged outside this path.", requirement_ids: [REQ-236-004] }
+    - { id: SCN-236-008, description: "Statement and admin descriptions agree.", requirement_ids: [REQ-236-007, REQ-236-008] }
+    - { id: SCN-236-009, description: "Customer reason cannot determine chargeability.", requirement_ids: [REQ-236-009] }
+invariants:
+    - { id: INV-236-001, description: "RTO chargeability reads only rto_dispositions.faultOwner." }
+    - { id: INV-236-002, description: "Only brand fault produces a brand RTO deduction." }
+    - { id: INV-236-003, description: "Unknown or absent attribution is absorbed by Renivet." }
+    - { id: INV-236-004, description: "Invalid totals never produce a payment-fee line." }
+    - { id: INV-236-005, description: "Recalculation cannot append duplicate fee lines." }
+    - { id: INV-236-006, description: "Non-RTO payout behavior is unchanged." }
+    - { id: INV-236-007, description: "Descriptions reflect adjudicated state, never customer reason." }
+flows:
+    - { id: FLOW-236-001, description: "Payout calculation resolves order type, disposition, fee, and outcome line.", state_transitions: [forward_fee, rto_absorbed, rto_brand_chargeable, unresolved_rto, invalid_basis] }
+    - { id: FLOW-236-002, description: "Existing replacement line-item persistence prevents duplication.", state_transitions: [forward_fee, rto_absorbed, rto_brand_chargeable] }
+    - { id: FLOW-236-003, description: "Existing statement and admin surfaces render the shared line description.", state_transitions: [forward_fee, rto_absorbed, rto_brand_chargeable] }
+dependencies:
+    - { id: DEP-236-001, name: contracted payment fee, purpose: "Reuse approved formula", description: "Use calculateContractedPaymentFeePaise.", status: resolved }
+    - { id: DEP-236-002, name: REN-237 attribution, purpose: "Authoritative fault source", description: "Read persisted rto_dispositions.faultOwner only.", status: resolved }
+    - { id: DEP-236-003, name: payout line items, purpose: "Persistence/idempotency", description: "Use existing replace-based cycle calculation.", status: resolved }
+    - { id: DEP-236-004, name: existing displays, purpose: "Operational visibility", description: "Reuse statement and payout workspace renderers.", status: resolved }
+integrations:
+    - { id: INT-236-001, system: PostgreSQL payout records, purpose: "Persist fee line", failure_mode: "Invalid basis or absent attribution fails safe without brand charge." }
+    - { id: INT-236-002, system: REN-237, purpose: "Consume final attribution", failure_mode: "No duplicate inference path." }
+    - { id: INT-236-003, system: payout statement/admin UI, purpose: "Display outcome", failure_mode: "Shared description remains precise." }
+personas:
+    - { id: PER-236-001, role: payout_admin, applicability: "Reviews payout cycle details." }
+    - { id: PER-236-002, role: brand, applicability: "Receives payout statement." }
+security_boundaries:
+    - { id: SEC-236-001, description: "Financial chargeability is server-side and not customer-controlled." }
+    - { id: SEC-236-002, description: "Only persisted adjudicated RTO attribution crosses into payout calculation." }
+business_rules:
+    - { id: BR-236-001, description: "Forward fee applies as today." }
+    - { id: BR-236-002, description: "RTO brand fault charges brand; every other outcome is Renivet-absorbed." }
+    - { id: BR-236-003, description: "Terra Luna remains the only applicable seller in this task." }
+decisions:
+    - { id: DEC-236-001, question: "Which fee formula applies?", class: AUTO_DECIDE, status: resolved, recommendation: "Reuse calculateContractedPaymentFeePaise.", basis: "Latest Linear ticket and existing helper.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-236-002, question: "Which fault source applies?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Read rto_dispositions.faultOwner from REN-237 output.", basis: "Latest Linear ticket explicitly makes REN-237 the sole producer.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-236-003, question: "How should missing attribution behave?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Absorb at Renivet and show unresolved/unknown.", basis: "Latest Linear acceptance criteria.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-236-001, category: unit, classification: REQUIRED, reason: "Cover formula and every forward/RTO fault path.", scenarios: [SCN-236-001, SCN-236-002, SCN-236-003, SCN-236-004] }
+    - { id: TEXP-236-002, category: integration, classification: REQUIRED, reason: "Verify payout line amount, sign, metadata, and description.", scenarios: [SCN-236-002, SCN-236-003, SCN-236-008] }
+    - { id: TEXP-236-003, category: regression, classification: REQUIRED, reason: "Protect non-RTO and unrelated financial behavior.", scenarios: [SCN-236-001, SCN-236-007] }
+    - { id: TEXP-236-004, category: integration, classification: REQUIRED, reason: "Verify invalid totals produce no fee line.", scenarios: [SCN-236-005] }
+    - { id: TEXP-236-005, category: integration, classification: REQUIRED, reason: "Verify replacement calculation has one fee line.", scenarios: [SCN-236-006] }
+    - { id: TEXP-236-006, category: component, classification: REQUIRED, reason: "Verify existing statement and admin displays expose outcome descriptions.", scenarios: [SCN-236-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-236-001, severity: MINOR, status: accepted, summary: "Keep RTO lookup explicit and fail safe when no disposition exists.", references: [REQ-236-003, INV-236-003] }
+        - { id: CRIT-236-002, severity: MINOR, status: accepted, summary: "Use one shared line description for PDF and admin surfaces.", references: [REQ-236-007, REQ-236-008] }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — latest REN-236 Linear content 2026-09-22; REN-237 dependency resolved"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-236-001, scenario_ids: [SCN-236-001, SCN-236-002] }
+        - { requirement_id: REQ-236-002, scenario_ids: [SCN-236-002, SCN-236-003] }
+        - { requirement_id: REQ-236-003, scenario_ids: [SCN-236-004] }
+        - { requirement_id: REQ-236-004, scenario_ids: [SCN-236-001, SCN-236-007] }
+        - { requirement_id: REQ-236-005, scenario_ids: [SCN-236-005] }
+        - { requirement_id: REQ-236-006, scenario_ids: [SCN-236-006] }
+        - { requirement_id: REQ-236-007, scenario_ids: [SCN-236-008] }
+        - { requirement_id: REQ-236-008, scenario_ids: [SCN-236-008] }
+        - { requirement_id: REQ-236-009, scenario_ids: [SCN-236-009] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-236-001, invariant_ids: [INV-236-006] }
+        - { scenario_id: SCN-236-002, invariant_ids: [INV-236-001, INV-236-002, INV-236-007] }
+        - { scenario_id: SCN-236-003, invariant_ids: [INV-236-001, INV-236-003, INV-236-007] }
+        - { scenario_id: SCN-236-004, invariant_ids: [INV-236-001, INV-236-003] }
+        - { scenario_id: SCN-236-005, invariant_ids: [INV-236-004] }
+        - { scenario_id: SCN-236-006, invariant_ids: [INV-236-005] }
+        - { scenario_id: SCN-236-007, invariant_ids: [INV-236-006] }
+        - { scenario_id: SCN-236-008, invariant_ids: [INV-236-007] }
+        - { scenario_id: SCN-236-009, invariant_ids: [INV-236-001, INV-236-007] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-236-001, test_expectation_ids: [TEXP-236-001, TEXP-236-003] }
+        - { scenario_id: SCN-236-002, test_expectation_ids: [TEXP-236-001, TEXP-236-002] }
+        - { scenario_id: SCN-236-003, test_expectation_ids: [TEXP-236-001, TEXP-236-002] }
+        - { scenario_id: SCN-236-004, test_expectation_ids: [TEXP-236-001] }
+        - { scenario_id: SCN-236-005, test_expectation_ids: [TEXP-236-004] }
+        - { scenario_id: SCN-236-006, test_expectation_ids: [TEXP-236-005] }
+        - { scenario_id: SCN-236-007, test_expectation_ids: [TEXP-236-003] }
+        - { scenario_id: SCN-236-008, test_expectation_ids: [TEXP-236-002, TEXP-236-006] }
+        - { scenario_id: SCN-236-009, test_expectation_ids: [TEXP-236-001, TEXP-236-003] }
