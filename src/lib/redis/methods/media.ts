@@ -8,6 +8,10 @@ import {
 } from "@/lib/validations";
 import { inArray } from "drizzle-orm";
 import { redis } from "..";
+import {
+    MEDIA_CACHE_TTL_SECONDS,
+    mediaCacheKey,
+} from "./media-key";
 
 class MediaCache {
     private async getAllKeys(pattern: string): Promise<string[]> {
@@ -62,6 +66,13 @@ class MediaCache {
                     new Date(a.createdAt).getTime()
             );
 
+        if (parsed.length !== dbMediaCount) {
+            const dbMediaItems =
+                await brandMediaItemQueries.getBrandMediaItemsByBrand(brandId);
+            if (dbMediaItems.count > 0) await this.addBulk(dbMediaItems.data);
+            return dbMediaItems;
+        }
+
         return {
             data: parsed,
             count: parsed.length,
@@ -109,27 +120,32 @@ class MediaCache {
     async getByIds(ids: string[]) {
         if (ids.length === 0) return { data: [], count: 0 };
 
-        const keys = ids.map((id) => `media:${id}:*`);
+        const dbMediaItems = await brandMediaItemQueries.getBrandMediaItemsByIds(ids);
+        const dbMediaById = new Map(
+            dbMediaItems.data.map((mediaItem) => [mediaItem.id, mediaItem])
+        );
+        const cacheableItems = ids
+            .map((id) => dbMediaById.get(id))
+            .filter((item): item is CachedBrandMediaItem => Boolean(item));
+        const keys = cacheableItems.map((item) => mediaCacheKey(item.id, item.brandId));
+        if (keys.length === 0) return dbMediaItems;
+
         const cachedMediaItems = await redis.mget(...keys);
         const mediaItems: CachedBrandMediaItem[] = [];
-        const missingIds: string[] = [];
+        const missingItems: CachedBrandMediaItem[] = [];
         // Parse Redis results
         for (let i = 0; i < cachedMediaItems.length; i++) {
             const cached = parseToJSON<CachedBrandMediaItem>(cachedMediaItems[i]);
             if (cached) {
                 mediaItems.push(cached);
             } else {
-                missingIds.push(ids[i]);
+                const missingItem = cacheableItems[i];
+                if (missingItem) missingItems.push(missingItem);
             }
         }
-        // Fetch missing media from DB only
-        if (missingIds.length > 0) {
-            const dbMediaItems = await brandMediaItemQueries.getBrandMediaItemsByIds(missingIds);
-            if (dbMediaItems.count > 0) {
-                mediaItems.push(...dbMediaItems.data);
-                // Add missing items back to Redis cache
-                await this.addBulk(dbMediaItems.data);
-            }
+        if (missingItems.length > 0) {
+            mediaItems.push(...missingItems);
+            await this.addBulk(missingItems);
         }
         // Sort by createdAt (same as before)
         mediaItems.sort(
@@ -142,18 +158,26 @@ class MediaCache {
         };
     }
 
-    async get(id: string) {
-        const cachedMediaItemRaw = await redis.get(`media:${id}`);
+    async get(id: string, brandId?: string) {
+        const dbMediaItem = brandId
+            ? null
+            : await brandMediaItemQueries.getBrandMediaItem(id);
+        const resolvedBrandId = brandId ?? dbMediaItem?.brandId;
+        if (!resolvedBrandId) return null;
+
+        const cachedMediaItemRaw = await redis.get(
+            mediaCacheKey(id, resolvedBrandId)
+        );
         let cachedMediaItem = cachedBrandMediaItemSchema
             .nullable()
             .parse(parseToJSON<CachedBrandMediaItem>(cachedMediaItemRaw));
 
         if (!cachedMediaItem) {
-            const dbMediaItem =
-                await brandMediaItemQueries.getBrandMediaItem(id);
-            if (!dbMediaItem) return null;
+            const fallbackMediaItem =
+                dbMediaItem ?? (await brandMediaItemQueries.getBrandMediaItem(id));
+            if (!fallbackMediaItem) return null;
 
-            cachedMediaItem = cachedBrandMediaItemSchema.parse(dbMediaItem);
+            cachedMediaItem = cachedBrandMediaItemSchema.parse(fallbackMediaItem);
             await this.add(cachedMediaItem);
         }
 
@@ -162,8 +186,10 @@ class MediaCache {
 
     async add(mediaItem: CachedBrandMediaItem) {
         await redis.set(
-            `media:${mediaItem.id}:${mediaItem.brandId}`,
-            JSON.stringify(mediaItem)
+            mediaCacheKey(mediaItem.id, mediaItem.brandId),
+            JSON.stringify(mediaItem),
+            "EX",
+            MEDIA_CACHE_TTL_SECONDS
         );
     }
 
@@ -171,16 +197,22 @@ class MediaCache {
         const pipe = redis.pipeline();
         mediaItems.forEach((mediaItem) => {
             pipe.set(
-                `media:${mediaItem.id}:${mediaItem.brandId}`,
-                JSON.stringify(mediaItem)
+                mediaCacheKey(mediaItem.id, mediaItem.brandId),
+                JSON.stringify(mediaItem),
+                "EX",
+                MEDIA_CACHE_TTL_SECONDS
             );
         });
 
         await pipe.exec();
     }
 
-    async remove(id: string) {
-        return await redis.del(`media:${id}`);
+    async remove(id: string, brandId?: string) {
+        const mediaItem = brandId
+            ? { brandId }
+            : await brandMediaItemQueries.getBrandMediaItem(id);
+        if (!mediaItem) return 0;
+        return await redis.del(mediaCacheKey(id, mediaItem.brandId));
     }
 
     async drop(brandId?: string) {

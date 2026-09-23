@@ -341,17 +341,15 @@ export const cartRouter = createTRPCRouter({
                     message: "Not enough stock available",
                 });
 
-            const [data] = await Promise.all([
-                queries.userCarts.updateProductInCart(existingCart.id, {
-                    ...existingCart,
-                    quantity,
-                }),
-                userCartCache.remove({
-                    userId,
-                    productId,
-                    variantId: variantId ?? undefined,
-                }),
-            ]);
+            const data = await queries.userCarts.updateProductInCart(
+                existingCart.id,
+                { ...existingCart, quantity }
+            );
+            await userCartCache.remove({
+                userId,
+                productId,
+                variantId: variantId ?? undefined,
+            });
             return data;
         }),
     updateCustomizationRequest: protectedProcedure
@@ -459,21 +457,20 @@ export const cartRouter = createTRPCRouter({
                         message: "This product is not available",
                     });
 
-                const [data] = await Promise.all([
-                    queries.userCarts.updateProductInCart(existingCart.id, {
-                        ...existingCart,
-                        status,
-                    }),
-                    userCartCache.drop(userId),
-                ]);
+                const data = await queries.userCarts.updateProductInCart(
+                    existingCart.id,
+                    { ...existingCart, status }
+                );
+                await userCartCache.drop(userId);
 
                 return data;
             }
 
-            const [data] = await Promise.all([
-                queries.userCarts.updateStatusInCart(userId, status),
-                userCartCache.drop(userId),
-            ]);
+            const data = await queries.userCarts.updateStatusInCart(
+                userId,
+                status
+            );
+            await userCartCache.drop(userId);
             return data;
         }),
     moveProductToWishlist: protectedProcedure
@@ -532,15 +529,15 @@ export const cartRouter = createTRPCRouter({
                     message: "This product is not available",
                 });
 
-            const [data] = await Promise.all([
-                queries.userWishlists.addProductInWishlist(input),
-                queries.userCarts.deleteProductFromCart(existingCart.id),
-                userCartCache.remove({
-                    userId,
-                    productId,
-                    variantId: variantId ?? undefined,
-                }),
-            ]);
+            await queries.userWishlists.addProductInWishlist(input);
+            const data = await queries.userCarts.deleteProductFromCart(
+                existingCart.id
+            );
+            await userCartCache.remove({
+                userId,
+                productId,
+                variantId: variantId ?? undefined,
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.WISHLIST.ADDED,
@@ -633,14 +630,14 @@ export const cartRouter = createTRPCRouter({
                     message: "This product is not in your cart",
                 });
 
-            const [data] = await Promise.all([
-                queries.userCarts.deleteProductFromCart(existingCart.id),
-                userCartCache.remove({
-                    userId,
-                    productId,
-                    variantId: variantId ?? undefined,
-                }),
-            ]);
+            const data = await queries.userCarts.deleteProductFromCart(
+                existingCart.id
+            );
+            await userCartCache.remove({
+                userId,
+                productId,
+                variantId: variantId ?? undefined,
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.CART.REMOVED,
@@ -705,13 +702,11 @@ export const cartRouter = createTRPCRouter({
                     message: "These variants are not in your cart",
                 });
 
-            const [data] = await Promise.all([
-                queries.userCarts.deleteProductsFromCart(
-                    userId,
-                    existingVariants.map((cart) => cart.id)
-                ),
-                userCartCache.drop(userId),
-            ]);
+            const data = await queries.userCarts.deleteProductsFromCart(
+                userId,
+                existingVariants.map((cart) => cart.id)
+            );
+            await userCartCache.drop(userId);
 
             posthog.capture({
                 event: POSTHOG_EVENTS.CART.BULK_REMOVED,

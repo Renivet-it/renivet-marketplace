@@ -1,5 +1,6 @@
 import { getDate } from "@/lib/utils";
 import { criticalRedis as redis } from "..";
+import { withRedisObservation } from "../connection-policy";
 
 export interface RevenueData {
     amount: number;
@@ -25,9 +26,11 @@ interface RevenueStats {
 
 class Revenue {
     async track(brandId: string, data: RevenueData) {
-        const key = ["revenue", brandId, getDate()].join("::");
-        const value = JSON.stringify(data);
-        await redis.rpush(key, value);
+        return withRedisObservation("revenue.track", async () => {
+            const key = ["revenue", brandId, getDate()].join("::");
+            const value = JSON.stringify(data);
+            await redis.rpush(key, value);
+        });
     }
 
     async retrieveByRange({
@@ -37,8 +40,9 @@ class Revenue {
         brandId: string;
         nDays: number;
     }) {
-        const pipeline = redis.pipeline();
-        const dates: string[] = [];
+        return withRedisObservation("revenue.retrieveByRange", async () => {
+            const pipeline = redis.pipeline();
+            const dates: string[] = [];
 
         for (let i = 0; i < nDays; i++) {
             const date = getDate(i);
@@ -47,9 +51,9 @@ class Revenue {
             pipeline.lrange(key, 0, -1);
         }
 
-        const results = await pipeline.exec();
+            const results = await pipeline.exec();
 
-        return dates.map((date, index) => {
+            return dates.map((date, index) => {
             const dayData = (results?.[index]?.[1] as string[] | null) ?? [];
             const transactions = dayData.map(
                 (item) => JSON.parse(item) as RevenueData
@@ -75,6 +79,7 @@ class Revenue {
                 refunds: totalRefunds,
                 transactions,
             };
+            });
         });
     }
 
