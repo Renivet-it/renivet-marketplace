@@ -16,7 +16,7 @@ import {
     applySearchSuccess,
 } from "@/lib/search/search-navigation";
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatINR } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
     ArrowRight,
     Clock3,
@@ -74,7 +74,6 @@ type SearchProduct = {
     id: string;
     name: string;
     slug?: string | null;
-    price: number;
     brand?: {
         name?: string | null;
     } | null;
@@ -995,14 +994,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                             )}
                                                             <span className="line-clamp-2 text-13 font-medium leading-tight text-[#2f2a23] transition-colors group-hover:text-primary">
                                                                 {product.name}
-                                                            </span>
-                                                            <span className="mt-1.5 text-13 font-semibold text-primary">
-                                                                {formatINR(
-                                                                    product.price,
-                                                                    {
-                                                                        input: "paise",
-                                                                    }
-                                                                )}
                                                             </span>
                                                         </div>
                                                     </div>
