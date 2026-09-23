@@ -1,0 +1,121 @@
+schema_version: "1.0"
+task:
+  id: REN-238
+  title: Redis command observability by cache path/route
+  source: linear
+  branch: feat/ren-238-239-240-upstash
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-238
+    priority: null
+    labels: [tech-debt]
+    status: Backlog
+    assignee: null
+    project: null
+    milestone: null
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - Cross-cutting Redis instrumentation touches both best-effort and critical clients.
+    - Observability must not change cache behavior or expose sensitive data.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [connection-policy Proxy, pipeline Proxy, redis index, analytics, revenue, existing Redis tests]
+  excluded_areas: [new Redis services, key/payload logging, application business logic, deployment configuration]
+  dependencies: [DEP-238-1]
+  integrations: [INT-238-1]
+  security_boundaries: [SEC-238-1]
+  state_transitions: [command-start -> confirmed, pipeline-registration -> confirmed-or-unconfirmed]
+dependencies:
+  - {id: DEP-238-1, name: existing ioredis clients, purpose: instrumentation target, description: Keep ioredis and existing client construction unchanged., status: resolved}
+integrations:
+  - {id: INT-238-1, system: Vercel-visible console logging, name: Vercel-visible console logging, purpose: cost and command baseline, description: Preserve existing console logging path with bounded aggregate records., status: resolved}
+personas:
+  - {id: PER-238-1, role: platform_engineer, applicability: Reviews Redis command volume and failures.}
+security_boundaries:
+  - {id: SEC-238-1, description: Logs must not include Redis keys, values, payloads, or per-command event data.}
+business_rules:
+  - {id: BR-238-1, description: Redis failure remains a cache failure/fallback and never changes the source-of-truth result.}
+decisions:
+  - id: DEC-238-1
+    question: Should commands be sampled?
+    class: AUTO_DECIDE
+    status: resolved
+    recommendation: Retain bounded 100% aggregate counting within the existing logging path.
+    basis: Ticket requests a baseline and forbids a per-command stream; no new sampling policy is required.
+    confidence: medium
+    consequence: medium
+    human_confirmation_required: false
+    confirmation_source: Finalized REN-238 execution rules supplied by user.
+requirements:
+  - {id: REQ-238-1, description: Count direct Redis commands by command family without counting pipeline or exec controls., type: explicit}
+  - {id: REQ-238-2, description: Count each registered pipeline command individually and separate rejected exec counts as unconfirmed., type: explicit}
+  - {id: REQ-238-3, description: Preserve AsyncLocalStorage attribution and existing Vercel-visible logging., type: explicit}
+  - {id: REQ-238-4, description: Keep instrumentation fail-open and exclude keys, payloads, and per-command event streams., type: explicit}
+  - {id: REQ-238-5, description: Emit only the fixed aggregate metadata allowlist with normalized command families and an unknown bucket., type: explicit}
+scenarios:
+  - {id: SCN-238-1, description: Direct and pipeline commands produce accurate aggregate physical counts., requirement_ids: [REQ-238-1, REQ-238-2]}
+  - {id: SCN-238-2, description: A rejected pipeline exec records unconfirmed work without changing the existing fallback result., requirement_ids: [REQ-238-2, REQ-238-4]}
+  - {id: SCN-238-3, description: A labeled cache operation is attributed and logged without sensitive command data., requirement_ids: [REQ-238-3, REQ-238-4]}
+  - {id: SCN-238-4, description: Registration-time or synchronous instrumentation failures remain fail-open and do not alter Redis behavior., requirement_ids: [REQ-238-4, REQ-238-5]}
+invariants:
+  - {id: INV-238-1, description: Observability cannot change Redis return values, fallback values, or thrown application errors.}
+  - {id: INV-238-2, description: A physical command count equals direct commands plus registered pipeline commands, excluding control methods.}
+  - {id: INV-238-3, description: Logs contain approved metadata only and remain bounded by observation scope.}
+  - {id: INV-238-4, description: Raw Redis errors, keys, arguments, and payloads never reach the aggregate logger.}
+flows:
+  - {id: FLOW-238-1, description: Cache method label -> AsyncLocalStorage scope -> Redis Proxy command aggregation -> one existing logger record., state_transitions: [unattributed -> labeled -> aggregated -> emitted]}
+test_expectations:
+  - {id: TEXP-238-1, category: unit, classification: REQUIRED, reason: Proves direct and pipeline family counts and control-method exclusion., scenarios: [SCN-238-1]}
+  - {id: TEXP-238-2, category: unit, classification: REQUIRED, reason: Proves rejected exec has separate unconfirmed accounting and preserves fallback., scenarios: [SCN-238-2]}
+  - {id: TEXP-238-3, category: regression, classification: REQUIRED, reason: Proves labels, command normalization, bounds, and sensitive-field exclusions remain stable., scenarios: [SCN-238-3]}
+  - {id: TEXP-238-4, category: unit, classification: REQUIRED, reason: Proves registration and instrumentation failures are fail-open., scenarios: [SCN-238-4]}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {severity: major, category: observability_testability, finding: Aggregate schema and sanitized error allowlist were underspecified., resolution: Contract now defines fixed fields, normalized families, unknown bucket, one-record scope, and sanitized error logging.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User execution approval in conversation on 2026-09-24.
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-238-1, scenario_ids: [SCN-238-1]}
+    - {requirement_id: REQ-238-2, scenario_ids: [SCN-238-1, SCN-238-2]}
+    - {requirement_id: REQ-238-3, scenario_ids: [SCN-238-3]}
+    - {requirement_id: REQ-238-4, scenario_ids: [SCN-238-2, SCN-238-3]}
+    - {requirement_id: REQ-238-5, scenario_ids: [SCN-238-3, SCN-238-4]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-238-1, invariant_ids: [INV-238-1, INV-238-2]}
+    - {scenario_id: SCN-238-2, invariant_ids: [INV-238-1, INV-238-2]}
+    - {scenario_id: SCN-238-3, invariant_ids: [INV-238-1, INV-238-3]}
+    - {scenario_id: SCN-238-4, invariant_ids: [INV-238-1, INV-238-4]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-238-1, test_expectation_ids: [TEXP-238-1]}
+    - {scenario_id: SCN-238-2, test_expectation_ids: [TEXP-238-2]}
+    - {scenario_id: SCN-238-3, test_expectation_ids: [TEXP-238-3]}
+    - {scenario_id: SCN-238-4, test_expectation_ids: [TEXP-238-4]}
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED
+  base_branch: origin/master
+  base_commit: "e442b86a0a4a2daacd9c443a6db483241f8c27d6"
+  head_commit: "4f5ae2d30242f8e56a1ff02df1f9cecb43e12ddd"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation: {requirements: PASS, scenarios: PASS, invariants: PASS, architecture: PASS, security: PASS, test_coverage: PASS, scope: PASS}
+  blocking_findings: []
+  required_actions: []
+  evidence: ["Compared origin/master and HEAD with the uncommitted working-tree diff against the approved REN-238 contract."]
+  governance_reentry_required: false

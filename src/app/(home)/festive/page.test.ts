@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Metadata } from "next";
 
+import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign";
 import { metadata } from "./page";
 
 describe("festive page metadata", () => {
     test("uses festive-specific metadata for every social preview", () => {
-        const expectedTitle = "Festive Collection | Renivet";
-        const expectedDescription =
-            "Shop Renivet's curated festive collection for thoughtful gifting.";
+        const expectedTitle = FESTIVE_CAMPAIGN.social.title;
+        const expectedDescription = FESTIVE_CAMPAIGN.social.description;
 
         expect(metadata.openGraph).toMatchObject({
             title: expectedTitle,

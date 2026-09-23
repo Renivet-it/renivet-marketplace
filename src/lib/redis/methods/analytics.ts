@@ -1,6 +1,7 @@
 import { getDate } from "@/lib/utils";
 import { parse } from "date-fns";
 import { criticalRedis as redis } from "..";
+import { withRedisObservation } from "../connection-policy";
 
 class Analytics {
     async track({
@@ -12,9 +13,11 @@ class Analytics {
         brandId: string;
         event: object;
     }) {
-        const keysArray = ["analytics", namespace, brandId, getDate()];
-        const key = keysArray.join("::");
-        await redis.hincrby(key, JSON.stringify(event), 1);
+        return withRedisObservation("analytics.track", async () => {
+            const keysArray = ["analytics", namespace, brandId, getDate()];
+            const key = keysArray.join("::");
+            await redis.hincrby(key, JSON.stringify(event), 1);
+        });
     }
 
     async retrieveByRange({
@@ -26,8 +29,9 @@ class Analytics {
         brandId?: string;
         nDays: number;
     }) {
-        const pipeline = redis.pipeline();
-        const dates: string[] = [];
+        return withRedisObservation("analytics.retrieveByRange", async () => {
+            const pipeline = redis.pipeline();
+            const dates: string[] = [];
 
         for (let i = 0; i < nDays; i++) {
             const formattedDate = getDate(i);
@@ -44,9 +48,9 @@ class Analytics {
             pipeline.hgetall(key);
         }
 
-        const results = await pipeline.exec();
+            const results = await pipeline.exec();
 
-        return dates
+            return dates
             .map((date, index) => ({
                 date,
                 events: Object.entries(results?.[index]?.[1] ?? {}).map(
@@ -60,7 +64,8 @@ class Analytics {
                 parse(b.date, "dd/MM/yyyy", new Date())
                     ? 1
                     : -1
-            );
+                );
+        });
     }
 
     async retrieve({
@@ -72,18 +77,20 @@ class Analytics {
         brandId?: string;
         date: string;
     }) {
-        const keysArray = ["analytics", namespace, brandId, date].filter(
-            Boolean
-        );
-        const key = keysArray.join("::");
+        return withRedisObservation("analytics.retrieve", async () => {
+            const keysArray = ["analytics", namespace, brandId, date].filter(
+                Boolean
+            );
+            const key = keysArray.join("::");
 
-        const res = await redis.hgetall(key);
-        return {
-            date,
-            events: Object.entries(res ?? []).map(([key, value]) => ({
-                [key]: Number(value),
-            })),
-        };
+            const res = await redis.hgetall(key);
+            return {
+                date,
+                events: Object.entries(res ?? []).map(([key, value]) => ({
+                    [key]: Number(value),
+                })),
+            };
+        });
     }
 }
 

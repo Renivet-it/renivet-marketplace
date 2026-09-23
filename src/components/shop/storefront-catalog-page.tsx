@@ -194,11 +194,7 @@ export async function StorefrontCatalogPage({
                         <div>
                             {pageHeading ? (
                                 <h1
-                                    className={
-                                        editorialIntro
-                                            ? "font-serif text-3xl"
-                                            : "sr-only"
-                                    }
+                                    className={editorialIntro ? "font-serif text-3xl" : "sr-only"}
                                 >
                                     {pageHeading}
                                 </h1>

@@ -39,4 +39,18 @@ describe("Redis connection policy", () => {
         expect(await cacheRedis.set("key", "value")).toBe("OK");
         expect(await cacheRedis.pipeline().exec()).toEqual([]);
     });
+
+    test("returns one null per requested MGET key when Redis is unavailable", async () => {
+        const cacheRedis = createBestEffortRedis({
+            mget: async () => {
+                throw new Error("Redis unavailable");
+            },
+        } as never);
+
+        expect(await cacheRedis.mget("one", "two", "three")).toEqual([
+            null,
+            null,
+            null,
+        ]);
+    });
 });

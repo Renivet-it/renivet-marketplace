@@ -1,0 +1,115 @@
+schema_version: "1.0"
+task:
+  id: REN-239
+  title: Media cache key and MGET resilience
+  source: linear
+  branch: feat/ren-238-239-240-upstash
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-239
+    priority: null
+    labels: [tech-debt]
+    status: Backlog
+    assignee: null
+    project: null
+    milestone: null
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - Media cache is consumed by product, cart, order, wishlist, brand, and marketing reads.
+    - Incorrect fallback can suppress Postgres recovery and incorrect keys can serve stale/missing media.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [connection-policy fallbacks, media cache, brand media mutations, media query callers, media schema]
+  excluded_areas: [media schema migration, getAll SCAN redesign, UploadThing behavior, caller data-model redesign]
+  dependencies: [DEP-239-1]
+  integrations: [INT-239-1]
+  security_boundaries: []
+  state_transitions: [db-media -> cache-write -> cache-read -> db-fallback -> explicit-drop]
+dependencies:
+  - {id: DEP-239-1, name: Postgres media queries, purpose: authoritative fallback and brand context, description: Existing brandMediaItemQueries remain source of truth., status: resolved}
+integrations:
+  - {id: INT-239-1, system: media edit invalidation, name: media edit invalidation, purpose: freshness, description: Existing brand media routes explicitly drop brand cache after mutations., status: resolved}
+personas:
+  - {id: PER-239-1, role: storefront_customer, applicability: Receives product images and media metadata.}
+security_boundaries: []
+business_rules:
+  - {id: BR-239-1, description: Postgres remains authoritative and Redis misses/failures must execute the existing DB fallback.}
+decisions:
+  - id: DEC-239-1
+    question: What finite TTL is appropriate?
+    class: B_RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: 24 hours.
+    basis: Media edit/create/delete routes explicitly invalidate by brand; media can be edited, so a one-day disposable safety net limits missed-invalidation staleness without using the seven-day cart TTL.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+    confirmation_source: Repository media mutation and cache-write evidence plus finalized REN-239 rules.
+requirements:
+  - {id: REQ-239-1, description: Shared MGET fallback returns one null per requested key and preserves DB fallback., type: explicit}
+  - {id: REQ-239-2, description: Media reads and invalidation use canonical media:id:brandId keys with no wildcard MGET; ID-only callers obtain brand context from the existing Postgres lookup without changing result shape., type: explicit}
+  - {id: REQ-239-3, description: Preserve caller data shape and explicit drop invalidation while adding finite write TTL., type: explicit}
+  - {id: REQ-239-4, description: Do not read or migrate legacy malformed keys and do not redesign getAll SCAN., type: explicit}
+scenarios:
+  - {id: SCN-239-1, description: MGET failure for N media keys produces N misses and DB fallback repopulates exact keys., requirement_ids: [REQ-239-1, REQ-239-3]}
+  - {id: SCN-239-2, description: Existing single and batch media reads use exact brand-scoped canonical keys, including ID-only callers obtaining brand context from Postgres., requirement_ids: [REQ-239-2, REQ-239-3]}
+  - {id: SCN-239-3, description: Media mutations retain explicit best-effort drop and cache writes expire after the selected TTL; legacy keys are not migrated., requirement_ids: [REQ-239-3, REQ-239-4]}
+invariants:
+  - {id: INV-239-1, description: A Redis failure never becomes authoritative absence when Postgres has media data.}
+  - {id: INV-239-2, description: Every media cache key includes id and brandId and no wildcard is passed to MGET.}
+  - {id: INV-239-3, description: Cache invalidation remains rebuildable and no old malformed-key migration is introduced.}
+flows:
+  - {id: FLOW-239-1, description: Media caller -> exact MGET -> parse hit or N-null miss -> Postgres fallback -> canonical TTL write., state_transitions: [request -> exact-read -> hit-or-miss -> fallback -> rebuild]}
+test_expectations:
+  - {id: TEXP-239-1, category: unit, classification: REQUIRED, reason: Proves N-null MGET fallback and no wildcard request., scenarios: [SCN-239-1, SCN-239-2]}
+  - {id: TEXP-239-2, category: integration, classification: REQUIRED, reason: Proves canonical get/add/bulk/remove behavior and DB fallback shape., scenarios: [SCN-239-1, SCN-239-2]}
+  - {id: TEXP-239-3, category: regression, classification: REQUIRED, reason: Proves explicit drop remains best-effort, legacy keys are not read, and all writes carry the selected 24-hour TTL., scenarios: [SCN-239-3]}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {severity: design_blocker, category: requirements_scenarios, finding: ID-only media callers lacked a canonical-key strategy., resolution: Contract preserves existing APIs and defines a Postgres-authoritative brand-context lookup before exact MGET.}
+    - {severity: major, category: compatibility_migration, finding: Legacy-key behavior was unspecified., resolution: Contract explicitly makes legacy keys unreachable and unmigrated.}
+    - {severity: minor, category: integrations_idempotency, finding: Invalidation failure behavior was unspecified., resolution: Contract defines invalidation as best-effort and TTL as the freshness bound.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User execution approval in conversation on 2026-09-24.
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-239-1, scenario_ids: [SCN-239-1]}
+    - {requirement_id: REQ-239-2, scenario_ids: [SCN-239-2]}
+    - {requirement_id: REQ-239-3, scenario_ids: [SCN-239-1, SCN-239-2, SCN-239-3]}
+    - {requirement_id: REQ-239-4, scenario_ids: [SCN-239-3]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-239-1, invariant_ids: [INV-239-1, INV-239-2]}
+    - {scenario_id: SCN-239-2, invariant_ids: [INV-239-2, INV-239-3]}
+    - {scenario_id: SCN-239-3, invariant_ids: [INV-239-3]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-239-1, test_expectation_ids: [TEXP-239-1, TEXP-239-2]}
+    - {scenario_id: SCN-239-2, test_expectation_ids: [TEXP-239-1, TEXP-239-2]}
+    - {scenario_id: SCN-239-3, test_expectation_ids: [TEXP-239-3]}
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED
+  base_branch: origin/master
+  base_commit: "e442b86a0a4a2daacd9c443a6db483241f8c27d6"
+  head_commit: "4f5ae2d30242f8e56a1ff02df1f9cecb43e12ddd"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation: {requirements: PASS, scenarios: PASS, invariants: PASS, architecture: PASS, security: PASS, test_coverage: PASS, scope: PASS}
+  blocking_findings: []
+  required_actions: []
+  evidence: ["Compared origin/master and HEAD with the uncommitted working-tree diff against the approved REN-239 contract."]
+  governance_reentry_required: false

@@ -1,0 +1,122 @@
+schema_version: "1.0"
+task:
+  id: REN-240
+  title: Replace cart hot-read KEYS with derived index
+  source: linear
+  branch: feat/ren-238-239-240-upstash
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-240
+    priority: null
+    labels: [tech-debt]
+    status: Backlog
+    assignee: null
+    project: null
+    milestone: null
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - Cart cache reads and writes are customer-facing and tied to Postgres cart mutations.
+    - Incorrect membership validation can return stale or missing cart items.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [userCartCache, cart queries, cart schema identity, cart route mutation callers, Redis pipeline behavior]
+  excluded_areas: [cart schema migration, backfill job, Redis product migration, broad dropAll redesign]
+  dependencies: [DEP-240-1, DEP-240-2]
+  integrations: []
+  security_boundaries: [SEC-240-1]
+  state_transitions: [postgres-mutation -> cache-index-mutation -> indexed-read -> validate-or-rebuild]
+dependencies:
+  - {id: DEP-240-1, name: Postgres getCartForUser, purpose: authoritative cart membership and values, description: Existing query remains source of truth., status: resolved}
+  - {id: DEP-240-2, name: seven-day cart item TTL, purpose: existing cache freshness contract, description: Preserve current item TTL and keep index TTL no shorter., status: resolved}
+integrations: []
+personas:
+  - {id: PER-240-1, role: storefront_customer, applicability: Reads and mutates their cart.}
+security_boundaries:
+  - {id: SEC-240-1, description: Index keys and members remain scoped to the authenticated userId; no cross-user reads are introduced.}
+business_rules:
+  - {id: BR-240-1, description: Postgres is authoritative; Redis is disposable and cannot turn a Redis outage into an empty cart when Postgres has rows.}
+decisions:
+  - id: DEC-240-1
+    question: What is the index member identity?
+    class: AUTO_DECIDE
+    status: resolved
+    recommendation: Use the full user-scoped cart item key derived from productId and optional variantId.
+    basis: It is directly addressable for MGET and encodes the required compound identity under the user-scoped index key.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+    confirmation_source: Finalized REN-240 execution rules supplied by user.
+requirements:
+  - {id: REQ-240-1, description: Normal cart reads use cart:index:userId and do not use KEYS or SCAN., type: explicit}
+  - {id: REQ-240-2, description: Postgres mutation completes before cache/index mutation and pipelines pair item and index operations without assuming atomicity; partial success remains rebuildable and idempotent., type: explicit}
+  - {id: REQ-240-3, description: Replace count-only validation with getCartForUser and compare actual cached membership by productId/variantId., type: explicit}
+  - {id: REQ-240-4, description: Any membership/value mismatch uses the existing drop-then-rebuild path; index remains derived and migration-free., type: explicit}
+scenarios:
+  - {id: SCN-240-1, description: A valid indexed cart read returns cached values without KEYS/SCAN., requirement_ids: [REQ-240-1, REQ-240-3]}
+  - {id: SCN-240-2, description: Empty, missing, stale, same-count/different-membership, variant, or Redis-failure reads fall back to Postgres and rebuild., requirement_ids: [REQ-240-3, REQ-240-4]}
+  - {id: SCN-240-3, description: Successful and failed cart mutations preserve Postgres-first ordering and paired index operations., requirement_ids: [REQ-240-2]}
+  - {id: SCN-240-4, description: An absent index, partial pipeline, repeated read, or concurrent rebuild is recovered by Postgres validation without KEYS/SCAN., requirement_ids: [REQ-240-1, REQ-240-4]}
+invariants:
+  - {id: INV-240-1, description: Postgres cart rows are authoritative for membership and values.}
+  - {id: INV-240-2, description: Every index member is scoped by userId and identifies productId plus variantId.}
+  - {id: INV-240-3, description: A Redis failure or mismatch cannot cause a non-empty Postgres cart to be returned as empty.}
+  - {id: INV-240-4, description: No migration/backfill is required because the index can be rebuilt from Postgres.}
+  - {id: INV-240-5, description: Cache/index mutations are idempotent and never precede a successful Postgres mutation.}
+flows:
+  - {id: FLOW-240-1, description: Postgres cart -> index SMEMBERS -> MGET members -> compare DB identity/value -> hit or drop/rebuild., state_transitions: [db-authoritative -> indexed-read -> validated-hit-or-mismatch -> rebuild]}
+test_expectations:
+  - {id: TEXP-240-1, category: unit, classification: REQUIRED, reason: Proves index key/member identity, paired pipeline commands, and no hot-read KEYS/SCAN., scenarios: [SCN-240-1, SCN-240-3]}
+  - {id: TEXP-240-2, category: integration, classification: REQUIRED, reason: Proves DB membership/value validation across empty, stale, variants, same-count, and Redis failure cases., scenarios: [SCN-240-2]}
+  - {id: TEXP-240-3, category: regression, classification: REQUIRED, reason: Proves Postgres-first mutation ordering and rebuildability without migration., scenarios: [SCN-240-3]}
+  - {id: TEXP-240-4, category: integration, classification: REQUIRED, reason: Proves absent-index initialization, repeated reads, partial pipeline recovery, and concurrent rebuild behavior., scenarios: [SCN-240-4]}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {severity: design_blocker, category: state_data_consistency, finding: Compound index identity and concurrent rebuild semantics were ambiguous., resolution: Contract defines exact canonical member encoding, Postgres-snapshot rebuild, idempotent partial-pipeline recovery, and Postgres-first mutation ordering.}
+    - {severity: major, category: failure_recovery, finding: New index command fallback behavior was unspecified., resolution: Contract requires index read failures to become rebuildable misses and writes to remain best-effort.}
+    - {severity: major, category: hidden_assumptions, finding: Index TTL and refresh behavior was incomplete., resolution: Contract selects seven days and refreshes expiry on every successful index write.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User execution approval in conversation on 2026-09-24.
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-240-1, scenario_ids: [SCN-240-1]}
+    - {requirement_id: REQ-240-2, scenario_ids: [SCN-240-3]}
+    - {requirement_id: REQ-240-3, scenario_ids: [SCN-240-1, SCN-240-2]}
+    - {requirement_id: REQ-240-4, scenario_ids: [SCN-240-2]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-240-1, invariant_ids: [INV-240-1, INV-240-2]}
+    - {scenario_id: SCN-240-2, invariant_ids: [INV-240-1, INV-240-3, INV-240-4]}
+    - {scenario_id: SCN-240-3, invariant_ids: [INV-240-1, INV-240-2]}
+    - {scenario_id: SCN-240-4, invariant_ids: [INV-240-1, INV-240-3, INV-240-4, INV-240-5]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-240-1, test_expectation_ids: [TEXP-240-1]}
+    - {scenario_id: SCN-240-2, test_expectation_ids: [TEXP-240-2]}
+    - {scenario_id: SCN-240-3, test_expectation_ids: [TEXP-240-1, TEXP-240-3]}
+    - {scenario_id: SCN-240-4, test_expectation_ids: [TEXP-240-1, TEXP-240-4]}
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED
+  base_branch: origin/master
+  base_commit: "e442b86a0a4a2daacd9c443a6db483241f8c27d6"
+  head_commit: "4f5ae2d30242f8e56a1ff02df1f9cecb43e12ddd"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation: {requirements: PASS, scenarios: PASS, invariants: PASS, architecture: PASS, security: PASS, test_coverage: PASS, scope: PASS}
+  blocking_findings: []
+  required_actions: []
+  evidence: ["Compared origin/master and HEAD with the uncommitted working-tree diff against the approved REN-240 contract."]
+  governance_reentry_required: false

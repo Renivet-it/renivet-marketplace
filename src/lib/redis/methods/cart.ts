@@ -2,6 +2,12 @@ import { userCartQueries } from "@/lib/db/queries";
 import { parseToJSON } from "@/lib/utils";
 import { CachedCart, cachedCartSchema } from "@/lib/validations";
 import { redis } from "..";
+import {
+    CART_CACHE_TTL_SECONDS,
+    cartIndexKey,
+    cartItemKey,
+    cartMembershipMatches,
+} from "./cart-key";
 
 const toNonNegativeInt = (value: unknown) => {
     const numeric = Number(value);
@@ -60,15 +66,20 @@ const parseCachedCartSafely = (cart: any): CachedCart | null => {
 
 class UserCartCache {
     async get(userId: string) {
-        const [dbCartsCount, keys] = await Promise.all([
-            userCartQueries.getCartProductCountForUser(userId),
-            redis.keys(`cart:${userId}:*`),
+        const [dbCarts, indexedKeys] = await Promise.all([
+            userCartQueries.getCartForUser(userId),
+            redis.smembers(cartIndexKey(userId)),
         ]);
+        const expectedKeys = dbCarts.map((cart) =>
+            cartItemKey(cart.userId, cart.productId, cart.variantId ?? undefined)
+        );
+        const membershipMatches = cartMembershipMatches(
+            expectedKeys,
+            indexedKeys
+        );
 
-        if (keys.length !== dbCartsCount) {
+        if (!membershipMatches) {
             await this.drop(userId);
-
-            const dbCarts = await userCartQueries.getCartForUser(userId);
             if (!dbCarts.length) return [];
 
             const cachedCarts = parseCachedCartArraySafely(dbCarts)
@@ -85,14 +96,29 @@ class UserCartCache {
             await this.addBulk(cachedCarts);
             return cachedCarts;
         }
-        if (!keys.length) return [];
+        if (!expectedKeys.length) return [];
 
-        const cachedCarts = await redis.mget(...keys);
+        const cachedCarts = await redis.mget(...expectedKeys);
         const parsedCachedCarts = parseCachedCartArraySafely(
             cachedCarts
                 .map((sub) => parseToJSON<CachedCart>(sub))
                 .filter((sub): sub is CachedCart => sub !== null)
         );
+
+        const cachedKeys = new Set(
+            parsedCachedCarts.map((cart) =>
+                cartItemKey(cart.userId, cart.productId, cart.variantId ?? undefined)
+            )
+        );
+        if (
+            parsedCachedCarts.length !== dbCarts.length ||
+            cachedKeys.size !== expectedKeys.length ||
+            expectedKeys.some((key) => !cachedKeys.has(key))
+        ) {
+            await this.drop(userId);
+            await this.addBulk(dbCarts);
+            return dbCarts;
+        }
 
         return parsedCachedCarts
             .sort(
@@ -115,8 +141,7 @@ class UserCartCache {
         productId: string;
         variantId?: string;
     }) {
-        const keyArray = ["cart", userId, productId, variantId];
-        const key = keyArray.filter(Boolean).join(":");
+        const key = cartItemKey(userId, productId, variantId);
 
         const cachedCart = await redis.get(key);
 
@@ -139,33 +164,34 @@ class UserCartCache {
     }
 
     async add(cart: CachedCart) {
-        const keyArray = ["cart", cart.userId, cart.productId, cart.variantId];
-        const key = keyArray.filter(Boolean).join(":");
-
-        return await redis.set(
-            key,
-            JSON.stringify(cart),
-            "EX",
-            60 * 60 * 24 * 7
+        const key = cartItemKey(
+            cart.userId,
+            cart.productId,
+            cart.variantId ?? undefined
         );
+        const pipeline = redis.pipeline();
+        pipeline
+            .set(key, JSON.stringify(cart), "EX", CART_CACHE_TTL_SECONDS)
+            .sadd(cartIndexKey(cart.userId), key)
+            .expire(cartIndexKey(cart.userId), CART_CACHE_TTL_SECONDS);
+        return pipeline.exec();
     }
 
     async addBulk(carts: CachedCart[]) {
         const pipeline = redis.pipeline();
+        if (!carts.length) return [];
 
-        await Promise.all(
-            carts.map((cart) => {
-                const keyArray = [
-                    "cart",
-                    cart.userId,
-                    cart.productId,
-                    cart.variantId,
-                ];
-                const key = keyArray.filter(Boolean).join(":");
-
-                pipeline.set(key, JSON.stringify(cart), "EX", 60 * 60 * 24 * 7);
-            })
-        );
+        carts.forEach((cart) => {
+            const key = cartItemKey(
+                cart.userId,
+                cart.productId,
+                cart.variantId ?? undefined
+            );
+            pipeline
+                .set(key, JSON.stringify(cart), "EX", CART_CACHE_TTL_SECONDS)
+                .sadd(cartIndexKey(cart.userId), key);
+        });
+        pipeline.expire(cartIndexKey(carts[0].userId), CART_CACHE_TTL_SECONDS);
 
         return pipeline.exec();
     }
@@ -179,16 +205,15 @@ class UserCartCache {
         productId: string;
         variantId?: string;
     }) {
-        const keyArray = ["cart", userId, productId, variantId];
-        const key = keyArray.filter(Boolean).join(":");
-
-        return await redis.del(key);
+        const key = cartItemKey(userId, productId, variantId);
+        const pipeline = redis.pipeline();
+        pipeline.del(key).srem(cartIndexKey(userId), key);
+        return pipeline.exec();
     }
 
     async drop(userId: string) {
-        const keys = await redis.keys(`cart:${userId}:*`);
-        if (!keys.length) return 0;
-        return await redis.del(...keys);
+        const keys = await redis.smembers(cartIndexKey(userId));
+        return await redis.del(...keys, cartIndexKey(userId));
     }
 
     async dropAll() {
