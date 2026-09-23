@@ -2,11 +2,11 @@
 
 ## Executive Result
 
-REVIEW_PASSED — NO_DRIFT. Base commit is `e442b86a0a4a2daacd9c443a6db483241f8c27d6` and head commit is `ef97911e0c0f3c49dc3c470be5c7d60ea2241874` on `feat/ren-238-239-240-upstash`. No governance re-entry is required.
+REVIEW_PASSED — NO_DRIFT. Base commit is `e442b86a0a4a2daacd9c443a6db483241f8c27d6` and head commit is `4f5ae2d30242f8e56a1ff02df1f9cecb43e12ddd` on `feat/ren-238-239-240-upstash`. No governance re-entry is required.
 
 ## Review Scope and Git Evidence
 
-Compared `origin/master` and commit `ef97911e0c0f3c49dc3c470be5c7d60ea2241874`. Evidence includes `src/lib/redis/connection-policy.ts`, `src/lib/redis/index.ts`, analytics/revenue wrappers, and `src/lib/redis/observability.test.ts`.
+Compared `origin/master` and commit `4f5ae2d30242f8e56a1ff02df1f9cecb43e12ddd`. Evidence includes `src/lib/redis/connection-policy.ts`, `src/lib/redis/index.ts`, analytics/revenue wrappers, and `src/lib/redis/observability.test.ts`.
 
 ## Requirement Reconciliation
 
