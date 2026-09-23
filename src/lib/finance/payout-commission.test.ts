@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
     calculateCommissionPaise,
+    commissionRuleDatesOverlap,
+    commissionRuleScopesOverlap,
+    getRuleSpecificityScore,
     resolveCommissionRuleFromCandidates,
     type CommissionRuleCandidate,
 } from "./payout-commission";
@@ -86,6 +89,26 @@ describe("REN-203 commission calculation", () => {
         });
 
         expect(winner).toBeNull();
+    });
+
+    test("classifies exact and different commission scopes with inclusive date overlap", () => {
+        const exact = rule({
+            brandId: "brand-1",
+            categoryId: "category-1",
+            productTypeId: "product-1",
+            effectiveFrom: "2026-01-01",
+            effectiveTo: "2026-06-30",
+        });
+        const sameScope = { ...exact, id: "rule-2" };
+        const broaderScope = { ...exact, id: "rule-3", productTypeId: null };
+        const adjacent = { ...exact, id: "rule-4", effectiveFrom: "2026-07-01" };
+
+        expect(commissionRuleScopesOverlap(exact, sameScope)).toBe(true);
+        expect(commissionRuleScopesOverlap(exact, broaderScope)).toBe(true);
+        expect(commissionRuleDatesOverlap(exact, sameScope)).toBe(true);
+        expect(commissionRuleDatesOverlap(exact, adjacent)).toBe(false);
+        expect(getRuleSpecificityScore(exact)).toBe(3);
+        expect(getRuleSpecificityScore(broaderScope)).toBe(2);
     });
 
     test("payout calculation does not contain the legacy silent commission fallback", async () => {

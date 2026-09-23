@@ -23,12 +23,41 @@ function isRuleEffective(
     return true;
 }
 
-function getRuleSpecificityScore(input: {
+export function getRuleSpecificityScore(input: {
     brandId?: string | null;
     categoryId?: string | null;
     productTypeId?: string | null;
 }) {
     return [input.brandId, input.categoryId, input.productTypeId].filter(Boolean).length;
+}
+
+export function commissionRuleScopesOverlap(
+    left: Pick<CommissionRuleCandidate, "brandId" | "categoryId" | "productTypeId">,
+    right: Pick<CommissionRuleCandidate, "brandId" | "categoryId" | "productTypeId">
+) {
+    return (["brandId", "categoryId", "productTypeId"] as const).every((key) => {
+        return !left[key] || !right[key] || left[key] === right[key];
+    });
+}
+
+function asUtcDate(value: string | null) {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function commissionRuleDatesOverlap(
+    left: Pick<CommissionRuleCandidate, "effectiveFrom" | "effectiveTo">,
+    right: Pick<CommissionRuleCandidate, "effectiveFrom" | "effectiveTo">
+) {
+    const leftFrom = asUtcDate(left.effectiveFrom);
+    const leftTo = asUtcDate(left.effectiveTo);
+    const rightFrom = asUtcDate(right.effectiveFrom);
+    const rightTo = asUtcDate(right.effectiveTo);
+
+    if (leftTo && rightFrom && leftTo < rightFrom) return false;
+    if (rightTo && leftFrom && rightTo < leftFrom) return false;
+    return true;
 }
 
 export function calculateCommissionPaise(
