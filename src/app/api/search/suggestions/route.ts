@@ -1,24 +1,14 @@
 import { NextResponse } from "next/server";
 import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
+import { getSuggestions } from "@/lib/search/search-engine";
+import { toSuggestionStrings } from "@/lib/search/search-preview";
 
-function toSuggestionStrings(data: unknown): string[] {
-    if (!Array.isArray(data)) return [];
-
-    return data
-        .map((item) => {
-            if (typeof item === "string") return item;
-            if (
-                item &&
-                typeof item === "object" &&
-                "text" in item &&
-                typeof (item as { text?: unknown }).text === "string"
-            ) {
-                return (item as { text: string }).text;
-            }
-            return "";
-        })
-        .filter(Boolean)
-        .slice(0, 10);
+async function getDatabaseSuggestions(query: string) {
+    try {
+        return toSuggestionStrings(await getSuggestions(query, 6));
+    } catch {
+        return [];
+    }
 }
 
 export async function GET(request: Request) {
@@ -30,7 +20,9 @@ export async function GET(request: Request) {
     }
 
     const upstreamUrl = buildEmbeddingServiceUrl("/suggestions/ai-suggestions");
-    if (!upstreamUrl) return NextResponse.json([]);
+    if (!upstreamUrl) {
+        return NextResponse.json(await getDatabaseSuggestions(query));
+    }
     upstreamUrl.searchParams.set("query", query);
 
     try {
@@ -44,15 +36,21 @@ export async function GET(request: Request) {
         });
 
         if (!response.ok) {
-            return NextResponse.json([], { status: 200 });
+            return NextResponse.json(await getDatabaseSuggestions(query));
         }
 
-        return NextResponse.json(toSuggestionStrings(await response.json()), {
-            headers: {
-                "Cache-Control": "private, max-age=30",
-            },
-        });
+        const suggestions = toSuggestionStrings(await response.json());
+        return NextResponse.json(
+            suggestions.length > 0
+                ? suggestions
+                : await getDatabaseSuggestions(query),
+            {
+                headers: {
+                    "Cache-Control": "private, max-age=30",
+                },
+            }
+        );
     } catch {
-        return NextResponse.json([], { status: 200 });
+        return NextResponse.json(await getDatabaseSuggestions(query));
     }
 }
