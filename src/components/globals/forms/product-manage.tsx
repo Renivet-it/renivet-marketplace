@@ -355,6 +355,13 @@ export function ProductManageForm({
         () => normalizeProductVariants(product),
         [product]
     );
+    const variantHsnCodes = Array.from(
+        new Set(
+            validVariants
+                .map((variant) => variant.hsCode?.trim())
+                .filter((code): code is string => Boolean(code))
+        )
+    );
 
     const form = useForm<CreateProduct>({
         resolver: zodResolver(createProductSchema),
@@ -1864,6 +1871,13 @@ export function ProductManageForm({
                                                 />
 
                                                 <FormMessage />
+                                                {product?.productHasVariants &&
+                                                !product.hsCode?.trim() &&
+                                                variantHsnCodes.length ? (
+                                                    <p className="mt-2 text-xs text-emerald-700">
+                                                        Variant HSN codes already saved: {variantHsnCodes.join(", ")}. Edit the individual variants above to change them.
+                                                    </p>
+                                                ) : null}
                                             </FormItem>
                                         )}
                                     />
