@@ -59,11 +59,21 @@ export function normalizeHsnImportRows(rows: RawHsnImportRow[]) {
 
 export function resolveHsnImportRows(
     rows: HsnImportRow[],
-    products: Array<{ id: string; sku: string | null; hsCode: string | null }>,
-    variants: Array<{ id: string; sku: string | null; productId: string; hsCode: string | null }>
+    products: Array<{ id: string; sku: string | null; nativeSku?: string | null; hsCode: string | null }>,
+    variants: Array<{ id: string; sku: string | null; nativeSku?: string | null; productId: string; hsCode: string | null }>
 ): HsnResolution[] {
-    const productsBySku = new Map(products.filter((row) => row.sku).map((row) => [row.sku!, row]));
-    const variantsBySku = new Map(variants.filter((row) => row.sku).map((row) => [row.sku!, row]));
+    const productsBySku = new Map<string, (typeof products)[number]>();
+    const variantsBySku = new Map<string, (typeof variants)[number]>();
+    for (const product of products) {
+        for (const key of [product.sku, product.nativeSku]) {
+            if (key) productsBySku.set(key, product);
+        }
+    }
+    for (const variant of variants) {
+        for (const key of [variant.sku, variant.nativeSku]) {
+            if (key) variantsBySku.set(key, variant);
+        }
+    }
 
     return rows.map((row) => {
         const product = productsBySku.get(row.sku);
