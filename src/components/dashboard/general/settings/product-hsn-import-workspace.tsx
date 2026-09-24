@@ -88,8 +88,6 @@ export function ProductHsnImportWorkspace() {
     };
 
     const validPreviewCount = preview.filter((row) => row.status === "product" || row.status === "variant").length;
-    const hasBlockingErrors = errors.some((error) => error.code !== "blank_hsn");
-
     const downloadErrors = () => {
         const csv = ["row,sku,code,message", ...errors.map((error) => [error.row, error.sku, error.code, error.message].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))].join("\n");
         const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -119,7 +117,7 @@ export function ProductHsnImportWorkspace() {
                             <h2 className="font-semibold text-slate-900">Preview</h2>
                             <p className="text-sm text-slate-600">{validPreviewCount} matched rows, {errors.length} input errors.</p>
                         </div>
-                        <Button disabled={!preview.length || hasBlockingErrors || applyMutation.isPending || previewMutation.isPending} onClick={() => void applyImport()}>
+                        <Button disabled={!validPreviewCount || applyMutation.isPending || previewMutation.isPending} onClick={() => void applyImport()}>
                             {applyMutation.isPending ? "Applying..." : "Apply HSN Updates"}
                         </Button>
                     </div>
