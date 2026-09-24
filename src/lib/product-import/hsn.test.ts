@@ -40,6 +40,18 @@ describe("HSN product import", () => {
         ]);
     });
 
+    test("matches uploaded SKU against a native SKU when the canonical SKU is empty", () => {
+        const result = resolveHsnImportRows(
+            [{ sku: "NATIVE-1", hsCode: "62044200" }],
+            [{ id: "product-1", sku: null, nativeSku: "NATIVE-1", hsCode: null }],
+            []
+        );
+
+        expect(result).toEqual([
+            expect.objectContaining({ sku: "NATIVE-1", status: "product", id: "product-1" }),
+        ]);
+    });
+
     test("keeps valid rows eligible when other input rows are invalid", async () => {
         const source = await readFile("src/components/dashboard/general/settings/product-hsn-import-workspace.tsx", "utf8");
 

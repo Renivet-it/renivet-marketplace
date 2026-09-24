@@ -355,6 +355,16 @@ export function ProductManageForm({
         () => normalizeProductVariants(product),
         [product]
     );
+    const variantHsnCodes = Array.from(
+        new Set(
+            validVariants
+                .map((variant) => variant.hsCode?.trim())
+                .filter((code): code is string => Boolean(code))
+        )
+    );
+    const sharedVariantHsnCode = variantHsnCodes.length === 1
+        ? variantHsnCodes[0]
+        : undefined;
 
     const form = useForm<CreateProduct>({
         resolver: zodResolver(createProductSchema),
@@ -1777,7 +1787,7 @@ export function ProductManageForm({
 
                                                 <FormControl>
                                                     <HsnMasterSelect
-                                                        value={field.value}
+                                                        value={field.value || sharedVariantHsnCode}
                                                         onValueChange={
                                                             field.onChange
                                                         }
@@ -1841,7 +1851,7 @@ export function ProductManageForm({
 
                                                 <FormControl>
                                                     <HsnMasterSelect
-                                                        value={field.value}
+                                                        value={field.value || sharedVariantHsnCode}
                                                         onValueChange={
                                                             field.onChange
                                                         }
@@ -1856,7 +1866,7 @@ export function ProductManageForm({
                                                     />
                                                 </FormControl>
                                                 <HsnMasterRate
-                                                    value={field.value}
+                                                    value={field.value || sharedVariantHsnCode}
                                                     options={
                                                         hsnMasterQuery.data ??
                                                         []
@@ -1864,6 +1874,13 @@ export function ProductManageForm({
                                                 />
 
                                                 <FormMessage />
+                                                {product?.productHasVariants &&
+                                                !product.hsCode?.trim() &&
+                                                variantHsnCodes.length ? (
+                                                    <p className="mt-2 text-xs text-emerald-700">
+                                                        Variant HSN codes already saved: {variantHsnCodes.join(", ")}. Edit the individual variants above to change them.
+                                                    </p>
+                                                ) : null}
                                             </FormItem>
                                         )}
                                     />

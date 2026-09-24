@@ -198,14 +198,26 @@ export function evaluateCatalogQc(product: ProductWithBrand): CatalogQcSnapshot 
         });
     }
 
-    if (!product.hsCode?.trim()) {
+    const activeVariants = product.variants.filter((variant) => !variant.isDeleted);
+    const missingVariantHsnCount = product.productHasVariants
+        ? activeVariants.filter((variant) => !variant.hsCode?.trim()).length
+        : 0;
+    const hasProductHsn = Boolean(product.hsCode?.trim());
+    const hasOperationalHsn = hasProductHsn || (
+        product.productHasVariants &&
+        activeVariants.length > 0 &&
+        missingVariantHsnCount === 0
+    );
+
+    if (!hasOperationalHsn) {
         pushFinding(findings, {
             code: "missing_hs_code",
             severity: "warning",
             field: "hsCode",
             title: "HSN code is missing",
-            description:
-                "The product does not have an HSN code for operational and classification workflows.",
+            description: product.productHasVariants && !hasProductHsn && missingVariantHsnCount > 0
+                ? `${missingVariantHsnCount} active variant${missingVariantHsnCount === 1 ? "" : "s"} do not have an HSN code for operational and classification workflows.`
+                : "The product does not have an HSN code for operational and classification workflows.",
             suggestion:
                 "Add the correct HSN code for the product type.",
         });

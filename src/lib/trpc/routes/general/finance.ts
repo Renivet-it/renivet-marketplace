@@ -108,12 +108,12 @@ async function findHsnImportTargets(ctx: Context, rows: HsnImportRow[]) {
     const skus = rows.map((row) => row.sku);
     const [productRows, variantRows] = await Promise.all([
         ctx.db.query.products.findMany({
-            where: inArray(products.sku, skus),
-            columns: { id: true, sku: true, hsCode: true },
+            where: or(inArray(products.sku, skus), inArray(products.nativeSku, skus)),
+            columns: { id: true, sku: true, nativeSku: true, hsCode: true },
         }),
         ctx.db.query.productVariants.findMany({
-            where: inArray(productVariants.sku, skus),
-            columns: { id: true, sku: true, productId: true, hsCode: true },
+            where: or(inArray(productVariants.sku, skus), inArray(productVariants.nativeSku, skus)),
+            columns: { id: true, sku: true, nativeSku: true, productId: true, hsCode: true },
         }),
     ]);
     const resolved = resolveHsnImportRows(rows, productRows, variantRows);
