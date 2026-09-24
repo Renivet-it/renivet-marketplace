@@ -1144,12 +1144,6 @@ class ProductQuery {
         prioritizedSubcategoryIds?: string[];
         isFestiveProduct?: boolean;
     }) {
-        console.log(
-            "[getProducts] search:",
-            search,
-            "requireMedia:",
-            requireMedia
-        );
         // --- Price conversions ---
         minPrice = !!minPrice
             ? minPrice < 0
