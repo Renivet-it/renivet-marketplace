@@ -627,7 +627,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             0,
             Number(item.discountPaise ?? exactMrp - total)
         );
-        const hsn = item.product?.hsCode ?? item.variant?.hsCode ?? "-";
+        const hsn = item.variant?.hsCode ?? item.product?.hsCode ?? "-";
         const sku =
             item.variant?.sku ??
             item.variant?.nativeSku ??

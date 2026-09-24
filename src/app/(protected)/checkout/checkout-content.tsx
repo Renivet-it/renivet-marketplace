@@ -401,7 +401,10 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 const checkoutItem = item as any;
                 return {
                     lineId: String(checkoutItem.id),
-                    hsnCode: checkoutItem.product.hsCode ?? "",
+                    hsnCode:
+                        checkoutItem.product.variants?.find(
+                            (variant: any) => variant.id === checkoutItem.variantId
+                        )?.hsCode ?? checkoutItem.product.hsCode ?? "",
                     unitPricePaise: checkoutItem.isSwapRewardItem
                         ? 0
                         : checkoutItem.variantId

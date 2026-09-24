@@ -94,7 +94,7 @@ export async function GET(
         }
 
         const hsnCodes = storedOrder.items
-            .map((item) => item.product?.hsCode ?? item.variant?.hsCode ?? "")
+            .map((item) => item.variant?.hsCode ?? item.product?.hsCode ?? "")
             .filter(Boolean);
         const hsnRows = hsnCodes.length
             ? await db.query.hsnMaster.findMany({
@@ -132,7 +132,7 @@ export async function GET(
             qrCodeDataUrl,
             items: storedOrder.items.map((item) => {
                 const hsnCode =
-                    item.product?.hsCode ?? item.variant?.hsCode ?? "";
+                    item.variant?.hsCode ?? item.product?.hsCode ?? "";
                 return {
                     quantity: item.quantity,
                     product: {

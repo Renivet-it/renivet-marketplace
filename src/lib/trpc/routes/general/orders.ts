@@ -522,7 +522,9 @@ export const ordersRouter = createTRPCRouter({
                     input.items.map((item, index) => ({
                         lineId: String(index),
                         hsnCode:
-                            productDetailsByIndex[index]?.product?.hsCode ?? "",
+                            productDetailsByIndex[index]?.variant?.hsCode ??
+                            productDetailsByIndex[index]?.product?.hsCode ??
+                            "",
                         unitPricePaise: Number(item.price ?? 0),
                         quantity: item.quantity,
                     })),

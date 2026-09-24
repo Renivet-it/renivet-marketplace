@@ -89,7 +89,7 @@ export async function POST(req: Request) {
         const hsnCodes = items
             .map(
                 (item: any) =>
-                    item.product?.hsCode ?? item.variant?.hsCode ?? item.hsCode
+                    item.variant?.hsCode ?? item.product?.hsCode ?? item.hsCode
             )
             .filter(
                 (code: unknown): code is string =>
@@ -106,8 +106,8 @@ export async function POST(req: Request) {
         );
         order.items = items.map((item: any) => {
             const hsnCode =
-                item.product?.hsCode ??
                 item.variant?.hsCode ??
+                item.product?.hsCode ??
                 item.hsCode ??
                 "";
             return { ...item, gstRateBps: gstRateByHsn.get(hsnCode) ?? 0 };

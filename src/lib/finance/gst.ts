@@ -330,7 +330,7 @@ export async function previewGstExport(
             const product = item.product;
             const brand = product?.brand;
             const brandGstin = brand?.confidential?.gstin?.trim() ?? "";
-            const hsnCode = product?.hsCode?.trim() ?? "";
+            const hsnCode = item.variant?.hsCode?.trim() || product?.hsCode?.trim() || "";
             const hsn = hsnCode ? hsnByCode.get(hsnCode) : undefined;
             const unitPricePaise = Number(
                 item.variant?.price ?? product?.price ?? 0
@@ -610,7 +610,7 @@ export async function previewGstExport(
             const product = item.product;
             const brand = product?.brand;
             const brandGstin = brand?.confidential?.gstin?.trim() ?? "";
-            const hsnCode = product?.hsCode?.trim() ?? "";
+            const hsnCode = item.variant?.hsCode?.trim() || product?.hsCode?.trim() || "";
             const hsn = hsnCode ? hsnByCode.get(hsnCode) : undefined;
             const unitPricePaise = Number(
                 item.variant?.price ?? product?.price ?? 0
