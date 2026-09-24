@@ -37,4 +37,9 @@ describe("admin bulk product import", () => {
         expect(source).toContain("Imported ${completedProducts} of ${products.length} products");
         expect(source).toContain("Imported {importProgress.completed} of {importProgress.total} products");
     });
+
+    test("persists HSN when updating an existing variant", async () => {
+        const source = await readFile("src/lib/trpc/routes/general/product-review.ts", "utf8");
+        expect((source.match(/hsCode: variant\.hsCode/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    });
 });

@@ -65,14 +65,69 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { TRPCError } from "@trpc/server";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { inArray, eq, and, or } from "drizzle-orm";
 import { products, productVariants } from "@/lib/db/schema";
+import { hsnMaster } from "@/lib/db/schema/finance-compliance";
+import { resolveHsnImportRows, type HsnImportRow } from "@/lib/product-import/hsn";
 
 const financeModuleEnum = z.enum(financeModules);
 
 function toAuditValue(value: object | null | undefined): Record<string, unknown> | null {
     return value ? Object.fromEntries(Object.entries(value)) : null;
+}
+
+const productHsnImportRowsSchema = z.object({
+    rows: z.array(z.object({
+        sku: z.string().trim().min(1),
+        hsCode: z.string().regex(/^\d{4,8}$/, "HSN code must contain 4 to 8 digits"),
+    })).min(1).max(500),
+});
+
+const productHsnApplySchema = productHsnImportRowsSchema.extend({
+    previewToken: z.string().length(64),
+});
+
+function createHsnImportToken(rows: HsnImportRow[]) {
+    return createHash("sha256").update(JSON.stringify(rows)).digest("hex");
+}
+
+function assertUniqueHsnImportRows(rows: HsnImportRow[]) {
+    const seen = new Set<string>();
+    for (const row of rows) {
+        if (seen.has(row.sku)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Duplicate SKU is not accepted: ${row.sku}` });
+        }
+        seen.add(row.sku);
+    }
+}
+
+async function findHsnImportTargets(ctx: Context, rows: HsnImportRow[]) {
+    assertUniqueHsnImportRows(rows);
+    const skus = rows.map((row) => row.sku);
+    const [productRows, variantRows] = await Promise.all([
+        ctx.db.query.products.findMany({
+            where: inArray(products.sku, skus),
+            columns: { id: true, sku: true, hsCode: true },
+        }),
+        ctx.db.query.productVariants.findMany({
+            where: inArray(productVariants.sku, skus),
+            columns: { id: true, sku: true, productId: true, hsCode: true },
+        }),
+    ]);
+    const resolved = resolveHsnImportRows(rows, productRows, variantRows);
+    const productById = new Map(productRows.map((row) => [row.id, row.hsCode]));
+    const variantById = new Map(variantRows.map((row) => [row.id, row.hsCode]));
+    return resolved.map((match) => ({
+        ...match,
+        currentHsCode:
+            match.status === "product"
+                ? productById.get(match.id) ?? null
+                : match.status === "variant"
+                    ? variantById.get(match.id) ?? null
+                    : null,
+    }));
 }
 
 async function assertFinanceAccess(
@@ -764,6 +819,80 @@ export const financeComplianceRouter = createTRPCRouter({
         await assertFinanceAccess(ctx, "gst_reports", "view");
         return ctx.queries.financeCompliance.listHsnMaster();
     }),
+
+    previewProductHsnImport: adminProcedure
+        .input(productHsnImportRowsSchema)
+        .mutation(async ({ ctx, input }) => {
+            const matches = await findHsnImportTargets(ctx, input.rows);
+            return {
+                rows: matches.map((match) => ({
+                    sku: match.sku,
+                    hsCode: match.hsCode,
+                    status: match.status,
+                    currentHsCode: match.currentHsCode,
+                })),
+                previewToken: createHsnImportToken(input.rows),
+            };
+        }),
+
+    applyProductHsnImport: adminProcedure
+        .input(productHsnApplySchema)
+        .mutation(async ({ ctx, input }) => {
+            if (createHsnImportToken(input.rows) !== input.previewToken) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Preview is stale. Generate a new preview before applying." });
+            }
+            const matches = await findHsnImportTargets(ctx, input.rows);
+            const targetMatches = matches.filter(
+                (match): match is Extract<typeof match, { status: "product" | "variant" }> =>
+                    match.status === "product" || match.status === "variant"
+            );
+            const hsnRows = await ctx.db.query.hsnMaster.findMany({
+                where: inArray(hsnMaster.hsnCode, targetMatches.map((match) => match.hsCode)),
+                columns: { id: true, hsnCode: true },
+            });
+            const hsnMasterByCode = new Map(hsnRows.map((row) => [row.hsnCode, row.id]));
+            let updated = 0;
+            let unchanged = 0;
+
+            await ctx.db.transaction(async (tx) => {
+                for (const match of targetMatches) {
+                    const current = match.status === "product"
+                        ? await tx.query.products.findFirst({ where: eq(products.id, match.id), columns: { hsCode: true } })
+                        : await tx.query.productVariants.findFirst({ where: eq(productVariants.id, match.id), columns: { hsCode: true } });
+                    if (current?.hsCode === match.hsCode) {
+                        unchanged += 1;
+                        continue;
+                    }
+                    if (match.status === "product") {
+                        await tx.update(products).set({ hsCode: match.hsCode, hsnMasterId: hsnMasterByCode.get(match.hsCode) ?? null, updatedAt: new Date() }).where(eq(products.id, match.id));
+                    } else {
+                        await tx.update(productVariants).set({ hsCode: match.hsCode, hsnMasterId: hsnMasterByCode.get(match.hsCode) ?? null, updatedAt: new Date() }).where(eq(productVariants.id, match.id));
+                    }
+                    updated += 1;
+                }
+            });
+
+            await writeFinanceAuditEvent({
+                actorId: ctx.user.id,
+                actionType: "product_hsn.bulk_updated",
+                entityType: "product_hsn_import",
+                entityId: "bulk",
+                afterValue: {
+                    submitted: input.rows.length,
+                    updated,
+                    unchanged,
+                    unmatched: matches.filter((match) => match.status === "unmatched").length,
+                    ambiguous: matches.filter((match) => match.status === "ambiguous").length,
+                },
+            });
+            return {
+                submitted: input.rows.length,
+                updated,
+                unchanged,
+                unmatched: matches.filter((match) => match.status === "unmatched").length,
+                ambiguous: matches.filter((match) => match.status === "ambiguous").length,
+            };
+        }),
 
     upsertHsnMaster: adminProcedure
         .input(

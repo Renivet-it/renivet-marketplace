@@ -1,0 +1,166 @@
+schema_version: "1.0"
+task:
+  id: REN-243
+  title: Fix bulk HSN updates and add audited admin HSN import
+  source: linear
+  branch: feat/hsn-bulk-upload-fix
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-243/fix-bulk-hsn-updates-and-add-audited-admin-hsn-import
+    priority: 1
+    labels: [Bug]
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: null
+    milestone: null
+risk:
+  initial_risk: L3
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  reasons:
+    - HSN values feed tax and invoice classification.
+    - The workflow performs bulk durable catalog writes from uploaded files.
+    - Authorization, tenant isolation, partial failures, and replay safety are required.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [CSV structure, product and variant schema, general bulk upload, brand bulk upload, product import UI, HSN master UI and API, admin settings patterns, audit facilities]
+  excluded_areas: [production database mutation, invoice calculation redesign, HSN master/GST-rate changes, unrelated upload refactors]
+  dependencies: [DEP-243-1, DEP-243-2, DEP-243-3]
+  integrations: []
+  security_boundaries: [SEC-243-1, SEC-243-2]
+  state_transitions: [file-selected -> preview-validated -> explicitly-confirmed -> batched-apply -> summarized]
+dependencies:
+  - {id: DEP-243-1, name: product and variant hsCode columns, purpose: authoritative destination for HSN values, description: Existing products and variants already store hsCode., status: resolved}
+  - {id: DEP-243-2, name: existing admin auth/settings patterns, purpose: restrict and expose the import workflow, description: Reuse existing adminProcedure and general settings conventions., status: resolved}
+  - {id: DEP-243-3, name: existing audit facilities, purpose: record import summary and actor, description: Reuse existing finance/catalog audit facilities where applicable., status: resolved}
+integrations: []
+personas:
+  - {id: PER-243-1, role: catalog_admin, applicability: Reviews and applies HSN imports.}
+  - {id: PER-243-2, role: brand_operator, applicability: Uses existing product bulk upload and must retain current permissions.}
+security_boundaries:
+  - {id: SEC-243-1, description: Only authorized administrators may preview/apply the product HSN import; no brand-user escalation is introduced.}
+  - {id: SEC-243-2, description: SKU resolution and updates cannot cross an unauthorized brand boundary or update multiple ambiguous records.}
+business_rules:
+  - {id: BR-243-1, description: Blank HSN cells are skipped and never clear an existing HSN in the dedicated import.}
+  - {id: BR-243-2, description: Conflicting duplicate SKU rows and ambiguous product/variant matches are rejected without mutation.}
+  - {id: BR-243-3, description: Reapplying an identical SKU/HSN mapping is idempotent and reported unchanged.}
+decisions:
+  - id: DEC-243-1
+    question: Should blank HSN cells clear existing product/variant HSN values?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Skip blank cells to avoid destructive accidental clearing.
+    basis: The supplied file is intended to repair missing values, and clearing tax data is destructive.
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+    confirmation_source: User approval to proceed with HSN-only updates in conversation on 2026-09-25.
+  - id: DEC-243-2
+    question: How should duplicate SKU rows with conflicting HSN values be handled?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Preserve existing bulk-upload duplicate rejection and reject duplicate input rows in the dedicated HSN import.
+    basis: The operator confirmed duplicate SKUs are not accepted by the existing bulk upload and requested that behavior remain unchanged.
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+    confirmation_source: User confirmation in conversation on 2026-09-25.
+  - id: DEC-243-3
+    question: Should product/variant SKU collisions be auto-precedenced?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Treat collisions as ambiguous and require correction rather than guessing.
+    basis: Both tables have canonical SKU fields and an incorrect target can misclassify invoices.
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+    confirmation_source: Safe exact-match policy approved as part of the HSN-only implementation request on 2026-09-25.
+requirements:
+  - {id: REQ-243-1, description: Existing product bulk imports persist hsCode for updates to existing products and existing variants in both bulk routes., type: explicit}
+  - {id: REQ-243-2, description: Authorized admins can upload CSV/XLSX with SKU and HSN/HS Code columns and receive a read-only preview before any write., type: explicit}
+  - {id: REQ-243-3, description: The apply operation resolves exactly one existing product or variant per SKU and never creates records., type: explicit}
+  - {id: REQ-243-4, description: The apply operation is bounded, observable by progress, idempotent, and reports every row outcome and failure., type: explicit}
+  - {id: REQ-243-5, description: Unauthorized users and cross-boundary ambiguous inputs cannot mutate HSN data., type: explicit}
+scenarios:
+  - {id: SCN-243-1, description: Existing product and existing variant bulk rows update hsCode and preserve current behavior for other fields., requirement_ids: [REQ-243-1]}
+  - {id: SCN-243-2, description: Admin previews a valid CSV/XLSX and sees match, update, unchanged, skipped, and error counts with no database writes., requirement_ids: [REQ-243-2, REQ-243-3]}
+  - {id: SCN-243-3, description: Admin explicitly applies a valid preview and receives bounded batch progress and a complete result summary., requirement_ids: [REQ-243-3, REQ-243-4]}
+  - {id: SCN-243-4, description: Missing SKU, invalid HSN, blank HSN, conflicting duplicate, unmatched SKU, ambiguous match, stale preview, and batch failure are reported without silent mutation., requirement_ids: [REQ-243-2, REQ-243-4, REQ-243-5]}
+  - {id: SCN-243-5, description: Unauthorized user cannot preview or apply the admin HSN import, and no brand boundary is crossed., requirement_ids: [REQ-243-5]}
+invariants:
+  - {id: INV-243-1, description: Product/variant hsCode is changed only for an explicitly confirmed, valid, exact-one SKU match.}
+  - {id: INV-243-2, description: Preview never writes product, variant, or HSN master data.}
+  - {id: INV-243-3, description: Blank or conflicting input never clears or selects a tax classification implicitly.}
+  - {id: INV-243-4, description: Repeating the same mapping is idempotent and never creates duplicate catalog records.}
+  - {id: INV-243-5, description: Every input row has one visible terminal outcome.}
+flows:
+  - {id: FLOW-243-1, description: Parse -> normalize -> validate -> resolve -> preview -> explicit confirmation -> batch update -> audit/result, state_transitions: [file-selected, preview-validated, explicitly-confirmed, batched-apply, summarized]}
+  - {id: FLOW-243-2, description: Existing bulk product row -> route validation -> product or variant update -> persisted hsCode, state_transitions: [uploaded, validated, updated]}
+test_expectations:
+  - {id: TEXP-243-1, category: unit, classification: REQUIRED, reason: Proves header aliases, HSN validation, blanks, duplicates, conflicts, and exact-one resolution., scenarios: [SCN-243-2, SCN-243-4]}
+  - {id: TEXP-243-2, category: regression, classification: REQUIRED, reason: Proves existing product and variant bulk uploads persist hsCode., scenarios: [SCN-243-1]}
+  - {id: TEXP-243-3, category: api, classification: REQUIRED, reason: Proves admin authorization, preview no-write behavior, explicit apply, stale preview rejection, and row outcomes., scenarios: [SCN-243-2, SCN-243-3, SCN-243-4, SCN-243-5]}
+  - {id: TEXP-243-4, category: component, classification: REQUIRED, reason: Proves file selection, preview summary, confirmation, progress, and error download behavior., scenarios: [SCN-243-2, SCN-243-3, SCN-243-4]}
+  - {id: TEXP-243-5, category: security, classification: REQUIRED, reason: Proves admin-only access and no unauthorized brand/cross-record mutation., scenarios: [SCN-243-5]}
+  - {id: TEXP-243-6, category: integration, classification: REQUIRED, reason: Proves bounded batches, idempotent replay, and partial failure reporting., scenarios: [SCN-243-3, SCN-243-4]}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {severity: major, category: state_data_consistency, finding: Blank-value, duplicate-conflict, and product-variant collision behavior affects durable tax classification., resolution: Contract skips blanks, preserves existing duplicate rejection, and rejects ambiguous product/variant matches.}
+    - {severity: major, category: security_privacy, finding: A bulk HSN updater must not expose a brand-scoped path that can mutate arbitrary products., resolution: Contract requires admin-only authorization and exact boundary checks.}
+    - {severity: major, category: failure_recovery, finding: A multi-thousand-row import can partially apply unless every row has a terminal outcome and batches are observable., resolution: Contract requires bounded batches, progress, idempotency, and row-level results.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User approval in conversation on 2026-09-25.
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: origin/master
+  base_commit: "f50896cbe52656c596648b13dfeb5db4cb2126f2"
+  head_commit: "0ffb0763a62eff76d6ce1b0b5ed791c88462c5e0"
+  pr_url: null
+  material_drift: MINOR_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-001: Add a rendered component test for the HSN import workspace when the dashboard test harness is extended."
+  evidence:
+    - "Compared origin/master merge-base f50896cbe52656c596648b13dfeb5db4cb2126f2 with HEAD 0ffb0763a62eff76d6ce1b0b5ed791c88462c5e0."
+    - "Focused HSN/import tests passed; full-suite failures were unrelated festive/navbar tests."
+  governance_reentry_required: false
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-243-1, scenario_ids: [SCN-243-1]}
+    - {requirement_id: REQ-243-2, scenario_ids: [SCN-243-2, SCN-243-4]}
+    - {requirement_id: REQ-243-3, scenario_ids: [SCN-243-2, SCN-243-3]}
+    - {requirement_id: REQ-243-4, scenario_ids: [SCN-243-3, SCN-243-4]}
+    - {requirement_id: REQ-243-5, scenario_ids: [SCN-243-4, SCN-243-5]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-243-1, invariant_ids: [INV-243-1, INV-243-4]}
+    - {scenario_id: SCN-243-2, invariant_ids: [INV-243-2, INV-243-5]}
+    - {scenario_id: SCN-243-3, invariant_ids: [INV-243-1, INV-243-4, INV-243-5]}
+    - {scenario_id: SCN-243-4, invariant_ids: [INV-243-3, INV-243-5]}
+    - {scenario_id: SCN-243-5, invariant_ids: [INV-243-1, INV-243-2]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-243-1, test_expectation_ids: [TEXP-243-2]}
+    - {scenario_id: SCN-243-2, test_expectation_ids: [TEXP-243-1, TEXP-243-3, TEXP-243-4]}
+    - {scenario_id: SCN-243-3, test_expectation_ids: [TEXP-243-3, TEXP-243-4, TEXP-243-6]}
+    - {scenario_id: SCN-243-4, test_expectation_ids: [TEXP-243-1, TEXP-243-3, TEXP-243-4, TEXP-243-6]}
+    - {scenario_id: SCN-243-5, test_expectation_ids: [TEXP-243-3, TEXP-243-5]}

@@ -23,6 +23,11 @@ const sections = [
         description: "Dedicated HSN master maintenance for GST rates, coverage checks, and bulk imports.",
     },
     {
+        title: "Product HSN Import",
+        href: "/dashboard/general/settings/product-hsn-import",
+        description: "Preview and apply product or variant HSN updates from SKU-based CSV/XLSX files.",
+    },
+    {
         title: "GST Report",
         href: "/dashboard/general/finance/gst-report",
         description: "HSN master, GST/TCS preview, run history, and export readiness.",

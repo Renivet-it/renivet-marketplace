@@ -554,6 +554,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.ADMINISTRATOR,
             },
             {
+                title: "Product HSN Import",
+                url: "/dashboard/general/settings/product-hsn-import",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.ADMINISTRATOR,
+            },
+            {
                 title: "Legal & Compliance",
                 url: "/dashboard/general/finance/legal-compliance",
                 permissions:
