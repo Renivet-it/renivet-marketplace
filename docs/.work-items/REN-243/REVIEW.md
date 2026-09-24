@@ -5,7 +5,7 @@
 `REVIEW_PASSED_WITH_FINDINGS` with `MINOR_DRIFT`. The implementation stays within the approved HSN import scope and preserves duplicate rejection. Governance re-entry is not required. The only non-blocking finding is that the new UI has static/source coverage but no dedicated rendered component test.
 
 Base: `origin/master` at `f50896cbe52656c596648b13dfeb5db4cb2126f2`  
-Head: `afa257f66d5c25fa43d6a807501e5b180a5c5cbf`
+Head: `0ffb0763a62eff76d6ce1b0b5ed791c88462c5e0`
 
 ## Review Scope and Git Evidence
 

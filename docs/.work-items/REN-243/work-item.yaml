@@ -127,7 +127,7 @@ implementation_review:
   result: REVIEW_PASSED_WITH_FINDINGS
   base_branch: origin/master
   base_commit: "f50896cbe52656c596648b13dfeb5db4cb2126f2"
-  head_commit: "afa257f66d5c25fa43d6a807501e5b180a5c5cbf"
+  head_commit: "0ffb0763a62eff76d6ce1b0b5ed791c88462c5e0"
   pr_url: null
   material_drift: MINOR_DRIFT
   reconciliation:
@@ -142,7 +142,7 @@ implementation_review:
   required_actions:
     - "REV-001: Add a rendered component test for the HSN import workspace when the dashboard test harness is extended."
   evidence:
-    - "Compared origin/master merge-base f50896cbe52656c596648b13dfeb5db4cb2126f2 with HEAD afa257f66d5c25fa43d6a807501e5b180a5c5cbf."
+    - "Compared origin/master merge-base f50896cbe52656c596648b13dfeb5db4cb2126f2 with HEAD 0ffb0763a62eff76d6ce1b0b5ed791c88462c5e0."
     - "Focused HSN/import tests passed; full-suite failures were unrelated festive/navbar tests."
   governance_reentry_required: false
 traceability:
