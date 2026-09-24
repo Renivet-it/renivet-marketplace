@@ -3,6 +3,7 @@ import {
     normalizeHsnImportRows,
     resolveHsnImportRows,
 } from "./hsn";
+import { readFile } from "node:fs/promises";
 
 describe("HSN product import", () => {
     test("normalizes the CSV HS Code header and skips blank HSN values", () => {
@@ -37,5 +38,12 @@ describe("HSN product import", () => {
         expect(result).toEqual([
             expect.objectContaining({ sku: "SKU-1", status: "ambiguous" }),
         ]);
+    });
+
+    test("keeps valid rows eligible when other input rows are invalid", async () => {
+        const source = await readFile("src/components/dashboard/general/settings/product-hsn-import-workspace.tsx", "utf8");
+
+        expect(source).toContain("disabled={!validPreviewCount || applyMutation.isPending || previewMutation.isPending}");
+        expect(source).not.toContain("hasBlockingErrors");
     });
 });
