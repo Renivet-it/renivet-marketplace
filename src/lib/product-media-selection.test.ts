@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    getVisibleMedia,
     moveSelectedMedia,
     removeSelectedMedia,
     uniqueSelectedMedia,
@@ -30,5 +31,14 @@ describe("product media selection", () => {
         expect(
             uniqueSelectedMedia([media("b"), media("a"), media("b")])
         ).toEqual([media("b"), media("a")]);
+    });
+
+    test("limits the initial media preview to a small render window", () => {
+        const items = Array.from({ length: 100 }, (_, index) =>
+            media(String(index))
+        );
+
+        expect(getVisibleMedia(items, 24)).toHaveLength(24);
+        expect(getVisibleMedia(items, 24)).toEqual(items.slice(0, 24));
     });
 });

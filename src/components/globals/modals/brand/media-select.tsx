@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
+    getVisibleMedia,
+    MEDIA_PREVIEW_BATCH_SIZE,
     moveSelectedMedia,
     removeSelectedMedia,
     uniqueSelectedMedia,
@@ -60,6 +62,9 @@ export function MediaSelectModal({
         completed: number;
         total: number;
     } | null>(null);
+    const [visibleMediaCount, setVisibleMediaCount] = useState(
+        MEDIA_PREVIEW_BATCH_SIZE
+    );
     const [selectedItems, setSelectedItems] = useState<BrandMediaItem[]>(() =>
         uniqueSelectedMedia(selectedMedia)
     );
@@ -78,6 +83,14 @@ export function MediaSelectModal({
         return allMedia.filter((item) =>
             item.name.toLowerCase().includes(search.toLowerCase())
         );
+    }, [allMedia, search]);
+    const visibleMedia = useMemo(
+        () => getVisibleMedia(itemsToMap, visibleMediaCount),
+        [itemsToMap, visibleMediaCount]
+    );
+
+    useEffect(() => {
+        setVisibleMediaCount(MEDIA_PREVIEW_BATCH_SIZE);
     }, [allMedia, search]);
 
     const { startUpload } = useUploadThing("brandMediaUploader", {
@@ -294,8 +307,24 @@ export function MediaSelectModal({
                         </div>
                     )}
 
-                    <div className="grid max-h-80 grid-cols-2 gap-4 overflow-scroll rounded-lg border p-2 md:grid-cols-6">
-                        {itemsToMap.map((media) => (
+                    <div
+                        className="grid max-h-80 grid-cols-2 gap-4 overflow-scroll rounded-lg border p-2 md:grid-cols-6"
+                        onScroll={(event) => {
+                            const target = event.currentTarget;
+                            if (
+                                target.scrollTop + target.clientHeight >=
+                                target.scrollHeight - 160
+                            ) {
+                                setVisibleMediaCount((count) =>
+                                    Math.min(
+                                        count + MEDIA_PREVIEW_BATCH_SIZE,
+                                        itemsToMap.length
+                                    )
+                                );
+                            }
+                        }}
+                    >
+                        {visibleMedia.map((media) => (
                             <ProductMediaSelectSingle
                                 key={media.id}
                                 media={media}
@@ -306,6 +335,23 @@ export function MediaSelectModal({
                                 }
                             />
                         ))}
+                        {visibleMedia.length < itemsToMap.length && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="col-span-full"
+                                onClick={() =>
+                                    setVisibleMediaCount((count) =>
+                                        Math.min(
+                                            count + MEDIA_PREVIEW_BATCH_SIZE,
+                                            itemsToMap.length
+                                        )
+                                    )
+                                }
+                            >
+                                Load more media
+                            </Button>
+                        )}
                     </div>
                 </div>
 

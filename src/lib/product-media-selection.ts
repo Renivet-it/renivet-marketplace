@@ -1,5 +1,14 @@
 import { BrandMediaItem } from "@/lib/validations";
 
+export const MEDIA_PREVIEW_BATCH_SIZE = 48;
+
+export function getVisibleMedia(
+    items: BrandMediaItem[],
+    visibleCount = MEDIA_PREVIEW_BATCH_SIZE
+) {
+    return items.slice(0, Math.max(0, visibleCount));
+}
+
 export function uniqueSelectedMedia(items: BrandMediaItem[]) {
     return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
