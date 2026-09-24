@@ -50,7 +50,6 @@ export function ProductMediaSelectSingle({
                         height={500}
                         width={500}
                         loading="lazy"
-                        quality={60}
                         sizes="(max-width: 768px) 42vw, 140px"
                         className="size-full rounded-sm object-cover"
                     />
