@@ -984,6 +984,7 @@ export const productsRouter = createTRPCRouter({
                                             width: variant.width,
                                             height: variant.height,
                                             length: variant.length,
+                                            hsCode: variant.hsCode,
                                             updatedAt: new Date(),
                                         })
                                         .where(
