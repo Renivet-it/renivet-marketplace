@@ -362,6 +362,9 @@ export function ProductManageForm({
                 .filter((code): code is string => Boolean(code))
         )
     );
+    const sharedVariantHsnCode = variantHsnCodes.length === 1
+        ? variantHsnCodes[0]
+        : undefined;
 
     const form = useForm<CreateProduct>({
         resolver: zodResolver(createProductSchema),
@@ -1784,7 +1787,7 @@ export function ProductManageForm({
 
                                                 <FormControl>
                                                     <HsnMasterSelect
-                                                        value={field.value}
+                                                        value={field.value || sharedVariantHsnCode}
                                                         onValueChange={
                                                             field.onChange
                                                         }
@@ -1848,7 +1851,7 @@ export function ProductManageForm({
 
                                                 <FormControl>
                                                     <HsnMasterSelect
-                                                        value={field.value}
+                                                        value={field.value || sharedVariantHsnCode}
                                                         onValueChange={
                                                             field.onChange
                                                         }
@@ -1863,7 +1866,7 @@ export function ProductManageForm({
                                                     />
                                                 </FormControl>
                                                 <HsnMasterRate
-                                                    value={field.value}
+                                                    value={field.value || sharedVariantHsnCode}
                                                     options={
                                                         hsnMasterQuery.data ??
                                                         []
