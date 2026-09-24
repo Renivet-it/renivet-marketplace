@@ -1,11 +1,12 @@
-import { BRAND_TIER_VALUES } from "@/config/brand-program";
 import { env } from "@/../env";
 import { utApi } from "@/app/api/uploadthing/core";
+import { BRAND_TIER_VALUES } from "@/config/brand-program";
 import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { brands } from "@/lib/db/schema";
 import {
     auditEntityChange,
     createOperationalAlert,
@@ -23,6 +24,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    publicProcedure,
 } from "@/lib/trpc/trpc";
 import {
     convertEmptyStringToNull,
@@ -35,12 +37,12 @@ import {
     brandConfidentialSchema,
     brandRequestSchema,
     createBrandRequestSchema,
-    updateBrandSchema,
     updateBrandConfidentialByAdminSchema,
     updateBrandRequestStatusSchema,
+    updateBrandSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const brandRequestsRouter = createTRPCRouter({
@@ -750,6 +752,18 @@ export const brandVerificationsRouter = createTRPCRouter({
 export const brandsRouter = createTRPCRouter({
     requests: brandRequestsRouter,
     verifications: brandVerificationsRouter,
+    getStorefrontBrands: publicProcedure.query(async ({ ctx }) => {
+        return ctx.db.query.brands.findMany({
+            columns: {
+                id: true,
+                name: true,
+                slug: true,
+                logoUrl: true,
+            },
+            where: eq(brands.isActive, true),
+            orderBy: [asc(brands.name)],
+        });
+    }),
     getBrands: protectedProcedure
         .input(
             z.object({

@@ -1,0 +1,387 @@
+schema_version: "1.0"
+task:
+    id: REN-193
+    title: "Deployment of the brand tab on the landing page"
+    source: linear
+    branch: ayanganguly333/ren-193-deployment-of-the-brand-tab-on-the-landing-page
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-193/deployment-of-the-brand-tab-on-the-landing-page
+        priority: No priority
+        labels: [sos]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: UI changes and updates
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - "Adds guest-visible navigation, responsive overlays, and a public database projection used across the shared header."
+        - "Incorrect filtering could expose inactive brands or private brand fields."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        [
+            Linear REN-193,
+            shared navbar,
+            brand TRPC router,
+            brand schema,
+            public brand shop route,
+            festive brand showcase,
+            dialog and sheet primitives,
+        ]
+    excluded_areas:
+        [
+            brand administration,
+            brand onboarding,
+            database schema changes,
+            promotional hero redesign,
+            production data changes,
+        ]
+    dependencies: [DEP-193-001, DEP-193-002, DEP-193-003]
+    integrations: [INT-193-001]
+    security_boundaries: [SEC-193-001]
+    state_transitions:
+        [
+            closed -> desktop_menu_open,
+            closed -> mobile_sheet_open,
+            preview -> all_brands_open,
+            directory -> brand_shop,
+        ]
+    related_tests: [TEXP-193-001, TEXP-193-002, TEXP-193-003, TEXP-193-004]
+    uncertainties:
+        - "Some priority labels may differ in punctuation or spacing from stored brand names, so matching requires normalized aliases."
+requirements:
+    - {
+          id: REQ-193-001,
+          description: "Show a BRANDS desktop navigation entry beside the department links; hover and keyboard focus expose nine available brands in the approved priority order without a large promotional banner.",
+          type: explicit,
+      }
+    - {
+          id: REQ-193-002,
+          description: "Show a mobile tag-icon action that opens a bottom sheet containing the same ordered brand preview.",
+          type: explicit,
+      }
+    - {
+          id: REQ-193-003,
+          description: "View All Brands opens a responsive searchable directory of all active brands, preserving priority order before alphabetical remainder.",
+          type: explicit,
+      }
+    - {
+          id: REQ-193-004,
+          description: "Every brand uses its stored logo/name with a resilient fallback and navigates to /brands/{slug}/shop.",
+          type: explicit,
+      }
+    - {
+          id: REQ-193-005,
+          description: "The guest endpoint returns only active-brand id, name, slug, and logoUrl fields and exposes no administrative or confidential data.",
+          type: safety,
+      }
+    - {
+          id: REQ-193-006,
+          description: "Existing category navigation, header actions, responsive layout, and public brand pages remain compatible.",
+          type: compatibility,
+      }
+scenarios:
+    - {
+          id: SCN-193-001,
+          description: "A desktop guest hovers or focuses BRANDS and sees up to nine available priority-ordered logo/name cards plus View All Brands.",
+          requirement_ids: [REQ-193-001, REQ-193-004],
+      }
+    - {
+          id: SCN-193-002,
+          description: "A mobile guest activates the tag icon and receives a focus-managed bottom sheet with the same ordered preview.",
+          requirement_ids: [REQ-193-002, REQ-193-004],
+      }
+    - {
+          id: SCN-193-003,
+          description: "View All Brands opens the responsive directory; search filters it and selecting a result navigates to the canonical brand shop.",
+          requirement_ids: [REQ-193-003, REQ-193-004],
+      }
+    - {
+          id: SCN-193-004,
+          description: "Inactive brands and private brand attributes are absent from the guest response and all navigation surfaces.",
+          requirement_ids: [REQ-193-005],
+      }
+    - {
+          id: SCN-193-005,
+          description: "A missing priority brand or broken/missing logo produces no empty slot and still presents a usable brand link.",
+          requirement_ids: [REQ-193-003, REQ-193-004, REQ-193-006],
+      }
+    - {
+          id: SCN-193-006,
+          description: "Existing category menus and header actions continue to work at desktop and mobile breakpoints.",
+          requirement_ids: [REQ-193-006],
+      }
+invariants:
+    - {
+          id: INV-193-001,
+          description: "All brand navigation surfaces derive from one active-brand response and one ordering function.",
+      }
+    - {
+          id: INV-193-002,
+          description: "Public brand navigation never exposes owner, contact, subscription, product, or confidential brand fields.",
+      }
+    - {
+          id: INV-193-003,
+          description: "A brand destination is always /brands/{stored slug}/shop.",
+      }
+    - {
+          id: INV-193-004,
+          description: "Unavailable priority brands do not reserve blank visual positions.",
+      }
+flows:
+    - {
+          id: FLOW-193-001,
+          description: "Active brand rows -> public allowlisted response -> priority ordering -> desktop preview/mobile preview/all-brand directory -> brand shop.",
+          state_transitions:
+              [
+                  closed -> desktop_menu_open,
+                  closed -> mobile_sheet_open,
+                  preview -> all_brands_open,
+                  directory -> brand_shop,
+              ],
+      }
+dependencies:
+    - {
+          id: DEP-193-001,
+          name: shared NavbarHome,
+          purpose: Desktop and mobile entry points,
+          description: "Existing shared marketplace header.",
+          status: resolved,
+      }
+    - {
+          id: DEP-193-002,
+          name: brands table,
+          purpose: Authoritative brand identity and artwork,
+          description: "Provides active state, name, slug, and logo URL.",
+          status: resolved,
+      }
+    - {
+          id: DEP-193-003,
+          name: brand shop route,
+          purpose: Canonical navigation destination,
+          description: "Existing /brands/{slug}/shop route.",
+          status: resolved,
+      }
+integrations:
+    - {
+          id: INT-193-001,
+          system: Next.js image delivery,
+          purpose: Render stored remote brand logos,
+          failure_mode: "A missing or invalid image URL leaves the logo unavailable",
+          retry_idempotency: "Rendering is read-only and fallback presentation remains available.",
+      }
+personas:
+    - {
+          id: PER-193-001,
+          role: desktop_guest,
+          applicability: Discovers brands through the header hover/focus menu.,
+      }
+    - {
+          id: PER-193-002,
+          role: mobile_guest,
+          applicability: Discovers brands through the tag-icon bottom sheet.,
+      }
+security_boundaries:
+    - {
+          id: SEC-193-001,
+          description: "The unauthenticated endpoint is a strict projection of active brand id, name, slug, and logoUrl only.",
+      }
+business_rules:
+    - {
+          id: BR-193-001,
+          description: "Named priority brands appear first in the approved order when present; all remaining active brands follow alphabetically.",
+      }
+    - {
+          id: BR-193-002,
+          description: "The preview contains at most nine real brands and never synthetic placeholders.",
+      }
+decisions:
+    - {
+          id: DEC-193-001,
+          question: "Should the desktop preview include a large My Mithila promotional banner?",
+          class: HUMAN_CONFIRMATION,
+          status: resolved,
+          recommendation: "No; use the space for a ninth brand card.",
+          basis: "Explicit user instruction in conversation on 2026-09-17.",
+          confidence: high,
+          consequence: medium,
+          human_confirmation_required: true,
+          confirmation_source: User instruction in conversation on 2026-09-17,
+      }
+    - {
+          id: DEC-193-002,
+          question: "What source should supply brand logos and routes?",
+          class: AUTO_DECIDE,
+          status: resolved,
+          recommendation: "Use active records from the brands table and their stored logoUrl/slug fields.",
+          basis: "Existing repository brand model and public brand route.",
+          confidence: high,
+          consequence: low,
+          human_confirmation_required: false,
+      }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - {
+              id: CRIT-193-001,
+              severity: MAJOR,
+              status: addressed,
+              summary: "Use a whitelisted active-brand public projection rather than the protected administrative query.",
+          }
+        - {
+              id: CRIT-193-002,
+              severity: MAJOR,
+              status: addressed,
+              summary: "One ordering function and response must drive desktop, mobile, and full-directory views.",
+          }
+        - {
+              id: CRIT-193-003,
+              severity: MAJOR,
+              status: addressed,
+              summary: "Keyboard, focus, escape, broken-logo, and missing-priority behavior require explicit verification.",
+          }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User explicit implementation approval and detailed design in conversation on 2026-09-17
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-193-001, scenario_ids: [SCN-193-001] }
+        - { requirement_id: REQ-193-002, scenario_ids: [SCN-193-002] }
+        - {
+              requirement_id: REQ-193-003,
+              scenario_ids: [SCN-193-003, SCN-193-005],
+          }
+        - {
+              requirement_id: REQ-193-004,
+              scenario_ids:
+                  [SCN-193-001, SCN-193-002, SCN-193-003, SCN-193-005],
+          }
+        - { requirement_id: REQ-193-005, scenario_ids: [SCN-193-004] }
+        - {
+              requirement_id: REQ-193-006,
+              scenario_ids: [SCN-193-005, SCN-193-006],
+          }
+    scenario_to_invariants:
+        - {
+              scenario_id: SCN-193-001,
+              invariant_ids: [INV-193-001, INV-193-003, INV-193-004],
+          }
+        - {
+              scenario_id: SCN-193-002,
+              invariant_ids: [INV-193-001, INV-193-003, INV-193-004],
+          }
+        - {
+              scenario_id: SCN-193-003,
+              invariant_ids: [INV-193-001, INV-193-003],
+          }
+        - { scenario_id: SCN-193-004, invariant_ids: [INV-193-002] }
+        - {
+              scenario_id: SCN-193-005,
+              invariant_ids: [INV-193-003, INV-193-004],
+          }
+        - { scenario_id: SCN-193-006, invariant_ids: [INV-193-001] }
+    scenario_to_test_expectations:
+        - {
+              scenario_id: SCN-193-001,
+              test_expectation_ids: [TEXP-193-001, TEXP-193-003],
+          }
+        - {
+              scenario_id: SCN-193-002,
+              test_expectation_ids: [TEXP-193-002, TEXP-193-003],
+          }
+        - {
+              scenario_id: SCN-193-003,
+              test_expectation_ids: [TEXP-193-001, TEXP-193-002, TEXP-193-003],
+          }
+        - { scenario_id: SCN-193-004, test_expectation_ids: [TEXP-193-004] }
+        - {
+              scenario_id: SCN-193-005,
+              test_expectation_ids: [TEXP-193-001, TEXP-193-002],
+          }
+        - { scenario_id: SCN-193-006, test_expectation_ids: [TEXP-193-003] }
+test_expectations:
+    - {
+          id: TEXP-193-001,
+          category: unit,
+          classification: REQUIRED,
+          reason: "Verify priority aliases, missing-priority behavior, alphabetical remainder, preview limit, and search.",
+          scenarios: [SCN-193-001, SCN-193-003, SCN-193-005],
+      }
+    - {
+          id: TEXP-193-002,
+          category: component,
+          classification: REQUIRED,
+          reason: "Verify mobile sheet and all-brand directory render stored logos/names, fallback safely, and use canonical links.",
+          scenarios: [SCN-193-002, SCN-193-003, SCN-193-005],
+      }
+    - {
+          id: TEXP-193-003,
+          category: accessibility,
+          classification: REQUIRED,
+          reason: "Verify desktop hover/focus, mobile/dialog focus management, escape dismissal, responsive layout, and existing header compatibility.",
+          scenarios: [SCN-193-001, SCN-193-002, SCN-193-003, SCN-193-006],
+      }
+    - {
+          id: TEXP-193-004,
+          category: security,
+          classification: REQUIRED,
+          reason: "Verify the public query filters active brands and selects only the approved public fields.",
+          scenarios: [SCN-193-004],
+      }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "59975662c6e44e434aefdc1473671c86f14d41d9"
+    head_commit: "166d40b8fe0d7fd78a2e24f85f9428e56c8e3869"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add mounted interaction and accessibility coverage when a DOM-capable React test harness is available."
+    evidence:
+        - "Compared the approved REN-193 contract with the origin/master merge base and implementation commit 166d40b8fe0d7fd78a2e24f85f9428e56c8e3869."
+        - "Observed one active-only public brand projection, one shared priority-ordering utility, responsive desktop/mobile navigation surfaces, and canonical brand-shop links."
+        - "Static test inspection covers ordering and public projection but not mounted keyboard, Escape, image-failure, or overlay-transition behavior."
+    governance_reentry_required: false

@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandMobileNavigation } from "@/components/globals/layouts/navbar/brand-navigation";
 import { Button } from "@/components/ui/button-general";
 import {
     Carousel,
@@ -7,6 +8,7 @@ import {
     CarouselItem,
 } from "@/components/ui/carousel";
 import { ProductSearch } from "@/components/ui/product-search";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
@@ -20,6 +22,10 @@ interface PageProps extends GenericProps {
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
+    const {
+        data: storefrontBrands = [],
+        isPending: isStorefrontBrandsLoading,
+    } = trpc.general.brands.getStorefrontBrands.useQuery();
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
@@ -196,27 +202,33 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         sizes="100vw"
                         className="object-cover"
                     />
-                    <div className="scrollbar-none relative z-10 flex w-full justify-between gap-3 overflow-x-auto px-3 py-4">
+                    <div className="scrollbar-none relative z-10 flex w-full justify-between gap-1.5 overflow-x-auto px-2 py-4 min-[390px]:gap-2 min-[390px]:px-3">
                         {categories.map((category) => (
                             <Link
                                 key={category.name}
                                 href={category.href}
-                                className="flex min-w-[60px] flex-col items-center"
+                                className="flex min-w-12 flex-col items-center min-[390px]:min-w-[52px] min-[420px]:min-w-14"
                             >
-                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-white shadow-sm">
+                                <div className="relative size-12 overflow-hidden rounded-full bg-white shadow-sm min-[390px]:size-[52px] min-[420px]:size-14">
                                     <Image
                                         src={category.imageUrl}
                                         alt={category.name}
                                         fill
                                         className="object-cover"
-                                        sizes="64px"
+                                        sizes="(max-width: 389px) 48px, (max-width: 419px) 52px, 56px"
                                     />
                                 </div>
-                                <span className="pt-1 text-xs font-medium text-black">
+                                <span className="pt-1 text-[11px] font-medium text-black min-[390px]:text-xs">
                                     {category.name}
                                 </span>
                             </Link>
                         ))}
+                        <BrandMobileNavigation
+                            brands={storefrontBrands}
+                            isLoading={isStorefrontBrandsLoading}
+                            className="flex min-w-12 shrink-0 flex-col items-center min-[390px]:min-w-[52px] min-[420px]:min-w-14"
+                            triggerClassName="size-12 min-[390px]:size-[52px] min-[420px]:size-14"
+                        />
                     </div>
                 </div>
 
