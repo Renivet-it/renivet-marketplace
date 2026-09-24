@@ -5,13 +5,13 @@
 `REVIEW_PASSED_WITH_FINDINGS` with `MINOR_DRIFT`. The implementation stays within the approved HSN import scope and preserves duplicate rejection. Governance re-entry is not required. The only non-blocking finding is that the new UI has static/source coverage but no dedicated rendered component test.
 
 Base: `origin/master` at `f50896cbe52656c596648b13dfeb5db4cb2126f2`  
-Head: `029cad5e4608978af92e0b5ca9268001725969c7`
+Head: `afa257f66d5c25fa43d6a807501e5b180a5c5cbf`
 
 ## Review Scope and Git Evidence
 
 - Branch: `feat/hsn-bulk-upload-fix`.
 - Linear identity: `REN-243`, matching the task-local work-item directory and contract.
-- Changed implementation areas: existing general and brand bulk product routes, finance router, protected finance settings page, HSN import workspace, HSN normalization/resolution helper, and focused tests.
+- Changed implementation areas: existing general and brand bulk product routes, finance router, protected finance settings page, Platform Settings navigation, HSN import workspace, HSN normalization/resolution helper, and focused tests.
 - No schema, migration, dependency, production configuration, or production data changes.
 
 ## Requirement Reconciliation
@@ -65,6 +65,8 @@ The implementation is within approved scope. The UI catches a failed batch, mark
 - `TEXP-243-5`: PASS statically through the admin route boundary and protected page.
 - `TEXP-243-6`: PASS statically through bounded batches, transaction, unchanged replay, and failure handling.
 
+- Platform Settings navigation: PASS. `src/config/site.ts` exposes Product HSN Import under the existing Platform Settings menu, with a focused sidebar test.
+
 Focused HSN/import tests passed (10 tests); governance validation passed. The full repository suite has two unrelated existing failures: the festive product-type active-state timeout and the shop desktop navbar layout expectation.
 
 ## Findings
@@ -85,4 +87,3 @@ None. Confirmed decisions `DEC-243-1`, `DEC-243-2`, and `DEC-243-3` are implemen
 ## Final Recommendation
 
 `REVIEW_PASSED_WITH_FINDINGS`. The branch is suitable for PR review. No governance re-entry is required. Do not apply the supplied CSV to production automatically; use the new admin preview and explicit apply flow.
-
