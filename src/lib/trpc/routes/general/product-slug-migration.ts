@@ -1,20 +1,38 @@
+import { hasFinanceAdminAccess } from "@/lib/finance/access";
 import {
     applyProductSlugMigrationBatch,
     getSlugMigrationRun,
     previewProductSlugMigration,
     SLUG_MIGRATION_BATCH_SIZE,
 } from "@/lib/services/product-slug-migration";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { adminProcedure, createTRPCRouter } from "../../trpc";
+import { createTRPCRouter, protectedProcedure } from "../../trpc";
+
+const slugMigrationAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+    const allowed = hasFinanceAdminAccess({
+        sitePermissions: ctx.user.sitePermissions,
+        roles: ctx.user.roles,
+    });
+
+    if (!allowed) {
+        throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Administrator access is required",
+        });
+    }
+
+    return next();
+});
 
 export const productSlugMigrationRouter = createTRPCRouter({
-    preview: adminProcedure.mutation(({ ctx }) =>
+    preview: slugMigrationAdminProcedure.mutation(({ ctx }) =>
         previewProductSlugMigration(ctx.user.id)
     ),
-    getRun: adminProcedure
+    getRun: slugMigrationAdminProcedure
         .input(z.object({ runId: z.string().uuid() }))
         .query(({ input }) => getSlugMigrationRun(input.runId)),
-    applyBatch: adminProcedure
+    applyBatch: slugMigrationAdminProcedure
         .input(
             z.object({
                 runId: z.string().uuid(),
@@ -29,5 +47,7 @@ export const productSlugMigrationRouter = createTRPCRouter({
                 actorId: ctx.user.id,
             })
         ),
-    batchSize: adminProcedure.query(() => SLUG_MIGRATION_BATCH_SIZE),
+    batchSize: slugMigrationAdminProcedure.query(
+        () => SLUG_MIGRATION_BATCH_SIZE
+    ),
 });
