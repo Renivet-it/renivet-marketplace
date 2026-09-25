@@ -17,22 +17,22 @@ export function ProductMediaPreview({
     mediaId,
 }: ProductMediaPreviewProps) {
     const isLocalPreview = src.startsWith("blob:") || src.startsWith("data:");
-    const proxySource =
-        mediaId && !isLocalPreview ? getAdminMediaProxyUrl(mediaId) : src;
-    const [source, setSource] = useState(proxySource);
+    const isPersistedMedia = Boolean(mediaId && !isLocalPreview);
+    const fallbackSource = isPersistedMedia
+        ? getAdminMediaProxyUrl(mediaId as string)
+        : src;
+    const [source, setSource] = useState(src);
     const [hasRetried, setHasRetried] = useState(false);
 
     useEffect(() => {
-        setSource(
-            mediaId && !isLocalPreview ? getAdminMediaProxyUrl(mediaId) : src
-        );
+        setSource(src);
         setHasRetried(false);
     }, [isLocalPreview, mediaId, src]);
 
     return (
-        // Persisted admin media loads through the authenticated same-origin
-        // route first. Fall back to the original URL for newly uploaded or
-        // legacy records that are not available through the proxy yet.
+        // Product media is public-read and should render directly. Fall back
+        // to the authenticated proxy for legacy/private files only when the
+        // public source fails.
         // eslint-disable-next-line @next/next/no-img-element
         <img
             src={source}
@@ -41,9 +41,9 @@ export function ProductMediaPreview({
             decoding="async"
             className={className}
             onError={() => {
-                if (mediaId && !isLocalPreview && !hasRetried) {
+                if (isPersistedMedia && !hasRetried) {
                     setHasRetried(true);
-                    setSource(src);
+                    setSource(fallbackSource);
                 }
             }}
         />
