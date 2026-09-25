@@ -16,18 +16,19 @@ export function ProductMediaPreview({
     className,
     mediaId,
 }: ProductMediaPreviewProps) {
-    const [source, setSource] = useState(src);
+    const proxySource = mediaId ? getAdminMediaProxyUrl(mediaId) : src;
+    const [source, setSource] = useState(proxySource);
     const [hasRetried, setHasRetried] = useState(false);
 
     useEffect(() => {
-        setSource(src);
+        setSource(mediaId ? getAdminMediaProxyUrl(mediaId) : src);
         setHasRetried(false);
-    }, [src]);
+    }, [mediaId, src]);
 
     return (
-        // Admin media URLs can come from multiple UploadThing app hosts and
-        // may be signed. Load the source URL directly so Next's optimizer
-        // allowlist and proxy do not delay or reject the preview.
+        // Persisted admin media loads through the authenticated same-origin
+        // route first. Fall back to the original URL for newly uploaded or
+        // legacy records that are not available through the proxy yet.
         // eslint-disable-next-line @next/next/no-img-element
         <img
             src={source}
@@ -38,7 +39,7 @@ export function ProductMediaPreview({
             onError={() => {
                 if (mediaId && !hasRetried) {
                     setHasRetried(true);
-                    setSource(getAdminMediaProxyUrl(mediaId));
+                    setSource(src);
                 }
             }}
         />
