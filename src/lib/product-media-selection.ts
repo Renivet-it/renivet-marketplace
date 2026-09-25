@@ -1,6 +1,6 @@
 import { BrandMediaItem } from "@/lib/validations";
 
-export const MEDIA_PREVIEW_BATCH_SIZE = 48;
+export const MEDIA_PREVIEW_BATCH_SIZE = 18;
 
 export function getVisibleMedia(
     items: BrandMediaItem[],
