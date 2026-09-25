@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductWithBrand } from "@/lib/validations";
 import { useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
+import { getDefaultAdminProductTab } from "./admin-product-edit-tabs-state";
 import { ProductQcPanel } from "./product-qc-panel";
 
 type ProductManageFormProps = ComponentProps<typeof ProductManageForm>;
@@ -20,7 +21,7 @@ export function AdminProductEditTabs({
     const searchParams = useSearchParams();
     const requestedTab = searchParams.get("tab");
     const requestedFocus = searchParams.get("focus");
-    const defaultTab = requestedTab === "edit" || requestedFocus === "hsCode" ? "edit" : "qc";
+    const defaultTab = getDefaultAdminProductTab(requestedTab, requestedFocus);
 
     return (
         <Tabs defaultValue={defaultTab} className="space-y-4">
