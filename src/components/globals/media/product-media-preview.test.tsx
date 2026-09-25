@@ -27,7 +27,7 @@ test("uses the authenticated proxy for persisted admin media", () => {
         />
     );
 
-    expect(html).toContain('src="/api/admin/media/media-123"');
+    expect(html).toContain('src="/api/admin/media/media-123?w=480&amp;q=70"');
 });
 
 test("keeps local upload previews immediate", () => {

@@ -40,5 +40,6 @@ describe("product media selection", () => {
 
         expect(getVisibleMedia(items, 24)).toHaveLength(24);
         expect(getVisibleMedia(items, 24)).toEqual(items.slice(0, 24));
+        expect(getVisibleMedia(items)).toEqual(items.slice(0, 18));
     });
 });
