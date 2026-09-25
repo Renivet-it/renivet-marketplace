@@ -39,8 +39,6 @@ test("keeps local upload previews immediate", () => {
         />
     );
 
-    expect(html).toContain(
-        'src="blob:https://renivet.com/local-upload"'
-    );
+    expect(html).toContain('src="blob:https://renivet.com/local-upload"');
     expect(html).not.toContain("/api/admin/media/");
 });

@@ -24,9 +24,7 @@ export function ProductMediaPreview({
 
     useEffect(() => {
         setSource(
-            mediaId && !isLocalPreview
-                ? getAdminMediaProxyUrl(mediaId)
-                : src
+            mediaId && !isLocalPreview ? getAdminMediaProxyUrl(mediaId) : src
         );
         setHasRetried(false);
     }, [isLocalPreview, mediaId, src]);
