@@ -29,3 +29,17 @@ test("shows the product HSN import under Platform Settings", () => {
             BitFieldSitePermission.ADMINISTRATOR,
     });
 });
+
+test("shows legacy product slug migration under Platform Settings", () => {
+    const platformSettings = generalSidebarConfig.find(
+        (section) => section.title === "Platform Settings"
+    );
+
+    expect(platformSettings?.items).toContainEqual({
+        title: "Legacy Product Slug Migration",
+        url: "/dashboard/general/settings/product-slug-migration",
+        permissions:
+            BitFieldSitePermission.MANAGE_SETTINGS |
+            BitFieldSitePermission.ADMINISTRATOR,
+    });
+});

@@ -33,12 +33,6 @@ const sections = [
             "Preview and apply product or variant HSN updates from SKU-based CSV/XLSX files.",
     },
     {
-        title: "Legacy Product Slug Migration",
-        href: "/dashboard/general/settings/product-slug-migration",
-        description:
-            "Preview, review, and safely convert legacy public product URLs with redirect history.",
-    },
-    {
         title: "GST Report",
         href: "/dashboard/general/finance/gst-report",
         description:
