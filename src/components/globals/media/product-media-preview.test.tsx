@@ -17,3 +17,15 @@ test("loads admin product media directly and eagerly", () => {
     expect(html).toContain('loading="eager"');
     expect(html).not.toContain("/_next/image");
 });
+
+test("uses the authenticated proxy for persisted admin media", () => {
+    const html = renderToStaticMarkup(
+        <ProductMediaPreview
+            src="https://new-upload-app.ufs.sh/f/product-image.webp"
+            mediaId="media-123"
+            alt="Product front view"
+        />
+    );
+
+    expect(html).toContain('src="/api/admin/media/media-123"');
+});
