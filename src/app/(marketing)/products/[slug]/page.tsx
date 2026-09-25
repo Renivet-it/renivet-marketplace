@@ -19,11 +19,12 @@ import {
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
+import { getHistoricalProductSlug } from "@/lib/services/product-slug-migration";
 import { buildCategoryUrl } from "@/lib/shop/category-url";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
 
@@ -68,11 +69,34 @@ export async function generateMetadata({
         verificationStatus: "approved",
         isPublished: true,
     });
-    if (!existingProduct)
+    if (!existingProduct) {
+        const historical = await getHistoricalProductSlug(slug);
+        if (historical) {
+            const migratedProduct = await productQueries.getProductBySlug({
+                slug: historical.newSlug,
+                verificationStatus: "approved",
+                isPublished: true,
+            });
+            if (migratedProduct) {
+                return {
+                    title: migratedProduct.metaTitle || migratedProduct.title,
+                    description:
+                        migratedProduct.metaDescription ||
+                        migratedProduct.description ||
+                        "",
+                    alternates: {
+                        canonical: getAbsoluteURL(
+                            `/products/${historical.newSlug}`
+                        ),
+                    },
+                };
+            }
+        }
         return {
             title: "Product not found",
             description: "The requested product was not found.",
         };
+    }
 
     const retailerItemId = existingProduct.id;
     const priceInRupees = existingProduct.costPerItem
@@ -185,7 +209,17 @@ async function ProductFetch({ params, searchParams }: PageProps) {
         userId ? userWishlistCache.get(userId) : undefined,
         userId ? userCartCache.get(userId) : undefined,
     ]);
-    if (!existingProduct) notFound();
+    if (!existingProduct) {
+        const historical = await getHistoricalProductSlug(slug);
+        if (historical) {
+            const query = new URLSearchParams();
+            if (typeof fbclid === "string") query.set("fbclid", fbclid);
+            permanentRedirect(
+                `/products/${historical.newSlug}${query.toString() ? `?${query.toString()}` : ""}`
+            );
+        }
+        notFound();
+    }
 
     await analytics.track({
         namespace: BRAND_EVENTS.PRODUCT.VIEWED,

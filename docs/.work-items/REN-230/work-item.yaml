@@ -1,0 +1,436 @@
+schema_version: "1.0"
+task:
+    id: REN-230
+    title: "[SEO][P1] Legacy Product Slug Migration, Redirects & Historical URL Safety"
+    source: linear
+    branch: feat/ren-230-slug-conversion
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-230
+        priority: 2
+        labels: [tech-debt]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — SEO & Organic Growth Program"
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Existing public product URLs change and require permanent redirect safety.
+        - The operation mutates many production product rows and must be collision-safe and reversible.
+        - Historical analytics currently resolves product context from the current slug.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        [
+            slug generation,
+            product schema,
+            public product route,
+            product query,
+            admin settings pages,
+            admin procedure,
+            analytics landing-path resolution,
+            migration conventions,
+        ]
+    excluded_areas:
+        [
+            new-product slug algorithm,
+            non-product URL aliases,
+            production execution,
+            unrelated catalog maintenance,
+        ]
+    dependencies: [DEP-230-1, DEP-230-2, DEP-230-3]
+    integrations: [INT-230-1, INT-230-2, INT-230-3]
+    security_boundaries: [SEC-230-1]
+    state_transitions:
+        [
+            legacy-slug -> preview-mapping -> conflict-review -> transactional-history-and-update -> redirect,
+        ]
+dependencies:
+    - {
+          id: DEP-230-1,
+          name: Existing JavaScript slug helpers,
+          purpose: Exact mapping compatibility,
+          description: Reuse generateProductSlug and generateProductSlugCandidate without changing their behavior.,
+          status: resolved,
+      }
+    - {
+          id: DEP-230-2,
+          name: Product stable IDs and unique slug constraint,
+          purpose: Identity and uniqueness,
+          description: All affected relations use product IDs and products.slug is unique.,
+          status: resolved,
+      }
+    - {
+          id: DEP-230-3,
+          name: Admin authentication and settings access,
+          purpose: Operator authorization,
+          description: Use existing adminProcedure and finance/settings dashboard access patterns.,
+          status: resolved,
+      }
+integrations:
+    - {
+          id: INT-230-1,
+          system: Public product route,
+          name: historical slug redirect,
+          purpose: Preserve old indexed URLs,
+          description: Current lookup falls back to persisted history and permanently redirects to the current slug.,
+          status: planned,
+      }
+    - {
+          id: INT-230-2,
+          system: Advanced analytics landing-path enrichment,
+          name: historical slug lookup,
+          purpose: Preserve historical product enrichment,
+          description: Historical paths can resolve old slugs through the same history source.,
+          status: planned,
+      }
+    - {
+          id: INT-230-3,
+          system: Product slug unique constraint,
+          name: collision-safe assignment,
+          purpose: Prevent writes from violating uniqueness,
+          description: Preview reserves deterministic candidates and apply rechecks current state in transactions.,
+          status: planned,
+      }
+personas:
+    - {
+          id: PER-230-1,
+          role: platform_admin,
+          applicability: Reviews migration preview and applies approved eligible mappings.,
+      }
+    - {
+          id: PER-230-2,
+          role: storefront_customer,
+          applicability: Reaches migrated products through old URLs and permanent redirects.,
+      }
+security_boundaries:
+    - {
+          id: SEC-230-1,
+          description: Preview/apply mutations are administrator-only; reports expose only product id,
+          old slug,
+          new slug,
+          and status needed for operation.,
+      }
+business_rules:
+    - {
+          id: BR-230-1,
+          description: Postgres is the source of truth; history and product slug update commit together per batch.,
+      }
+    - {
+          id: BR-230-2,
+          description: Only currently fully public products are eligible; non-public products remain untouched.,
+      }
+    - {
+          id: BR-230-3,
+          description: A collision or changed source row is reported and skipped rather than guessed or overwritten.,
+      }
+decisions:
+    - id: DEC-230-1
+      question: How should historical analytics resolve pre-migration slugs?
+      class: B_RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Extend landing-path resolution to consult product slug history.
+      basis: Preserves the identified historical enrichment behavior and avoids accepted degradation.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: true
+      confirmation_source: User requested end-to-end REN-230 implementation; recommendation follows the ticket's compatibility requirement.
+    - id: DEC-230-2
+      question: What deterministic order assigns collision suffixes?
+      class: B_RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: createdAt ASC, then product id ASC.
+      basis: Stable chronological order matches the ticket's recommended precedent and remains deterministic across reruns.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: REN-230 proposed collision approach and implementation contract.
+    - id: DEC-230-3
+      question: Should the admin control be one-click destructive mutation or preview/apply?
+      class: A_AUTO_DECIDE
+      status: resolved
+      recommendation: Two-step preview/apply with stale-preview and unresolved-conflict guards.
+      basis: The ticket requires mapping review, collision sign-off, monitored batches, and rollback evidence; a direct one-click write would violate those safeguards.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: REN-230 acceptance criteria.
+requirements:
+    - {
+          id: REQ-230-1,
+          description: Persist old product slugs with product identity and migration metadata under a unique old-slug key.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-2,
+          description: Resolve historical product URLs with a permanent redirect to the current slug before returning notFound.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-3,
+          description: Provide an administrator-only Settings preview and apply workflow with counts,
+          mappings,
+          conflicts,
+          progress,
+          and final results.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-4,
+          description: Generate exact JavaScript mappings,
+          validate Unicode-sensitive rows,
+          resolve deterministic suffixes,
+          and migrate only eligible public products.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-5,
+          description: Apply history and product slug updates transactionally in monitored batches with stale-preview and idempotency guards.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-6,
+          description: Preserve historical analytics product enrichment by consulting slug history.,
+          type: explicit,
+      }
+    - {
+          id: REQ-230-7,
+          description: Do not modify new-product slug generation or non-public products.,
+          type: explicit,
+      }
+scenarios:
+    - {
+          id: SCN-230-1,
+          description: Admin previews the current eligible population and sees exact old-to-new mappings plus collision and Unicode reports.,
+          requirement_ids: [REQ-230-3, REQ-230-4],
+      }
+    - {
+          id: SCN-230-2,
+          description: Admin applies a clean preview and each migrated product records history and current slug atomically.,
+          requirement_ids: [REQ-230-1, REQ-230-5],
+      }
+    - {
+          id: SCN-230-3,
+          description: A stale preview,
+          collision,
+          or uniqueness conflict is skipped and reported without overwriting another product.,
+          requirement_ids: [REQ-230-4, REQ-230-5],
+      }
+    - {
+          id: SCN-230-4,
+          description: A request for an old migrated URL permanently redirects to the current product URL; an unknown slug remains not found.,
+          requirement_ids: [REQ-230-2],
+      }
+    - {
+          id: SCN-230-5,
+          description: Historical analytics resolves old landing paths to the product through slug history.,
+          requirement_ids: [REQ-230-6],
+      }
+    - {
+          id: SCN-230-6,
+          description: New product creation continues using the existing slug algorithm and non-public rows remain unchanged.,
+          requirement_ids: [REQ-230-7],
+      }
+invariants:
+    - {
+          id: INV-230-1,
+          description: Every migrated old slug remains queryable and points to one stable product identity.,
+          scenarios: [SCN-230-2, SCN-230-4],
+      }
+    - {
+          id: INV-230-2,
+          description: No migration write can create duplicate current slugs or overwrite a different product.,
+          scenarios: [SCN-230-2, SCN-230-3],
+      }
+    - {
+          id: INV-230-3,
+          description: Non-public products and new-product slug behavior are unchanged.,
+          scenarios: [SCN-230-3, SCN-230-6],
+      }
+flows:
+    - {
+          id: FLOW-230-1,
+          description: Admin -> preview -> review mappings/conflicts -> apply batches -> history/current slug commit -> redirect/report.,
+          state_transitions:
+              [
+                  request -> preview -> review -> apply -> committed-or-skipped -> report,
+              ],
+      }
+test_expectations:
+    - {
+          id: TEXP-230-1,
+          category: unit,
+          classification: REQUIRED,
+          reason: Proves exact JS mapping,
+          Unicode handling,
+          deterministic suffixes,
+          and eligibility.,
+          scenarios: [SCN-230-1, SCN-230-6],
+      }
+    - {
+          id: TEXP-230-2,
+          category: integration,
+          classification: REQUIRED,
+          reason: Proves transactional history/product updates,
+          uniqueness guards,
+          stale previews,
+          and idempotency.,
+          scenarios: [SCN-230-2, SCN-230-3],
+      }
+    - {
+          id: TEXP-230-3,
+          category: integration,
+          classification: REQUIRED,
+          reason: Proves permanent redirects and unknown-slug notFound behavior.,
+          scenarios: [SCN-230-4],
+      }
+    - {
+          id: TEXP-230-4,
+          category: regression,
+          classification: REQUIRED,
+          reason: Proves historical analytics enrichment and unchanged new-product generation.,
+          scenarios: [SCN-230-5, SCN-230-6],
+      }
+    - {
+          id: TEXP-230-5,
+          category: ui_ux,
+          classification: REQUIRED,
+          reason: Proves admin authorization,
+          preview/apply states,
+          conflict blocking,
+          progress,
+          and error reporting.,
+          scenarios: [SCN-230-1, SCN-230-3],
+      }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Independent read-only contract critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - {
+              severity: design_blocker,
+              category: requirements_scenarios,
+              finding: Public-vs-public collision groups require manual sign-off,
+              not automatic suffix assignment.,
+              resolution: Pending owner confirmation and explicit review state in the workflow.,
+          }
+        - {
+              severity: major,
+              category: failure_recovery,
+              finding: UI-only progress cannot safely recover from interrupted batches.,
+              resolution: Add durable migration run and batch checkpoints with resume and sample rollback evidence.,
+          }
+        - {
+              severity: major,
+              category: security_privacy,
+              finding: Authorization must be enforced independently on page,
+              preview,
+              apply,
+              and status endpoints.,
+              resolution: Require administrator boundary on every surface and test unauthorized access.,
+          }
+        - {
+              severity: design_blocker,
+              category: state_data_consistency,
+              finding: History/run schema,
+              locking,
+              current-slug conflicts,
+              and rollback conflicts are underspecified.,
+              resolution: Define schema constraints and concurrency/rollback behavior before implementation.,
+          }
+        - {
+              severity: major,
+              category: integrations_idempotency,
+              finding: Preview manifest integrity and reservation of in-run candidates are unspecified.,
+              resolution: Add immutable manifest hash,
+              expiry,
+              source-version checks,
+              and deterministic reservations.,
+          }
+        - {
+              severity: design_blocker,
+              category: compatibility_migration,
+              finding: Legacy predicate,
+              redirect status,
+              deployment order,
+              and batch gates are unspecified.,
+              resolution: Define the exact compatibility contract and validation gates.,
+          }
+        - {
+              severity: major,
+              category: observability_testability,
+              finding: Audit fields and required concurrency/redirect/rollback tests are incomplete.,
+              resolution: Add run/batch/actor/count/error audit fields and the missing acceptance tests.,
+          }
+        - {
+              severity: design_blocker,
+              category: assumptions_dependencies,
+              finding: Collision order and historical analytics fate remain owner decisions in Linear.,
+              resolution: Obtain explicit owner decisions before READY_FOR_DEV.,
+          }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User approval of all recommended REN-230 decisions in conversation on 2026-09-25.
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-230-1, scenario_ids: [SCN-230-2] }
+        - { requirement_id: REQ-230-2, scenario_ids: [SCN-230-4] }
+        - { requirement_id: REQ-230-3, scenario_ids: [SCN-230-1, SCN-230-3] }
+        - { requirement_id: REQ-230-4, scenario_ids: [SCN-230-1, SCN-230-3] }
+        - { requirement_id: REQ-230-5, scenario_ids: [SCN-230-2, SCN-230-3] }
+        - { requirement_id: REQ-230-6, scenario_ids: [SCN-230-5] }
+        - { requirement_id: REQ-230-7, scenario_ids: [SCN-230-6] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-230-1, invariant_ids: [INV-230-2] }
+        - { scenario_id: SCN-230-2, invariant_ids: [INV-230-1, INV-230-2] }
+        - { scenario_id: SCN-230-3, invariant_ids: [INV-230-2, INV-230-3] }
+        - { scenario_id: SCN-230-4, invariant_ids: [INV-230-1, INV-230-2] }
+        - { scenario_id: SCN-230-5, invariant_ids: [INV-230-1] }
+        - { scenario_id: SCN-230-6, invariant_ids: [INV-230-3] }
+    scenario_to_test_expectations:
+        - {
+              scenario_id: SCN-230-1,
+              test_expectation_ids: [TEXP-230-1, TEXP-230-5],
+          }
+        - { scenario_id: SCN-230-2, test_expectation_ids: [TEXP-230-2] }
+        - {
+              scenario_id: SCN-230-3,
+              test_expectation_ids: [TEXP-230-2, TEXP-230-5],
+          }
+        - { scenario_id: SCN-230-4, test_expectation_ids: [TEXP-230-3] }
+        - { scenario_id: SCN-230-5, test_expectation_ids: [TEXP-230-4] }
+        - {
+              scenario_id: SCN-230-6,
+              test_expectation_ids: [TEXP-230-1, TEXP-230-4],
+          }
