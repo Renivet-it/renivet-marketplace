@@ -47,6 +47,7 @@ export function ProductMediaSelectSingle({
                     <ProductMediaPreview
                         src={media.url}
                         alt={media.alt || media.name}
+                        mediaId={media.id}
                         className="size-full rounded-sm object-cover"
                     />
                 ) : (

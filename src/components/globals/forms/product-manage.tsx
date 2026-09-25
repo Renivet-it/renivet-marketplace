@@ -728,6 +728,9 @@ export function ProductManageForm({
                                                                     src={
                                                                         media.url
                                                                     }
+                                                                    mediaId={
+                                                                        media.id
+                                                                    }
                                                                     alt={
                                                                         media.alt ||
                                                                         media.name
@@ -2009,6 +2012,9 @@ export function ProductManageForm({
                                                                 <ProductMediaPreview
                                                                     src={
                                                                         media.url
+                                                                    }
+                                                                    mediaId={
+                                                                        media.id
                                                                     }
                                                                     alt={
                                                                         media.alt ||
