@@ -1,4 +1,4 @@
-import { orderQueries } from "@/lib/db/queries";
+import { orderQueries, refundQueries } from "@/lib/db/queries";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { db } from "@/lib/db";
 import { orderItems, orderShipments, returnExchangePolicy, users } from "@/lib/db/schema";
@@ -40,7 +40,7 @@ type RefundCreateInput = {
     reasonCode: string;
     notes?: string | null;
     refundType?: "full" | "partial" | "exchange" | "credit_note";
-    costAllocation: RefundCostAllocation;
+    costAllocation?: RefundCostAllocation;
     returnShippingPaidBy?: "renivet" | "customer" | "na";
     evidenceUrls?: string[];
     actorId: string;
@@ -124,7 +124,7 @@ async function assertRefundBusinessRules(input: RefundCreateInput) {
         parentReasonName: reason.parent?.name ?? null,
     });
 
-    if (requiresNotesForCostAllocation(input.costAllocation) && !input.notes?.trim()) {
+    if (input.costAllocation && requiresNotesForCostAllocation(input.costAllocation) && !input.notes?.trim()) {
         throw new Error("Notes are required for renivet_fault and carrier_fault refunds.");
     }
 
@@ -143,14 +143,14 @@ async function assertRefundBusinessRules(input: RefundCreateInput) {
         .filter((policy) => policy.returnable === false)
         .map((policy) => policy.productId);
 
-    if (nonReturnableProductIds.length && requiresPhysicalReturn(input.costAllocation)) {
+    if (input.costAllocation && nonReturnableProductIds.length && requiresPhysicalReturn(input.costAllocation)) {
         throw new Error("This order contains non-returnable products and cannot be refunded.");
     }
 
-    if (deliveredAt) {
+    if (input.costAllocation && deliveredAt) {
         const ageingDays = differenceInDays(new Date(deliveredAt), new Date());
         if (ageingDays > maxWindowDays) {
-            if (!isLateWindowExceptionAllowed(input.costAllocation)) {
+            if (!input.costAllocation || !isLateWindowExceptionAllowed(input.costAllocation)) {
                 throw new Error(
                     `Refund window expired ${ageingDays} days after delivery. Only brand_fault and carrier_fault refunds are allowed after ${maxWindowDays} days.`
                 );
@@ -245,8 +245,11 @@ export async function createFinanceRefundCase(input: RefundCreateInput) {
     const status: RefundStatus =
         approvalStatus === "pending" ? "awaiting_approval" : "pending";
     const returnShippingPaidBy =
-        input.returnShippingPaidBy ?? getReturnShippingPaidBy(input.costAllocation);
-    const qcStatus = getDefaultQcStatus(input.costAllocation);
+        input.returnShippingPaidBy ??
+        (input.costAllocation ? getReturnShippingPaidBy(input.costAllocation) : "na");
+    const qcStatus = input.costAllocation
+        ? getDefaultQcStatus(input.costAllocation)
+        : null;
 
     const row = await financeComplianceQueries.createRefund({
         id: `fin_${input.orderId}_${Date.now()}`,
@@ -257,14 +260,16 @@ export async function createFinanceRefundCase(input: RefundCreateInput) {
         status,
         reasonCode: input.reasonCode,
         reasonNotes: input.notes,
-        costAllocation: input.costAllocation,
+        costAllocation: input.costAllocation ?? null,
         notes: input.notes,
         refundType: input.refundType ?? "full",
-        policyBucket: input.costAllocation,
+        policyBucket: input.costAllocation ?? null,
         approvalStatus,
         approvedBy: approvalStatus === "approved" ? input.actorId : null,
         approvedAt: approvalStatus === "approved" ? new Date() : null,
-        reversePickupRequired: requiresReversePickup(input.costAllocation),
+        reversePickupRequired: input.costAllocation
+            ? requiresReversePickup(input.costAllocation)
+            : false,
         escalationStatus: "none",
         returnShippingPaidBy,
         returnQcStatus: qcStatus,
@@ -300,7 +305,7 @@ export async function createFinanceRefundCase(input: RefundCreateInput) {
         metadata: {
             module: "finance_compliance",
             orderId: input.orderId,
-            costAllocation: input.costAllocation,
+            costAllocation: input.costAllocation ?? null,
             suggestedCostAllocation,
         },
     });
@@ -648,8 +653,18 @@ export async function executeApprovedRefund(refundId: string, actorId: string) {
             : razorpayRefund.status === "failed"
               ? "failed"
               : "pending";
-    const updated = await financeComplianceQueries.updateRefund(refund.id, {
+    await refundQueries.recordRefundEvent({
+        refundId: refund.id,
+        gatewayRefundId: razorpayRefund.id,
+        userId: refund.userId,
+        orderId: refund.orderId,
+        paymentId,
+        amount: refund.amount,
         status: nextStatus,
+        paymentMethod: order.paymentMethod,
+    });
+
+    const updated = await financeComplianceQueries.updateRefund(refund.id, {
         processedBy: actorId,
         razorpayRefundId: razorpayRefund.id,
         escalationStatus: razorpayRefund.status === "failed" ? "raised" : "none",

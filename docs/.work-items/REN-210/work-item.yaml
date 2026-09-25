@@ -1,0 +1,147 @@
+schema_version: "1.0"
+task:
+    id: REN-210
+    title: "[FCCP][P1] Automate Contracted Payment Fee — Extract Exact Clause Wording First"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-210/fccpp1-automate-contracted-payment-fee-extract-exact-clause-wording
+        priority: High
+        labels: [Feature]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganganguly333/ren-210-fccp1-automate-contracted-payment-fee-extract-exact-clause
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The feature changes seller payout deductions and therefore future payable amounts."
+        - "The contractual formula is ambiguous and the source document is unavailable."
+        - "Scope, auditability, and separation from gateway costs are financial and compliance boundaries."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, payouts.ts, finance code, admin reports/exports, payout statement components, REN-208 agreement repository, BIZ-14 evidence]
+    excluded_areas: [payout implementation, payout execution, historical backfill, gateway-cost capture, commission/TDS/TCS/holdback changes]
+    dependencies: [DEP-210-001, DEP-210-002, DEP-210-003, DEP-210-004]
+    integrations: [INT-210-001, INT-210-002]
+    security_boundaries: [SEC-210-001, SEC-210-002]
+    state_transitions: [evidence_missing, clause_extracted, formula_confirmed, fee_applied, fee_not_applied]
+    related_tests: [TEXP-210-001, TEXP-210-002, TEXP-210-003, TEXP-210-004, TEXP-210-005]
+    uncertainties: ["Signed agreement PDF is unavailable.", "Manual reconciliation process is undocumented.", "Formula base, rounding, granularity, and reverse/RTO treatment are unknown."]
+requirements:
+    - { id: REQ-210-001, description: "Record the Payment Fee clause verbatim from the signed agreement before implementation.", type: evidence }
+    - { id: REQ-210-002, description: "Document or explicitly mark unresolved the formula base, rounding, granularity, and Forward/Reverse/RTO treatment.", type: safety }
+    - { id: REQ-210-003, description: "Document the existing manual Admin reconciliation process before replacement.", type: operational }
+    - { id: REQ-210-004, description: "Keep applicable-brand scope limited to sellers with confirmed agreements and preserve UNKNOWN for others.", type: authorization }
+    - { id: REQ-210-005, description: "Implement no fee calculation until the extracted wording is independently confirmed.", type: financial_control }
+    - { id: REQ-210-006, description: "When unblocked, make the fee auditable, agreement-version scoped, and visible on settlement statements without changing unrelated payout deductions.", type: auditability }
+scenarios:
+    - { id: SCN-210-001, description: "Primary agreement text is available and the clause is recorded verbatim.", requirement_ids: [REQ-210-001, REQ-210-002] }
+    - { id: SCN-210-002, description: "The document is silent on an arithmetic or scope dimension and it is recorded as document does not specify.", requirement_ids: [REQ-210-002] }
+    - { id: SCN-210-003, description: "Current manual reconciliation is documented with owner, timing, base, and record.", requirement_ids: [REQ-210-003] }
+    - { id: SCN-210-004, description: "Brands without confirmed applicable agreements remain UNKNOWN and receive no fee.", requirement_ids: [REQ-210-004, REQ-210-005] }
+    - { id: SCN-210-005, description: "After confirmation, fee calculation is line-level auditable and settlement-visible without changing other deductions.", requirement_ids: [REQ-210-006] }
+invariants:
+    - { id: INV-210-001, description: "No engineering inference becomes the contractual formula." }
+    - { id: INV-210-002, description: "No brand without a confirmed applicable agreement receives the fee." }
+    - { id: INV-210-003, description: "Gateway cost remains distinct from contractual Payment Fee." }
+    - { id: INV-210-004, description: "Unconfirmed formula produces no fee deduction and an explicit not-applied record." }
+    - { id: INV-210-005, description: "Commission, TDS, TCS, holdback, and historical payout records remain unchanged." }
+flows:
+    - { id: FLOW-210-001, description: "Evidence is collected and confirmed before formula design.", state_transitions: [evidence_missing, clause_extracted, formula_confirmed] }
+    - { id: FLOW-210-002, description: "Confirmed fee is applied only to an eligible agreement-scoped seller and recorded as a distinct deduction.", state_transitions: [formula_confirmed, fee_applied, fee_not_applied] }
+dependencies:
+    - { id: DEP-210-001, name: signed Terra Luna agreement, purpose: "Primary clause evidence", description: "Formula source status: CONFIRMED 2026-09-20 as authoritative business decision (max(2% of order total, INR 20), Terra Luna only); agreement version linkage remains a later REN-208 update. Forward/Reverse-RTO chargeability scope is not covered by this confirmation and remains UNKNOWN — see DEC-210-003.", status: resolved }
+    - { id: DEP-210-002, name: REN-208, purpose: "Agreement-version storage and access", description: "The fee must cite a governed agreement version.", status: resolved }
+    - { id: DEP-210-003, name: REN-209, purpose: "Commercial-term configuration", description: "Confirmed fee value/formula is scoped to Terra Luna and can later gain agreement-version linkage.", status: resolved }
+    - { id: DEP-210-004, name: manual Admin reconciliation process, purpose: "Replacement baseline", description: "Current manual process remains a follow-up documentation item.", status: resolved }
+integrations:
+    - { id: INT-210-001, system: payout engine and settlement statement, purpose: "Distinct auditable fee deduction", failure_mode: "Wrong formula or scope changes seller payable amounts", retry_idempotency: "No fee is applied while formula or agreement scope is unconfirmed." }
+    - { id: INT-210-002, system: agreement repository and audit log, purpose: "Clause/source traceability", failure_mode: "A deduction without clause/version/actor evidence must fail closed", retry_idempotency: "Audit/source linkage must be committed with the deduction." }
+personas:
+    - { id: PER-210-001, role: finance_operator, applicability: "Owns manual reconciliation and confirms operational baseline." }
+    - { id: PER-210-002, role: renivet_admin, applicability: "Maintains approved configuration after evidence confirmation." }
+security_boundaries:
+    - { id: SEC-210-001, description: "Only authorized internal finance/admin roles may configure or apply the fee." }
+    - { id: SEC-210-002, description: "Agreement contents, signed URLs, and financial deduction evidence are not exposed to brands without scope authorization." }
+business_rules:
+    - { id: BR-210-001, description: "The document, not engineering inference or an existing report assumption, defines the formula." }
+    - { id: BR-210-002, description: "Contractual Payment Fee is distinct from Renivet's Razorpay gateway cost." }
+    - { id: BR-210-003, description: "No retrospective historical payout backfill is included." }
+decisions:
+    - { id: DEC-210-001, question: "What is the confirmed Terra Luna Payment Fee formula?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use max(2% of order total, INR 20) for Forward and Reverse/RTO.", basis: "User explicitly confirmed Akshay’s internal approval.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-210-002, question: "What is the current manual reconciliation process?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Track as a non-blocking operational follow-up; do not alter the confirmed calculation.", basis: "User approved use of the reconciliation logic for implementation.", confidence: medium, consequence: medium, human_confirmation_required: true }
+    - { id: DEC-210-003, question: "[2026-09-20 clarification, does not reopen DEC-210-001] Does the confirmed formula also confirm Forward vs Reverse/RTO chargeability scope?", class: AUTO_DECIDE, status: resolved, recommendation: "No. The 2026-09-20 management decision confirms only the arithmetic — max(2% of order total, INR 20) — as the authoritative Terra Luna Payment Fee formula. Whether this fee applies identically to Reverse/RTO transactions or Forward transactions only remains explicitly UNKNOWN/unconfirmed and is not decided by the formula confirmation. DEC-210-001's recommendation text ('for Forward and Reverse/RTO') and CRIT-210-002's summary ('Forward/Reverse/RTO treatment are confirmed') both predate this clarification and should be read alongside this entry, not as a settled chargeability-scope decision. This finding is consistent with, and does not contradict, this work item's own uncertainties list (line 36: 'reverse/RTO treatment are unknown') and REQ-210-002 / SCN-210-002, which already anticipated this gap.", basis: "Management decision, 2026-09-20 — formula confirmed as authoritative business decision; Forward/Reverse-RTO chargeability explicitly left open, not to be inferred.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-210-001, category: business_uat, classification: REQUIRED, reason: "Clause extraction and ambiguity register must be confirmed against the primary document.", scenarios: [SCN-210-001, SCN-210-002] }
+    - { id: TEXP-210-002, category: exploratory, classification: REQUIRED, reason: "Manual reconciliation process must be observed and documented before replacement.", scenarios: [SCN-210-003] }
+    - { id: TEXP-210-003, category: unit, classification: REQUIRED, reason: "Confirmed formula boundaries, rounding, and no-fee behavior must be deterministic after unblocking.", scenarios: [SCN-210-004, SCN-210-005] }
+    - { id: TEXP-210-004, category: integration, classification: REQUIRED, reason: "Agreement-scoped deduction and settlement statement traceability require end-to-end proof.", scenarios: [SCN-210-004, SCN-210-005] }
+    - { id: TEXP-210-005, category: regression, classification: REQUIRED, reason: "Unrelated deductions, gateway costs, and historical payouts must remain unchanged.", scenarios: [SCN-210-005] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-210-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Akshay’s internal confirmation resolves the formula and scope.", references: [REQ-210-001, DEC-210-001] }
+        - { id: CRIT-210-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Order-total base, minimum, and Forward/Reverse/RTO treatment are confirmed.", references: [REQ-210-002, REQ-210-003, DEC-210-002] }
+        - { id: CRIT-210-003, severity: MAJOR, status: resolved, summary: "Payout implementation is Terra Luna-only and does not reuse unscoped report paths.", references: [REQ-210-005, INV-210-001, INV-210-003] }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — user confirmation in conversation"
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "25a1b598e428957219eb8677785730429acd191f"
+    head_commit: "83cfcdd63212069ba960e1fc33e8802a48bab0d5"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add live payout-cycle, Forward/Reverse-RTO, settlement-statement, and historical reconciliation integration coverage before production use."
+        - "REV-002: Document the current manual reconciliation process operationally."
+    evidence:
+        - "Compared approved REN-210 contract and implementation commits 25a1b598e428957219eb8677785730429acd191f..83cfcdd63212069ba960e1fc33e8802a48bab0d5 on feat/ren-203-spec."
+        - "Focused Payment Fee tests pass; full TypeScript output contains only pre-existing payout-clearance errors outside this change."
+    governance_reentry_required: false
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-210-001, scenario_ids: [SCN-210-001] }
+        - { requirement_id: REQ-210-002, scenario_ids: [SCN-210-001, SCN-210-002] }
+        - { requirement_id: REQ-210-003, scenario_ids: [SCN-210-003] }
+        - { requirement_id: REQ-210-004, scenario_ids: [SCN-210-004] }
+        - { requirement_id: REQ-210-005, scenario_ids: [SCN-210-004] }
+        - { requirement_id: REQ-210-006, scenario_ids: [SCN-210-005] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-210-001, invariant_ids: [INV-210-001] }
+        - { scenario_id: SCN-210-002, invariant_ids: [INV-210-001] }
+        - { scenario_id: SCN-210-003, invariant_ids: [INV-210-004] }
+        - { scenario_id: SCN-210-004, invariant_ids: [INV-210-002, INV-210-003, INV-210-004] }
+        - { scenario_id: SCN-210-005, invariant_ids: [INV-210-003, INV-210-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-210-001, test_expectation_ids: [TEXP-210-001] }
+        - { scenario_id: SCN-210-002, test_expectation_ids: [TEXP-210-001] }
+        - { scenario_id: SCN-210-003, test_expectation_ids: [TEXP-210-002] }
+        - { scenario_id: SCN-210-004, test_expectation_ids: [TEXP-210-003, TEXP-210-004] }
+        - { scenario_id: SCN-210-005, test_expectation_ids: [TEXP-210-003, TEXP-210-004, TEXP-210-005] }

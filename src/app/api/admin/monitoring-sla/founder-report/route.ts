@@ -1,5 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
+import { resolveCommissionRuleFromCandidates } from "@/lib/finance/payout-commission";
 import {
     accessReviewItems,
     accessReviewRuns,
@@ -22,12 +23,13 @@ import {
     products,
     categories,
     orderItems,
+    commissionRules as commissionRulesTable,
 } from "@/lib/db/schema";
 import { monitoringSlaQueries } from "@/lib/db/queries";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { and, desc, gte, lt, ne } from "drizzle-orm";
+import { and, desc, eq, gte, lt, ne } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
@@ -386,6 +388,9 @@ export async function GET(req: NextRequest) {
             shipments: true,
         },
     });
+    const commissionRules = await db.query.commissionRules.findMany({
+        where: eq(commissionRulesTable.isActive, true),
+    });
 
     // Detailed financial calculations matching dashboard system
     let totalGrossSale = 0;
@@ -419,8 +424,18 @@ export async function GET(req: NextRequest) {
         let commission = 0;
         if (order.items && order.items.length > 0) {
             const item = order.items[0];
-            const commRate = item.product?.category?.commissionRate || 0;
-            commission = (commRate / 100) * grossSale;
+            const rule = item.product?.brandId
+                ? resolveCommissionRuleFromCandidates({
+                      brandId: item.product.brandId,
+                      categoryId: item.product.categoryId,
+                      productTypeId: item.product.productTypeId,
+                      targetDate: new Date(order.createdAt),
+                      rules: commissionRules,
+                  })
+                : null;
+            commission =
+                ((rule?.commissionPercentBps ?? 0) / 10_000) *
+                grossSale;
         }
         totalCommission += commission;
     }

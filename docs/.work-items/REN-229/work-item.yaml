@@ -3,7 +3,7 @@ task:
     id: REN-229
     title: "[FCCP] Commission Rules Data Integrity / Foundation"
     source: linear
-    branch: feat/ren-229-spec
+    branch: feat/ren-203-spec
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-229/fccp-commission-rules-data-integrity-foundation

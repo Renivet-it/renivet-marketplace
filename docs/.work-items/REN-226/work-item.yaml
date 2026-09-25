@@ -1,0 +1,190 @@
+schema_version: "1.0"
+task:
+    id: REN-226
+    title: "[FCCP][P1] Implement Refund Source-of-Truth & Reconciliation (BIZ-9)"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-226/fccpp1-implement-refund-source-of-truth-and-reconciliation-biz-9
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-224
+        linear_branch: ayanganguly333/ren-226-fccp1-implement-refund-source-of-truth-reconciliation-biz-9
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Refund and payment-state transitions affect customer money and order lifecycle integrity."
+        - "Razorpay webhooks, cancellation paths, finance workflows, notifications, analytics, and payout/GST consumers cross the source-of-truth boundary."
+        - "Historical mismatch investigation touches production financial data and must remain read-only until separately approved."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/relations, refund schema and migration, refund query layers, Razorpay payment/refund webhooks, finance refund lifecycle, customer/support cancellation paths, order status mutation, monitoring alerts, payout/GST/report consumers, tests and migration conventions]
+    excluded_areas: [production data reads or writes, bulk historical backfill, return/RTO redesign, BIZ-8/BIZ-10/BIZ-11 decisions, payout formula redesign]
+    dependencies: [DEP-226-001, DEP-226-002, DEP-226-003, DEP-226-004, DEP-226-005]
+    integrations: [INT-226-001, INT-226-002, INT-226-003]
+    security_boundaries: [SEC-226-001, SEC-226-002, SEC-226-003]
+    state_transitions: [refund_not_persisted, refund_pending, refund_processed, refund_failed, status_derived, mismatch_detected, mismatch_alerted, mismatch_resolved]
+    related_tests: [TEXP-226-001, TEXP-226-002, TEXP-226-003, TEXP-226-004, TEXP-226-005, TEXP-226-006, TEXP-226-007]
+    uncertainties: ["Production outcome for Order 4 and ORD-EAR-783631-QFJV is not available in the repository or Linear response.", "The final natural-key/index choice depends on duplicate preflight across existing refund rows.", "Linear comments were temporarily unavailable during specification retrieval."]
+requirements:
+    - { id: REQ-226-001, description: "Make refunds the authoritative persisted event before any refunded order status.", type: safety }
+    - { id: REQ-226-002, description: "Centralize refund persistence and derived status across all normal refund paths.", type: explicit }
+    - { id: REQ-226-003, description: "Derive refund_pending, refunded, and refund_failed from durable refund state without unrelated lifecycle changes.", type: compatibility }
+    - { id: REQ-226-004, description: "Make same-event replay idempotent, including concurrent gateway delivery and split-payment identities.", type: safety }
+    - { id: REQ-226-005, description: "Provide a reusable report-only reconciliation query for missing or conflicting refund backing rows.", type: explicit }
+    - { id: REQ-226-006, description: "Run ongoing reconciliation with bounded, deduplicated operational alerting.", type: operability }
+    - { id: REQ-226-007, description: "Provide read-only evidence and issue-recorded outcomes for the two named historical gap cases; prohibit silent correction or bulk backfill.", type: compliance }
+    - { id: REQ-226-008, description: "Preserve existing refund, return, RTO, payout, notification, analytics, and cancellation rules outside source ordering and idempotency.", type: compatibility }
+    - { id: REQ-226-009, description: "Keep schema/query types synchronized and make any required uniqueness change additive, preflighted, and recoverable.", type: migration }
+    - { id: REQ-226-010, description: "Provide deterministic unit, integration, security, regression, and business-UAT evidence.", type: explicit }
+scenarios:
+    - { id: SCN-226-001, description: "Processed webhook persists/locates the refund before deriving refunded and replay remains idempotent.", requirement_ids: [REQ-226-001, REQ-226-002, REQ-226-003, REQ-226-004] }
+    - { id: SCN-226-002, description: "Failed webhook persists/locates the refund and derives refund_failed without creating refunded.", requirement_ids: [REQ-226-001, REQ-226-003, REQ-226-008] }
+    - { id: SCN-226-003, description: "All application refund creation paths use the canonical boundary and cannot produce a status-only refund.", requirement_ids: [REQ-226-001, REQ-226-002, REQ-226-008] }
+    - { id: SCN-226-004, description: "Concurrent duplicate gateway events converge on one event row and one effective transition.", requirement_ids: [REQ-226-004, REQ-226-009] }
+    - { id: SCN-226-005, description: "Split-payment orders preserve distinct refund events without order-only deduplication.", requirement_ids: [REQ-226-004, REQ-226-008] }
+    - { id: SCN-226-006, description: "A refunded order without a refund row is detected and reported without automatic repair.", requirement_ids: [REQ-226-005, REQ-226-007] }
+    - { id: SCN-226-007, description: "Ongoing reconciliation emits bounded deduplicated alerts and later resolution evidence.", requirement_ids: [REQ-226-005, REQ-226-006] }
+    - { id: SCN-226-008, description: "The named historical cases receive read-only evidence and explicit outcome classifications.", requirement_ids: [REQ-226-007, REQ-226-010] }
+    - { id: SCN-226-009, description: "Webhook signature and finance/admin authorization boundaries remain enforced.", requirement_ids: [REQ-226-002, REQ-226-010] }
+    - { id: SCN-226-010, description: "Existing downstream refund, return, payout, GST, analytics, notification, and reward behavior remains unchanged.", requirement_ids: [REQ-226-008, REQ-226-010] }
+    - { id: SCN-226-011, description: "Database or gateway failure leaves no refunded status without a persisted refund event and supports safe retry.", requirement_ids: [REQ-226-001, REQ-226-004, REQ-226-009] }
+invariants:
+    - { id: INV-226-001, description: "Every refunded order has an authoritative processed refund event row." }
+    - { id: INV-226-002, description: "A refund event is persisted at most once for its selected natural identity." }
+    - { id: INV-226-003, description: "Payment status is derived state and never the refund source of truth." }
+    - { id: INV-226-004, description: "Distinct split-payment refund events remain distinct." }
+    - { id: INV-226-005, description: "Reconciliation reports and alerts divergences without silently mutating financial data." }
+    - { id: INV-226-006, description: "Signature, authorization, audit, and secret-handling boundaries remain enforced." }
+    - { id: INV-226-007, description: "Unrelated refund/return/payout business rules do not change." }
+    - { id: INV-226-008, description: "Retries and partial failures are safe under concurrency." }
+flows:
+    - { id: FLOW-226-001, description: "Caller validates existing rules, canonical service persists/locates refund, derives status atomically, then runs guarded side effects.", state_transitions: [refund_not_persisted, status_derived] }
+    - { id: FLOW-226-002, description: "Signed webhook is parsed, refund event is persisted, order state is derived, and existing side effects run idempotently.", state_transitions: [refund_pending, refund_processed, refund_failed] }
+    - { id: FLOW-226-003, description: "Reconciliation queries order/refund state, classifies divergence, and emits bounded evidence without mutation.", state_transitions: [mismatch_detected, mismatch_alerted, mismatch_resolved] }
+    - { id: FLOW-226-004, description: "Failure leaves a retryable valid state and repeated natural events converge safely.", state_transitions: [refund_not_persisted, refund_pending, status_derived] }
+dependencies:
+    - { id: DEP-226-001, name: refunds, purpose: "Authoritative refund event store", description: "Existing table with refund IDs, payment IDs, gateway refund ID, lifecycle status, and order relation.", status: resolved }
+    - { id: DEP-226-002, name: orders, purpose: "Derived payment status", description: "Existing order payment status must be updated only through the canonical refund boundary for refund states.", status: resolved }
+    - { id: DEP-226-003, name: Razorpay webhooks/API, purpose: "External refund event source", description: "Signed webhook and refund API retries must remain safe.", status: resolved }
+    - { id: DEP-226-004, name: monitoring and audit, purpose: "Operational divergence visibility", description: "Existing audit/alert conventions provide bounded evidence and dedupe.", status: resolved }
+    - { id: DEP-226-005, name: historical gap cases, purpose: "Read-only reconciliation evidence", description: "Order 4 and ORD-EAR-783631-QFJV require controlled production investigation outside spec work; the implementation dependency is resolved by the report contract.", status: resolved }
+integrations:
+    - { id: INT-226-001, system: Razorpay, purpose: "Refund webhook", name: Razorpay refund webhook, contract: "Signed processed/failed refund events identify a gateway refund and payment.", failure_mode: "Invalid signature or malformed event is rejected; duplicate event is acknowledged idempotently." }
+    - { id: INT-226-002, system: Razorpay, purpose: "Refund API", name: Razorpay refund API, contract: "Refund request returns a gateway refund identity used by the canonical row.", failure_mode: "Gateway failure does not derive refunded status; retry uses existing refund identity." }
+    - { id: INT-226-003, system: Renivet monitoring and audit, purpose: "Operational divergence evidence", name: monitoring/audit, contract: "Divergence is emitted with a stable dedupe key and non-secret identifiers.", failure_mode: "Alert write failure is observable and does not auto-correct financial rows." }
+personas:
+    - { id: PER-226-001, name: customer, role: customer, applicability: "Receives refund/order status and existing refund communication." }
+    - { id: PER-226-002, name: finance/admin, role: finance administrator, applicability: "Reviews authoritative refund records and reconciliation evidence." }
+    - { id: PER-226-003, name: operations, role: operations operator, applicability: "Responds to bounded payment/refund divergence alerts." }
+security_boundaries:
+    - { id: SEC-226-001, description: "Razorpay webhook signature verification remains mandatory before any state change." }
+    - { id: SEC-226-002, description: "Finance/admin refund and reconciliation actions retain existing authenticated authorization." }
+    - { id: SEC-226-003, description: "Reports and alerts exclude gateway secrets and unnecessary payment-sensitive payloads." }
+business_rules:
+    - { id: BR-226-001, description: "Refunds table is authoritative; payment status is derived." }
+    - { id: BR-226-002, description: "Processed refund may derive refunded; pending and failed states remain non-refunded." }
+    - { id: BR-226-003, description: "Same underlying refund event cannot create duplicate rows or transitions." }
+    - { id: BR-226-004, description: "Historical mismatch correction is separate, approved, and auditable; no bulk backfill." }
+decisions:
+    - { id: DEC-226-001, question: "Which record is authoritative for refund events?", class: AUTO_DECIDE, status: resolved, recommendation: "refunds table", basis: "Approved BIZ-9 decision in REN-226.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-226-002, question: "How should refund persistence be shared across paths?", class: AUTO_DECIDE, status: resolved, recommendation: "One canonical transaction-aware service/query boundary.", basis: "Existing webhook, payment, cancellation, support, and finance paths currently diverge.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-226-003, question: "Should named historical orders be corrected during implementation?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "No; read/report only until a separate production correction is approved and recorded.", basis: "Issue production-safety gate and financial data risk.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-226-001, category: unit, classification: REQUIRED, reason: "Status derivation and natural identity behavior must be deterministic.", scenarios: [SCN-226-001, SCN-226-002, SCN-226-004, SCN-226-005, SCN-226-006] }
+    - { id: TEXP-226-002, category: integration, classification: REQUIRED, reason: "Durable refund-before-status ordering and concurrent duplicate handling require database evidence.", scenarios: [SCN-226-001, SCN-226-003, SCN-226-004, SCN-226-011] }
+    - { id: TEXP-226-003, category: api, classification: REQUIRED, reason: "All normal refund callers must use the canonical write boundary.", scenarios: [SCN-226-002, SCN-226-003] }
+    - { id: TEXP-226-004, category: security, classification: REQUIRED, reason: "Webhook signature and finance/admin access must remain protected.", scenarios: [SCN-226-009] }
+    - { id: TEXP-226-005, category: regression, classification: REQUIRED, reason: "Downstream refund, return, payout, GST, analytics, notifications, and rewards must not regress.", scenarios: [SCN-226-010] }
+    - { id: TEXP-226-006, category: business_uat, classification: REQUIRED, reason: "Finance/operations must review reconciliation output, alert dedupe, and the two named gap-case outcomes.", scenarios: [SCN-226-006, SCN-226-007, SCN-226-008] }
+    - { id: TEXP-226-007, category: integration, classification: REQUIRED, reason: "Any new natural-key uniqueness/index change must be preflighted, additive, and recoverable.", scenarios: [SCN-226-004, SCN-226-005, SCN-226-011] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-226-001, severity: MAJOR, status: open, summary: "Natural-key coverage must support split-payment refund events and cannot deduplicate only by order." }
+        - { id: CRIT-226-002, severity: MAJOR, status: open, summary: "Refund persistence, derived status, and side-effect ordering need an explicit transaction/idempotency boundary." }
+        - { id: CRIT-226-003, severity: MINOR, status: open, summary: "Historical mismatch handling must remain report-only until separately approved." }
+        - { id: CRIT-226-004, severity: MINOR, status: open, summary: "Ongoing reconciliation requires stable alert deduplication and resolution evidence." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-requested-spec
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-226-001, scenario_ids: [SCN-226-001, SCN-226-002, SCN-226-003, SCN-226-011] }
+        - { requirement_id: REQ-226-002, scenario_ids: [SCN-226-001, SCN-226-003, SCN-226-009] }
+        - { requirement_id: REQ-226-003, scenario_ids: [SCN-226-001, SCN-226-002] }
+        - { requirement_id: REQ-226-004, scenario_ids: [SCN-226-001, SCN-226-004, SCN-226-005, SCN-226-011] }
+        - { requirement_id: REQ-226-005, scenario_ids: [SCN-226-006, SCN-226-007] }
+        - { requirement_id: REQ-226-006, scenario_ids: [SCN-226-007] }
+        - { requirement_id: REQ-226-007, scenario_ids: [SCN-226-006, SCN-226-008] }
+        - { requirement_id: REQ-226-008, scenario_ids: [SCN-226-002, SCN-226-003, SCN-226-005, SCN-226-010] }
+        - { requirement_id: REQ-226-009, scenario_ids: [SCN-226-004, SCN-226-011] }
+        - { requirement_id: REQ-226-010, scenario_ids: [SCN-226-008, SCN-226-009, SCN-226-010] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-226-001, invariant_ids: [INV-226-001, INV-226-002, INV-226-003, INV-226-008] }
+        - { scenario_id: SCN-226-002, invariant_ids: [INV-226-003, INV-226-007] }
+        - { scenario_id: SCN-226-003, invariant_ids: [INV-226-001, INV-226-003, INV-226-007] }
+        - { scenario_id: SCN-226-004, invariant_ids: [INV-226-002, INV-226-008] }
+        - { scenario_id: SCN-226-005, invariant_ids: [INV-226-004, INV-226-008] }
+        - { scenario_id: SCN-226-006, invariant_ids: [INV-226-001, INV-226-005] }
+        - { scenario_id: SCN-226-007, invariant_ids: [INV-226-005, INV-226-008] }
+        - { scenario_id: SCN-226-008, invariant_ids: [INV-226-005, INV-226-006] }
+        - { scenario_id: SCN-226-009, invariant_ids: [INV-226-006] }
+        - { scenario_id: SCN-226-010, invariant_ids: [INV-226-007] }
+        - { scenario_id: SCN-226-011, invariant_ids: [INV-226-001, INV-226-002, INV-226-008] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-226-001, test_expectation_ids: [TEXP-226-001, TEXP-226-002, TEXP-226-003] }
+        - { scenario_id: SCN-226-002, test_expectation_ids: [TEXP-226-001, TEXP-226-003] }
+        - { scenario_id: SCN-226-003, test_expectation_ids: [TEXP-226-002, TEXP-226-003] }
+        - { scenario_id: SCN-226-004, test_expectation_ids: [TEXP-226-001, TEXP-226-002, TEXP-226-007] }
+        - { scenario_id: SCN-226-005, test_expectation_ids: [TEXP-226-001, TEXP-226-007] }
+        - { scenario_id: SCN-226-006, test_expectation_ids: [TEXP-226-001, TEXP-226-006] }
+        - { scenario_id: SCN-226-007, test_expectation_ids: [TEXP-226-006] }
+        - { scenario_id: SCN-226-008, test_expectation_ids: [TEXP-226-006] }
+        - { scenario_id: SCN-226-009, test_expectation_ids: [TEXP-226-004] }
+        - { scenario_id: SCN-226-010, test_expectation_ids: [TEXP-226-005] }
+        - { scenario_id: SCN-226-011, test_expectation_ids: [TEXP-226-002, TEXP-226-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: feat/ren-203-spec
+    base_commit: "004e7e93fb037a7ff4583ca6504548302aad0800"
+    head_commit: "ab5706c4669ac689e95c0973027dc0ba225c4b93"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-226-001: Run the authorized read-only reconciliation report against the correct production/audit dataset for both named gap cases; separately approve any correction."
+        - "REV-226-002: Add controlled Postgres/webhook integration execution for ordering, concurrent replay, unique collision, and failure recovery before production rollout."
+    evidence:
+        - "Compared the approved REN-226 contract with the task-local stacked-branch diff from 004e7e93fb037a7ff4583ca6504548302aad0800 to ab5706c4669ac689e95c0973027dc0ba225c4b93."
+        - "recordRefundEvent in src/lib/db/queries/refund.ts transactionally persists/locates refund rows and derives aggregate split-payment status."
+        - "Razorpay refund webhooks and active payment/cancellation/finance paths use the canonical event writer before refund side effects."
+        - "src/app/api/cron/refund-reconciliation/route.ts provides authenticated targeted report/alert execution; the configured database did not contain either named identifier, and this outcome was recorded in Linear comment 4c854964-09e6-4d4f-8ef8-29ed3d38b141."
+        - "Focused REN-226 unit/static regression tests, Drizzle schema check, and governance validation passed; the full repository suite retains unrelated existing failures."
+        - "Reconciliation resolves cleared refund mismatch alerts through resolveOpenAlertsByDedupePrefix."
+    governance_reentry_required: false

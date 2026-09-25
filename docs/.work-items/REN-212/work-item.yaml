@@ -1,0 +1,126 @@
+schema_version: "1.0"
+task:
+    id: REN-212
+    title: "[FCCP][P2] Define COD & Split-Payment Payment-State Reconciliation — Discovery for BIZ-8"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-212/fccpp2-define-cod-and-split-payment-payment-state-reconciliation
+        priority: Medium
+        labels: [Doc]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganganguly333/ren-212-fccp2-define-cod-split-payment-payment-state-reconciliation
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "COD payment evidence controls whether seller money becomes payout-eligible."
+        - "External carrier credentials and remittance data are unavailable or ambiguous."
+        - "Split payments can map one payment ID to multiple orders, creating identity and reconciliation risk."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, COD service, carrier remittance sync, cron route, COD reconciliation schemas/queries, order payment fields, payout eligibility]
+    excluded_areas: [credential changes, external carrier sync execution, payment/refund/remittance mutations, payout execution, ledger architecture]
+    dependencies: [DEP-212-001, DEP-212-002, DEP-212-003, DEP-212-004]
+    integrations: [INT-212-001, INT-212-002]
+    security_boundaries: [SEC-212-001, SEC-212-002]
+    state_transitions: [unconfirmed, held, remittance_observed, matched, disputed, escalated, payout_eligible]
+    related_tests: [TEXP-212-001, TEXP-212-002, TEXP-212-003]
+    uncertainties: ["Automatic Delhivery sync failure mode and live production row evidence.", "Live versus vestigial COD table family.", "Per-order split-payment confirmation semantics.", "Aging/escalation owner and thresholds."]
+requirements:
+    - { id: REQ-212-001, description: "Document the COD money path end to end with carrier, fields, tables, and jobs.", type: discovery }
+    - { id: REQ-212-002, description: "Report production carrier credential state without changing credentials.", type: safety }
+    - { id: REQ-212-003, description: "Document split-payment mapping and the limits of per-order payment confirmation.", type: identity }
+    - { id: REQ-212-004, description: "Identify the live and vestigial COD reconciliation table families using evidence.", type: data_consistency }
+    - { id: REQ-212-005, description: "Propose an evidence-based reconciliation rule, including never-confirmed handling.", type: financial_control }
+    - { id: REQ-212-006, description: "Record interim handling: unconfirmed COD orders are held, never treated as paid.", type: safety }
+    - { id: REQ-212-007, description: "Make no production data, credential, payment, refund, remittance, or payout changes.", type: compatibility }
+scenarios:
+    - { id: SCN-212-001, description: "Carrier credentials are set, unset, or set-but-failing and the state is reported distinctly.", requirement_ids: [REQ-212-001, REQ-212-002] }
+    - { id: SCN-212-002, description: "COD order flows from delivery through carrier remittance evidence to a reconciled state.", requirement_ids: [REQ-212-001, REQ-212-004, REQ-212-005] }
+    - { id: SCN-212-003, description: "One payment ID funds multiple orders and the per-order confirmation limit is documented.", requirement_ids: [REQ-212-003, REQ-212-005] }
+    - { id: SCN-212-004, description: "The populated and empty COD table families are distinguished using database evidence.", requirement_ids: [REQ-212-004] }
+    - { id: SCN-212-005, description: "COD with unconfirmed payment evidence remains held with a visible reason.", requirement_ids: [REQ-212-005, REQ-212-006] }
+    - { id: SCN-212-006, description: "Discovery produces no production mutations or credential changes.", requirement_ids: [REQ-212-007] }
+invariants:
+    - { id: INV-212-001, description: "Unknown COD payment evidence is never mapped to paid." }
+    - { id: INV-212-002, description: "An empty provider response cannot be interpreted as zero remittance without credential/connectivity evidence." }
+    - { id: INV-212-003, description: "A payment ID is not treated as unique ownership of one order when split-payment siblings exist." }
+    - { id: INV-212-004, description: "Discovery is read-only against production and external providers." }
+    - { id: INV-212-005, description: "BIZ-9 refund reconciliation remains outside this task." }
+flows:
+    - { id: FLOW-212-001, description: "Trace COD delivery, provider remittance, matching, variance, and payout eligibility evidence.", state_transitions: [unconfirmed, remittance_observed, matched, disputed] }
+    - { id: FLOW-212-002, description: "Hold an order when evidence is missing and release only after the future rule’s evidence threshold is met.", state_transitions: [unconfirmed, held, payout_eligible] }
+    - { id: FLOW-212-003, description: "Report credential/provider ambiguity without triggering a sync or changing configuration.", state_transitions: [unconfirmed, escalated] }
+dependencies:
+    - { id: DEP-212-001, name: carrier remittance providers, purpose: "External COD evidence", description: "Delhivery and Shiprocket credentials/endpoints and provider records determine whether remittance can be confirmed.", status: blocked }
+    - { id: DEP-212-002, name: cod_reconciliation_items, purpose: "Current remittance record", description: "Repository schema shows the populated-looking family but production row evidence is required.", status: unresolved }
+    - { id: DEP-212-003, name: split Razorpay payments, purpose: "Payment identity", description: "One payment ID may fund multiple orders and cannot be naively treated as one-order proof.", status: unresolved }
+    - { id: DEP-212-004, name: REN-204, purpose: "Interim payout eligibility", description: "COD orders remain held until this discovery defines release evidence.", status: resolved }
+integrations:
+    - { id: INT-212-001, system: carrier remittance APIs, purpose: "Observe COD remittance evidence", failure_mode: "Missing credentials or provider outage appears identical to no remittance unless explicitly reported", retry_idempotency: "Discovery must not trigger provider sync." }
+    - { id: INT-212-002, system: Razorpay payment/order mapping, purpose: "Understand split-payment identity", failure_mode: "Sibling orders can make payment-level confirmation insufficient for one order", retry_idempotency: "Use read-only production evidence." }
+personas:
+    - { id: PER-212-001, role: finance_operator, applicability: "Owns COD reconciliation and escalation." }
+    - { id: PER-212-002, role: payout_operator, applicability: "Needs visible held reasons and future release evidence." }
+security_boundaries:
+    - { id: SEC-212-001, description: "Credentials are read for status reporting only and never exposed, changed, or rotated by this task." }
+    - { id: SEC-212-002, description: "Payment/order identifiers and remittance evidence are accessed by authorized internal operators only." }
+business_rules:
+    - { id: BR-212-001, description: "Delivered does not imply paid for COD." }
+    - { id: BR-212-002, description: "Unconfirmed COD payment evidence is held, not paid." }
+    - { id: BR-212-003, description: "BIZ-9 refund source-of-truth work remains separate." }
+decisions:
+    - { id: DEC-212-001, question: "Are carrier credentials set, unset, or set-but-failing in production?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Record Delhivery as credentials set but automatic remittance not synced; do not change credentials.", basis: "User confirmed Delhivery is used, credentials are set, and remittance is handled manually.", confidence: medium, consequence: high, human_confirmation_required: true }
+    - { id: DEC-212-002, question: "What evidence and aging/escalation policy releases a COD order for payout?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Finance owner must decide after the money path and table state are evidenced.", basis: "BIZ-8 requires explicit COD logic and the issue forbids silent paid assumptions.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-212-001, category: exploratory, classification: REQUIRED, reason: "Discovery must document systems, fields, jobs, credentials, and live/vestigial table evidence.", scenarios: [SCN-212-001, SCN-212-002, SCN-212-004] }
+    - { id: TEXP-212-002, category: business_uat, classification: REQUIRED, reason: "Finance must review the proposed reconciliation rule and never-confirmed escalation path.", scenarios: [SCN-212-002, SCN-212-003, SCN-212-005] }
+    - { id: TEXP-212-003, category: regression, classification: REQUIRED, reason: "Read-only discovery must prove no production state, credential, or payout behavior changed.", scenarios: [SCN-212-006] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-212-001, severity: MAJOR, status: open, summary: "Delhivery credentials are reported as set, but automatic remittance is not synced; provider connectivity and production row evidence remain unverified.", references: [REQ-212-002, DEC-212-001] }
+        - { id: CRIT-212-002, severity: DESIGN_BLOCKER, status: open, summary: "The release evidence and aging/escalation policy remain undecided.", references: [REQ-212-005, DEC-212-002] }
+        - { id: CRIT-212-003, severity: MAJOR, status: open, summary: "Live versus vestigial table family needs production row evidence.", references: [REQ-212-004, SCN-212-004] }
+approval:
+    state: BLOCKED
+    design_blockers: [CRIT-212-002, CRIT-212-003]
+    approved_by: ""
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-212-001, scenario_ids: [SCN-212-001, SCN-212-002] }
+        - { requirement_id: REQ-212-002, scenario_ids: [SCN-212-001] }
+        - { requirement_id: REQ-212-003, scenario_ids: [SCN-212-003] }
+        - { requirement_id: REQ-212-004, scenario_ids: [SCN-212-002, SCN-212-004] }
+        - { requirement_id: REQ-212-005, scenario_ids: [SCN-212-002, SCN-212-003, SCN-212-005] }
+        - { requirement_id: REQ-212-006, scenario_ids: [SCN-212-005] }
+        - { requirement_id: REQ-212-007, scenario_ids: [SCN-212-006] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-212-001, invariant_ids: [INV-212-002, INV-212-004] }
+        - { scenario_id: SCN-212-002, invariant_ids: [INV-212-001, INV-212-002] }
+        - { scenario_id: SCN-212-003, invariant_ids: [INV-212-003] }
+        - { scenario_id: SCN-212-004, invariant_ids: [INV-212-004] }
+        - { scenario_id: SCN-212-005, invariant_ids: [INV-212-001, INV-212-005] }
+        - { scenario_id: SCN-212-006, invariant_ids: [INV-212-004, INV-212-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-212-001, test_expectation_ids: [TEXP-212-001] }
+        - { scenario_id: SCN-212-002, test_expectation_ids: [TEXP-212-001, TEXP-212-002] }
+        - { scenario_id: SCN-212-003, test_expectation_ids: [TEXP-212-002] }
+        - { scenario_id: SCN-212-004, test_expectation_ids: [TEXP-212-001] }
+        - { scenario_id: SCN-212-005, test_expectation_ids: [TEXP-212-002] }
+        - { scenario_id: SCN-212-006, test_expectation_ids: [TEXP-212-003] }

@@ -2,6 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
+import { formatCommissionPercentageFromBps } from "@/lib/finance/commission-percentage";
 import { convertPaiseToRupees, convertValueToLabel } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
 import { unparse } from "papaparse";
@@ -32,8 +33,7 @@ export function OrdersDownload({ orders }: PageProps) {
                 );
                 const netMRP = totalMRP - totalMRP * 0.18;
                 const commissionAmount =
-                    ((order.items[0]?.product?.category?.commissionRate || 0) /
-                        100) *
+                    ((order.items[0]?.commissionPercentBps ?? 0) / 10_000) *
                     totalMRP;
                 const gstOnCommission = commissionAmount * 0.18;
                 return {
@@ -70,11 +70,13 @@ export function OrdersDownload({ orders }: PageProps) {
                         order.items[0]?.product?.brand.confidential
                             ?.bankAccountHolderName || "", // need to add the seller info
                     "SUM of COMM.%":
-                        order.items[0]?.product?.category.commissionRate || "", // need to add the commission info
+                        order.items[0]?.commissionPercentBps == null
+                            ? "Unconfigured"
+                            : formatCommissionPercentageFromBps(
+                                  order.items[0].commissionPercentBps
+                              ),
                     "SUM of COMM. Amt": convertPaiseToRupees(
-                        ((order.items[0]?.product?.category?.commissionRate ||
-                            0) /
-                            100) *
+                        ((order.items[0]?.commissionPercentBps ?? 0) / 10_000) *
                             totalMRP
                     ), // need to add the commission info
                     "SUM of GST on COMM.@18%":
@@ -96,9 +98,8 @@ export function OrdersDownload({ orders }: PageProps) {
                         (totalMRP ?? 0) === 0
                             ? 0
                             : (order?.totalAmount ?? 0) -
-                                  ((order?.items?.[0]?.product?.category
-                                      ?.commissionRate ?? 0) /
-                                      100) *
+                                  ((order?.items?.[0]?.commissionPercentBps ?? 0) /
+                                      10_000) *
                                       (totalMRP ?? 0) -
                                   (order?.shipments?.[0]
                                       ?.awbDetailsShipRocketJson?.response?.data

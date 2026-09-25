@@ -6,6 +6,34 @@ import {
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
+import {
+    calculateCommissionPaise,
+    resolveCommissionRuleFromCandidates,
+    type CommissionRuleCandidate,
+} from "./payout-commission";
+import {
+    evaluatePayoutEligibility,
+    getDeliveredAt,
+    isWithinPayoutWindow,
+} from "./payout-eligibility";
+import {
+    calculateHoldbackPaise,
+    getHoldbackPolicyMetadata,
+} from "./payout-holdback";
+import {
+    evaluatePayoutExecutionGate,
+    isPayoutOverrideApproved,
+} from "./payout-execution-gate";
+import {
+    calculateContractedPaymentFeePaise,
+    CONTRACTED_PAYMENT_FEE_METADATA,
+} from "./contracted-payment-fee";
+import {
+    describePaymentFeeOutcome,
+    resolvePaymentFeeOutcome,
+} from "./payment-fee-allocation";
+
+const TERRA_LUNA_BRAND_ID = "a8e54f13-228d-452c-8292-f1dd7b07dcb3";
 
 type ResolvedRule = {
     commissionPercentBps: number;
@@ -29,6 +57,7 @@ type BrandCycleSummary = {
     brandName: string;
     grossSalesPaise: number;
     commissionPaise: number;
+    paymentFeePaise: number;
     returnsPaise: number;
     carrierClaimsPaise: number;
     holdbackPaise: number;
@@ -58,33 +87,33 @@ type CycleCalculationSummary = {
     totalGrossPaise: number;
     totalNetPayablePaise: number;
     brands: BrandCycleSummary[];
+    controlEvidence?: {
+        commissionValidation: "REN-203";
+        eligibilityGating: "REN-204";
+        paymentStateGating: "REN-204";
+        holdbackSuspension: "BIZ-15";
+    };
+    eligibilityDiagnostics?: Array<{
+        orderId: string;
+        disposition: "excluded" | "held";
+        reason: string;
+    }>;
     executions?: Array<Record<string, unknown>>;
     executedAt?: string;
+};
+
+type PayoutExecutionClearanceInput = {
+    cycleId: string;
+    actorId: string;
+    evidenceReference: string;
+    transactionValidationReference: string;
+    transactionValidatedAt: Date;
+    expiresAt?: Date | null;
 };
 
 function toDate(value?: string | Date | null) {
     if (!value) return null;
     return value instanceof Date ? value : new Date(value);
-}
-
-function isRuleEffective(
-    effectiveFrom: string | null,
-    effectiveTo: string | null,
-    targetDate: Date
-) {
-    const from = effectiveFrom ? new Date(effectiveFrom) : null;
-    const to = effectiveTo ? new Date(effectiveTo) : null;
-    if (from && targetDate < from) return false;
-    if (to && targetDate > to) return false;
-    return true;
-}
-
-function getRuleSpecificityScore(input: {
-    brandId?: string | null;
-    categoryId?: string | null;
-    productTypeId?: string | null;
-}) {
-    return [input.brandId, input.categoryId, input.productTypeId].filter(Boolean).length;
 }
 
 function getCycleSummaryRecord(cycle: {
@@ -100,24 +129,13 @@ function buildCycleTotals(brands: BrandCycleSummary[]): CycleCalculationSummary 
         totalGrossPaise: brands.reduce((sum, item) => sum + item.grossSalesPaise, 0),
         totalNetPayablePaise: brands.reduce((sum, item) => sum + item.netPayablePaise, 0),
         brands,
+        controlEvidence: {
+            commissionValidation: "REN-203",
+            eligibilityGating: "REN-204",
+            paymentStateGating: "REN-204",
+            holdbackSuspension: "BIZ-15",
+        },
     };
-}
-
-function getOrderDeliveredAt(order: {
-    createdAt?: Date | string | null;
-    updatedAt?: Date | string | null;
-    shipments?: Array<{
-        status?: string | null;
-        updatedAt?: Date | string | null;
-    }>;
-}) {
-    const shipmentDelivery = order.shipments?.find((shipment) => shipment.status === "delivered");
-    return (
-        toDate(shipmentDelivery?.updatedAt) ??
-        toDate(order.updatedAt) ??
-        toDate(order.createdAt) ??
-        new Date()
-    );
 }
 
 async function resolveCommissionRuleForItem(input: {
@@ -130,31 +148,10 @@ async function resolveCommissionRuleForItem(input: {
         isActive: true,
     });
 
-    const matching = rules.filter((rule) => {
-        if (!isRuleEffective(rule.effectiveFrom, rule.effectiveTo, input.targetDate)) {
-            return false;
-        }
-        const brandOk = !rule.brandId || rule.brandId === input.brandId;
-        const categoryOk = !rule.categoryId || rule.categoryId === input.categoryId;
-        const productTypeOk = !rule.productTypeId || rule.productTypeId === input.productTypeId;
-        return brandOk && categoryOk && productTypeOk;
+    const winner = resolveCommissionRuleFromCandidates({
+        ...input,
+        rules,
     });
-
-    const winner = matching.sort((left, right) => {
-        if (right.priority !== left.priority) return right.priority - left.priority;
-        return (
-            getRuleSpecificityScore({
-                brandId: right.brandId,
-                categoryId: right.categoryId,
-                productTypeId: right.productTypeId,
-            }) -
-            getRuleSpecificityScore({
-                brandId: left.brandId,
-                categoryId: left.categoryId,
-                productTypeId: left.productTypeId,
-            })
-        );
-    })[0];
 
     if (!winner) return null;
 
@@ -257,17 +254,86 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         financeComplianceQueries.listBrandsForPayout(),
         financeComplianceQueries.listCarrierClaimsForFinanceWindow({ start, end }),
     ]);
+    const rtoDispositions = await financeComplianceQueries.listRtoDispositionsForOrderIds(
+        orders.map((order) => order.id)
+    );
+    const rtoByOrderId = new Map(rtoDispositions.map((disposition) => [disposition.orderId, disposition]));
+
+    const completedPriorCycles = previousCycles.filter(
+        (row) => row.status === "completed"
+    );
+    const priorLineItems = await Promise.all(
+        completedPriorCycles.map((row) =>
+            financeComplianceQueries.listPayoutLineItems(row.id)
+        )
+    );
+    const settledOrderIds = new Set(
+        priorLineItems
+            .flat()
+            .filter((item) => item.referenceType === "sale" && item.referenceId)
+            .map((item) => item.referenceId as string)
+    );
+    const paymentIdCounts = new Map<string, number>();
+    for (const order of orders) {
+        const deliveredAt = getDeliveredAt(order);
+        if (
+            order.status === "delivered" &&
+            isWithinPayoutWindow(deliveredAt, start, end) &&
+            order.paymentId
+        ) {
+            paymentIdCounts.set(
+                order.paymentId,
+                (paymentIdCounts.get(order.paymentId) ?? 0) + 1
+            );
+        }
+    }
+    const ambiguousPaymentIds = new Set(
+        [...paymentIdCounts.entries()]
+            .filter(([, count]) => count > 1)
+            .map(([paymentId]) => paymentId)
+    );
 
     const brandDirectory = new Map(brands.map((brand) => [brand.brandId, brand]));
     const previousSummaryMap = new Map(
         getCycleSummaryRecord(cycle).map((summary) => [summary.brandId, summary])
     );
     const summaries = new Map<string, BrandCycleSummary>();
+    const eligibilityDiagnostics: CycleCalculationSummary["eligibilityDiagnostics"] = [];
+    const paymentFeeOrderIds = new Set<string>();
 
     for (const order of orders) {
         if (order.status !== "delivered") continue;
-        const deliveredAt = getOrderDeliveredAt(order);
-        if (deliveredAt < start || deliveredAt > end) continue;
+        const deliveredAt = getDeliveredAt(order);
+        if (!deliveredAt) {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: "excluded",
+                reason: "missing_delivery_timestamp",
+            });
+            continue;
+        }
+        if (!isWithinPayoutWindow(deliveredAt, start, end)) {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: "excluded",
+                reason: "delivery_outside_cycle",
+            });
+            continue;
+        }
+
+        const eligibility = evaluatePayoutEligibility(
+            order,
+            settledOrderIds,
+            ambiguousPaymentIds
+        );
+        if (eligibility.disposition !== "eligible") {
+            eligibilityDiagnostics.push({
+                orderId: order.id,
+                disposition: eligibility.disposition,
+                reason: eligibility.reason,
+            });
+            continue;
+        }
 
         for (const item of order.items) {
             const brandId = item.product?.brandId;
@@ -277,23 +343,18 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             if (!brand) continue;
 
             const previous = previousSummaryMap.get(brandId);
-            const rule =
-                (await resolveCommissionRuleForItem({
+            const rule = await resolveCommissionRuleForItem({
                     brandId,
                     categoryId: item.product?.categoryId,
                     productTypeId: item.product?.productTypeId,
                     targetDate: deliveredAt,
-                })) ?? {
-                    commissionPercentBps: item.product?.category?.commissionRate ?? 2000,
-                    holdbackPercentBps: brand.holdbackPercentBps ?? 500,
-                    ruleName: "default_20_percent",
-                };
+                });
 
             const grossItemPaise =
                 Number(item.variant?.price ?? item.product?.price ?? 0) * item.quantity;
-            const commissionPaise = Math.round(
-                grossItemPaise * (rule.commissionPercentBps / 10_000)
-            );
+            const commissionPaise = rule
+                ? calculateCommissionPaise(grossItemPaise, rule.commissionPercentBps)
+                : 0;
 
             const existing =
                 summaries.get(brandId) ??
@@ -302,6 +363,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     brandName: brand.brandName,
                     grossSalesPaise: 0,
                     commissionPaise: 0,
+                    paymentFeePaise: 0,
                     returnsPaise: 0,
                     carrierClaimsPaise: 0,
                     holdbackPaise: 0,
@@ -331,10 +393,8 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                         gstin: brand.gstin,
                         pan: brand.pan,
                         payoutEmail: brand.payoutEmail,
-                        holdbackPercentBps:
-                            brand.holdbackPercentBps && brand.holdbackPercentBps > 0
-                                ? brand.holdbackPercentBps
-                                : 500,
+                        holdbackPercentBps: 0,
+                        holdbackPolicy: getHoldbackPolicyMetadata(),
                     },
                 } satisfies BrandCycleSummary);
 
@@ -345,24 +405,59 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 description: `${item.product?.title ?? "Product"} x${item.quantity}`,
                 amountPaise: grossItemPaise,
                 referenceId: order.id,
-                metadata: {
-                    deliveredAt: deliveredAt.toISOString(),
-                    commissionPercentBps: rule.commissionPercentBps,
-                    holdbackPercentBps: rule.holdbackPercentBps,
-                    ruleName: rule.ruleName,
-                    ruleId: "ruleId" in rule ? rule.ruleId : undefined,
-                },
-            });
+                    metadata: {
+                        deliveredAt: deliveredAt.toISOString(),
+                        commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                        commissionPercentBps: rule?.commissionPercentBps,
+                        holdbackPercentBps: 0,
+                        ruleName: rule?.ruleName,
+                        ruleId: rule?.ruleId,
+                    },
+                });
             existing.lineItems.push({
-                lineType: "commission",
-                description: `Platform commission for ${item.product?.title ?? "product"}`,
+                lineType: rule ? "commission" : "commission_blocked",
+                description: rule
+                    ? `Platform commission for ${item.product?.title ?? "product"}`
+                    : `Commission blocked: no approved rule for ${item.product?.title ?? "product"}`,
                 amountPaise: -commissionPaise,
                 referenceId: order.id,
                 metadata: {
-                    ruleName: rule.ruleName,
-                    ruleId: "ruleId" in rule ? rule.ruleId : undefined,
+                    commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                    ruleName: rule?.ruleName,
+                    ruleId: rule?.ruleId,
                 },
             });
+
+            if (
+                brandId === TERRA_LUNA_BRAND_ID &&
+                !paymentFeeOrderIds.has(order.id)
+            ) {
+                const paymentFeePaise = calculateContractedPaymentFeePaise(
+                    Number(order.totalAmount)
+                );
+                paymentFeeOrderIds.add(order.id);
+                if (paymentFeePaise > 0) {
+                    const disposition = rtoByOrderId.get(order.id);
+                    const outcome = resolvePaymentFeeOutcome({
+                        isRto: Boolean(disposition),
+                        faultOwner: disposition?.faultOwner,
+                    });
+                    if (outcome.brandChargeable) existing.paymentFeePaise += paymentFeePaise;
+                    existing.lineItems.push({
+                        lineType: "payment_fee",
+                        description: describePaymentFeeOutcome(outcome),
+                        amountPaise: outcome.brandChargeable ? -paymentFeePaise : 0,
+                        referenceId: order.id,
+                        metadata: {
+                            ...CONTRACTED_PAYMENT_FEE_METADATA,
+                            amountPaise: paymentFeePaise,
+                            shipmentType: outcome.shipmentType,
+                            chargedTo: outcome.chargedTo,
+                            faultOwner: outcome.faultOwner,
+                        },
+                    });
+                }
+            }
 
             summaries.set(brandId, existing);
         }
@@ -424,7 +519,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
         const summary = summaries.get(override.brandId);
         if (!summary) continue;
 
-        if (!override.approvedBy && Math.abs(override.amountPaise) > 50_000) {
+        if (!isPayoutOverrideApproved(override)) {
             summary.metadata.pendingOverrideCount = Number(summary.metadata.pendingOverrideCount ?? 0) + 1;
             continue;
         }
@@ -444,15 +539,16 @@ async function buildBrandPayoutSummaries(cycleId: string) {
     }
 
     for (const summary of summaries.values()) {
-        const holdbackPercentBps = Number(summary.metadata.holdbackPercentBps ?? 500);
+        const holdbackPercentBps = Number(summary.metadata.holdbackPercentBps ?? 0);
         const preHoldbackBase =
             summary.grossSalesPaise -
             summary.commissionPaise -
+            summary.paymentFeePaise -
             summary.returnsPaise -
             summary.carrierClaimsPaise;
-        summary.holdbackPaise = Math.max(
-            0,
-            Math.round(Math.max(preHoldbackBase, 0) * (holdbackPercentBps / 10_000))
+        summary.holdbackPaise = calculateHoldbackPaise(
+            preHoldbackBase,
+            holdbackPercentBps
         );
         if (summary.holdbackPaise > 0) {
             summary.lineItems.push({
@@ -465,12 +561,14 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             });
         }
 
-        summary.holdbackReleasePaise = await computeHoldbackRelease({
-            brandId: summary.brandId,
-            payoutDate: new Date(cycle.payoutDate),
-            previousCycles,
-            refundRows,
-        });
+        summary.holdbackReleasePaise = summary.holdbackPaise > 0
+            ? await computeHoldbackRelease({
+                  brandId: summary.brandId,
+                  payoutDate: new Date(cycle.payoutDate),
+                  previousCycles,
+                  refundRows,
+              })
+            : 0;
         if (summary.holdbackReleasePaise > 0) {
             summary.lineItems.push({
                 lineType: "holdback_release",
@@ -530,7 +628,10 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             summary.tdsPaise;
     }
 
-    return Array.from(summaries.values());
+    return {
+        brands: Array.from(summaries.values()),
+        eligibilityDiagnostics,
+    };
 }
 
 async function persistCycleSummary(params: {
@@ -538,6 +639,8 @@ async function persistCycleSummary(params: {
     actorId: string;
     status: "calculated" | "approved" | "processing" | "completed" | "failed";
     brands: BrandCycleSummary[];
+    eligibilityDiagnostics?: CycleCalculationSummary["eligibilityDiagnostics"];
+    previousSummary?: CycleCalculationSummary;
     calculatedBy?: string;
     approvedBy?: string;
     executedBy?: string;
@@ -551,6 +654,9 @@ async function persistCycleSummary(params: {
         executedBy: params.executedBy,
         calculationSummary: {
             ...base,
+            eligibilityDiagnostics:
+                params.eligibilityDiagnostics ??
+                params.previousSummary?.eligibilityDiagnostics,
             executions: params.executions,
             executedAt: params.executions?.length ? new Date().toISOString() : undefined,
         },
@@ -635,7 +741,8 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
 
-    const summaries = await buildBrandPayoutSummaries(cycleId);
+    const { brands: summaries, eligibilityDiagnostics } =
+        await buildBrandPayoutSummaries(cycleId);
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -655,6 +762,8 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         actorId,
         status: "calculated",
         brands: summaries,
+        eligibilityDiagnostics,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         calculatedBy: actorId,
     });
 
@@ -707,6 +816,7 @@ export async function approvePayoutCycle(
         actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         approvedBy: actorId,
     });
 
@@ -799,6 +909,162 @@ async function createRazorpayPayout(input: {
     return (await response.json()) as Record<string, unknown>;
 }
 
+function buildExecutionGateChecks(
+    cycle: { calculationSummary?: Record<string, unknown> | null },
+    clearance: {
+        clearedBy: string;
+        evidenceReference: string;
+        transactionValidationReference: string;
+        transactionValidatedAt: Date;
+        clearedAt: Date;
+        expiresAt: Date | null;
+        revokedAt: Date | null;
+    } | null
+) {
+    const summary = cycle.calculationSummary as CycleCalculationSummary | undefined;
+    const brands = summary?.brands ?? [];
+    const lineItems = brands.flatMap((brand) => brand.lineItems);
+    const controlEvidence = summary?.controlEvidence;
+
+    return {
+        commissionValidation:
+            brands.length > 0 &&
+            lineItems.every((line) => line.lineType !== "commission_blocked") &&
+            controlEvidence?.commissionValidation === "REN-203",
+        eligibilityGating:
+            Array.isArray(summary?.eligibilityDiagnostics) &&
+            controlEvidence?.eligibilityGating === "REN-204",
+        paymentStateGating:
+            Array.isArray(summary?.eligibilityDiagnostics) &&
+            controlEvidence?.paymentStateGating === "REN-204",
+        holdbackSuspension:
+            brands.length > 0 &&
+            brands.every(
+                (brand) =>
+                    (brand.metadata.holdbackPolicy as Record<string, unknown> | undefined)
+                        ?.suspended === true &&
+                    (brand.metadata.holdbackPolicy as Record<string, unknown> | undefined)
+                        ?.authority === "BIZ-15" &&
+                    controlEvidence?.holdbackSuspension === "BIZ-15"
+            ),
+        realTransactionValidation:
+            Boolean(
+                clearance?.transactionValidationReference &&
+                    clearance.transactionValidatedAt
+            ),
+        humanClearance: clearance
+            ? {
+                  clearedBy: clearance.clearedBy,
+                  evidenceReference: clearance.evidenceReference,
+                  clearedAt: clearance.clearedAt,
+                  expiresAt: clearance.expiresAt,
+                  revokedAt: clearance.revokedAt,
+              }
+            : null,
+    };
+}
+
+async function evaluateAndAuditPayoutExecutionGate(
+    cycle: { id: string; calculationSummary?: Record<string, unknown> | null },
+    actorId: string,
+    clearance: Awaited<
+        ReturnType<typeof financeComplianceQueries.getActivePayoutExecutionClearance>
+    >
+) {
+    const result = evaluatePayoutExecutionGate(
+        buildExecutionGateChecks(cycle, clearance),
+        new Date()
+    );
+    await writeFinanceAuditEvent({
+        actorId,
+        actionType: "payout_execution_gate_evaluated",
+        entityType: "payout_cycle",
+        entityId: cycle.id,
+        reason: result.allowed ? "gate_passed" : "gate_blocked",
+        afterValue: {
+            allowed: result.allowed,
+            reasons: result.reasons,
+        },
+        metadata: {
+            cycleId: cycle.id,
+            checks: buildExecutionGateChecks(cycle, clearance),
+        },
+    });
+    return result;
+}
+
+export async function recordPayoutExecutionClearance(
+    input: PayoutExecutionClearanceInput
+) {
+    const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    if (!["calculated", "approved"].includes(cycle.status)) {
+        throw new Error("Clearance can only be recorded before payout execution.");
+    }
+    if (!input.evidenceReference.trim() || !input.transactionValidationReference.trim()) {
+        throw new Error("Clearance evidence and transaction validation references are required.");
+    }
+    const now = new Date();
+    if (input.transactionValidatedAt > now) {
+        throw new Error("Transaction validation cannot be dated in the future.");
+    }
+    if (input.expiresAt && input.expiresAt <= now) {
+        throw new Error("Clearance expiry must be in the future.");
+    }
+    const row = await financeComplianceQueries.createPayoutExecutionClearance({
+        cycleId: input.cycleId,
+        clearedBy: input.actorId,
+        evidenceReference: input.evidenceReference.trim(),
+        transactionValidationReference: input.transactionValidationReference.trim(),
+        transactionValidatedAt: input.transactionValidatedAt,
+        expiresAt: input.expiresAt ?? null,
+    });
+    await writeFinanceAuditEvent({
+        actorId: input.actorId,
+        actionType: "payout_execution_clearance_recorded",
+        entityType: "payout_execution_clearance",
+        entityId: row.id,
+        reason: "biz_3_clearance_recorded",
+        afterValue: {
+            cycleId: row.cycleId,
+            clearedBy: row.clearedBy,
+            evidenceReference: row.evidenceReference,
+            transactionValidationReference: row.transactionValidationReference,
+            transactionValidatedAt: row.transactionValidatedAt,
+            expiresAt: row.expiresAt,
+        },
+    });
+    return row;
+}
+
+export async function revokePayoutExecutionClearance(
+    clearanceId: string,
+    actorId: string,
+    reason: string
+) {
+    if (!reason.trim()) throw new Error("Clearance revocation reason is required.");
+    const row = await financeComplianceQueries.revokePayoutExecutionClearance(
+        clearanceId,
+        actorId,
+        reason.trim()
+    );
+    if (!row) throw new Error("Payout execution clearance not found.");
+    await writeFinanceAuditEvent({
+        actorId,
+        actionType: "payout_execution_clearance_revoked",
+        entityType: "payout_execution_clearance",
+        entityId: row.id,
+        reason: "biz_3_clearance_revoked",
+        afterValue: {
+            cycleId: row.cycleId,
+            revokedBy: actorId,
+            revokedAt: row.revokedAt,
+            revocationReason: row.revocationReason,
+        },
+    });
+    return row;
+}
+
 export async function executePayoutCycle(
     cycleId: string,
     actorId: string,
@@ -809,6 +1075,26 @@ export async function executePayoutCycle(
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     if (!brands.length) throw new Error("Run calculation before execution.");
+
+    if (cycle.status !== "approved") {
+        throw new Error(`Payout execution blocked: cycle status is ${cycle.status}.`);
+    }
+
+    const clearance = await financeComplianceQueries.getActivePayoutExecutionClearance(
+        cycleId
+    );
+    const gate = await evaluateAndAuditPayoutExecutionGate(
+        cycle,
+        actorId,
+        clearance
+    );
+    if (!gate.allowed) {
+        throw new Error(
+            `Payout execution blocked: ${gate.reasons
+                .map((reason) => `${reason.code} — ${reason.message}`)
+                .join("; ")}`
+        );
+    }
 
     const executions: Array<Record<string, unknown>> = [];
 
@@ -951,6 +1237,7 @@ export async function executePayoutCycle(
         actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: actorId,
         executions,
     });
@@ -1007,6 +1294,7 @@ export async function completeManualBrandPayout(input: {
         actorId: input.actorId,
         status: deriveCycleStatus(brands) as "approved" | "calculated" | "processing" | "completed" | "failed",
         brands,
+        previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: input.actorId,
     });
 
@@ -1073,10 +1361,10 @@ export async function createPayoutOverride(input: {
     if (!input.proofFileUrl) {
         throw new Error("Override proof is required.");
     }
-    if (Math.abs(input.amountPaise) > 50_000 && !input.approverId) {
-        throw new Error("Overrides above Rs. 500 require a second admin approver.");
+    if (!input.approverId) {
+        throw new Error("Every payout override requires a second admin approver.");
     }
-    if (input.approverId && input.approverId === input.actorId) {
+    if (input.approverId === input.actorId) {
         throw new Error("Checker and maker must be different admins.");
     }
 
@@ -1089,10 +1377,7 @@ export async function createPayoutOverride(input: {
         notes: input.notes,
         proofFileUrl: input.proofFileUrl,
         createdBy: input.actorId,
-        approvedBy:
-            Math.abs(input.amountPaise) > 50_000
-                ? input.approverId ?? null
-                : input.actorId,
+        approvedBy: input.approverId,
     });
 
     await auditAndAlert({
@@ -1104,7 +1389,7 @@ export async function createPayoutOverride(input: {
         reason: input.reasonCode,
         title: "Payout override recorded",
         message: `Override recorded for brand ${input.brandId}.`,
-        severity: Math.abs(input.amountPaise) > 50_000 ? "warning" : "info",
+        severity: "warning",
         ownerRole: "finance_admin",
         type: "payout_override_created",
         dedupeKey: `payout-override:${row.id}`,
