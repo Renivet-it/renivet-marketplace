@@ -68,22 +68,34 @@ export function MediaSelectModal({
     const [selectedItems, setSelectedItems] = useState<BrandMediaItem[]>(() =>
         uniqueSelectedMedia(selectedMedia)
     );
+    const [optimisticMedia, setOptimisticMedia] = useState<BrandMediaItem[]>([]);
 
     useEffect(() => {
         if (isOpen) setSelectedItems(uniqueSelectedMedia(selectedMedia));
     }, [isOpen, selectedMedia]);
 
     const inputRef = useRef<HTMLInputElement>(null!);
+    const optimisticObjectUrlsRef = useRef<string[]>([]);
     const uploadToastIdRef = useRef<ReturnType<typeof toast.loading> | undefined>(
         undefined
     );
 
+    const mediaQuery = trpc.brands.media.getMediaItems.useQuery(
+        { brandId },
+        { initialData: { data: allMedia, count: allMedia.length } }
+    );
+    const persistedMedia = mediaQuery.data?.data ?? allMedia;
+    const mediaItems = useMemo(
+        () => [...optimisticMedia, ...persistedMedia],
+        [optimisticMedia, persistedMedia]
+    );
+
     const itemsToMap = useMemo(() => {
-        if (search.length === 0) return allMedia;
-        return allMedia.filter((item) =>
+        if (search.length === 0) return mediaItems;
+        return mediaItems.filter((item) =>
             item.name.toLowerCase().includes(search.toLowerCase())
         );
-    }, [allMedia, search]);
+    }, [mediaItems, search]);
     const visibleMedia = useMemo(
         () => getVisibleMedia(itemsToMap, visibleMediaCount),
         [itemsToMap, visibleMediaCount]
@@ -91,7 +103,7 @@ export function MediaSelectModal({
 
     useEffect(() => {
         setVisibleMediaCount(MEDIA_PREVIEW_BATCH_SIZE);
-    }, [allMedia, search]);
+    }, [mediaItems, search]);
 
     const { startUpload } = useUploadThing("brandMediaUploader", {
         onUploadError: (e) => {
@@ -99,10 +111,7 @@ export function MediaSelectModal({
         },
     });
 
-    const { refetch } = trpc.brands.media.getMediaItems.useQuery(
-        { brandId },
-        { initialData: { data: allMedia, count: allMedia.length } }
-    );
+    const { refetch } = mediaQuery;
     const { mutateAsync: createAsync } =
         trpc.brands.media.createMediaItems.useMutation();
 
@@ -153,11 +162,17 @@ export function MediaSelectModal({
             return res;
         },
         onSuccess: (_, __, { toastId }) => {
+            optimisticObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            optimisticObjectUrlsRef.current = [];
+            setOptimisticMedia([]);
             setUploadProgress(null);
             toast.success("Media uploaded successfully", { id: toastId });
-            refetch();
+            void refetch();
         },
         onError: (err, _, ctx) => {
+            optimisticObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            optimisticObjectUrlsRef.current = [];
+            setOptimisticMedia([]);
             return handleClientError(err, ctx?.toastId);
         },
     });
@@ -207,8 +222,26 @@ export function MediaSelectModal({
                         className="hidden"
                         accept={accept}
                         onChange={(e) => {
-                            if (!e.target.files) return;
-                            uploadMedia(Array.from(e.target.files));
+                            if (!e.target.files?.length) return;
+                            const files = Array.from(e.target.files);
+                            const previews = files.map((file) => {
+                                const url = URL.createObjectURL(file);
+                                optimisticObjectUrlsRef.current.push(url);
+                                return {
+                                    id: crypto.randomUUID(),
+                                    brandId,
+                                    url,
+                                    type: file.type || "image/*",
+                                    name: file.name,
+                                    alt: null,
+                                    size: file.size,
+                                    createdAt: new Date(),
+                                    updatedAt: new Date(),
+                                } satisfies BrandMediaItem;
+                            });
+                            setOptimisticMedia((current) => [...previews, ...current]);
+                            uploadMedia(files);
+                            e.target.value = "";
                         }}
                     />
 
