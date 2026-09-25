@@ -1,10 +1,10 @@
 "use client";
 
+import { ProductMediaPreview } from "@/components/globals/media/product-media-preview";
 import { Icons } from "@/components/icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { BrandMediaItem } from "@/lib/validations";
-import Image from "next/image";
 
 interface PageProps {
     media: BrandMediaItem;
@@ -44,14 +44,9 @@ export function ProductMediaSelectSingle({
                 onClick={() => handleSelection(!isSelected)}
             >
                 {isMediaImage ? (
-                    <Image
+                    <ProductMediaPreview
                         src={media.url}
                         alt={media.alt || media.name}
-                        height={500}
-                        width={500}
-                        unoptimized
-                        loading="eager"
-                        sizes="(max-width: 768px) 42vw, 140px"
                         className="size-full rounded-sm object-cover"
                     />
                 ) : (
