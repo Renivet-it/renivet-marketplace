@@ -1835,6 +1835,13 @@
             "when": 1789817460000,
             "tag": "0288_ren209_terra_luna_commercial_rules",
             "breakpoints": true
+        },
+        {
+            "idx": 262,
+            "version": "7",
+            "when": 1789821000000,
+            "tag": "0289_payout_execution_clearances",
+            "breakpoints": true
         }
     ]
 }
