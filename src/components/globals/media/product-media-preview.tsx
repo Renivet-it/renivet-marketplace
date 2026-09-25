@@ -16,14 +16,18 @@ export function ProductMediaPreview({
     className,
     mediaId,
 }: ProductMediaPreviewProps) {
-    const proxySource = mediaId ? getAdminMediaProxyUrl(mediaId) : src;
+    const isLocalPreview = src.startsWith("blob:") || src.startsWith("data:");
+    const proxySource =
+        mediaId && !isLocalPreview ? getAdminMediaProxyUrl(mediaId) : src;
     const [source, setSource] = useState(proxySource);
     const [hasRetried, setHasRetried] = useState(false);
 
     useEffect(() => {
-        setSource(mediaId ? getAdminMediaProxyUrl(mediaId) : src);
+        setSource(
+            mediaId && !isLocalPreview ? getAdminMediaProxyUrl(mediaId) : src
+        );
         setHasRetried(false);
-    }, [mediaId, src]);
+    }, [isLocalPreview, mediaId, src]);
 
     return (
         // Persisted admin media loads through the authenticated same-origin
@@ -37,7 +41,7 @@ export function ProductMediaPreview({
             decoding="async"
             className={className}
             onError={() => {
-                if (mediaId && !hasRetried) {
+                if (mediaId && !isLocalPreview && !hasRetried) {
                     setHasRetried(true);
                     setSource(src);
                 }

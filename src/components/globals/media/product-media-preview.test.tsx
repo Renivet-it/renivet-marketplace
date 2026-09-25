@@ -29,3 +29,16 @@ test("uses the authenticated proxy for persisted admin media", () => {
 
     expect(html).toContain('src="/api/admin/media/media-123"');
 });
+
+test("keeps local upload previews immediate", () => {
+    const html = renderToStaticMarkup(
+        <ProductMediaPreview
+            src="blob:https://renivet.com/local-upload"
+            mediaId="temporary-media-id"
+            alt="New upload"
+        />
+    );
+
+    expect(html).toContain('src="blob:https://renivet.com/local-upload"');
+    expect(html).not.toContain("/api/admin/media/");
+});
