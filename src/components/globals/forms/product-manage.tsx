@@ -72,12 +72,12 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ProductMediaPreview } from "../media/product-media-preview";
 import { MediaSelectModal, RequestCategoryModal } from "../modals";
 import { ProductVariantManage } from "./product-variant-manage";
 
@@ -724,7 +724,7 @@ export function ProductManageForm({
                                                                         "col-span-2 row-span-2"
                                                                 )}
                                                             >
-                                                                <Image
+                                                                <ProductMediaPreview
                                                                     src={
                                                                         media.url
                                                                     }
@@ -732,8 +732,6 @@ export function ProductManageForm({
                                                                         media.alt ||
                                                                         media.name
                                                                     }
-                                                                    height={500}
-                                                                    width={500}
                                                                     className="size-full rounded-sm object-cover"
                                                                 />
                                                                 <span className="absolute left-3 top-3 flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow">
@@ -2008,7 +2006,7 @@ export function ProductManageForm({
                                                                 key={media.id}
                                                                 className="aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted"
                                                             >
-                                                                <Image
+                                                                <ProductMediaPreview
                                                                     src={
                                                                         media.url
                                                                     }
@@ -2016,8 +2014,6 @@ export function ProductManageForm({
                                                                         media.alt ||
                                                                         media.name
                                                                     }
-                                                                    height={500}
-                                                                    width={500}
                                                                     className="size-full rounded-sm object-cover"
                                                                 />
                                                             </div>
