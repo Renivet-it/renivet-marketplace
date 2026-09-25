@@ -49,6 +49,7 @@ export function ProductMediaSelectSingle({
                         alt={media.alt || media.name}
                         height={500}
                         width={500}
+                        unoptimized
                         loading="lazy"
                         sizes="(max-width: 768px) 42vw, 140px"
                         className="size-full rounded-sm object-cover"
