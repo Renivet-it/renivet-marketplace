@@ -288,6 +288,7 @@ export function MediaSelectModal({
                                         <ProductMediaPreview
                                             src={item.url}
                                             alt={item.alt || item.name}
+                                            mediaId={item.id}
                                             className="size-10 shrink-0 rounded object-cover"
                                         />
                                         <span className="min-w-0 flex-1 truncate text-xs font-medium">
