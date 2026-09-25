@@ -21,11 +21,11 @@ const f = createUploadthing();
 export const utApi = new UTApi();
 
 export const BRAND_MEDIA_UPLOAD_LIMITS = {
-    image: { maxFileCount: 20, maxFileSize: "8MB" },
-    video: { maxFileCount: 5, maxFileSize: "64MB" },
-    audio: { maxFileCount: 10, maxFileSize: "32MB" },
-    pdf: { maxFileCount: 10, maxFileSize: "16MB" },
-    text: { maxFileCount: 10, maxFileSize: "1MB" },
+    image: { maxFileCount: 20, maxFileSize: "8MB", acl: "public-read" },
+    video: { maxFileCount: 5, maxFileSize: "64MB", acl: "public-read" },
+    audio: { maxFileCount: 10, maxFileSize: "32MB", acl: "public-read" },
+    pdf: { maxFileCount: 10, maxFileSize: "16MB", acl: "public-read" },
+    text: { maxFileCount: 10, maxFileSize: "1MB", acl: "public-read" },
 } as const;
 
 export const uploadRouter = {
@@ -68,10 +68,10 @@ export const uploadRouter = {
             };
         }),
     contentUploader: f({
-    "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
-    "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
-    "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
-})
+        "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+    })
         .middleware(async () => {
             const auth = await clerkAuth();
             if (!auth.userId)
@@ -110,9 +110,13 @@ export const uploadRouter = {
             };
         }),
     financeProofUploader: f({
-        "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
-        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
-        "application/pdf": { maxFileSize: "4MB", maxFileCount: 1 },
+        "image/png": { maxFileSize: "4MB", maxFileCount: 1, acl: "private" },
+        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1, acl: "private" },
+        "application/pdf": {
+            maxFileSize: "4MB",
+            maxFileCount: 1,
+            acl: "private",
+        },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -130,11 +134,15 @@ export const uploadRouter = {
                 });
 
             const { sitePermissions } = getUserPermissions(existingUser.roles);
-            const isAuthorized = hasPermission(sitePermissions, [
-                BitFieldSitePermission.ADMINISTRATOR,
-                BitFieldSitePermission.MANAGE_MONITORING,
-                BitFieldSitePermission.MANAGE_SETTINGS,
-            ], "any");
+            const isAuthorized = hasPermission(
+                sitePermissions,
+                [
+                    BitFieldSitePermission.ADMINISTRATOR,
+                    BitFieldSitePermission.MANAGE_MONITORING,
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+                ],
+                "any"
+            );
 
             if (!isAuthorized)
                 throw new UploadThingError({
@@ -200,7 +208,7 @@ export const uploadRouter = {
     brandRequestLogoUploader: f({
         "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
         "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
-         "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -312,8 +320,8 @@ export const uploadRouter = {
             );
             const isAuthorized =
                 hasPermission(brandPermissions, [
-                BitFieldBrandPermission.MANAGE_PRODUCTS |
-                    BitFieldBrandPermission.MANAGE_BRANDING,
+                    BitFieldBrandPermission.MANAGE_PRODUCTS |
+                        BitFieldBrandPermission.MANAGE_BRANDING,
                 ]) ||
                 hasPermission(sitePermissions, [
                     BitFieldSitePermission.MANAGE_BRANDS,
@@ -338,7 +346,7 @@ export const uploadRouter = {
     brandCoverUploader: f({
         "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
         "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
-            "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -360,8 +368,8 @@ export const uploadRouter = {
             );
             const isAuthorized =
                 hasPermission(brandPermissions, [
-                BitFieldBrandPermission.MANAGE_PRODUCTS |
-                    BitFieldBrandPermission.MANAGE_BRANDING,
+                    BitFieldBrandPermission.MANAGE_PRODUCTS |
+                        BitFieldBrandPermission.MANAGE_BRANDING,
                 ]) ||
                 hasPermission(sitePermissions, [
                     BitFieldSitePermission.MANAGE_BRANDS,
@@ -384,7 +392,11 @@ export const uploadRouter = {
             };
         }),
     brandRequestDocUploader: f({
-        "application/pdf": { maxFileSize: "4MB", maxFileCount: 1 },
+        "application/pdf": {
+            maxFileSize: "4MB",
+            maxFileCount: 1,
+            acl: "private",
+        },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -525,7 +537,7 @@ export const uploadRouter = {
             };
         }),
     corporateArtworkUploader: f({
-        blob: { maxFileSize: "25MB", maxFileCount: 1 },
+        blob: { maxFileSize: "25MB", maxFileCount: 1, acl: "private" },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -546,7 +558,7 @@ export const uploadRouter = {
             type: file.type,
         })),
     corporateEmployeeSheetUploader: f({
-        blob: { maxFileSize: "10MB", maxFileCount: 1 },
+        blob: { maxFileSize: "10MB", maxFileCount: 1, acl: "private" },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -567,7 +579,7 @@ export const uploadRouter = {
             type: file.type,
         })),
     corporateRfqAttachmentUploader: f({
-        blob: { maxFileSize: "50MB", maxFileCount: 6 },
+        blob: { maxFileSize: "50MB", maxFileCount: 6, acl: "private" },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -588,7 +600,7 @@ export const uploadRouter = {
             type: file.type,
         })),
     corporateDocumentUploader: f({
-        blob: { maxFileSize: "50MB", maxFileCount: 6 },
+        blob: { maxFileSize: "50MB", maxFileCount: 6, acl: "private" },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
