@@ -1,5 +1,6 @@
 "use client";
 
+import { ProductMediaPreview } from "@/components/globals/media/product-media-preview";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import {
@@ -20,8 +21,8 @@ import {
     uniqueSelectedMedia,
 } from "@/lib/product-media-selection";
 import { trpc } from "@/lib/trpc/client";
-import { uploadFilesInBatches } from "@/lib/uploadthing/batch-upload";
 import { useUploadThing } from "@/lib/uploadthing";
+import { uploadFilesInBatches } from "@/lib/uploadthing/batch-upload";
 import { handleClientError } from "@/lib/utils";
 import { BrandMediaItem } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
@@ -68,7 +69,9 @@ export function MediaSelectModal({
     const [selectedItems, setSelectedItems] = useState<BrandMediaItem[]>(() =>
         uniqueSelectedMedia(selectedMedia)
     );
-    const [optimisticMedia, setOptimisticMedia] = useState<BrandMediaItem[]>([]);
+    const [optimisticMedia, setOptimisticMedia] = useState<BrandMediaItem[]>(
+        []
+    );
 
     useEffect(() => {
         if (isOpen) setSelectedItems(uniqueSelectedMedia(selectedMedia));
@@ -76,9 +79,9 @@ export function MediaSelectModal({
 
     const inputRef = useRef<HTMLInputElement>(null!);
     const optimisticObjectUrlsRef = useRef<string[]>([]);
-    const uploadToastIdRef = useRef<ReturnType<typeof toast.loading> | undefined>(
-        undefined
-    );
+    const uploadToastIdRef = useRef<
+        ReturnType<typeof toast.loading> | undefined
+    >(undefined);
 
     const mediaQuery = trpc.brands.media.getMediaItems.useQuery(
         { brandId },
@@ -162,7 +165,9 @@ export function MediaSelectModal({
             return res;
         },
         onSuccess: (_, __, { toastId }) => {
-            optimisticObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            optimisticObjectUrlsRef.current.forEach((url) =>
+                URL.revokeObjectURL(url)
+            );
             optimisticObjectUrlsRef.current = [];
             setOptimisticMedia([]);
             setUploadProgress(null);
@@ -170,7 +175,9 @@ export function MediaSelectModal({
             void refetch();
         },
         onError: (err, _, ctx) => {
-            optimisticObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+            optimisticObjectUrlsRef.current.forEach((url) =>
+                URL.revokeObjectURL(url)
+            );
             optimisticObjectUrlsRef.current = [];
             setOptimisticMedia([]);
             return handleClientError(err, ctx?.toastId);
@@ -239,7 +246,10 @@ export function MediaSelectModal({
                                     updatedAt: new Date(),
                                 } satisfies BrandMediaItem;
                             });
-                            setOptimisticMedia((current) => [...previews, ...current]);
+                            setOptimisticMedia((current) => [
+                                ...previews,
+                                ...current,
+                            ]);
                             uploadMedia(files);
                             e.target.value = "";
                         }}
@@ -275,7 +285,7 @@ export function MediaSelectModal({
                                         <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                                             {index + 1}
                                         </span>
-                                        <img
+                                        <ProductMediaPreview
                                             src={item.url}
                                             alt={item.alt || item.name}
                                             className="size-10 shrink-0 rounded object-cover"

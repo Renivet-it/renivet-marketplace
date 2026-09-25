@@ -167,7 +167,6 @@ import { productQueries } from "@/lib/db/queries";
 import {
     brandCache,
     categoryCache,
-    mediaCache,
     productTypeCache,
     subCategoryCache,
 } from "@/lib/redis/methods";
@@ -231,13 +230,11 @@ async function ProductEditFetch({ params }: PageProps) {
         categories,
         subCategories,
         productTypes,
-        media,
     ] = await Promise.all([
         brandCache.get(brandId),
         categoryCache.getAll(),
         subCategoryCache.getAll(),
         productTypeCache.getAll(),
-        mediaCache.getAll(brandId),
     ]);
 
     if (!cachedBrand) notFound();
@@ -249,7 +246,7 @@ async function ProductEditFetch({ params }: PageProps) {
             allCategories={categories}
             allSubCategories={subCategories}
             allProductTypes={productTypes}
-            allMedia={media.data}
+            allMedia={[]}
             product={existingProduct}
         />
     );
