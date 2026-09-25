@@ -4,21 +4,22 @@ import {
     brands,
     categories,
     products,
+    productSlugHistory,
     subCategories,
     users,
 } from "@/lib/db/schema";
 import {
-    ANALYTICS_DATE_PRESETS,
     ANALYTICS_COMPARISONS,
+    ANALYTICS_DATE_PRESETS,
     FREEFORM_DIMENSIONS,
     FREEFORM_METRICS,
+    getAdminReportLibrary as getSystemReportLibrary,
+    refreshAdminAnalyticsSnapshots,
+    resolveDateWindow,
     type AnalyticsDateInput,
     type AnalyticsReportLibraryItem,
     type FreeformDimension,
     type FreeformMetric,
-    getAdminReportLibrary as getSystemReportLibrary,
-    resolveDateWindow,
-    refreshAdminAnalyticsSnapshots,
 } from "@/lib/reports/admin-analytics";
 import {
     getPostHogBehaviorOverview,
@@ -27,7 +28,7 @@ import {
     getPostHogSessionsByLocation,
     isPostHogBehaviorConfigured,
 } from "@/lib/reports/posthog-behavior";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 
 export const REPORT_CATEGORIES = ["Sales", "Behavior", "Acquisition"] as const;
 export const REPORT_VISUALIZATIONS = [
@@ -130,7 +131,9 @@ function normalizeDimensions(value: FreeformDimension[]) {
     const dimensions = value.filter((dimension) =>
         FREEFORM_DIMENSIONS.includes(dimension)
     );
-    return dimensions.length ? dimensions : (["product_title"] as FreeformDimension[]);
+    return dimensions.length
+        ? dimensions
+        : (["product_title"] as FreeformDimension[]);
 }
 
 function toVisualization(value: unknown): ReportVisualization {
@@ -144,7 +147,8 @@ function extractProductSlugFromLandingPath(path: string): string | null {
     const normalizedPath = String(path ?? "").trim();
     if (!normalizedPath.startsWith("/products/")) return null;
 
-    const pathOnly = normalizedPath.split("?")[0]?.split("#")[0] ?? normalizedPath;
+    const pathOnly =
+        normalizedPath.split("?")[0]?.split("#")[0] ?? normalizedPath;
     const segments = pathOnly.split("/").filter(Boolean);
     if (segments.length < 2 || segments[0] !== "products") return null;
 
@@ -178,6 +182,7 @@ async function enrichLandingRowsWithProductDetails(
     const productRows = await db
         .select({
             slug: products.slug,
+            historicalSlug: productSlugHistory.oldSlug,
             productTitle: products.title,
             productBrandName: brands.name,
             productSubcategoryName: subCategories.name,
@@ -185,12 +190,24 @@ async function enrichLandingRowsWithProductDetails(
         })
         .from(products)
         .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(
+            productSlugHistory,
+            eq(productSlugHistory.productId, products.id)
+        )
         .leftJoin(subCategories, eq(products.subcategoryId, subCategories.id))
         .leftJoin(categories, eq(products.categoryId, categories.id))
-        .where(inArray(products.slug, slugs));
+        .where(
+            or(
+                inArray(products.slug, slugs),
+                inArray(productSlugHistory.oldSlug, slugs)
+            )
+        );
 
     const detailsBySlug = new Map(
-        productRows.map((row) => [row.slug, row])
+        productRows.flatMap((row) => [
+            [row.slug, row] as const,
+            ...(row.historicalSlug ? [[row.historicalSlug, row] as const] : []),
+        ])
     );
 
     return rows.map((row) => {
@@ -236,9 +253,15 @@ export async function getAdminBehaviorOverview(
     }
 
     const window = resolveDateWindow(input);
-    const current = await getPostHogBehaviorOverview(window.current.start, window.current.end);
+    const current = await getPostHogBehaviorOverview(
+        window.current.start,
+        window.current.end
+    );
     const previous = window.previous
-        ? await getPostHogBehaviorOverview(window.previous.start, window.previous.end)
+        ? await getPostHogBehaviorOverview(
+              window.previous.start,
+              window.previous.end
+          )
         : {
               sessions: 0,
               visitors: 0,
@@ -247,11 +270,23 @@ export async function getAdminBehaviorOverview(
               bounceSessions: 0,
           };
 
-    const currentCheckoutRate = safeRate(current.sessionsReachedCheckout, current.sessions);
-    const previousCheckoutRate = safeRate(previous.sessionsReachedCheckout, previous.sessions);
+    const currentCheckoutRate = safeRate(
+        current.sessionsReachedCheckout,
+        current.sessions
+    );
+    const previousCheckoutRate = safeRate(
+        previous.sessionsReachedCheckout,
+        previous.sessions
+    );
 
-    const currentBounceRate = safeRate(current.bounceSessions, current.sessions);
-    const previousBounceRate = safeRate(previous.bounceSessions, previous.sessions);
+    const currentBounceRate = safeRate(
+        current.bounceSessions,
+        current.sessions
+    );
+    const previousBounceRate = safeRate(
+        previous.bounceSessions,
+        previous.sessions
+    );
 
     return {
         sessions: current.sessions,
@@ -263,18 +298,23 @@ export async function getAdminBehaviorOverview(
         comparison: {
             sessions: percentDelta(current.sessions, previous.sessions),
             visitors: percentDelta(current.visitors, previous.visitors),
-            sessionsWithCart: percentDelta(current.sessionsWithCart, previous.sessionsWithCart),
+            sessionsWithCart: percentDelta(
+                current.sessionsWithCart,
+                previous.sessionsWithCart
+            ),
             sessionsReachedCheckout: percentDelta(
                 current.sessionsReachedCheckout,
                 previous.sessionsReachedCheckout
             ),
-            checkoutConversionRate: percentDelta(currentCheckoutRate, previousCheckoutRate),
+            checkoutConversionRate: percentDelta(
+                currentCheckoutRate,
+                previousCheckoutRate
+            ),
             bounceRate: percentDelta(currentBounceRate, previousBounceRate),
         },
         source: "posthog",
     };
 }
-
 
 export async function getAdminBehaviorTimeSeries(
     input: AnalyticsDateInput
@@ -282,14 +322,20 @@ export async function getAdminBehaviorTimeSeries(
     if (!isPostHogBehaviorConfigured()) return [];
 
     const window = resolveDateWindow(input);
-    const rows = await getPostHogDailyBehavior(window.current.start, window.current.end);
+    const rows = await getPostHogDailyBehavior(
+        window.current.start,
+        window.current.end
+    );
 
     return rows.map((row) => ({
         date: row.dateKey,
         sessions: row.sessions,
         visitors: row.visitors,
         bounceRate: safeRate(row.bounceSessions, row.sessions),
-        checkoutConversionRate: safeRate(row.sessionsReachedCheckout, row.sessions),
+        checkoutConversionRate: safeRate(
+            row.sessionsReachedCheckout,
+            row.sessions
+        ),
     }));
 }
 
@@ -331,8 +377,10 @@ export async function getAdminLandingPagePerformance(
 
     const normalizedRows = rows
         .map((row) => ({
-            landingPath: String(row.landingPath ?? "unknown").trim() || "unknown",
-            landingType: String(row.landingType ?? "unknown").trim() || "unknown",
+            landingPath:
+                String(row.landingPath ?? "unknown").trim() || "unknown",
+            landingType:
+                String(row.landingType ?? "unknown").trim() || "unknown",
             sessions: Number(row.sessions ?? 0),
             visitors: Number(row.visitors ?? 0),
             sessionsWithCart: Number(row.sessionsWithCart ?? 0),
@@ -411,7 +459,9 @@ export async function getAdminLandingPagePerformance(
     ];
 }
 
-export async function getAdminReportLibrary(userId?: string): Promise<AnalyticsReportLibraryItem[]> {
+export async function getAdminReportLibrary(
+    userId?: string
+): Promise<AnalyticsReportLibraryItem[]> {
     const systemReports = await getSystemReportLibrary();
 
     const rows = await db
@@ -435,7 +485,9 @@ export async function getAdminReportLibrary(userId?: string): Promise<AnalyticsR
         .where(
             and(
                 eq(analyticsSavedReports.isActive, true),
-                userId ? eq(analyticsSavedReports.createdBy, userId) : undefined,
+                userId
+                    ? eq(analyticsSavedReports.createdBy, userId)
+                    : undefined,
                 eq(analyticsSavedReports.isSystemReport, false)
             )
         )
@@ -453,7 +505,9 @@ export async function getAdminReportLibrary(userId?: string): Promise<AnalyticsR
                 : "You",
         createdById: row.createdById ?? undefined,
         lastViewed: row.lastViewedAt ?? toDateKey(row.createdAt),
-        dimensions: normalizeDimensions((row.dimensions as FreeformDimension[]) ?? []),
+        dimensions: normalizeDimensions(
+            (row.dimensions as FreeformDimension[]) ?? []
+        ),
         metrics: normalizeMetrics((row.metrics as FreeformMetric[]) ?? []),
         visualizationType: toVisualization(row.visualizationType),
         filtersJson:
@@ -466,7 +520,10 @@ export async function getAdminReportLibrary(userId?: string): Promise<AnalyticsR
     return [...systemReports, ...savedReports];
 }
 
-export async function saveAdminReport(input: SaveAnalyticsReportInput, userId: string) {
+export async function saveAdminReport(
+    input: SaveAnalyticsReportInput,
+    userId: string
+) {
     const [created] = await db
         .insert(analyticsSavedReports)
         .values({
@@ -486,7 +543,10 @@ export async function saveAdminReport(input: SaveAnalyticsReportInput, userId: s
     return created;
 }
 
-export async function updateAdminReport(input: UpdateAnalyticsReportInput, userId: string) {
+export async function updateAdminReport(
+    input: UpdateAnalyticsReportInput,
+    userId: string
+) {
     const rows = await db
         .update(analyticsSavedReports)
         .set({
@@ -531,7 +591,9 @@ export async function deleteAdminReport(id: string, userId: string) {
     return rows.length > 0;
 }
 
-export async function refreshSnapshots(input: RefreshAnalyticsSnapshotsInput = {}) {
+export async function refreshSnapshots(
+    input: RefreshAnalyticsSnapshotsInput = {}
+) {
     const summary = await refreshAdminAnalyticsSnapshots({
         startDate: input.startDate,
         endDate: input.endDate,
@@ -553,4 +615,3 @@ export const ANALYTICS_ADVANCED_INPUTS = {
     categories: REPORT_CATEGORIES,
     visualizations: REPORT_VISUALIZATIONS,
 };
-

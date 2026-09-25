@@ -5,57 +5,74 @@ const sections = [
     {
         title: "Refunds",
         href: "/dashboard/general/finance/refunds",
-        description: "Approval queue, reverse pickup flags, failure retries, and audit trail.",
+        description:
+            "Approval queue, reverse pickup flags, failure retries, and audit trail.",
     },
     {
         title: "COD Reconciliation",
         href: "/dashboard/general/finance/cod-reconciliation",
-        description: "Daily remittance checks, discrepancy review, and sync run history.",
+        description:
+            "Daily remittance checks, discrepancy review, and sync run history.",
     },
     {
         title: "Payouts",
         href: "/dashboard/general/finance/payouts",
-        description: "Cycle calculation, brand review cards, overrides, and execution tracking.",
+        description:
+            "Cycle calculation, brand review cards, overrides, and execution tracking.",
     },
     {
         title: "HSN Master",
         href: "/dashboard/general/finance/hsn-master",
-        description: "Dedicated HSN master maintenance for GST rates, coverage checks, and bulk imports.",
+        description:
+            "Dedicated HSN master maintenance for GST rates, coverage checks, and bulk imports.",
     },
     {
         title: "Product HSN Import",
         href: "/dashboard/general/settings/product-hsn-import",
-        description: "Preview and apply product or variant HSN updates from SKU-based CSV/XLSX files.",
+        description:
+            "Preview and apply product or variant HSN updates from SKU-based CSV/XLSX files.",
+    },
+    {
+        title: "Legacy Product Slug Migration",
+        href: "/dashboard/general/settings/product-slug-migration",
+        description:
+            "Preview, review, and safely convert legacy public product URLs with redirect history.",
     },
     {
         title: "GST Report",
         href: "/dashboard/general/finance/gst-report",
-        description: "HSN master, GST/TCS preview, run history, and export readiness.",
+        description:
+            "HSN master, GST/TCS preview, run history, and export readiness.",
     },
     {
         title: "Monthly P&L",
         href: "/dashboard/general/finance/monthly-pl",
-        description: "Manual entries, month summaries, and finance close visibility.",
+        description:
+            "Manual entries, month summaries, and finance close visibility.",
     },
     {
         title: "Data Deletion",
         href: "/dashboard/general/finance/data-deletion",
-        description: "DPDP request lifecycle, execution evidence, and failure monitoring.",
+        description:
+            "DPDP request lifecycle, execution evidence, and failure monitoring.",
     },
     {
         title: "Legal & Compliance",
         href: "/dashboard/general/finance/legal-compliance",
-        description: "GRO contact history, consumer-protection publishing, and public legal surfaces.",
+        description:
+            "GRO contact history, consumer-protection publishing, and public legal surfaces.",
     },
     {
         title: "Module Access",
         href: "/dashboard/general/settings/module-access",
-        description: "Finance-specific access grants layered on top of existing role permissions.",
+        description:
+            "Finance-specific access grants layered on top of existing role permissions.",
     },
     {
         title: "Audit Log",
         href: "/dashboard/general/finance/audit-log",
-        description: "Structured finance audit evidence with typed actors, JSON diffs, proof links, and CSV export.",
+        description:
+            "Structured finance audit evidence with typed actors, JSON diffs, proof links, and CSV export.",
     },
 ];
 
@@ -73,9 +90,10 @@ export default async function FinanceDashboardPage() {
                         Finance Control Center
                     </h1>
                     <p className="mt-2 max-w-3xl text-sm text-slate-600">
-                        Shared operating surface for refunds, COD reconciliation, payouts,
-                        GST, TDS, DPDP requests, and finance access controls introduced in the
-                        implementation spec.
+                        Shared operating surface for refunds, COD
+                        reconciliation, payouts, GST, TDS, DPDP requests, and
+                        finance access controls introduced in the implementation
+                        spec.
                     </p>
                 </header>
 

@@ -44,3 +44,4 @@ export * from "./analytics";
 export * from "./unicommerce";
 export * from "./review";
 export * from "./finance-compliance";
+export * from "./product-slug-migration";

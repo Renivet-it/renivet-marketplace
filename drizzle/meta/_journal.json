@@ -1814,6 +1814,13 @@
             "when": 1789641000000,
             "tag": "0285_commission_rules_integrity",
             "breakpoints": true
+        },
+        {
+            "idx": 259,
+            "version": "7",
+            "when": 1789734600000,
+            "tag": "0286_product_slug_migration",
+            "breakpoints": true
         }
     ]
 }
