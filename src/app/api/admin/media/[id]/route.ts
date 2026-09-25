@@ -1,13 +1,9 @@
 import { BitFieldSitePermission } from "@/config/permissions";
-import {
-    getAdminMediaTransform,
-    resolveAdminMediaSourceUrl,
-} from "@/lib/media/admin-media-transform";
+import { resolveAdminMediaSourceUrl } from "@/lib/media/admin-media-transform";
 import { mediaCache, userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { UTApi } from "uploadthing/server";
 
 interface RouteProps {
@@ -16,7 +12,7 @@ interface RouteProps {
 
 const utApi = new UTApi();
 
-export async function GET(request: Request, { params }: RouteProps) {
+export async function GET(_: Request, { params }: RouteProps) {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
@@ -44,34 +40,23 @@ export async function GET(request: Request, { params }: RouteProps) {
             async (key) => (await utApi.getSignedURL(key)).url
         );
         const upstream = await fetch(sourceUrl, {
-            headers: { Accept: "image/*" },
+            headers: { Accept: "image/*,application/octet-stream;q=0.8,*/*;q=0.1" },
             cache: "no-store",
         });
-        const contentType = upstream.headers.get("content-type");
-        if (!upstream.ok || !contentType?.startsWith("image/")) {
+        if (!upstream.ok || !upstream.body) {
             return new NextResponse("Media unavailable", { status: 502 });
         }
-
-        const { width, quality } = getAdminMediaTransform(new URL(request.url));
-        const optimized = await sharp(await upstream.arrayBuffer())
-            .rotate()
-            .resize({
-                width,
-                height: width,
-                fit: "inside",
-                withoutEnlargement: true,
-            })
-            .webp({ quality })
-            .toBuffer();
 
         const headers = new Headers({
             "Cache-Control":
                 "private, max-age=3600, stale-while-revalidate=86400",
-            "Content-Length": String(optimized.byteLength),
-            "Content-Type": "image/webp",
+            "Content-Type":
+                upstream.headers.get("content-type") ?? media.type ?? "application/octet-stream",
         });
+        const contentLength = upstream.headers.get("content-length");
+        if (contentLength) headers.set("Content-Length", contentLength);
 
-        return new NextResponse(optimized, { headers });
+        return new NextResponse(upstream.body, { headers });
     } catch {
         return new NextResponse("Media unavailable", { status: 502 });
     }
