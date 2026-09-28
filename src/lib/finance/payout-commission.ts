@@ -71,6 +71,18 @@ export function calculateCommissionPaise(
     return Math.round(grossItemPaise * (commissionPercentBps / 10_000));
 }
 
+export function categoryCommissionPercentToBps(categoryCommissionPercent: number) {
+    if (
+        !Number.isInteger(categoryCommissionPercent) ||
+        categoryCommissionPercent < 0 ||
+        categoryCommissionPercent > 100
+    ) {
+        throw new Error("Invalid category commission rate: expected 0..100 percent.");
+    }
+
+    return categoryCommissionPercent * 100;
+}
+
 export function resolveCommissionRuleFromCandidates(input: {
     brandId: string;
     categoryId?: string | null;

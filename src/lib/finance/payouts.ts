@@ -8,6 +8,7 @@ import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 import {
     calculateCommissionPaise,
+    categoryCommissionPercentToBps,
     resolveCommissionRuleFromCandidates,
     type CommissionRuleCandidate,
 } from "./payout-commission";
@@ -40,6 +41,7 @@ type ResolvedRule = {
     holdbackPercentBps: number;
     ruleName: string;
     ruleId?: string;
+    source: "commission_rule" | "category_fallback";
 };
 
 type PayoutExecutionStatus =
@@ -142,6 +144,7 @@ async function resolveCommissionRuleForItem(input: {
     brandId: string;
     categoryId?: string | null;
     productTypeId?: string | null;
+    categoryCommissionPercent?: number | null;
     targetDate: Date;
 }) {
     const rules = await financeComplianceQueries.listCommissionRules({
@@ -153,13 +156,25 @@ async function resolveCommissionRuleForItem(input: {
         rules,
     });
 
-    if (!winner) return null;
+    if (!winner) {
+        if (input.categoryCommissionPercent == null) return null;
+
+        return {
+            commissionPercentBps: categoryCommissionPercentToBps(
+                input.categoryCommissionPercent
+            ),
+            holdbackPercentBps: 0,
+            ruleName: "category_fallback",
+            source: "category_fallback",
+        } satisfies ResolvedRule;
+    }
 
     return {
         commissionPercentBps: winner.commissionPercentBps,
         holdbackPercentBps: winner.holdbackPercentBps,
         ruleName: winner.ruleName,
         ruleId: winner.id,
+        source: "commission_rule",
     } satisfies ResolvedRule;
 }
 
@@ -347,6 +362,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     brandId,
                     categoryId: item.product?.categoryId,
                     productTypeId: item.product?.productTypeId,
+                    categoryCommissionPercent: item.product?.category?.commissionRate,
                     targetDate: deliveredAt,
                 });
 
@@ -408,6 +424,7 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     metadata: {
                         deliveredAt: deliveredAt.toISOString(),
                         commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                        commissionSource: rule?.source,
                         commissionPercentBps: rule?.commissionPercentBps,
                         holdbackPercentBps: 0,
                         ruleName: rule?.ruleName,
@@ -423,6 +440,8 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 referenceId: order.id,
                 metadata: {
                     commissionStatus: rule ? "applied" : "blocked_unconfigured",
+                    commissionPercentBps: rule?.commissionPercentBps,
+                    commissionSource: rule?.source,
                     ruleName: rule?.ruleName,
                     ruleId: rule?.ruleId,
                 },

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
     calculateCommissionPaise,
+    categoryCommissionPercentToBps,
     commissionRuleDatesOverlap,
     commissionRuleScopesOverlap,
     getRuleSpecificityScore,
@@ -32,6 +33,11 @@ describe("REN-203 commission calculation", () => {
     test("calculates commission using canonical basis points", () => {
         expect(calculateCommissionPaise(10_000, 2500)).toBe(2500);
         expect(calculateCommissionPaise(10_000, 2000)).toBe(2000);
+    });
+
+    test("converts category percentage fallback to canonical basis points", () => {
+        expect(categoryCommissionPercentToBps(20)).toBe(2000);
+        expect(categoryCommissionPercentToBps(18)).toBe(1800);
     });
 
     test("rejects a rate outside the basis-point percentage range", () => {
@@ -81,7 +87,7 @@ describe("REN-203 commission calculation", () => {
         expect(winner?.id).toBe("current");
     });
 
-    test("returns no rule instead of applying an unapproved fallback", () => {
+    test("returns no rule when no commission rule exists", () => {
         const winner = resolveCommissionRuleFromCandidates({
             brandId: "brand-without-approved-rule",
             targetDate: deliveredAt,
@@ -111,10 +117,10 @@ describe("REN-203 commission calculation", () => {
         expect(getRuleSpecificityScore(broaderScope)).toBe(2);
     });
 
-    test("payout calculation does not contain the legacy silent commission fallback", async () => {
+    test("payout calculation checks commission rules before category fallback", async () => {
         const source = await Bun.file(new URL("./payouts.ts", import.meta.url)).text();
 
-        expect(source).not.toContain("category?.commissionRate");
+        expect(source).toContain("category?.commissionRate");
         expect(source).not.toContain('ruleName: "default_20_percent"');
     });
 });
