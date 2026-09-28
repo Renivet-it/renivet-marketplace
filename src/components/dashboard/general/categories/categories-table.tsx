@@ -37,11 +37,8 @@ const columns: ColumnDef<TableCategory>[] = [
     },
     {
         accessorKey: "commissionRate",
-        header: "Commission Rate",
-        cell: ({ row }) => {
-            const data = row.original;
-            return `${data.commissionRate}%`;
-        },
+        header: "Commission Rules",
+        cell: () => "Managed in Finance rules",
     },
     {
         accessorKey: "createdAt",

@@ -6,6 +6,7 @@ import {
     gte,
     ilike,
     inArray,
+    isNull,
     lte,
     or,
     sql,
@@ -17,6 +18,7 @@ import {
     brandConfidentials,
     brandPayoutConfig,
     brandPayoutCycles,
+    payoutExecutionClearances,
     brandPayoutLineItems,
     brandPayoutOverrides,
     brands,
@@ -43,9 +45,11 @@ import {
     plManualEntries,
     plSnapshots,
     products,
+    productTypes,
     productVariants,
     reasonMasters,
     refunds,
+    rtoDispositions,
     userConsents,
     users,
 } from "../schema";
@@ -528,6 +532,55 @@ class FinanceComplianceQuery {
         });
     }
 
+    async createPayoutExecutionClearance(
+        values: typeof payoutExecutionClearances.$inferInsert
+    ) {
+        return db
+            .insert(payoutExecutionClearances)
+            .values(values)
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
+    async getActivePayoutExecutionClearance(cycleId: string, now = new Date()) {
+        return db.query.payoutExecutionClearances.findFirst({
+            where: and(
+                eq(payoutExecutionClearances.cycleId, cycleId),
+                isNull(payoutExecutionClearances.revokedAt),
+                or(
+                    isNull(payoutExecutionClearances.expiresAt),
+                    gte(payoutExecutionClearances.expiresAt, now)
+                )
+            ),
+            orderBy: [desc(payoutExecutionClearances.createdAt)],
+        });
+    }
+
+    async getLatestPayoutExecutionClearance(cycleId: string) {
+        return db.query.payoutExecutionClearances.findFirst({
+            where: eq(payoutExecutionClearances.cycleId, cycleId),
+            orderBy: [desc(payoutExecutionClearances.createdAt)],
+        });
+    }
+
+    async revokePayoutExecutionClearance(
+        id: string,
+        revokedBy: string,
+        revocationReason: string
+    ) {
+        return db
+            .update(payoutExecutionClearances)
+            .set({
+                revokedAt: new Date(),
+                revokedBy,
+                revocationReason,
+                updatedAt: new Date(),
+            })
+            .where(eq(payoutExecutionClearances.id, id))
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
     async addPayoutLineItems(
         values: Array<typeof brandPayoutLineItems.$inferInsert>
     ) {
@@ -657,6 +710,94 @@ class FinanceComplianceQuery {
                 asc(commissionRules.priority),
                 desc(commissionRules.createdAt),
             ],
+        });
+    }
+
+    async findLockedPayoutCycleForReferences(references: string[]) {
+        const normalizedReferences = [...new Set(references.filter(Boolean))];
+        if (!normalizedReferences.length) return null;
+
+        const rows = await db
+            .select({ cycle: brandPayoutCycles, lineItem: brandPayoutLineItems })
+            .from(brandPayoutLineItems)
+            .innerJoin(
+                brandPayoutCycles,
+                eq(brandPayoutCycles.id, brandPayoutLineItems.cycleId)
+            )
+            .where(
+                and(
+                    inArray(brandPayoutCycles.status, ["approved", "processing", "completed"]),
+                    inArray(brandPayoutLineItems.referenceId, normalizedReferences)
+                )
+            )
+            .orderBy(desc(brandPayoutCycles.updatedAt));
+
+        return rows[0] ?? null;
+    }
+
+    async listCommissionRuleAdminRows(filters?: {
+        brandId?: string;
+        categoryId?: string;
+        isActive?: boolean;
+    }) {
+        const rows = await db
+            .select({
+                rule: commissionRules,
+                brandName: brands.name,
+                categoryName: categories.name,
+                productTypeName: productTypes.name,
+            })
+            .from(commissionRules)
+            .leftJoin(brands, eq(commissionRules.brandId, brands.id))
+            .leftJoin(categories, eq(commissionRules.categoryId, categories.id))
+            .leftJoin(productTypes, eq(commissionRules.productTypeId, productTypes.id))
+            .where(
+                and(
+                    filters?.brandId
+                        ? eq(commissionRules.brandId, filters.brandId)
+                        : undefined,
+                    filters?.categoryId
+                        ? eq(commissionRules.categoryId, filters.categoryId)
+                        : undefined,
+                    filters?.isActive !== undefined
+                        ? eq(commissionRules.isActive, filters.isActive)
+                        : undefined
+                )
+            )
+            .orderBy(asc(commissionRules.priority), desc(commissionRules.createdAt));
+
+        return rows;
+    }
+
+    async listCommissionRuleLookups() {
+        const [brandRows, categoryRows, productTypeRows] = await Promise.all([
+            db.query.brands.findMany({
+                columns: { id: true, name: true },
+                where: eq(brands.isActive, true),
+                orderBy: asc(brands.name),
+            }),
+            db.query.categories.findMany({
+                columns: { id: true, name: true },
+                orderBy: asc(categories.name),
+            }),
+            db.query.productTypes.findMany({
+                columns: { id: true, name: true, categoryId: true },
+                orderBy: asc(productTypes.name),
+            }),
+        ]);
+
+        return {
+            brands: brandRows,
+            categories: categoryRows,
+            productTypes: productTypeRows,
+        };
+    }
+
+    async listCommissionRuleHistory(ruleId: string) {
+        return this.listFinanceAuditLogs({
+            entityType: "commission_rule",
+            entityId: ruleId,
+            limit: 100,
         });
     }
 
@@ -1084,8 +1225,8 @@ class FinanceComplianceQuery {
             returning id
         `);
 
-        const insertedRows = Array.isArray((result as { rows?: unknown }).rows)
-            ? ((result as { rows: Array<{ id?: string }> }).rows ?? [])
+        const insertedRows = Array.isArray((result as unknown as { rows?: unknown }).rows)
+            ? ((result as unknown as { rows: Array<{ id?: string }> }).rows ?? [])
             : Array.isArray(result)
               ? (result as Array<{ id?: string }>)
               : [];
@@ -1268,10 +1409,10 @@ class FinanceComplianceQuery {
 
     async listOrdersForFinanceWindow(input: { start: Date; end: Date }) {
         return db.query.orders.findMany({
-            where: and(
-                gte(orders.createdAt, input.start),
-                lte(orders.createdAt, input.end)
-            ),
+            // Delivery eligibility is resolved from the delivered shipment
+            // timestamp in the payout calculation. Filtering by createdAt
+            // here would drop orders created before the settlement cycle.
+            where: eq(orders.status, "delivered"),
             with: {
                 address: true,
                 shipments: true,
@@ -1375,6 +1516,13 @@ class FinanceComplianceQuery {
         if (!orderIds.length) return [];
         return db.query.orderShipments.findMany({
             where: inArray(orderShipments.orderId, orderIds),
+        });
+    }
+
+    async listRtoDispositionsForOrderIds(orderIds: string[]) {
+        if (!orderIds.length) return [];
+        return db.query.rtoDispositions.findMany({
+            where: inArray(rtoDispositions.orderId, orderIds),
         });
     }
 

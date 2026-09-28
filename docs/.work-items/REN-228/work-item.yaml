@@ -1,0 +1,128 @@
+schema_version: "1.0"
+task:
+    id: REN-228
+    title: "[FCCP][P2] Build Seller Settlement Documents & Validate Against Contract (BIZ-5, BIZ-19)"
+    source: linear
+    branch: feat/ren-203-spec
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-228/fccpp2-build-seller-settlement-documents-and-validate-against-contract
+        priority: Medium
+        labels: [Feature]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-224
+        linear_branch: ayanganganguly333/ren-228-fccpp2-build-seller-settlement-documents-validate-against
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Seller settlement documents expose financial amounts and payout state."
+        - "Authorization and cycle/brand identity must prevent cross-seller document access."
+        - "Tax-document semantics and contract adequacy are external legal/finance boundaries."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, regular payout calculation/execution, payout statement route/template, finance dashboard link, corporate settlement mechanism, invoice/document flows, REN-203/204/205/206 dependencies]
+    excluded_areas: [production payout execution, cadence changes, tax classification, GST/tax field design, historical backfill, legal conclusion, corporate document redesign]
+    dependencies: [DEP-228-001, DEP-228-002, DEP-228-003, DEP-228-004]
+    integrations: [INT-228-001, INT-228-002]
+    security_boundaries: [SEC-228-001, SEC-228-002]
+    state_transitions: [calculated, approved, statement_ready, awaiting_manual_confirmation, completed, failed]
+    related_tests: [TEXP-228-001, TEXP-228-002, TEXP-228-003, TEXP-228-004]
+    uncertainties: ["External CA/Registerkaro tax/document treatment.", "First real payout-cycle validation.", "Business/Legal conclusion on Terra Luna §3.5 cadence/content adequacy."]
+requirements:
+    - { id: REQ-228-001, description: "Harden the regular payout statement path without redesigning the existing cycle snapshot or PDF waterfall.", type: financial_control }
+    - { id: REQ-228-002, description: "Authorize statement access and validate cycle/brand membership before rendering a PDF.", type: security }
+    - { id: REQ-228-003, description: "Prevent calculated or merely approved cycles from being represented as completed seller settlements.", type: state_safety }
+    - { id: REQ-228-004, description: "Provide a regular-order commission-invoice design and plumbing boundary without deciding tax-specific content.", type: design }
+    - { id: REQ-228-005, description: "Keep Track C legal/finance review and Track D first-real-cycle validation explicitly separate from engineering completion.", type: governance }
+    - { id: REQ-228-006, description: "Make no production payout, cadence, tax classification, or historical-data changes.", type: compatibility }
+scenarios:
+    - { id: SCN-228-001, description: "Authorized finance user downloads a statement for a statement-ready brand payout.", requirement_ids: [REQ-228-001, REQ-228-002, REQ-228-003] }
+    - { id: SCN-228-002, description: "A missing or unrelated brand/cycle identifier is rejected without rendering another seller's statement.", requirement_ids: [REQ-228-002] }
+    - { id: SCN-228-003, description: "A calculated or approved-but-not-executed cycle is not exposed as a completed settlement statement.", requirement_ids: [REQ-228-003] }
+    - { id: SCN-228-004, description: "Razorpay-completed and manual-confirmation payout paths preserve transaction/status data in the statement.", requirement_ids: [REQ-228-001, REQ-228-003] }
+    - { id: SCN-228-005, description: "Commission-invoice design identifies source data, trigger, reference, access, audit, and REN-225 numbering dependency without tax assumptions.", requirement_ids: [REQ-228-004] }
+    - { id: SCN-228-006, description: "Track C review and Track D first-real-cycle validation remain open operational checkpoints.", requirement_ids: [REQ-228-005, REQ-228-006] }
+invariants:
+    - { id: INV-228-001, description: "A statement route never returns a different brand's cycle summary or line items." }
+    - { id: INV-228-002, description: "No seller-facing statement claims completed settlement before an allowed execution state." }
+    - { id: INV-228-003, description: "Statement values come from the persisted payout-cycle snapshot and line items, not a fresh mutable recalculation." }
+    - { id: INV-228-004, description: "Tax-document classification is never inferred from the commission-invoice plumbing design." }
+    - { id: INV-228-005, description: "Test/staging output is not recorded as first-real-cycle contract validation." }
+flows:
+    - { id: FLOW-228-001, description: "Payout cycle calculation -> approval -> execution/manual confirmation -> authorized statement rendering.", state_transitions: [calculated, approved, statement_ready, completed] }
+    - { id: FLOW-228-002, description: "Reject unauthorized or mismatched cycle/brand statement requests.", state_transitions: [calculated, failed] }
+    - { id: FLOW-228-003, description: "Commission-invoice target design remains pending external tax/document conclusion.", state_transitions: [approved, statement_ready] }
+dependencies:
+    - { id: DEP-228-001, name: payout controls, purpose: "Correct statement source", description: "REN-203/204/205/206 must govern commission, eligibility, holdback, and execution before a real statement is meaningful.", status: resolved }
+    - { id: DEP-228-002, name: finance payout snapshot, purpose: "Statement data", description: "brand_payout_cycles, brand_payout_line_items, and calculationSummary provide the persisted source.", status: resolved }
+    - { id: DEP-228-003, name: CA/Registerkaro conclusion, purpose: "Commission-invoice tax boundary", description: "External conclusion is required before tax-specific invoice implementation.", status: blocked }
+    - { id: DEP-228-004, name: first real payout cycle, purpose: "Track D validation", description: "A real executed cycle is required for mandatory post-execution validation and is not created by this issue.", status: pending }
+integrations:
+    - { id: INT-228-001, system: finance payout APIs, purpose: "Cycle state and statement data", failure_mode: "Missing cycle, brand, or line items must fail closed.", retry_idempotency: "GET rendering is read-only and derived from persisted snapshots." }
+    - { id: INT-228-002, system: React PDF renderer, purpose: "Seller statement PDF", failure_mode: "Render errors return a controlled server error without exposing unrelated data.", retry_idempotency: "Repeated GETs produce the same snapshot document." }
+personas:
+    - { id: PER-228-001, role: finance_admin, applicability: "Reviews and accesses seller settlement statements." }
+    - { id: PER-228-002, role: seller_brand_user, applicability: "May access only the applicable brand's statement through the authorized surface." }
+    - { id: PER-228-003, role: business_legal_or_registerkaro, applicability: "Owns Track C legal/cadence review and Track B tax/document conclusion." }
+security_boundaries:
+    - { id: SEC-228-001, description: "Statement access uses the existing finance authorization boundary and does not trust URL identifiers alone." }
+    - { id: SEC-228-002, description: "Cycle, brand, transaction, bank, and payout data are treated as financial-sensitive records." }
+business_rules:
+    - { id: BR-228-001, description: "A completed delivery or calculated payout is not itself a completed seller settlement." }
+    - { id: BR-228-002, description: "Regular commission-invoice tax treatment remains undecided until CA/Registerkaro review." }
+    - { id: BR-228-003, description: "Track C and Track D do not become complete because Track A code is complete." }
+decisions:
+    - { id: DEC-228-001, question: "Should regular statements reuse the persisted payout-cycle snapshot and existing PDF template?", class: AUTO_DECIDE, status: resolved, recommendation: "Yes; harden the existing path rather than introduce a second statement system.", basis: "Repository already persists cycle summaries/line items and has a working statement template/route.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-228-002, question: "What tax classification, numbering, and statutory fields belong on a regular commission invoice?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Do not implement tax-specific content until CA/Registerkaro conclusion is attached.", basis: "Linear decision explicitly routes these high-consequence questions outside engineering.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-228-003, question: "When can Track D validate the first real statement?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "After the first real payout cycle executes; track as a later condition.", basis: "A real seller settlement artifact is required and cannot be substituted by a test PDF.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-228-001, category: unit, classification: REQUIRED, reason: "Statement readiness and cycle/brand validation must fail closed for mismatched or pre-execution states.", scenarios: [SCN-228-001, SCN-228-002, SCN-228-003] }
+    - { id: TEXP-228-002, category: api, classification: REQUIRED, reason: "The statement route must enforce authorization, membership, and controlled missing-data responses.", scenarios: [SCN-228-001, SCN-228-002, SCN-228-004] }
+    - { id: TEXP-228-003, category: component, classification: REQUIRED, reason: "The PDF template must preserve financial fields and status/transaction presentation.", scenarios: [SCN-228-001, SCN-228-004] }
+    - { id: TEXP-228-004, category: business_uat, classification: REQUIRED, reason: "Finance must review the commission-invoice boundary and keep Tracks C/D separately tracked.", scenarios: [SCN-228-005, SCN-228-006] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-228-001, severity: MAJOR, status: mitigated, summary: "The regular statement route must fail closed on unauthorized or mismatched cycle/brand requests and pre-execution states.", references: [REQ-228-002, REQ-228-003, INV-228-001] }
+        - { id: CRIT-228-002, severity: DESIGN_BLOCKER, status: open, summary: "Tax-specific commission-invoice content cannot be implemented before CA/Registerkaro conclusion.", references: [REQ-228-004, DEC-228-002] }
+        - { id: CRIT-228-003, severity: DESIGN_BLOCKER, status: open, summary: "First-real-cycle validation cannot occur before a real payout cycle executes.", references: [REQ-228-005, INV-228-005] }
+        - { id: CRIT-228-004, severity: MINOR, status: deferred, summary: "Terra Luna cadence/content adequacy requires Business/Legal or Registerkaro review.", references: [REQ-228-005, DEC-228-003] }
+approval:
+    state: BLOCKED
+    design_blockers: [CRIT-228-002, CRIT-228-003]
+    approved_by: ""
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-228-001, scenario_ids: [SCN-228-001, SCN-228-004] }
+        - { requirement_id: REQ-228-002, scenario_ids: [SCN-228-001, SCN-228-002] }
+        - { requirement_id: REQ-228-003, scenario_ids: [SCN-228-001, SCN-228-003, SCN-228-004] }
+        - { requirement_id: REQ-228-004, scenario_ids: [SCN-228-005] }
+        - { requirement_id: REQ-228-005, scenario_ids: [SCN-228-006] }
+        - { requirement_id: REQ-228-006, scenario_ids: [SCN-228-006] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-228-001, invariant_ids: [INV-228-001, INV-228-002, INV-228-003] }
+        - { scenario_id: SCN-228-002, invariant_ids: [INV-228-001] }
+        - { scenario_id: SCN-228-003, invariant_ids: [INV-228-002] }
+        - { scenario_id: SCN-228-004, invariant_ids: [INV-228-003] }
+        - { scenario_id: SCN-228-005, invariant_ids: [INV-228-004] }
+        - { scenario_id: SCN-228-006, invariant_ids: [INV-228-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-228-001, test_expectation_ids: [TEXP-228-001, TEXP-228-002, TEXP-228-003] }
+        - { scenario_id: SCN-228-002, test_expectation_ids: [TEXP-228-001, TEXP-228-002] }
+        - { scenario_id: SCN-228-003, test_expectation_ids: [TEXP-228-001] }
+        - { scenario_id: SCN-228-004, test_expectation_ids: [TEXP-228-002, TEXP-228-003] }
+        - { scenario_id: SCN-228-005, test_expectation_ids: [TEXP-228-004] }
+        - { scenario_id: SCN-228-006, test_expectation_ids: [TEXP-228-004] }

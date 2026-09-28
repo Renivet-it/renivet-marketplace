@@ -513,14 +513,6 @@ export async function POST(req: NextRequest) {
                     ];
 
                     if (!isStockAvailable) {
-                        await orderQueries.updateOrderStatus(existingOrder.id, {
-                            paymentId: payload.payload.payment.entity.id,
-                            paymentMethod:
-                                payload.payload.payment.entity.method,
-                            paymentStatus: "refund_pending",
-                            status: "cancelled",
-                        });
-
                         const rzpRefund = await razorpay.payments.refund(
                             payload.payload.payment.entity.id,
                             {
@@ -528,13 +520,17 @@ export async function POST(req: NextRequest) {
                             }
                         );
 
-                        await refundQueries.createRefund({
-                            id: rzpRefund.id,
+                        await refundQueries.recordRefundEvent({
+                            refundId: rzpRefund.id,
+                            gatewayRefundId: rzpRefund.id,
                             userId: existingOrder.userId,
                             orderId: existingOrder.id,
                             paymentId: payload.payload.payment.entity.id,
                             status: "pending",
                             amount: payload.payload.payment.entity.amount,
+                            paymentMethod:
+                                payload.payload.payment.entity.method,
+                            orderStatus: "cancelled",
                         });
 
                         const existingUser = await userCache.get(

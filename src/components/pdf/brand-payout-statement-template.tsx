@@ -297,7 +297,7 @@ export function BrandPayoutStatementTemplate(props: {
     };
 
     const deductions = props.lineItems.filter((item) =>
-        ["refund_deduction", "carrier_claim", "override", "holdback", "tds"].includes(item.lineType)
+        ["refund_deduction", "carrier_claim", "payment_fee", "override", "holdback", "tds"].includes(item.lineType)
     );
 
     const orderItems = props.lineItems.filter(

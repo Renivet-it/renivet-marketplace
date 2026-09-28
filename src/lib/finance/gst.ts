@@ -1,10 +1,14 @@
 import { db } from "@/lib/db";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
-import { corporateOrders } from "@/lib/db/schema";
+import { corporateOrders, corporateTaxInvoices } from "@/lib/db/schema";
 import { deriveGstRateBps, splitGstByState } from "@/lib/finance/calculations";
+import {
+    resolveGstExportInvoiceNumber,
+    resolveGstExportReference,
+} from "@/lib/finance/gst-invoice-number";
 import { toCsv } from "@/lib/finance/reporting";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 type ValidationIssue = {
     severity: "error" | "warning";
@@ -16,7 +20,8 @@ type ValidationIssue = {
         | "inactive_hsn"
         | "missing_hsn_master"
         | "missing_corporate_brand"
-        | "missing_corporate_state";
+        | "missing_corporate_state"
+        | "missing_invoice_number";
     message: string;
     entityType: "order" | "product" | "brand" | "corporate_order";
     entityId: string;
@@ -194,11 +199,6 @@ function formatInvoiceNumber(
     return `${prefix}-${compactMonth}-${suffix}`;
 }
 
-function getMonthKeyFromDate(value: Date | string | null | undefined) {
-    const date = value ? new Date(value) : new Date();
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function formatMoney(paise: number) {
     return (paise / 100).toFixed(2);
 }
@@ -279,6 +279,20 @@ export async function previewGstExport(
     ]);
 
     const hsnByCode = new Map(hsnRows.map((row) => [row.hsnCode, row]));
+    const corporateTaxInvoiceRows = corporateRows.length
+        ? await db.query.corporateTaxInvoices.findMany({
+              where: inArray(
+                  corporateTaxInvoices.orderId,
+                  corporateRows.map((order) => order.id)
+              ),
+              orderBy: [desc(corporateTaxInvoices.createdAt)],
+          })
+        : [];
+    const corporateTaxInvoiceByOrderId = new Map(
+        corporateTaxInvoiceRows
+            .filter((invoice) => invoice.orderId)
+            .map((invoice) => [invoice.orderId as string, invoice])
+    );
     const validationIssues: ValidationIssue[] = [];
     const rows: GstCsvRow[] = [];
     const tcsBuckets = new Map<
@@ -325,6 +339,16 @@ export async function previewGstExport(
             0
         );
         let orderHasInvoiceRows = false;
+        const authoritativeInvoiceNumber = order.invoiceNumber?.trim() ?? "";
+        if (!authoritativeInvoiceNumber) {
+            validationIssues.push({
+                severity: "error",
+                code: "missing_invoice_number",
+                message: `Order ${order.id} has no authoritative invoice number for GST export.`,
+                entityType: "order",
+                entityId: order.id,
+            });
+        }
 
         for (const item of order.items) {
             const product = item.product;
@@ -413,7 +437,12 @@ export async function previewGstExport(
             const row = emptyCsvRow();
             row.section = "GST";
             row.subsection = order.customerGstin ? "B2B" : "B2C";
-            row.invoiceNumber = formatInvoiceNumber("INV", order.id, monthKey);
+            row.invoiceNumber = authoritativeInvoiceNumber
+                ? resolveGstExportInvoiceNumber({
+                      invoiceNumber: authoritativeInvoiceNumber,
+                      orderId: order.id,
+                  })
+                : "";
             row.invoiceDate = new Date(order.createdAt ?? new Date())
                 .toISOString()
                 .slice(0, 10);
@@ -428,7 +457,7 @@ export async function previewGstExport(
             row.cgst = formatMoney(gstSplit.cgstPaise);
             row.sgst = formatMoney(gstSplit.sgstPaise);
             row.igst = formatMoney(gstSplit.igstPaise);
-            row.orderReference = order.id;
+            row.orderReference = resolveGstExportReference(order.id).value;
             row.stateOfSupply = customerState;
             row.notes = product?.title ?? "";
             rows.push(row);
@@ -458,6 +487,7 @@ export async function previewGstExport(
     }
 
     for (const order of corporateRows) {
+        const corporateTaxInvoice = corporateTaxInvoiceByOrderId.get(order.id);
         const customerState = readCorporateState(
             (order.companySnapshot as Record<string, unknown> | null) ?? null,
             order.deliveryCity
@@ -537,15 +567,25 @@ export async function previewGstExport(
                 entityId: order.id,
             });
         }
+        if (!corporateTaxInvoice?.invoiceNumber) {
+            validationIssues.push({
+                severity: "error",
+                code: "missing_invoice_number",
+                message: `Corporate order ${order.publicOrderId} has no authoritative customer tax invoice number for GST export.`,
+                entityType: "corporate_order",
+                entityId: order.id,
+            });
+        }
 
         const row = emptyCsvRow();
         row.section = "GST";
         row.subsection = "B2B";
-        row.invoiceNumber = formatInvoiceNumber(
-            "INV",
-            order.publicOrderId,
-            monthKey
-        );
+        row.invoiceNumber = corporateTaxInvoice?.invoiceNumber
+            ? resolveGstExportInvoiceNumber({
+                  invoiceNumber: corporateTaxInvoice.invoiceNumber,
+                  orderId: order.id,
+              })
+            : "";
         row.invoiceDate = new Date(order.createdAt ?? new Date())
             .toISOString()
             .slice(0, 10);
@@ -655,11 +695,21 @@ export async function previewGstExport(
             row.subsection = "CREDIT_NOTE";
             row.invoiceNumber = formatInvoiceNumber("CRN", refund.id, monthKey);
             row.invoiceDate = new Date(eventDate).toISOString().slice(0, 10);
-            row.originalInvoiceNumber = formatInvoiceNumber(
-                "INV",
-                order.id,
-                getMonthKeyFromDate(order.createdAt)
-            );
+            row.originalInvoiceNumber = order.invoiceNumber?.trim()
+                ? resolveGstExportInvoiceNumber({
+                      invoiceNumber: order.invoiceNumber,
+                      orderId: order.id,
+                  })
+                : "";
+            if (!row.originalInvoiceNumber) {
+                validationIssues.push({
+                    severity: "error",
+                    code: "missing_invoice_number",
+                    message: `Refund ${refund.id} references order ${order.id} without an authoritative invoice number.`,
+                    entityType: "order",
+                    entityId: order.id,
+                });
+            }
             row.customerGstin = order.customerGstin ?? "";
             row.customerState = customerState;
             row.customerStateCode = customerStateCode;

@@ -149,20 +149,22 @@ export async function executeOrderCancellation({
                     orderId: order.id,
                 },
             });
-            await refundQueries.createRefund({
-                id: rzpRefund.id,
+            await refundQueries.recordRefundEvent({
+                refundId: rzpRefund.id,
+                gatewayRefundId: rzpRefund.id,
                 userId: order.userId,
                 orderId: order.id,
                 paymentId: order.paymentId,
                 status: "pending",
                 amount: order.totalAmount,
+                paymentMethod: order.paymentMethod,
             });
             nextPaymentStatus = "refund_pending";
         } catch {
             nextPaymentStatus = "refund_failed";
         }
     } else {
-        nextPaymentStatus = order.paymentMethod === "COD" ? "cancelled" : "failed";
+        nextPaymentStatus = "failed";
     }
 
     // 4. Restore product stock

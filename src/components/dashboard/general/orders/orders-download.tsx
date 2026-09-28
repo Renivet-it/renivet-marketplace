@@ -103,6 +103,7 @@
 // }
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
+import { formatCommissionPercentageFromBps } from "@/lib/finance/commission-percentage";
 import { convertPaiseToRupees, convertValueToLabel } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
 import ExcelJS from "exceljs";
@@ -230,8 +231,7 @@ export function OrdersDownload({ orders }: PageProps) {
                 );
                 const netMRP = totalMRP - totalMRP * 0.18;
                 const commissionAmount =
-                    ((order.items[0]?.product?.category?.commissionRate || 0) /
-                        100) *
+                    ((order.items[0]?.commissionPercentBps ?? 0) / 10_000) *
                     totalMRP;
                 const gstOnCommission = commissionAmount * 0.18;
                 const paymentFee =
@@ -277,8 +277,12 @@ export function OrdersDownload({ orders }: PageProps) {
                     // "Bank Name": order.items[0]?.product?.brand.confidential?.bankName || "",
                     // "Beneficiary Name": order.items[0]?.product?.brand.confidential?.bankAccountHolderName || "",
                     "Gross Sale(Inc GST)": convertPaiseToRupees(totalPrice),
-                    "Commission % (Category Based)":
-                        order.items[0]?.product?.category.commissionRate || "",
+                    "Commission % (Canonical Rule)":
+                        order.items[0]?.commissionPercentBps == null
+                            ? "Unconfigured"
+                            : formatCommissionPercentageFromBps(
+                                  order.items[0].commissionPercentBps
+                              ),
                     "Commission Amount": convertPaiseToRupees(commissionAmount),
                     "GST on Commission @18%":
                         convertPaiseToRupees(gstOnCommission),
@@ -307,9 +311,8 @@ export function OrdersDownload({ orders }: PageProps) {
                         (totalMRP ?? 0) === 0
                             ? 0
                             : (order?.totalAmount ?? 0) -
-                                  ((order?.items?.[0]?.product?.category
-                                      ?.commissionRate ?? 0) /
-                                      100) *
+                                  ((order?.items?.[0]?.commissionPercentBps ?? 0) /
+                                      10_000) *
                                       (totalMRP ?? 0) -
                                   (order?.shipments?.[0]
                                       ?.awbDetailsShipRocketJson?.response?.data

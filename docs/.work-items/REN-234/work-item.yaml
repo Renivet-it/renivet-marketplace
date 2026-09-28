@@ -1,0 +1,156 @@
+schema_version: "1.0"
+task:
+    id: REN-234
+    title: "[FCCP][P1] Commission Rules Admin Management UI"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-234/fccpp1-commission-rules-admin-management-ui
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-229
+        linear_branch: ayanganganguly333/ren-234-fccp1-commission-rules-admin-management-ui
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The UI administers financial commission rules used by payout calculation."
+        - "Permissions and audit history protect sensitive finance controls."
+        - "Overlap/fallback explanations must match the runtime resolver exactly."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue/comments/relations, commission rule schema, list/upsert backend, payout resolver, finance permissions, audit log, DataTable patterns, payout workspace conventions]
+    excluded_areas: [new rates, holdback changes, payout resolver redesign, schema/migration changes, Terra Luna rule insertion, direct database administration]
+    dependencies: [DEP-234-001, DEP-234-002, DEP-234-003]
+    integrations: [INT-234-001, INT-234-002]
+    security_boundaries: [SEC-234-001, SEC-234-002]
+    state_transitions: [active, inactive, conflict, ambiguous, fallback]
+    related_tests: [TEXP-234-001, TEXP-234-002, TEXP-234-003, TEXP-234-004]
+    uncertainties: ["Existing audit records may or may not contain before/after values; UI must show only what exists.", "Backend create idempotency remains a documented limitation."]
+requirements:
+    - { id: REQ-234-001, description: "List commission rules with required fields, display names, active state, filters, sorting, loading, empty, and error states.", type: ui }
+    - { id: REQ-234-002, description: "Create and edit rules using exactly the approved upsert input contract, with bps-to-percent guidance and client validation.", type: behavior }
+    - { id: REQ-234-003, description: "Preview exact conflicts and different-scope ambiguity server-side before save, reusing the runtime resolver for winner explanation.", type: financial_control }
+    - { id: REQ-234-004, description: "Deactivate rules with confirmation and preserve inactive rows for inspection.", type: auditability }
+    - { id: REQ-234-005, description: "Show per-rule audit history using only fields present in the existing finance audit log.", type: auditability }
+    - { id: REQ-234-006, description: "Enforce payouts:view/payouts:manage behavior through the existing finance module access mechanism.", type: security }
+    - { id: REQ-234-007, description: "Do not add schema, rates, holdback overrides, or payout resolver behavior.", type: compatibility }
+scenarios:
+    - { id: SCN-234-001, description: "View user loads rules, filters brand/category, sorts priority/specificity, sees inactive rows and history, but has no mutation controls.", requirement_ids: [REQ-234-001, REQ-234-005, REQ-234-006] }
+    - { id: SCN-234-002, description: "Manage user creates a valid rule with all required fields and sees a bps percentage equivalent.", requirement_ids: [REQ-234-002, REQ-234-006] }
+    - { id: SCN-234-003, description: "Missing required fields are rejected before the mutation request.", requirement_ids: [REQ-234-002] }
+    - { id: SCN-234-004, description: "Exact active overlap blocks save; different-scope overlap shows an ambiguity warning and current resolver winner.", requirement_ids: [REQ-234-003] }
+    - { id: SCN-234-005, description: "Conflict query failure is retryable and does not silently permit or reject save.", requirement_ids: [REQ-234-003] }
+    - { id: SCN-234-006, description: "Manage user deactivates a rule after scope/fallback confirmation and the row remains visible as inactive.", requirement_ids: [REQ-234-004, REQ-234-006] }
+    - { id: SCN-234-007, description: "The page is denied to users without finance module view/manage access.", requirement_ids: [REQ-234-006] }
+    - { id: SCN-234-008, description: "Implementation changes only UI/query surfaces and leaves schema, rates, and payout resolution unchanged.", requirement_ids: [REQ-234-007] }
+invariants:
+    - { id: INV-234-001, description: "A user without payouts view/manage access cannot read or mutate commission rules through this feature." }
+    - { id: INV-234-002, description: "Client-side conflict and fallback explanations never become a second commission precedence algorithm." }
+    - { id: INV-234-003, description: "An exact active overlap is never treated as a dismissible warning." }
+    - { id: INV-234-004, description: "Deactivation never deletes a commission rule row." }
+    - { id: INV-234-005, description: "The form never sends holdbackPercentBps other than the server-supported literal zero." }
+flows:
+    - { id: FLOW-234-001, description: "Finance access -> list/filter/sort -> view rule/fallback/history.", state_transitions: [active, inactive, fallback] }
+    - { id: FLOW-234-002, description: "Manage form -> conflict preview -> upsert -> refresh or preserve values on error.", state_transitions: [active, conflict, ambiguous] }
+    - { id: FLOW-234-003, description: "Manage confirmation -> soft deactivation -> inactive row/history.", state_transitions: [active, inactive] }
+dependencies:
+    - { id: DEP-234-001, name: REN-229 commission foundation, purpose: "Existing table/backend", description: "Use current commission_rules schema, upsert mutation, and runtime resolver.", status: resolved }
+    - { id: DEP-234-002, name: finance module access, purpose: "Authorization", description: "Use payouts view/manage access and existing finance admin override.", status: resolved }
+    - { id: DEP-234-003, name: finance audit log, purpose: "Rule history", description: "Read existing commission_rule audit entries without adding an audit table.", status: resolved }
+integrations:
+    - { id: INT-234-001, system: tRPC finance routes, purpose: "Rule list/upsert/preview/history", failure_mode: "Permission, validation, conflict, and query errors remain visible to the operator.", retry_idempotency: "Save disabled while mutation is in flight; edits target IDs; backend create limitation documented." }
+    - { id: INT-234-002, system: DataTable/react-pdf-free admin UI, purpose: "Rule operations", failure_mode: "Loading/empty/error states fail visibly without hiding finance data.", retry_idempotency: "Read queries may retry; mutation errors preserve form values." }
+personas:
+    - { id: PER-234-001, role: finance_admin, applicability: "Can view and manage rules." }
+    - { id: PER-234-002, role: finance_viewer, applicability: "Can view rules/history but cannot mutate." }
+    - { id: PER-234-003, role: unauthorized_user, applicability: "Cannot access the page." }
+security_boundaries:
+    - { id: SEC-234-001, description: "Page and server procedures enforce the existing payouts module access; client visibility is not the security boundary." }
+    - { id: SEC-234-002, description: "Commission rates, rule metadata, and audit history are finance-sensitive and are not exposed to public routes." }
+business_rules:
+    - { id: BR-234-001, description: "Commission values are basis points; the UI explains the percentage equivalent without converting the stored value incorrectly." }
+    - { id: BR-234-002, description: "Runtime winner ordering is priority descending, specificity descending, then rule ID descending via the existing resolver." }
+    - { id: BR-234-003, description: "Different-scope overlap is informative; exact active scope/date overlap blocks save." }
+decisions:
+    - { id: DEC-234-001, question: "Should this reuse the existing finance/DataTable/access/audit patterns?", class: AUTO_DECIDE, status: resolved, recommendation: "Yes.", basis: "Linear UI/UX specification and repository conventions explicitly require reuse.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-234-002, question: "Should the approved conflict-preview query exception be implemented?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Yes; implement the thin read-only query described by Linear.", basis: "Akshay's 2026-09-22 remediation comment confirms both blockers resolved and READY.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-234-001, category: unit, classification: REQUIRED, reason: "Conflict classification, overlap boundaries, specificity sorting, fallback, and bps display must be deterministic.", scenarios: [SCN-234-002, SCN-234-004, SCN-234-005] }
+    - { id: TEXP-234-002, category: api, classification: REQUIRED, reason: "Server query/mutation permission, required-input, conflict, and history behavior must be protected.", scenarios: [SCN-234-001, SCN-234-003, SCN-234-004, SCN-234-007] }
+    - { id: TEXP-234-003, category: component, classification: REQUIRED, reason: "The admin UI must render view/manage states, form errors, loading, retries, deactivation, and history correctly.", scenarios: [SCN-234-001, SCN-234-002, SCN-234-003, SCN-234-005, SCN-234-006] }
+    - { id: TEXP-234-004, category: regression, classification: REQUIRED, reason: "Commission resolver and schema behavior must remain unchanged; no migrations or rates are introduced.", scenarios: [SCN-234-004, SCN-234-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-234-001, severity: MAJOR, status: mitigated, summary: "Finance access must be enforced server-side for every rule operation and reflected in UI controls.", references: [REQ-234-006, SEC-234-001] }
+        - { id: CRIT-234-002, severity: MAJOR, status: mitigated, summary: "Exact and different-scope overlaps require distinct blocking/informational outcomes using the existing resolver.", references: [REQ-234-003, INV-234-002, INV-234-003] }
+        - { id: CRIT-234-003, severity: MINOR, status: accepted, summary: "Create lacks backend idempotency; UI in-flight disabling is a mitigation and the residual limitation remains documented.", references: [INT-234-001] }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Akshay — Linear remediation comment 2026-09-22; user requested implementation"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-234-001, scenario_ids: [SCN-234-001] }
+        - { requirement_id: REQ-234-002, scenario_ids: [SCN-234-002, SCN-234-003] }
+        - { requirement_id: REQ-234-003, scenario_ids: [SCN-234-004, SCN-234-005] }
+        - { requirement_id: REQ-234-004, scenario_ids: [SCN-234-006] }
+        - { requirement_id: REQ-234-005, scenario_ids: [SCN-234-001] }
+        - { requirement_id: REQ-234-006, scenario_ids: [SCN-234-001, SCN-234-002, SCN-234-006, SCN-234-007] }
+        - { requirement_id: REQ-234-007, scenario_ids: [SCN-234-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-234-001, invariant_ids: [INV-234-001, INV-234-004] }
+        - { scenario_id: SCN-234-002, invariant_ids: [INV-234-005] }
+        - { scenario_id: SCN-234-003, invariant_ids: [INV-234-005] }
+        - { scenario_id: SCN-234-004, invariant_ids: [INV-234-002, INV-234-003] }
+        - { scenario_id: SCN-234-005, invariant_ids: [INV-234-002] }
+        - { scenario_id: SCN-234-006, invariant_ids: [INV-234-004] }
+        - { scenario_id: SCN-234-007, invariant_ids: [INV-234-001] }
+        - { scenario_id: SCN-234-008, invariant_ids: [INV-234-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-234-001, test_expectation_ids: [TEXP-234-002, TEXP-234-003] }
+        - { scenario_id: SCN-234-002, test_expectation_ids: [TEXP-234-001, TEXP-234-003] }
+        - { scenario_id: SCN-234-003, test_expectation_ids: [TEXP-234-002, TEXP-234-003] }
+        - { scenario_id: SCN-234-004, test_expectation_ids: [TEXP-234-001, TEXP-234-002] }
+        - { scenario_id: SCN-234-005, test_expectation_ids: [TEXP-234-001, TEXP-234-003] }
+        - { scenario_id: SCN-234-006, test_expectation_ids: [TEXP-234-003] }
+        - { scenario_id: SCN-234-007, test_expectation_ids: [TEXP-234-002] }
+        - { scenario_id: SCN-234-008, test_expectation_ids: [TEXP-234-004] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "08d89fbc2a3f23c48b16c6ec1ab8fecc559d6fe3"
+    head_commit: "1eb46a7295417a84fe5051786db03667c09ce00b"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add route-level authorization and DOM coverage for the full workspace state matrix."
+    evidence:
+        - "Compared approved REN-234 contract against the origin/master merge-base diff through head 1eb46a7295417a84fe5051786db03667c09ce00b."
+        - "Focused REN-234 resolver/form tests pass; governance validation passes."
+    governance_reentry_required: false

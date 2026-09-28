@@ -130,7 +130,9 @@ export function CategoryManageForm({ category, setIsOpen }: PageProps) {
                     name="commissionRate"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Commission Rate</FormLabel>
+                            <FormLabel>
+                                Legacy category rate (not used for payouts)
+                            </FormLabel>
 
                             <FormControl>
                                 <PriceInput
@@ -138,9 +140,7 @@ export function CategoryManageForm({ category, setIsOpen }: PageProps) {
                                     placeholder="Enter discount value"
                                     currency="%"
                                     value={field.value}
-                                    disabled={
-                                        isCategoryCreating || isCategoryUpdating
-                                    }
+                                    disabled
                                     onChange={(e) => {
                                         const value = parseInt(e.target.value);
                                         const limitedValue =
@@ -157,6 +157,10 @@ export function CategoryManageForm({ category, setIsOpen }: PageProps) {
                             </FormControl>
 
                             <FormMessage />
+                            <p className="text-xs text-muted-foreground">
+                                Commission percentages are managed from Finance
+                                rules and are not maintained on categories.
+                            </p>
                         </FormItem>
                     )}
                 />

@@ -46,6 +46,12 @@ export const orderSchema = z.object({
             invalid_type_error: "Receipt ID must be a string",
         })
         .min(1, "Receipt ID is invalid"),
+    invoiceNumber: z.string().trim().min(1).nullable().optional(),
+    invoiceIssuedAt: z
+        .union([z.string(), z.date()])
+        .transform((value) => new Date(value))
+        .nullable()
+        .optional(),
     paymentMethod: z
         .string({
             required_error: "Payment Method is required",

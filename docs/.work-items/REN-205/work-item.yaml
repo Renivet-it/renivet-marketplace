@@ -1,0 +1,176 @@
+schema_version: "1.0"
+task:
+    id: REN-205
+    title: "[FCCP][P0] Suspend the Unauthorized 5% Holdback Deduction (BIZ-15)"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-205/fccpp0-suspend-the-unauthorized-5percent-holdback-deduction-biz-15
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-205-fccp-p0-suspend-the-unauthorized-5-holdback-deduction-biz-15
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Changes financial deductions used in brand payout calculations."
+        - "Incorrect re-enablement could deduct an unauthorized reserve."
+        - "The behavior is adjacent to payout statement generation and execution safety."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-205 BIZ-15 decision and acceptance criteria
+        - payout holdback calculation and release paths
+        - commission-rule and brand payout configuration schemas
+        - payout cycle and line-item persistence
+        - brand payout statement rendering
+        - existing finance calculation tests
+    excluded_areas:
+        - production configuration mutation or normalization
+        - commission, TDS/TCS, returns, and carrier-claim deductions
+        - payout execution, approval, or cycle unblocking
+        - commercial/legal decision about whether holdback is justified
+        - migrations and schema deletion
+    dependencies: [DEP-205-001, DEP-205-002, DEP-205-003, DEP-205-004]
+    integrations: [INT-205-001, INT-205-002]
+    security_boundaries: [SEC-205-001]
+    state_transitions: [holdback_suspended, holdback_enabled_test_only, cycle_recomputed, cycle_state_unchanged]
+    related_tests: [TEXP-205-001, TEXP-205-002, TEXP-205-003, TEXP-205-004, TEXP-205-005, TEXP-205-006]
+    uncertainties:
+        - "The current production brand configuration must be inspected and reported in controlled validation; it must not be changed by REN-205."
+requirements:
+    - { id: REQ-205-001, description: "No real payout cycle may deduct a holdback while BIZ-15 suspension is active, regardless of configured or missing brand value.", type: safety }
+    - { id: REQ-205-002, description: "Remove hardcoded 500 bps/default holdback fallback from the active suspended calculation path.", type: explicit }
+    - { id: REQ-205-003, description: "Preserve holdback schema, capability, enabled calculation branch, release logic, and historical records for future explicit re-authorization.", type: compatibility }
+    - { id: REQ-205-004, description: "Expose the BIZ-15 suspension in bounded cycle metadata and do not render a new holdback line when none was taken.", type: observability }
+    - { id: REQ-205-005, description: "When no holdback was taken, holdback release returns zero without error or positive adjustment.", type: safety }
+    - { id: REQ-205-006, description: "Do not change any other deduction, production configuration, order/payment data, payout approval, or payout execution behavior.", type: compatibility }
+    - { id: REQ-205-007, description: "Provide reproducible unit, integration, regression, statement, and controlled configuration-validation evidence.", type: explicit }
+scenarios:
+    - { id: SCN-205-001, description: "A brand with no holdback configuration produces zero holdback under BIZ-15 suspension.", requirement_ids: [REQ-205-001, REQ-205-002] }
+    - { id: SCN-205-002, description: "A brand with a configured holdback value still produces zero holdback while BIZ-15 suspension is active.", requirement_ids: [REQ-205-001] }
+    - { id: SCN-205-003, description: "The deliberately enabled calculation branch computes the configured holdback correctly in an isolated test without enabling real cycles.", requirement_ids: [REQ-205-003] }
+    - { id: SCN-205-004, description: "Holdback release with no prior holdback line returns zero and does not create a positive adjustment.", requirement_ids: [REQ-205-003, REQ-205-005] }
+    - { id: SCN-205-005, description: "A suspended cycle exposes BIZ-15 metadata and does not create a new holdback line in its statement.", requirement_ids: [REQ-205-004] }
+    - { id: SCN-205-006, description: "Existing historical holdback lines remain representable and are not deleted or rewritten by the suspension.", requirement_ids: [REQ-205-003, REQ-205-006] }
+    - { id: SCN-205-007, description: "Commission, returns, carrier claims, TDS/TCS, net payable arithmetic, and cycle state remain unchanged except for removal of active holdback deduction.", requirement_ids: [REQ-205-006, REQ-205-007] }
+    - { id: SCN-205-008, description: "Controlled inspection reports current holdback configuration without writing or normalizing production data.", requirement_ids: [REQ-205-006, REQ-205-007] }
+invariants:
+    - { id: INV-205-001, description: "While BIZ-15 is suspended, holdback percentage applied to a real cycle is always zero." }
+    - { id: INV-205-002, description: "No null/missing/configured value can enable holdback during suspension." }
+    - { id: INV-205-003, description: "Holdback capability and historical representation remain available for explicit future re-authorization." }
+    - { id: INV-205-004, description: "A cycle without a holdback deduction cannot produce a holdback release adjustment." }
+    - { id: INV-205-005, description: "Holdback suspension does not mutate unrelated deductions, production data, or payout execution state." }
+flows:
+    - { id: FLOW-205-001, description: "Payout calculation -> BIZ-15 suspension gate -> zero holdback -> BIZ-15 metadata -> no new holdback statement line.", state_transitions: [holdback_suspended, cycle_recomputed] }
+    - { id: FLOW-205-002, description: "Future explicitly enabled test path -> configured holdback -> existing holdback arithmetic and release capability.", state_transitions: [holdback_enabled_test_only] }
+    - { id: FLOW-205-003, description: "Cycle recalculation -> unchanged unrelated deductions and approval/execution state.", state_transitions: [cycle_state_unchanged] }
+dependencies:
+    - { id: DEP-205-001, name: src/lib/finance/payouts.ts, purpose: Holdback calculation and release, description: "Current path applies brand value or a hardcoded 500 bps fallback and emits holdback lines.", status: resolved }
+    - { id: DEP-205-002, name: commission_rules.holdback_percent_bps, purpose: Future rule-level holdback capability, description: "Schema field remains intact and is not deleted or repurposed.", status: resolved }
+    - { id: DEP-205-003, name: brand_payout_config.holdback_percent_bps, purpose: Future brand-level configuration, description: "Configured values are inspected but cannot override BIZ-15 suspension.", status: resolved }
+    - { id: DEP-205-004, name: brand payout statement template, purpose: Statement visibility, description: "A newly suspended calculation must not render a holdback line that was not taken.", status: resolved }
+integrations:
+    - { id: INT-205-001, system: payout-cycle calculation, purpose: Apply BIZ-15 suspension without changing cycle execution, failure_mode: "Unauthorized holdback deduction or accidental cycle transition", retry_idempotency: "Repeated calculation preserves zero holdback and the same BIZ-15 metadata." }
+    - { id: INT-205-002, system: payout statement rendering, purpose: Reflect actual holdback lines and suspension state, failure_mode: "Statement misrepresents a deduction", retry_idempotency: "Rendering is derived from persisted calculation output without mutation." }
+personas:
+    - { id: PER-205-001, role: finance_operator, applicability: Reviews suspended calculations and configuration evidence. }
+    - { id: PER-205-002, role: brand_payee, applicability: Receives a payout statement without an unauthorized holdback deduction. }
+security_boundaries:
+    - { id: SEC-205-001, description: "Configuration inspection and suspension metadata must not expose bank credentials, customer identity, or raw production payloads; validation is read-only." }
+business_rules:
+    - { id: BR-205-001, description: "BIZ-15 suspends the 5% holdback for the first real payout pending documentary authorization." }
+    - { id: BR-205-002, description: "Suspension is not deletion; holdback code, schema, release capability, and history remain available." }
+    - { id: BR-205-003, description: "No config value, null fallback, or default may re-enable holdback while BIZ-15 is active." }
+    - { id: BR-205-004, description: "REN-205 does not alter commission, TDS/TCS, returns, carrier claims, order/payment data, payout execution, or approval." }
+decisions:
+    - { id: DEC-205-001, question: "Should BIZ-15 suspend holdback rather than delete the capability?", class: AUTO_DECIDE, status: resolved, recommendation: "Use an explicit off gate and preserve enabled arithmetic/release logic and history.", basis: "The Linear decision explicitly says suspended, not deleted, and requires future re-enablement after documentary authorization.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-205-002, question: "Can a configured value override BIZ-15 suspension?", class: AUTO_DECIDE, status: resolved, recommendation: "No; suspension dominates all configuration values until a new recorded decision.", basis: "The approved BIZ-15 constraint says no 5% or other holdback for any real cycle while suspended.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-205-001, category: unit, classification: REQUIRED, reason: "Verify null/missing and configured holdback values both produce zero under suspension.", scenarios: [SCN-205-001, SCN-205-002] }
+    - { id: TEXP-205-002, category: unit, classification: REQUIRED, reason: "Verify the explicitly enabled branch still calculates holdback correctly in isolation.", scenarios: [SCN-205-003] }
+    - { id: TEXP-205-003, category: unit, classification: REQUIRED, reason: "Verify no prior holdback line yields zero release without error or positive adjustment.", scenarios: [SCN-205-004] }
+    - { id: TEXP-205-004, category: integration, classification: REQUIRED, reason: "Recalculate an equivalent synthetic/non-production payout-cycle fixture (management decision, 2026-09-20 — the real 2026-06-H2 cycle must not be recalculated) and assert no new holdback line appears while BIZ-15 metadata is present. 2026-06-H2 was the originally-referenced fixture in this ticket's design; it remains cited here only as historical context, not as the current validation target.", scenarios: [SCN-205-005, SCN-205-007] }
+    - { id: TEXP-205-005, category: regression, classification: REQUIRED, reason: "Verify historical holdback lines remain representable and unrelated deductions/state are unchanged.", scenarios: [SCN-205-006, SCN-205-007] }
+    - { id: TEXP-205-006, category: ui_ux, classification: REQUIRED, reason: "Verify statements do not show a holdback line when no holdback was taken and expose the suspension context where appropriate.", scenarios: [SCN-205-005] }
+    - { id: TEXP-205-007, category: security, classification: REQUIRED, reason: "Verify controlled configuration inspection is read-only and bounded.", scenarios: [SCN-205-008] }
+    - { id: TEXP-205-008, category: business_uat, classification: REQUIRED, reason: "Finance validates current configuration evidence and confirms BIZ-15 suspension without executing or approving a cycle.", scenarios: [SCN-205-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-205-001, severity: MAJOR, status: open, summary: "Suspension must dominate configured values and retain an enabled test branch." }
+        - { id: CRIT-205-002, severity: MAJOR, status: open, summary: "Historical holdback lines must remain intact while new suspended cycles create none." }
+        - { id: CRIT-205-003, severity: MINOR, status: open, summary: "BIZ-15 authority needs a stable bounded operator marker." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-205-001, scenario_ids: [SCN-205-001, SCN-205-002, SCN-205-005] }
+        - { requirement_id: REQ-205-002, scenario_ids: [SCN-205-001, SCN-205-002] }
+        - { requirement_id: REQ-205-003, scenario_ids: [SCN-205-003, SCN-205-004, SCN-205-006] }
+        - { requirement_id: REQ-205-004, scenario_ids: [SCN-205-005] }
+        - { requirement_id: REQ-205-005, scenario_ids: [SCN-205-004] }
+        - { requirement_id: REQ-205-006, scenario_ids: [SCN-205-006, SCN-205-007, SCN-205-008] }
+        - { requirement_id: REQ-205-007, scenario_ids: [SCN-205-007, SCN-205-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-205-001, invariant_ids: [INV-205-001, INV-205-002] }
+        - { scenario_id: SCN-205-002, invariant_ids: [INV-205-001, INV-205-002] }
+        - { scenario_id: SCN-205-003, invariant_ids: [INV-205-003] }
+        - { scenario_id: SCN-205-004, invariant_ids: [INV-205-003, INV-205-004] }
+        - { scenario_id: SCN-205-005, invariant_ids: [INV-205-001, INV-205-005] }
+        - { scenario_id: SCN-205-006, invariant_ids: [INV-205-003, INV-205-005] }
+        - { scenario_id: SCN-205-007, invariant_ids: [INV-205-005] }
+        - { scenario_id: SCN-205-008, invariant_ids: [INV-205-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-205-001, test_expectation_ids: [TEXP-205-001] }
+        - { scenario_id: SCN-205-002, test_expectation_ids: [TEXP-205-001] }
+        - { scenario_id: SCN-205-003, test_expectation_ids: [TEXP-205-002] }
+        - { scenario_id: SCN-205-004, test_expectation_ids: [TEXP-205-003] }
+        - { scenario_id: SCN-205-005, test_expectation_ids: [TEXP-205-004, TEXP-205-006] }
+        - { scenario_id: SCN-205-006, test_expectation_ids: [TEXP-205-005] }
+        - { scenario_id: SCN-205-007, test_expectation_ids: [TEXP-205-004, TEXP-205-005] }
+        - { scenario_id: SCN-205-008, test_expectation_ids: [TEXP-205-007, TEXP-205-008] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "16bde07a7445326100ad0bc5eb65766bcb620a24"
+    head_commit: "43c3ba9ca2825bf85f5fbaf940bb08183f285c1e"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-205-001: Run controlled read-only inspection of current production holdback configuration and record the result before release validation."
+        - "REV-205-002 (superseded 2026-09-20 by management decision — see note below): Run the approved synthetic/non-production integration fixture (not the real 2026-06-H2 cycle) and statement regression in a controlled environment. Originally worded as \"Run the approved 2026-06-H2 integration fixture...\"; the real 2026-06-H2 cycle must not be recalculated for this validation. 2026-06-H2 is preserved here only as historical context for why that cycle was originally chosen as the reference fixture."
+    evidence:
+        - "Compared the approved REN-205 contract with origin/master..43c3ba9ca2825bf85f5fbaf940bb08183f285c1e."
+        - "src/lib/finance/payout-holdback.ts provides the BIZ-15 suspension gate, bounded authority metadata, and an isolated enabled arithmetic branch."
+        - "src/lib/finance/payouts.ts forces active cycle holdback to zero, suppresses new holdback lines, and prevents release when no current holdback was taken."
+        - "src/lib/finance/payout-holdback.test.ts covers missing/configured suspension and deliberate enabled arithmetic."
+        - "No schema, migration, order/payment, approval, execution, or production configuration changes were introduced."
+    governance_reentry_required: false

@@ -722,8 +722,7 @@ export function OrdersTable({
             (sum, order) =>
                 sum +
                 +convertPaiseToRupees(
-                    ((order.items[0]?.product?.category?.commissionRate || 0) /
-                        100) *
+                    ((order.items[0]?.commissionPercentBps ?? 0) / 10_000) *
                         order.totalAmount
                 ),
             0
@@ -933,7 +932,7 @@ export function OrdersTable({
         // --- Items Table ---
         const tableData = dataToUse.map((row, i) => {
             let commissionRate =
-                row.items[0]?.product?.category?.commissionRate || 0;
+                (row.items[0]?.commissionPercentBps ?? 0) / 100;
             // Apply 5% adjustment if flag is set
             if (applyShipmentFlag) {
                 commissionRate += 5; // Increase commission by 5%

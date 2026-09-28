@@ -21,6 +21,11 @@ const sections = [
             "Cycle calculation, brand review cards, overrides, and execution tracking.",
     },
     {
+        title: "Commission Rules",
+        href: "/dashboard/general/finance/commission-rules",
+        description: "Review, preview, deactivate, and audit approved commission rules.",
+    },
+    {
         title: "HSN Master",
         href: "/dashboard/general/finance/hsn-master",
         description:

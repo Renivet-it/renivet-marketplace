@@ -1,0 +1,45 @@
+$ next dev --turbo --port "3000"
+❌ Invalid environment variables: {
+  CLERK_SECRET_KEY: [ 'CLERK_SECRET is required' ],
+  SVIX_SECRET: [ 'SVIX_SECRET is required' ],
+  DATABASE_URL: [ 'Required' ],
+  REDIS_URL: [ 'REDIS_URL is required' ],
+  UPLOADTHING_TOKEN: [ 'UPLOADTHING_TOKEN is required' ],
+  JWT_SECRET_KEY: [ 'JWT_SECRET_KEY is required' ],
+  GOOGLE_ANALYTICS_ID: [ 'GOOGLE_ANALYTICS_ID is required' ],
+  FACEBOOK_CAPI_ACCESS_TOKEN: [ 'FACEBOOK_CAPI_ACCESS_TOKEN is required' ],
+  RESEND_API_KEY: [ 'RESEND_API_KEY is required' ],
+  RAZOR_PAY_KEY_ID: [ 'RAZOR_PAY_KEY_ID is required' ],
+  RAZOR_PAY_SECRET_KEY: [ 'RAZOR_PAY_SECRET_KEY is required' ],
+  RAZOR_PAY_WEBHOOK_SECRET: [ 'RAZOR_PAY_WEBHOOK_SECRET is required' ],
+  RESEND_EMAIL_FROM: [ 'RESEND_EMAIL_FROM is required' ],
+  RENIVET_EMAIL_1: [ 'RENIVET_EMAIL_1 is required' ],
+  RENIVET_EMAIL_2: [ 'RENIVET_EMAIL_2 is required' ],
+  SHIPROCKET_LOGIN_EMAIL: [ 'SHIPROCKET_LOGIN_EMAIL is required' ],
+  SHIPROCKET_LOGIN_PASSWORD: [ 'SHIPROCKET_LOGIN_PASSWORD is required' ],
+  SHIPROCKET_WEBHOOK_API_KEY: [ 'SHIPROCKET_WEBHOOK_API_KEY is required' ],
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: [ 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required' ],
+  NEXT_PUBLIC_RAZOR_PAY_KEY_ID: [ 'NEXT_PUBLIC_RAZOR_PAY_KEY_ID is required' ],
+  NEXT_PUBLIC_FACEBOOK_APP_ID: [ 'NEXT_PUBLIC_FACEBOOK_APP_ID is required' ],
+  NEXT_PUBLIC_POSTHOG_KEY: [ 'NEXT_PUBLIC_POSTHOG_KEY is required' ],
+  NEXT_PUBLIC_POSTHOG_HOST: [ 'NEXT_PUBLIC_POSTHOG_HOST is required' ]
+}
+ ⨯ Failed to load next.config.ts, see more info here https://nextjs.org/docs/messages/next-config-error
+C:\Personal Projects\renivet-marketplace\node_modules\@t3-oss\env-core\dist\index.js:109
+        throw new Error("Invalid environment variables");
+              ^
+
+Error: Invalid environment variables
+    at onValidationError (C:\Personal Projects\renivet-marketplace\node_modules\@t3-oss\env-core\dist\index.js:109:15)
+    at createEnv (C:\Personal Projects\renivet-marketplace\node_modules\@t3-oss\env-core\dist\index.js:116:16)
+    at createEnv (C:\Personal Projects\renivet-marketplace\node_modules\@t3-oss\env-nextjs\dist\index.js:74:35)
+    at Object.<anonymous> (C:\Personal Projects\renivet-marketplace\.worktrees\ren-203-spec\env.ts:14:36)
+    at Module._compile (node:internal/modules/cjs/loader:1376:14)
+    at mod._compile (C:\Personal Projects\renivet-marketplace\node_modules\next\dist\build\next-config-ts\require-hook.js:67:33)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)
+    at require.extensions.<computed> (C:\Personal Projects\renivet-marketplace\node_modules\next\dist\build\next-config-ts\require-hook.js:69:20)
+    at Module.load (node:internal/modules/cjs/loader:1207:32)
+    at Module._load (node:internal/modules/cjs/loader:1023:12)
+
+Node.js v20.10.0
+error: script "dev" exited with code 1

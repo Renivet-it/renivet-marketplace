@@ -1,0 +1,153 @@
+schema_version: "1.0"
+task:
+    id: REN-212
+    title: "[FCCP][P2] Define COD & Split-Payment Payment-State Reconciliation — Discovery for BIZ-8"
+    source: linear
+    branch: feat/ren-203-spec
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-212/fccpp2-define-cod-and-split-payment-payment-state-reconciliation
+        priority: Medium
+        labels: [Doc]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons: ["COD/split reconciliation affects payment confirmation and payout eligibility.", "Carrier credentials, shared payment IDs, and duplicate table families create financial-control risk.", "The discovery is strictly read-only."]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue and relations, COD/remittance service, carrier credential gates, COD cron routes, payout eligibility, Razorpay split-order creation, order payment schema, legacy COD schema, newer finance COD schema, finance query layer, migrations, audit-artifact availability]
+    excluded_areas: [production data writes, carrier sync execution, credential values/secrets, payment/remittance/refund/payout mutation, BIZ-11 policy decision, payout-cycle execution]
+    dependencies: [DEP-212-001, DEP-212-002, DEP-212-003]
+    integrations: [INT-212-001, INT-212-002, INT-212-003]
+    security_boundaries: [SEC-212-001, SEC-212-002, SEC-212-003]
+    state_transitions: [delivered_pending_reconciliation, evidence_unavailable, provider_unavailable, confirmed_paid, discrepancy_review, aged_escalated, permanently_held, authorized_resolution]
+    related_tests: [TEXP-212-001, TEXP-212-002, TEXP-212-003, TEXP-212-004]
+    uncertainties: ["Production carrier credential state and table usage require read-only authorized evidence.", "Both COD table families are represented in schema/code.", "Permanent-hold duration and escalation owner require finance/operations confirmation.", "Referenced audit documents are absent from this checkout."]
+requirements:
+    - {id: REQ-212-001, description: "Document the end-to-end COD money path and current payout-eligibility behavior.", type: discovery}
+    - {id: REQ-212-002, description: "Report carrier configuration states and distinguish missing configuration from confirmed zero remittance.", type: safety}
+    - {id: REQ-212-003, description: "Document shared Razorpay payment IDs and evidence needed for order-level split-payment confirmation.", type: safety}
+    - {id: REQ-212-004, description: "Identify both COD table families and evidence needed before choosing a source of truth.", type: data_integrity}
+    - {id: REQ-212-005, description: "Propose a BIZ-8 rule with pending, aging/escalation, and permanent-hold outcomes.", type: business_rule}
+    - {id: REQ-212-006, description: "Document that unresolved COD/split payments remain held and are not payout eligible.", type: compatibility}
+    - {id: REQ-212-007, description: "Keep REN-226 refund authority and BIZ-11 policy outside this discovery.", type: boundary}
+    - {id: REQ-212-008, description: "Produce documentation only with no application, schema, configuration, production-data, or test changes.", type: safety}
+    - {id: REQ-212-009, description: "Define a redacted evidence artifact that distinguishes unavailable, provider-failed, and checked-zero states.", type: observability}
+    - {id: REQ-212-010, description: "Define null/state preservation and stable identity requirements for repeated provider rows and payment groups.", type: data_integrity}
+scenarios:
+    - {id: SCN-212-001, description: "Delivered COD without confirmed remittance remains pending and payout-held.", requirement_ids: [REQ-212-001, REQ-212-005, REQ-212-006]}
+    - {id: SCN-212-002, description: "Missing carrier configuration is unavailable evidence, never zero remittance or paid.", requirement_ids: [REQ-212-002, REQ-212-005]}
+    - {id: SCN-212-003, description: "Carrier provider failure is distinguished from a valid zero-remittance response.", requirement_ids: [REQ-212-002, REQ-212-005]}
+    - {id: SCN-212-004, description: "One gateway payment shared by multiple orders requires allocation evidence.", requirement_ids: [REQ-212-003, REQ-212-005]}
+    - {id: SCN-212-005, description: "Both COD table families are reported without selecting or migrating one without evidence.", requirement_ids: [REQ-212-004, REQ-212-008]}
+    - {id: SCN-212-006, description: "Aging unresolved cases escalate and remain permanently held until authorized resolution.", requirement_ids: [REQ-212-005, REQ-212-006]}
+    - {id: SCN-212-007, description: "Refund and BIZ-11 questions remain delegated to their owning work items.", requirement_ids: [REQ-212-007]}
+    - {id: SCN-212-008, description: "A report records not-checked, provider-failed, checked-zero, and confirmed-remittance states with redacted evidence.", requirement_ids: [REQ-212-002, REQ-212-009, REQ-212-010]}
+invariants:
+    - {id: INV-212-001, description: "Delivered status alone never proves COD payment confirmation."}
+    - {id: INV-212-002, description: "Missing, failed, and confirmed carrier evidence remain distinct states."}
+    - {id: INV-212-003, description: "A shared gateway payment ID is not order-level settlement proof by itself."}
+    - {id: INV-212-004, description: "Unconfirmed COD and split-payment orders remain payout-held."}
+    - {id: INV-212-005, description: "The discovery does not mutate financial, credential, or production state."}
+    - {id: INV-212-006, description: "REN-226 refund authority and BIZ-11 boundaries remain unchanged."}
+    - {id: INV-212-007, description: "Missing provider evidence stays null/unavailable and legacy default-zero values are never treated as confirmed remittance."}
+flows:
+    - {id: FLOW-212-001, description: "Delivery -> carrier evidence -> reconciliation classification -> payout hold or later confirmation.", state_transitions: [delivered_pending_reconciliation, confirmed_paid, permanently_held]}
+    - {id: FLOW-212-002, description: "Credential/provider evidence -> unavailable classification -> operational review without mutation.", state_transitions: [evidence_unavailable, provider_unavailable, discrepancy_review]}
+    - {id: FLOW-212-003, description: "Shared payment ID -> payment group -> allocation evidence review -> held or confirmed outcome.", state_transitions: [delivered_pending_reconciliation, discrepancy_review, confirmed_paid]}
+    - {id: FLOW-212-004, description: "Read-only table-family usage report -> canonical-source decision deferred until evidence review.", state_transitions: [discrepancy_review, authorized_resolution]}
+    - {id: FLOW-212-005, description: "Authorized diagnostic -> redacted evidence artifact -> partial failure retry or checked-zero classification.", state_transitions: [evidence_unavailable, provider_unavailable, discrepancy_review]}
+dependencies:
+    - {id: DEP-212-001, name: REN-226, purpose: "Refund source of truth", description: "Refund reconciliation remains owned by REN-226.", status: resolved}
+    - {id: DEP-212-002, name: REN-204, purpose: "Payout eligibility", description: "Payout gating must consume the later approved reconciliation outcome.", status: resolved}
+    - {id: DEP-212-003, name: BIZ-11, purpose: "Credential policy", description: "Credential-state policy remains undecided; this ticket reports evidence only.", status: resolved}
+integrations:
+    - {id: INT-212-001, system: Delhivery, purpose: "COD remittance evidence", name: Delhivery remittance endpoint, contract: "Configured endpoint and token may return remittance rows; absent inputs currently produce an empty result.", failure_mode: "Missing configuration or provider failure cannot confirm payment."}
+    - {id: INT-212-002, system: Shiprocket, purpose: "COD remittance evidence", name: Shiprocket remittance endpoint, contract: "Configured endpoint and token may return remittance rows; absent inputs currently produce an empty result.", failure_mode: "Missing configuration or provider failure cannot confirm payment."}
+    - {id: INT-212-003, system: Razorpay, purpose: "Shared payment identity", name: Razorpay payment ID, contract: "One payment ID can be stored on multiple brand-split orders.", failure_mode: "Shared identity without allocation evidence leaves affected orders held."}
+personas:
+    - {id: PER-212-001, name: finance, role: finance administrator, applicability: "Reviews remittance evidence, exceptions, aging, and policy."}
+    - {id: PER-212-002, name: operations, role: operations operator, applicability: "Reviews carrier/configuration failures and escalated holds."}
+    - {id: PER-212-003, name: brand, role: brand payout recipient, applicability: "Receives payout only after approved reconciliation conditions."}
+security_boundaries:
+    - {id: SEC-212-001, description: "Do not expose carrier or gateway credentials in reports or logs."}
+    - {id: SEC-212-002, description: "Discovery reports are read-only and do not mutate financial or credential records."}
+    - {id: SEC-212-003, description: "Future diagnostics remain authenticated and do not trigger the write-capable sync path."}
+business_rules:
+    - {id: BR-212-001, description: "BIZ-8 requires delivered and confirmed paid; delivered alone is insufficient."}
+    - {id: BR-212-002, description: "Missing/failed evidence is not zero remittance and never implies paid."}
+    - {id: BR-212-003, description: "COD/split orders without final reconciliation remain payout-held."}
+    - {id: BR-212-004, description: "A shared gateway payment ID needs explicit allocation evidence for order confirmation."}
+    - {id: BR-212-005, description: "Refund truth remains owned by REN-226 and BIZ-11 remains undecided."}
+decisions:
+    - {id: DEC-212-001, question: "What is the permanent-hold duration and escalation owner?", class: HUMAN_CONFIRMATION, status: proposed, recommendation: "Keep unresolved COD/split orders held until finance/operations approves duration and owner.", confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-212-002, question: "How should missing carrier configuration be classified?", class: RECOMMEND_CONTINUE, status: proposed, recommendation: "evidence_unavailable, never zero remittance or paid.", confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-212-003, question: "How should shared payment IDs be handled?", class: RECOMMEND_CONTINUE, status: proposed, recommendation: "Treat as a payment group and require explicit allocation evidence.", confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-212-004, question: "Which COD table family is canonical?", class: HUMAN_CONFIRMATION, status: proposed, recommendation: "Run read-only production usage/overlap evidence before selecting or migrating a family.", confidence: medium, consequence: high, human_confirmation_required: true}
+    - {id: DEC-212-005, question: "What evidence is safe to expose in the diagnostic report?", class: RECOMMEND_CONTINUE, status: proposed, recommendation: "Use aggregate counts, timestamps, state classes, and stable non-secret correlation identifiers; redact tokens, raw payloads, full payment IDs, and unrestricted remittance references.", confidence: high, consequence: high, human_confirmation_required: true}
+test_expectations:
+    - {id: TEXP-212-001, category: exploratory, classification: REQUIRED, reason: "Document the COD money path, split path, and current payout gate.", scenarios: [SCN-212-001, SCN-212-004]}
+    - {id: TEXP-212-002, category: security, classification: REQUIRED, reason: "Report configuration evidence without secret disclosure or sync execution.", scenarios: [SCN-212-002, SCN-212-003]}
+    - {id: TEXP-212-003, category: exploratory, classification: REQUIRED, reason: "Identify both table families before canonical-source selection.", scenarios: [SCN-212-005]}
+    - {id: TEXP-212-004, category: business_uat, classification: REQUIRED, reason: "Finance/operations review aging, escalation, permanent-hold, and allocation policy.", scenarios: [SCN-212-006, SCN-212-007]}
+    - {id: TEXP-212-005, category: security, classification: REQUIRED, reason: "Diagnostic evidence must distinguish configuration/provider outcomes while redacting secrets and sensitive identifiers.", scenarios: [SCN-212-008]}
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - {id: CRIT-212-005, severity: BLOCKER, status: addressed, summary: "Allow read-only production/configuration evidence while retaining a no-write/no-sync boundary."}
+        - {id: CRIT-212-006, severity: MAJOR, status: addressed, summary: "Require separate unavailable/provider-failed/checked evidence and partial-carrier retry semantics."}
+        - {id: CRIT-212-007, severity: MAJOR, status: addressed, summary: "Add redacted diagnostic evidence requirements."}
+        - {id: CRIT-212-008, severity: MAJOR, status: addressed, summary: "Specify null preservation and prohibit interpreting legacy default zero as remittance proof."}
+        - {id: CRIT-212-009, severity: MAJOR, status: addressed, summary: "Require stable identity/deduplication evidence for provider rows and payment groups."}
+        - {id: CRIT-212-010, severity: MAJOR, status: addressed, summary: "Require compatibility evidence for both table-family consumers before migration."}
+        - {id: CRIT-212-011, severity: MAJOR, status: addressed, summary: "Define a redacted evidence artifact proving not-checked versus checked-zero."}
+        - {id: CRIT-212-012, severity: MAJOR, status: open, summary: "Finance decisions for permanent hold and canonical table family remain unresolved."}
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-212-001, DEC-212-004]
+    approved_by: independent-critic
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-212-001, scenario_ids: [SCN-212-001]}
+        - {requirement_id: REQ-212-002, scenario_ids: [SCN-212-002, SCN-212-003]}
+        - {requirement_id: REQ-212-003, scenario_ids: [SCN-212-004]}
+        - {requirement_id: REQ-212-004, scenario_ids: [SCN-212-005]}
+        - {requirement_id: REQ-212-005, scenario_ids: [SCN-212-001, SCN-212-002, SCN-212-003, SCN-212-004, SCN-212-006]}
+        - {requirement_id: REQ-212-006, scenario_ids: [SCN-212-001, SCN-212-006]}
+        - {requirement_id: REQ-212-007, scenario_ids: [SCN-212-007]}
+        - {requirement_id: REQ-212-008, scenario_ids: [SCN-212-005]}
+        - {requirement_id: REQ-212-009, scenario_ids: [SCN-212-008]}
+        - {requirement_id: REQ-212-010, scenario_ids: [SCN-212-005, SCN-212-008]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-212-001, invariant_ids: [INV-212-001, INV-212-004]}
+        - {scenario_id: SCN-212-002, invariant_ids: [INV-212-002, INV-212-005]}
+        - {scenario_id: SCN-212-003, invariant_ids: [INV-212-002, INV-212-005]}
+        - {scenario_id: SCN-212-004, invariant_ids: [INV-212-003, INV-212-004]}
+        - {scenario_id: SCN-212-005, invariant_ids: [INV-212-005]}
+        - {scenario_id: SCN-212-006, invariant_ids: [INV-212-004, INV-212-005]}
+        - {scenario_id: SCN-212-007, invariant_ids: [INV-212-006]}
+        - {scenario_id: SCN-212-008, invariant_ids: [INV-212-002, INV-212-005, INV-212-007]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-212-001, test_expectation_ids: [TEXP-212-001]}
+        - {scenario_id: SCN-212-002, test_expectation_ids: [TEXP-212-002]}
+        - {scenario_id: SCN-212-003, test_expectation_ids: [TEXP-212-002]}
+        - {scenario_id: SCN-212-004, test_expectation_ids: [TEXP-212-001]}
+        - {scenario_id: SCN-212-005, test_expectation_ids: [TEXP-212-003]}
+        - {scenario_id: SCN-212-006, test_expectation_ids: [TEXP-212-004]}
+        - {scenario_id: SCN-212-007, test_expectation_ids: [TEXP-212-004]}
+        - {scenario_id: SCN-212-008, test_expectation_ids: [TEXP-212-005]}

@@ -327,6 +327,44 @@ export const brandPayoutCycles = pgTable(
     })
 );
 
+export const payoutExecutionClearances = pgTable(
+    "payout_execution_clearances",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        cycleId: uuid("cycle_id")
+            .notNull()
+            .references(() => brandPayoutCycles.id, { onDelete: "cascade" }),
+        clearedBy: text("cleared_by")
+            .notNull()
+            .references(() => users.id, { onDelete: "restrict" }),
+        evidenceReference: text("evidence_reference").notNull(),
+        transactionValidationReference: text(
+            "transaction_validation_reference"
+        ).notNull(),
+        transactionValidatedAt: timestamp("transaction_validated_at").notNull(),
+        clearedAt: timestamp("cleared_at").notNull().defaultNow(),
+        expiresAt: timestamp("expires_at"),
+        revokedAt: timestamp("revoked_at"),
+        revokedBy: text("revoked_by").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        revocationReason: text("revocation_reason"),
+        metadata: jsonb("metadata")
+            .$type<Record<string, unknown>>()
+            .notNull()
+            .default({}),
+        ...timestamps,
+    },
+    (table) => ({
+        payoutExecutionClearancesCycleIdx: index(
+            "payout_execution_clearances_cycle_idx"
+        ).on(table.cycleId, table.createdAt),
+        payoutExecutionClearancesActiveIdx: index(
+            "payout_execution_clearances_active_idx"
+        ).on(table.cycleId, table.revokedAt, table.expiresAt),
+    })
+);
+
 export const brandPayoutLineItems = pgTable(
     "brand_payout_line_items",
     {
@@ -860,3 +898,23 @@ export const refundWorkflowRelations = relations(refunds, ({ one }) => ({
         references: [brandPayoutCycles.id],
     }),
 }));
+
+export const payoutExecutionClearanceRelations = relations(
+    payoutExecutionClearances,
+    ({ one }) => ({
+        cycle: one(brandPayoutCycles, {
+            fields: [payoutExecutionClearances.cycleId],
+            references: [brandPayoutCycles.id],
+        }),
+        clearedByUser: one(users, {
+            fields: [payoutExecutionClearances.clearedBy],
+            references: [users.id],
+            relationName: "payoutClearanceClearedBy",
+        }),
+        revokedByUser: one(users, {
+            fields: [payoutExecutionClearances.revokedBy],
+            references: [users.id],
+            relationName: "payoutClearanceRevokedBy",
+        }),
+    })
+);

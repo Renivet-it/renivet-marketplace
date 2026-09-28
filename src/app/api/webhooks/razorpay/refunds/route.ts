@@ -38,21 +38,21 @@ export async function POST(req: NextRequest) {
         switch (payload.event) {
             case "refund.processed":
                 {
-                    await Promise.all([
-                        orderQueries.updateOrderStatus(existingOrder.id, {
-                            paymentId: payload.payload.payment.entity.id,
-                            paymentMethod:
-                                payload.payload.payment.entity.method,
-                            paymentStatus: "refunded",
-                            status: "cancelled",
-                            cancellationReasonCode: "RTN_GOODWILL",
-                            manualOverrideReason: "Refund processed by Razorpay webhook",
-                        }),
-                        refundQueries.updateRefundStatus(
-                            payload.payload.refund.entity.id,
-                            payload.payload.refund.entity.status
-                        ),
-                    ]);
+                    const recorded = await refundQueries.recordRefundEvent({
+                        refundId: payload.payload.refund.entity.id,
+                        gatewayRefundId: payload.payload.refund.entity.id,
+                        userId: existingOrder.userId,
+                        orderId: existingOrder.id,
+                        paymentId: payload.payload.payment.entity.id,
+                        amount: payload.payload.refund.entity.amount,
+                        status: "processed",
+                        paymentMethod: payload.payload.payment.entity.method,
+                        orderStatus: "cancelled",
+                        cancellationReasonCode: "RTN_GOODWILL",
+                        manualOverrideReason:
+                            "Refund processed by Razorpay webhook",
+                    });
+                    if (!recorded.statusChanged) break;
                     await writeFinanceAuditEvent({
                         actorId: "razorpay-webhook",
                         actionType: "refund_processed",
@@ -175,21 +175,21 @@ export async function POST(req: NextRequest) {
 
             case "refund.failed":
                 {
-                    await Promise.all([
-                        orderQueries.updateOrderStatus(existingOrder.id, {
-                            paymentId: payload.payload.payment.entity.id,
-                            paymentMethod:
-                                payload.payload.payment.entity.method,
-                            paymentStatus: "refund_failed",
-                            status: "cancelled",
-                            cancellationReasonCode: "RTN_GOODWILL",
-                            manualOverrideReason: "Refund failed by Razorpay webhook",
-                        }),
-                        refundQueries.updateRefundStatus(
-                            payload.payload.refund.entity.id,
-                            payload.payload.refund.entity.status
-                        ),
-                    ]);
+                    const recorded = await refundQueries.recordRefundEvent({
+                        refundId: payload.payload.refund.entity.id,
+                        gatewayRefundId: payload.payload.refund.entity.id,
+                        userId: existingOrder.userId,
+                        orderId: existingOrder.id,
+                        paymentId: payload.payload.payment.entity.id,
+                        amount: payload.payload.refund.entity.amount,
+                        status: "failed",
+                        paymentMethod: payload.payload.payment.entity.method,
+                        orderStatus: "cancelled",
+                        cancellationReasonCode: "RTN_GOODWILL",
+                        manualOverrideReason:
+                            "Refund failed by Razorpay webhook",
+                    });
+                    if (!recorded.statusChanged) break;
                     await writeFinanceAuditEvent({
                         actorId: "razorpay-webhook",
                         actionType: "refund_failed",

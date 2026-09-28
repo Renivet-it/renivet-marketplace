@@ -1,0 +1,181 @@
+schema_version: "1.0"
+task:
+    id: REN-203
+    title: "[FCCP][P0] Remediate Commission Calculation & Validate Payout Amounts"
+    source: linear
+    branch: feat/ren-203-spec
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-203
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-203-fccpp0-remediate-commission-calculation-validate-payout
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Changes commission amounts used in brand payout calculations."
+        - "Incorrect units or fallback behavior can create financial overpayment or underpayment."
+        - "The behavior is adjacent to payout-cycle approval and execution safety gates."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-203 and relations
+        - payout commission resolution and arithmetic
+        - finance-compliance schema and queries
+        - order and order-item discount fields
+        - existing financial calculation tests
+        - payout-cycle state handling
+    excluded_areas:
+        - production data mutation or rule population
+        - payout execution, approval, or cycle unblocking
+        - holdback policy owned by REN-205
+        - payout eligibility owned by REN-204
+        - TDS/TCS and BIZ-16 delivery-inclusion decision
+        - absent RUNS decision-pack files not available in this checkout
+    dependencies: [DEP-203-001, DEP-203-002, DEP-203-003, DEP-203-004]
+    integrations: [INT-203-001, INT-203-002]
+    security_boundaries: [SEC-203-001]
+    state_transitions: [rule_unconfigured, rule_resolved, commission_recomputed, cycle_calculated, cycle_approval_unchanged]
+    related_tests: [TEXP-203-001, TEXP-203-002, TEXP-203-003, TEXP-203-004, TEXP-203-005, TEXP-203-006, TEXP-203-007]
+    uncertainties:
+        - "The referenced BIZ-13/BIZ-3 decision pack is absent locally."
+        - "Terra Luna production source-of-truth is constrained by REN-209 ownership and is not approved in this spec."
+        - "Current schema cannot distinguish seller-funded from platform-funded discounts."
+requirements:
+    - { id: REQ-203-001, description: "Use one explicit basis-point unit convention from rule resolution through commission arithmetic; 10000 bps equals 100%.", type: explicit }
+    - { id: REQ-203-002, description: "Remove the mixed-unit category-rate/default fallback and never silently substitute an unapproved commission number.", type: explicit }
+    - { id: REQ-203-003, description: "Resolve effective-dated, scoped, active rules deterministically against the delivered date/timestamp.", type: explicit }
+    - { id: REQ-203-004, description: "Support the approved Terra Luna scope of 25% generally and 20% for Personal Care without applying those values to another brand.", type: explicit }
+    - { id: REQ-203-005, description: "Return an explicit unconfigured result for brands without an approved effective rate and prevent silent payable commission calculation.", type: safety }
+    - { id: REQ-203-006, description: "Preserve seller-attributable commission-base semantics and explicitly surface the absence of seller/platform discount attribution without inventing schema fields.", type: compatibility }
+    - { id: REQ-203-007, description: "Keep holdback, delivered-and-paid eligibility, payout-cycle transitions, historical line items, and production data unchanged.", type: compatibility }
+    - { id: REQ-203-008, description: "Provide independently reproducible unit, integration, regression, controlled-validation, and audit evidence for the corrected calculation.", type: explicit }
+scenarios:
+    - { id: SCN-203-001, description: "A clean Terra Luna item with an approved general rule computes exactly 25% using the canonical internal unit.", requirement_ids: [REQ-203-001, REQ-203-004] }
+    - { id: SCN-203-002, description: "A Terra Luna Personal Care item with an approved scoped rule computes exactly 20% and the general 25% rule does not win.", requirement_ids: [REQ-203-003, REQ-203-004] }
+    - { id: SCN-203-003, description: "A brand with no approved effective rule produces an explicit unconfigured result and no silent numeric fallback.", requirement_ids: [REQ-203-002, REQ-203-005] }
+    - { id: SCN-203-004, description: "Effective-from/effective-to boundaries and deterministic priority/specificity select the same rule for repeated recomputation at the delivered date.", requirement_ids: [REQ-203-003] }
+    - { id: SCN-203-005, description: "A discounted order does not treat an unclassified order-level discount as seller-funded or platform-funded; the schema gap is surfaced according to the approved policy.", requirement_ids: [REQ-203-006] }
+    - { id: SCN-203-006, description: "Recomputing the 2026-06-H2 ten-line-item fixture produces independently expected commission values and does not mutate historical line-item history.", requirement_ids: [REQ-203-001, REQ-203-007, REQ-203-008] }
+    - { id: SCN-203-007, description: "Commission calculation leaves eligibility, holdback, and payout-cycle approval/processing/completion transitions unchanged.", requirement_ids: [REQ-203-007] }
+    - { id: SCN-203-008, description: "An audit record identifies the applied rule/unit or unconfigured reason without exposing customer or payment-sensitive data.", requirement_ids: [REQ-203-005, REQ-203-008] }
+invariants:
+    - { id: INV-203-001, description: "Commission arithmetic receives only canonical integer basis points; no plain percentage and no ambiguous magic fallback reaches multiplication." }
+    - { id: INV-203-002, description: "Only an approved effective rule for the matching brand/category/product type can produce a numeric commission rate." }
+    - { id: INV-203-003, description: "A commission recomputation is observational with respect to payout execution and does not advance cycle state." }
+    - { id: INV-203-004, description: "Historical payout line items are not rewritten by this task." }
+    - { id: INV-203-005, description: "Diagnostics are deterministic, auditable, and exclude customer/payment-sensitive values." }
+flows:
+    - { id: FLOW-203-001, description: "Delivered order item -> effective-date/scoped rule resolution -> canonical bps validation -> commission-base calculation -> rounded commission amount -> audit metadata.", state_transitions: [rule_resolved, commission_recomputed] }
+    - { id: FLOW-203-002, description: "Delivered order item -> no approved rule -> explicit unconfigured result -> blocked/flagged output per approved policy -> no silent payable amount.", state_transitions: [rule_unconfigured] }
+    - { id: FLOW-203-003, description: "Recompute cycle -> write only the intended current calculation result -> leave approval/processing/completion and historical records unchanged.", state_transitions: [commission_recomputed, cycle_calculated, cycle_approval_unchanged] }
+dependencies:
+    - { id: DEP-203-001, name: commission_rules.commission_percent_bps, purpose: Canonical persisted commission unit, description: "Existing integer basis-point field with effective dates and scope; no production population in REN-203.", status: resolved }
+    - { id: DEP-203-002, name: src/lib/finance/payouts.ts, purpose: Commission rule resolution and payout arithmetic, description: "Current implementation contains the mixed-unit fallback and /10000 arithmetic boundary.", status: resolved }
+    - { id: DEP-203-003, name: order and order-item discount data, purpose: Commission base, description: "Only order-level discount fields are present; seller/platform attribution is absent; REN-203 preserves the bounded schema-gap behavior and does not infer ownership.", status: resolved }
+    - { id: DEP-203-004, name: REN-204/REN-205/REN-206/REN-209, purpose: Adjacent payout and commercial controls, description: "Eligibility, holdback, safety gate, and production commercial configuration are separate ownership boundaries.", status: resolved }
+integrations:
+    - { id: INT-203-001, system: payout-cycle calculation, purpose: Consume corrected commission amounts, failure_mode: "Incorrect financial statement or payable amount", retry_idempotency: "Repeated recomputation for the same delivered inputs yields the same result and does not execute a cycle." }
+    - { id: INT-203-002, system: finance audit/controlled validation, purpose: Independently reconcile rule, base, unit, and amount, failure_mode: "Untraceable or unreviewable payout amount", retry_idempotency: "Audit evidence is additive and deterministic." }
+personas:
+    - { id: PER-203-001, role: finance_operator, applicability: Reviews commission calculations and controlled validation evidence. }
+    - { id: PER-203-002, role: brand_payee, applicability: Receives the resulting payout amount and requires accurate rate application. }
+security_boundaries:
+    - { id: SEC-203-001, description: "Payout diagnostics and test fixtures must not expose customer identity, payment credentials, or unnecessary order-level sensitive data; production reads remain read-only during validation." }
+business_rules:
+    - { id: BR-203-001, description: "10000 basis points equals 100%; 2500 equals 25%; 2000 equals 20%." }
+    - { id: BR-203-002, description: "Terra Luna is the only brand with approved rates in this task: 25% generally and 20% Personal Care, subject to an approved effective rule/source." }
+    - { id: BR-203-003, description: "No rate may be inferred for the other 34 brands or represented as no-contract merely because configuration is absent." }
+    - { id: BR-203-004, description: "REN-203 does not change holdback, eligibility, payout execution, production rule population, or historical payout line items." }
+decisions:
+    - { id: DEC-203-001, question: "What is the canonical commission rate unit?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use integer basis points end-to-end with explicit names/types and one conversion boundary.", basis: "Existing finance schema and tax calculations already use bps; this removes the current percent/bps mix.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-002, question: "How should missing/unapproved rates be represented?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Fail closed with an explicitly blocked/flagged zero-payable commission result; never silently omit or calculate an unapproved rate.", basis: "Approved by the requester; this preserves reconciliation visibility while preventing payable commission leakage.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-003, question: "Where do Terra Luna’s approved rates live at runtime?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use only the approved commercial configuration source owned by REN-209; REN-203 must remain fail-closed if it is absent.", basis: "Approved by the requester; production commission-rule population remains outside REN-203.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-004, question: "How are seller/platform discounts distinguished?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Do not infer ownership from order-level fields; preserve the current commission-base behavior and explicitly surface the schema gap until authoritative allocation exists.", basis: "Approved by the requester; current order-item schema has no funding attribution.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-203-005, question: "May this task alter holdback or payout-cycle state?", class: AUTO_DECIDE, status: resolved, recommendation: "No; preserve those controls and keep REN-206 blocked.", basis: "Explicit ownership boundaries in REN-203 requirements.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-203-001, category: unit, classification: REQUIRED, reason: "Verify percent-to-bps conversion, bps arithmetic, rounding, and regression against the defective mixed-unit path.", scenarios: [SCN-203-001, SCN-203-002, SCN-203-003] }
+    - { id: TEXP-203-002, category: integration, classification: REQUIRED, reason: "Verify effective dates, scope specificity, priority, tie handling, and delivered-date resolution.", scenarios: [SCN-203-002, SCN-203-004] }
+    - { id: TEXP-203-003, category: regression, classification: REQUIRED, reason: "Verify non-Terra brands never receive a silent approved numeric rate and the fallback is absent.", scenarios: [SCN-203-003] }
+    - { id: TEXP-203-004, category: integration, classification: REQUIRED, reason: "Reconcile the 2026-06-H2 ten-line-item fixture to independently calculated expected values and confirm historical records are preserved.", scenarios: [SCN-203-006] }
+    - { id: TEXP-203-005, category: regression, classification: REQUIRED, reason: "Verify eligibility, holdback, payout status, and execution/approval transitions are unchanged.", scenarios: [SCN-203-007] }
+    - { id: TEXP-203-006, category: security, classification: REQUIRED, reason: "Verify unconfigured diagnostics are bounded and contain no customer/payment-sensitive data.", scenarios: [SCN-203-003, SCN-203-008] }
+    - { id: TEXP-203-007, category: business_uat, classification: REQUIRED, reason: "Independently recalculate one real Terra Luna transaction in controlled read-only validation and obtain explicit finance clearance without executing a payout cycle.", scenarios: [SCN-203-006, SCN-203-008] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-203-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Authoritative Terra Luna runtime source is resolved to the approved REN-209 commercial configuration; REN-203 remains fail-closed when absent." }
+        - { id: CRIT-203-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Unconfigured-brand output is resolved to an explicitly blocked/flagged zero-payable result." }
+        - { id: CRIT-203-003, severity: DESIGN_BLOCKER, status: resolved, summary: "Seller/platform discount attribution remains a documented schema gap; REN-203 will not infer ownership." }
+        - { id: CRIT-203-004, severity: MAJOR, status: open, summary: "Effective-date examples, safety regression coverage, and bounded observability must be made executable." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-confirmed
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-203-001, scenario_ids: [SCN-203-001, SCN-203-006] }
+        - { requirement_id: REQ-203-002, scenario_ids: [SCN-203-003] }
+        - { requirement_id: REQ-203-003, scenario_ids: [SCN-203-002, SCN-203-004] }
+        - { requirement_id: REQ-203-004, scenario_ids: [SCN-203-001, SCN-203-002] }
+        - { requirement_id: REQ-203-005, scenario_ids: [SCN-203-003, SCN-203-008] }
+        - { requirement_id: REQ-203-006, scenario_ids: [SCN-203-005] }
+        - { requirement_id: REQ-203-007, scenario_ids: [SCN-203-006, SCN-203-007] }
+        - { requirement_id: REQ-203-008, scenario_ids: [SCN-203-006, SCN-203-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-203-001, invariant_ids: [INV-203-001, INV-203-002] }
+        - { scenario_id: SCN-203-002, invariant_ids: [INV-203-001, INV-203-002] }
+        - { scenario_id: SCN-203-003, invariant_ids: [INV-203-001, INV-203-002, INV-203-005] }
+        - { scenario_id: SCN-203-004, invariant_ids: [INV-203-002] }
+        - { scenario_id: SCN-203-005, invariant_ids: [INV-203-005] }
+        - { scenario_id: SCN-203-006, invariant_ids: [INV-203-001, INV-203-003, INV-203-004] }
+        - { scenario_id: SCN-203-007, invariant_ids: [INV-203-003, INV-203-004] }
+        - { scenario_id: SCN-203-008, invariant_ids: [INV-203-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-203-001, test_expectation_ids: [TEXP-203-001] }
+        - { scenario_id: SCN-203-002, test_expectation_ids: [TEXP-203-001, TEXP-203-002] }
+        - { scenario_id: SCN-203-003, test_expectation_ids: [TEXP-203-001, TEXP-203-003, TEXP-203-006] }
+        - { scenario_id: SCN-203-004, test_expectation_ids: [TEXP-203-002] }
+        - { scenario_id: SCN-203-005, test_expectation_ids: [TEXP-203-006] }
+        - { scenario_id: SCN-203-006, test_expectation_ids: [TEXP-203-004, TEXP-203-007] }
+        - { scenario_id: SCN-203-007, test_expectation_ids: [TEXP-203-005] }
+        - { scenario_id: SCN-203-008, test_expectation_ids: [TEXP-203-006, TEXP-203-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "16bde07a7445326100ad0bc5eb65766bcb620a24"
+    head_commit: "e57ea971e8102385444b30659d31814851c761e5"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add payout-cycle integration, controlled Terra Luna reconciliation, historical-preservation, state-transition, and diagnostic-boundary evidence before release."
+    evidence:
+        - "Compared the approved REN-203 contract with the origin/master-to-head diff at the recorded base and head commits."
+        - "Focused tests cover canonical bps arithmetic, effective scoped rule selection, effective dates, no-rule behavior, and removal of the legacy fallback."
+        - "Broader integration and controlled-validation evidence remains incomplete as documented in REV-001."
+    governance_reentry_required: false

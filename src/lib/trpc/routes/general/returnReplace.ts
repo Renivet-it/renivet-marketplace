@@ -1,19 +1,21 @@
 import { z } from "zod";
 import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 import { eq, and, like, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 import { swapRewardService } from "@/lib/services/swap-reward";
 import { createFinanceRefundCase } from "@/lib/finance/refunds";
-import {
-  getReturnShippingPaidBy,
-  inferRefundCostAllocationFromReason,
-  type RefundCostAllocation,
-} from "@/lib/finance/refund-policy";
 
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { orderReturnRequests, orders, orderItems, users, orderShipments, brandConfidentials } from "@/lib/db/schema";
-import { generatePickupLocationCode } from "@/lib/utils";
+import { createTRPCRouter, isTRPCAuth, protectedProcedure } from "@/lib/trpc/trpc";
+import type { Context } from "@/lib/trpc/context";
+import { orderReturnRequests, orders, orderItems, users, orderShipments, brandConfidentials, refunds, rtoDispositions } from "@/lib/db/schema";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { generatePickupLocationCode, hasPermission } from "@/lib/utils";
+import { getFinanceModuleAccess } from "@/lib/finance/access";
+import { writeFinanceAuditEvent } from "@/lib/finance/audit";
+import { buildReturnAttributionUpdate, requiresReturnAttributionNotes } from "@/lib/finance/return-attribution";
+import { requiresNotesForCostAllocation, type RefundCostAllocation } from "@/lib/finance/refund-policy";
 import Razorpay from "razorpay";
 function formatIndianWhatsAppNumber(phone: string) {
   const cleaned = phone.replace(/\D/g, ""); // remove spaces, dashes
@@ -62,16 +64,24 @@ async function resolveFinanceRefundReason(requestReason?: string | null) {
     throw new Error("No finance refund reasons are configured in reason_master.");
   }
 
-  const inferredCostAllocation =
-    inferRefundCostAllocationFromReason({
-      reasonName: matchedLeaf.name,
-      parentReasonName: matchedLeaf.parent?.name ?? null,
-    }) ?? "brand_fault";
+  return { reason: matchedLeaf };
+}
 
-  return {
-    reason: matchedLeaf,
-    costAllocation: inferredCostAllocation,
-  };
+type AuthenticatedContext = Omit<Context, "user"> & {
+  user: NonNullable<Context["user"]> & { sitePermissions: number; brandPermissions: number };
+};
+
+async function requireRefundModuleAccess(ctx: AuthenticatedContext, mode: "view" | "manage") {
+  const access = await getFinanceModuleAccess({
+    userId: ctx.user.id,
+    sitePermissions: ctx.user.sitePermissions,
+    roles: ctx.user.roles,
+    moduleKey: "refunds",
+  });
+  if (!(mode === "manage" ? access.canManage : access.canView)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: `Refund ${mode} access is required.` });
+  }
+  return access;
 }
 
 
@@ -132,7 +142,7 @@ export const returnReplaceRouter = createTRPCRouter({
             );
 
             if (!existingFinanceRefund) {
-              const { reason, costAllocation } = await resolveFinanceRefundReason(input.reason);
+              const { reason } = await resolveFinanceRefundReason(input.reason);
 
               await createFinanceRefundCase({
                 orderId: order.id,
@@ -142,8 +152,6 @@ export const returnReplaceRouter = createTRPCRouter({
                 reasonCode: reason.id,
                 notes: input.comment ?? input.reason ?? undefined,
                 refundType: "full",
-                costAllocation: costAllocation as RefundCostAllocation,
-                returnShippingPaidBy: getReturnShippingPaidBy(costAllocation as RefundCostAllocation),
                 evidenceUrls: Array.isArray(input.images)
                   ? input.images.filter((value): value is string => typeof value === "string")
                   : [],
@@ -201,6 +209,7 @@ export const returnReplaceRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
+            await requireRefundModuleAccess(ctx as AuthenticatedContext, "view");
             const { page, limit, search } = input;
 
             const offset = (page - 1) * limit;
@@ -273,6 +282,166 @@ export const returnReplaceRouter = createTRPCRouter({
             };
         }),
 
+    getAttributionContext: protectedProcedure
+      .input(z.object({ requestId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const access = await requireRefundModuleAccess(ctx as AuthenticatedContext, "view");
+        const request = await ctx.db.query.orderReturnRequests.findFirst({
+          where: (r, { eq }) => eq(r.id, input.requestId),
+        });
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Return request not found." });
+
+        const refund = await ctx.db.query.refunds.findFirst({
+          where: (r, { eq }) => eq(r.orderId, request.orderId),
+        });
+        const rto = await ctx.db.query.rtoDispositions.findFirst({
+          where: (r, { eq }) => eq(r.orderId, request.orderId),
+        });
+        const [refundAudit, rtoAudit] = await Promise.all([
+          refund
+            ? ctx.queries.financeCompliance.listFinanceAuditLogs({ entityType: "refund", entityId: refund.id, actionType: "return_attribution_set", limit: 20 })
+            : Promise.resolve([]),
+          rto
+            ? ctx.queries.financeCompliance.listFinanceAuditLogs({ entityType: "rto_disposition", entityId: rto.id, actionType: "rto_attribution_set", limit: 20 })
+            : Promise.resolve([]),
+        ]);
+
+        return {
+          request: { id: request.id, orderId: request.orderId, requestType: request.requestType },
+          refund: refund
+            ? {
+                id: refund.id,
+                costAllocation: refund.costAllocation,
+                policyBucket: refund.policyBucket,
+                notes: refund.notes,
+              }
+            : null,
+          rto: rto
+            ? {
+                id: rto.id,
+                faultOwner: rto.faultOwner,
+                rtoReason: rto.rtoReason,
+                recoveryDecision: rto.recoveryDecision,
+                notes: rto.notes,
+                status: rto.status,
+              }
+            : null,
+          auditHistory: [...refundAudit, ...rtoAudit]
+            .sort((a, b) => b.timestampUtc.getTime() - a.timestampUtc.getTime())
+            .map((entry) => ({
+              id: entry.id,
+              timestampUtc: entry.timestampUtc,
+              actorId: entry.userId,
+              beforeValue: entry.beforeValue,
+              afterValue: entry.afterValue,
+            })),
+          canManageRefunds: access.canManage,
+          canManageRto: hasPermission(ctx.user.sitePermissions, [BitFieldSitePermission.MANAGE_ORDERS]),
+        };
+      }),
+
+    setReturnAttribution: protectedProcedure
+      .input(z.object({
+        requestId: z.string(),
+        costAllocation: z.enum(["brand_fault", "customer_fault", "renivet_fault", "carrier_fault"]),
+        notes: z.string().max(2000).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
+        const request = await ctx.db.query.orderReturnRequests.findFirst({
+          where: (r, { eq }) => eq(r.id, input.requestId),
+        });
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Return request not found." });
+
+        const refund = await ctx.db.query.refunds.findFirst({
+          where: (r, { eq }) => eq(r.orderId, request.orderId),
+        });
+        if (!refund) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No refund case exists for this request." });
+
+        const lockedCycle = await financeComplianceQueries.findLockedPayoutCycleForReferences([
+          refund.id,
+          request.orderId,
+        ]);
+        if (lockedCycle) {
+          throw new TRPCError({ code: "CONFLICT", message: "Attribution is locked because this case is in an approved payout cycle." });
+        }
+
+        if (requiresReturnAttributionNotes({ previous: refund.costAllocation, next: input.costAllocation })) {
+          if (!input.notes?.trim()) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required when reclassifying attribution." });
+          }
+        }
+        if (requiresNotesForCostAllocation(input.costAllocation as RefundCostAllocation) && !input.notes?.trim()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required for this attribution." });
+        }
+
+        const update = buildReturnAttributionUpdate({
+          previous: refund.costAllocation as RefundCostAllocation | null,
+          next: input.costAllocation,
+          notes: input.notes,
+        });
+        await ctx.db.update(refunds).set(update).where(eq(refunds.id, refund.id));
+        await writeFinanceAuditEvent({
+          actorId: ctx.user.id,
+          actorType: "admin",
+          actionType: "return_attribution_set",
+          entityType: "refund",
+          entityId: refund.id,
+          reason: update.notes,
+          beforeValue: { costAllocation: refund.costAllocation, policyBucket: refund.policyBucket },
+          afterValue: { costAllocation: update.costAllocation, policyBucket: update.policyBucket },
+        });
+        return { success: true };
+      }),
+
+    setRtoAttribution: protectedProcedure
+      .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+      .input(z.object({
+        requestId: z.string(),
+        faultOwner: z.enum(["customer", "carrier", "brand", "renivet", "unknown"]),
+        notes: z.string().max(2000).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const request = await ctx.db.query.orderReturnRequests.findFirst({
+          where: (r, { eq }) => eq(r.id, input.requestId),
+        });
+        if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Return request not found." });
+        const rto = await ctx.db.query.rtoDispositions.findFirst({
+          where: (r, { eq }) => eq(r.orderId, request.orderId),
+        });
+        if (!rto) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No RTO disposition exists for this request." });
+
+        const lockedCycle = await financeComplianceQueries.findLockedPayoutCycleForReferences([
+          rto.id,
+          request.orderId,
+        ]);
+        if (lockedCycle) {
+          throw new TRPCError({ code: "CONFLICT", message: "RTO attribution is locked because this case is in an approved payout cycle." });
+        }
+        if (rto.faultOwner !== input.faultOwner && !input.notes?.trim()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required when reclassifying RTO attribution." });
+        }
+
+        await ctx.db.update(rtoDispositions).set({
+          faultOwner: input.faultOwner,
+          notes: input.notes?.trim() || rto.notes,
+          handledBy: ctx.user.id,
+          dispositionAt: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(rtoDispositions.id, rto.id));
+        await writeFinanceAuditEvent({
+          actorId: ctx.user.id,
+          actorType: "admin",
+          actionType: "rto_attribution_set",
+          entityType: "rto_disposition",
+          entityId: rto.id,
+          reason: input.notes,
+          beforeValue: { faultOwner: rto.faultOwner, notes: rto.notes },
+          afterValue: { faultOwner: input.faultOwner, notes: input.notes?.trim() || rto.notes },
+        });
+        return { success: true };
+      }),
+
     // -------------------------------------------------------
     // 3️⃣ APPROVE REQUEST
     // -------------------------------------------------------
@@ -333,7 +502,7 @@ export const returnReplaceRouter = createTRPCRouter({
       );
 
       if (!existingFinanceRefund) {
-        const { reason, costAllocation } = await resolveFinanceRefundReason(request.reason);
+        const { reason } = await resolveFinanceRefundReason(request.reason);
 
         await createFinanceRefundCase({
           orderId: order.id,
@@ -343,8 +512,6 @@ export const returnReplaceRouter = createTRPCRouter({
           reasonCode: reason.id,
           notes: request.comment ?? request.reason ?? undefined,
           refundType: "full",
-          costAllocation: costAllocation as RefundCostAllocation,
-          returnShippingPaidBy: getReturnShippingPaidBy(costAllocation as RefundCostAllocation),
           evidenceUrls: Array.isArray(request.images)
             ? request.images.filter((value): value is string => typeof value === "string")
             : [],

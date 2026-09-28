@@ -41,6 +41,7 @@ export const orderItemSchema = z.object({
         })
         .int("Quantity must be an integer")
         .positive("Quantity must be positive"),
+    commissionPercentBps: z.number().int().min(0).max(10_000).nullable().optional(),
     customizationRequest: z.preprocess(
         (value) => (value === undefined ? null : value),
         z
