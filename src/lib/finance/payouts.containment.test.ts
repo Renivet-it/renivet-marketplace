@@ -183,3 +183,79 @@ describe("AQ-01 commission fallback removed", () => {
         ).rejects.toThrow("commission_validation_failed");
     });
 });
+
+describe("AQ-18 recalculation status guard", () => {
+    for (const status of ["draft", "calculated"]) {
+        test(`recalculates a ${status} cycle`, async () => {
+            state.cycle = cycle(status);
+
+            const updated = await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+            expect(updated.status).toBe("calculated");
+            expect(state.replacedLineItems).not.toBeNull();
+        });
+    }
+
+    for (const status of ["approved", "processing", "completed", "failed"]) {
+        test(`rejects recalculation of a ${status} cycle without writing`, async () => {
+            state.cycle = cycle(status);
+
+            await expect(
+                payouts.calculatePayoutCycle("cycle-1", "finance-1")
+            ).rejects.toThrow(
+                `Payout cycle recalculation blocked: cycle status is ${status}.`
+            );
+            expect(state.replacedLineItems).toBeNull();
+            expect(state.cycleUpdates).toHaveLength(0);
+        });
+    }
+
+    const overrideInput = {
+        cycleId: "cycle-1",
+        brandId,
+        adjustmentType: "manual_correction",
+        amountPaise: 5_000,
+        reasonCode: "correction",
+        notes: "Correct a shipping deduction",
+        proofFileUrl: "https://files.example.com/proof.pdf",
+        actorId: "finance-1",
+        approverId: "finance-2",
+    };
+
+    test("rejects creating an override on a locked cycle before storing it", async () => {
+        state.cycle = cycle("completed");
+
+        await expect(payouts.createPayoutOverride(overrideInput)).rejects.toThrow(
+            "Payout cycle recalculation blocked: cycle status is completed."
+        );
+        expect(state.overrideInserts).toHaveLength(0);
+        expect(state.replacedLineItems).toBeNull();
+    });
+
+    test("creates and applies an override on a calculated cycle", async () => {
+        state.cycle = cycle("calculated");
+
+        await payouts.createPayoutOverride(overrideInput);
+
+        expect(state.overrideInserts).toHaveLength(1);
+        expect(state.replacedLineItems).not.toBeNull();
+    });
+
+    test("rejects approving an override on a locked cycle before updating it", async () => {
+        state.cycle = cycle("approved");
+        state.override = {
+            id: "override-1",
+            cycleId: "cycle-1",
+            brandId,
+            createdBy: "finance-1",
+            approvedBy: null,
+            reasonCode: "correction",
+        };
+
+        await expect(
+            payouts.approvePayoutOverride("override-1", "finance-2")
+        ).rejects.toThrow("Payout cycle recalculation blocked: cycle status is approved.");
+        expect(state.overrideUpdates).toHaveLength(0);
+        expect(state.replacedLineItems).toBeNull();
+    });
+});

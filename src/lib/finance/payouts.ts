@@ -737,9 +737,23 @@ function deriveCycleStatus(brands: BrandCycleSummary[]) {
     return "calculated";
 }
 
+// Once a cycle is approved its amounts are what the approver signed off, and from
+// processing onwards money may have moved, so only draft/calculated cycles can be
+// recalculated (AQ-18).
+const RECALCULABLE_PAYOUT_CYCLE_STATUSES = ["draft", "calculated"];
+
+function assertPayoutCycleRecalculable(cycle: { status: string }) {
+    if (!RECALCULABLE_PAYOUT_CYCLE_STATUSES.includes(cycle.status)) {
+        throw new Error(
+            `Payout cycle recalculation blocked: cycle status is ${cycle.status}.`
+        );
+    }
+}
+
 export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const { brands: summaries, eligibilityDiagnostics } =
         await buildBrandPayoutSummaries(cycleId);
@@ -1367,6 +1381,10 @@ export async function createPayoutOverride(input: {
     if (input.approverId === input.actorId) {
         throw new Error("Checker and maker must be different admins.");
     }
+    // An approved override triggers recalculation, so reject it before it is stored.
+    const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const row = await financeComplianceQueries.addPayoutOverride({
         cycleId: input.cycleId,
@@ -1415,6 +1433,9 @@ export async function approvePayoutOverride(overrideId: string, actorId: string)
     if (row.createdBy === actorId) {
         throw new Error("The same admin cannot approve this override.");
     }
+    const cycle = await financeComplianceQueries.getPayoutCycle(row.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const updated = await financeComplianceQueries.updatePayoutOverride(overrideId, {
         approvedBy: actorId,
