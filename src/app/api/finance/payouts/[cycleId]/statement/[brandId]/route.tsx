@@ -1,5 +1,6 @@
 import { BrandPayoutStatementTemplate } from "@/components/pdf/brand-payout-statement-template";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
+import { authorizePayoutStatementDownload } from "@/lib/finance/payout-statement-access";
 import { renderToStream } from "@react-pdf/renderer";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,6 +13,14 @@ export async function GET(
         }>;
     }
 ) {
+    const access = await authorizePayoutStatementDownload();
+    if (!access.ok) {
+        return NextResponse.json(
+            { ok: false, error: access.error },
+            { status: access.status }
+        );
+    }
+
     const { cycleId, brandId } = await context.params;
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) {
