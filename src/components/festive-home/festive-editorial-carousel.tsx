@@ -15,9 +15,9 @@ import Link from "next/link";
 export function FestiveEditorialCarousel() {
     return (
         <section
-            data-festive-section="editorial-cards"
+            data-festive-section="hero"
             aria-label="Explore festive collections"
-            className="bg-[#fff9eb] px-3 pb-10 pt-8 md:px-8 md:pb-12 md:pt-0"
+            className="relative w-full overflow-hidden bg-[#fbf4e7]"
         >
             <Carousel
                 opts={{ loop: true }}
@@ -36,7 +36,7 @@ export function FestiveEditorialCarousel() {
                             <Link
                                 href={slide.href}
                                 aria-label={`Explore festive collection ${index + 1}`}
-                                className="relative block aspect-[0.94] overflow-hidden md:aspect-[2.45]"
+                                className="relative block aspect-[2/3] overflow-hidden md:aspect-[2.87]"
                             >
                                 <Image
                                     data-festive-editorial-image="true"

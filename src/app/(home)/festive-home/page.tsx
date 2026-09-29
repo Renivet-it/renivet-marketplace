@@ -148,6 +148,8 @@ export default async function FestiveHomePage() {
     return (
         <div className="overflow-hidden bg-[#fbf4e7] text-[#3e2b24]">
             <main className="mx-auto w-full max-w-[1600px] bg-[#fbf4e7]">
+                <FestiveEditorialCarousel />
+                {false && (
                 <section
                     data-festive-section="hero"
                     className="relative w-full overflow-hidden bg-[#542313]"
@@ -261,10 +263,11 @@ export default async function FestiveHomePage() {
                         </p>
                     </div>
                 </section>
+                )}
 
                 <div
                     data-festive-section="editorial-transition"
-                    className="relative hidden h-[130px] bg-[#fff9eb] md:block"
+                    className="hidden"
                 >
                     <Image
                         src={`${assetRoot}/sandstone-arch.png`}
@@ -281,8 +284,6 @@ export default async function FestiveHomePage() {
                         className="absolute bottom-0 right-0 w-[170px]"
                     />
                 </div>
-
-                <FestiveEditorialCarousel />
 
                 <FestiveProductCarousel
                     products={festiveProducts}

@@ -43,7 +43,7 @@ test("festive home mirrors the approved desktop section proportions", async () =
     ).text();
 
     expect(source).toContain('data-festive-section="hero"');
-    expect(editorial).toContain('data-festive-section="editorial-cards"');
+    expect(editorial).toContain('data-festive-section="hero"');
     expect(carousel).toContain('data-festive-section="festive-edit"');
     expect(source).toContain('data-festive-section="brand-story"');
     expect(brands).toContain('data-festive-section="brands"');
@@ -172,12 +172,9 @@ test.skip("legacy festive editorial cards link to their curated catalogue filter
 test("festive home leaves breathing room above the editorial corner artwork", async () => {
     const source = await Bun.file(pagePath).text();
 
+    expect(source).toContain("<FestiveEditorialCarousel />");
     expect(source).toContain('data-festive-section="editorial-transition"');
-    expect(source).toContain("h-[130px]");
-    expect(source).toContain(
-        'className="absolute bottom-0 left-0 w-[170px] -scale-x-100"'
-    );
-    expect(source).toContain('className="absolute bottom-0 right-0 w-[170px]"');
+    expect(source).toContain('className="hidden"');
 });
 
 test.skip("legacy festive home stacks portrait editorial cards with imagery on mobile", async () => {
