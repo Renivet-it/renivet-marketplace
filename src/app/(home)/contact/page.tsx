@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { siteConfig } from "@/config/site";
+import { grievanceSubmissionSchema } from "@/lib/grievance/validation";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 type ContactFormData = {
@@ -18,6 +20,7 @@ type ContactFormData = {
 type GrievanceFormData = {
     name: string;
     email: string;
+    phone: string;
     orderId: string;
     category:
         | "order_issue"
@@ -26,6 +29,7 @@ type GrievanceFormData = {
         | "product_quality"
         | "other";
     description: string;
+    accountCreationConsent: boolean;
 };
 
 const grievanceCategoryLabels: Record<GrievanceFormData["category"], string> = {
@@ -45,27 +49,58 @@ export default function ContactPage() {
     const [grievanceForm, setGrievanceForm] = useState<GrievanceFormData>({
         name: "",
         email: "",
+        phone: "",
         orderId: "",
         category: "order_issue",
         description: "",
+        accountCreationConsent: false,
     });
+    const [identityEditing, setIdentityEditing] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [submissionAccessPath, setSubmissionAccessPath] = useState<string | null>(null);
 
     const legalContactsQuery = trpc.general.legal.getActiveLegalContacts.useQuery();
+    const currentUserQuery = trpc.general.users.currentUser.useQuery(undefined, {
+        retry: false,
+    });
+    const currentUser = currentUserQuery.data;
     const submitGrievance = trpc.general.legal.submitGrievance.useMutation({
         onSuccess: (result) => {
-            toast.success(`Grievance submitted. Ticket ID: ${result.ticketId}`);
+            if (result.accessPath) {
+                setSubmissionAccessPath(result.accessPath);
+                toast.success(
+                    result.requiresAccountCreation
+                        ? "Your grievance is saved. Continue to create your account to track it."
+                        : "Your grievance was submitted. Sign in to track it."
+                );
+            } else {
+                toast.success(`Grievance submitted. Ticket ID: ${result.ticketId}`);
+            }
             setGrievanceForm({
                 name: "",
                 email: "",
+                phone: "",
                 orderId: "",
                 category: "order_issue",
                 description: "",
+                accountCreationConsent: false,
             });
+            setFieldErrors({});
         },
         onError: (error) => {
             toast.error(error.message);
         },
     });
+
+    useEffect(() => {
+        if (!currentUser || identityEditing) return;
+        setGrievanceForm((current) => ({
+            ...current,
+            name: current.name || `${currentUser.firstName} ${currentUser.lastName}`.trim(),
+            email: current.email || currentUser.email,
+            phone: current.phone || currentUser.phone || "",
+        }));
+    }, [currentUser, identityEditing]);
 
     const gro = useMemo(
         () => legalContactsQuery.data?.find((item) => item.role === "gro") ?? null,
@@ -220,19 +255,30 @@ export default function ContactPage() {
                                 className="mt-5 grid gap-4"
                                 onSubmit={(event) => {
                                     event.preventDefault();
+                                    const parsed = grievanceSubmissionSchema.safeParse(grievanceForm);
+                                    if (!parsed.success) {
+                                        setFieldErrors(
+                                            Object.fromEntries(
+                                                Object.entries(parsed.flatten().fieldErrors).map(([key, errors]) => [
+                                                    key,
+                                                    errors?.[0] ?? "Please check this field.",
+                                                ])
+                                            )
+                                        );
+                                        return;
+                                    }
+                                    setFieldErrors({});
                                     submitGrievance.mutate({
-                                        name: grievanceForm.name,
-                                        email: grievanceForm.email,
-                                        orderId: grievanceForm.orderId || undefined,
-                                        category: grievanceForm.category,
-                                        description: grievanceForm.description,
+                                        ...parsed.data,
                                     });
                                 }}
                             >
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <Input
                                         placeholder="Name"
+                                        aria-invalid={Boolean(fieldErrors.name)}
                                         value={grievanceForm.name}
+                                        disabled={Boolean(currentUser) && !identityEditing}
                                         onChange={(event) =>
                                             setGrievanceForm((current) => ({
                                                 ...current,
@@ -240,10 +286,15 @@ export default function ContactPage() {
                                             }))
                                         }
                                     />
+                                    {fieldErrors.name ? (
+                                        <p className="text-xs text-red-600">{fieldErrors.name}</p>
+                                    ) : null}
                                     <Input
                                         type="email"
                                         placeholder="Email"
+                                        aria-invalid={Boolean(fieldErrors.email)}
                                         value={grievanceForm.email}
+                                        disabled={Boolean(currentUser) && !identityEditing}
                                         onChange={(event) =>
                                             setGrievanceForm((current) => ({
                                                 ...current,
@@ -251,6 +302,36 @@ export default function ContactPage() {
                                             }))
                                         }
                                     />
+                                    {fieldErrors.email ? (
+                                        <p className="text-xs text-red-600">{fieldErrors.email}</p>
+                                    ) : null}
+                                </div>
+                                {currentUser && !identityEditing ? (
+                                    <button
+                                        type="button"
+                                        className="justify-self-start text-xs font-semibold text-emerald-800 underline underline-offset-2"
+                                        onClick={() => setIdentityEditing(true)}
+                                    >
+                                        Edit contact details for this grievance
+                                    </button>
+                                ) : null}
+                                <div>
+                                    <Input
+                                        placeholder="Phone number"
+                                        inputMode="tel"
+                                        aria-invalid={Boolean(fieldErrors.phone)}
+                                        value={grievanceForm.phone}
+                                        disabled={Boolean(currentUser?.phone) && !identityEditing}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                phone: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    {fieldErrors.phone ? (
+                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>
+                                    ) : null}
                                 </div>
                                 <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr]">
                                     <Input
@@ -293,6 +374,32 @@ export default function ContactPage() {
                                         }))
                                     }
                                 />
+                                {!currentUser ? (
+                                    <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-xs leading-5 text-slate-700">
+                                        <input
+                                            type="checkbox"
+                                            checked={grievanceForm.accountCreationConsent}
+                                            onChange={(event) =>
+                                                setGrievanceForm((current) => ({
+                                                    ...current,
+                                                    accountCreationConsent: event.target.checked,
+                                                }))
+                                            }
+                                            className="mt-1"
+                                        />
+                                        <span>
+                                            If no account matches these details, I consent to creating a Renivet account so I can securely track and reply to this grievance.
+                                        </span>
+                                    </label>
+                                ) : null}
+                                {submissionAccessPath ? (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                                        <p>Continue securely to access your grievance:</p>
+                                        <Link className="mt-2 inline-block font-semibold underline underline-offset-2" href={submissionAccessPath}>
+                                            Continue to account access
+                                        </Link>
+                                    </div>
+                                ) : null}
                                 <Button type="submit" disabled={submitGrievance.isPending}>
                                     {submitGrievance.isPending ? "Submitting..." : "Submit grievance"}
                                 </Button>

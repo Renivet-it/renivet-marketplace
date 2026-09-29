@@ -274,6 +274,12 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             label: "Help Center",
         },
         {
+            icon: "Ticket",
+            name: "grievances",
+            href: "/profile/grievances",
+            label: "My Grievances",
+        },
+        {
             icon: "Info",
             name: "faqs",
             href: "#",
