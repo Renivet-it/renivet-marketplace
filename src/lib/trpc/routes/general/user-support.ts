@@ -317,6 +317,34 @@ export const userSupportRouter = createTRPCRouter({
                 ],
             });
         }),
+    listMyGrievances: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().default(50),
+                page: z.number().default(1),
+                status: z.string().optional(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const filters: SQL[] = [
+                eq(userSupportTickets.userId, ctx.user.id),
+                eq(userSupportTickets.category, "GRIEVANCE"),
+            ];
+
+            if (input.status && input.status !== "all") {
+                filters.push(eq(userSupportTickets.status, input.status));
+            }
+
+            return db.query.userSupportTickets.findMany({
+                where: and(...filters),
+                limit: input.limit,
+                offset: (input.page - 1) * input.limit,
+                orderBy: [
+                    desc(userSupportTickets.latestMessageAt),
+                    desc(userSupportTickets.createdAt),
+                ],
+            });
+        }),
     getTicket: protectedProcedure
         .input(z.string())
         .query(async ({ ctx, input: ticketId }) => {
