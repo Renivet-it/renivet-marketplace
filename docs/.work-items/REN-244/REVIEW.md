@@ -2,87 +2,89 @@
 
 ## Executive Result
 
-`REVIEW_FAILED` with `MATERIAL_DRIFT`. Compared `origin/main` merge-base `58a5a2b2d236449d788e0f26a988d1eadb6e2591` to head `7ad4136967a1c57cb15c460c556c9fe7f82fec2e`. Governance re-entry is required because the implementation uses one static aggregate CTA destination, while the Linear acceptance requires an order-specific action-button URL for each delayed order.
+`REVIEW_PASSED_WITH_FINDINGS` with `MINOR_DRIFT`. Compared `origin/main` merge-base `58a5a2b2d236449d788e0f26a988d1eadb6e2591` to head `000f4e9a70a85b690baeadb41628989b2e366258`. Linear now permits aggregate digests with a static authenticated `Open Orders` CTA. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
-- Linear issue: REN-244, title matches task-local `task.id` and work-item directory.
+- Linear issue, title, task ID, and work-item directory match.
+- Linear REN-244 was updated to permit multiple qualifying orders per digest and the authenticated admin orders-page CTA.
 - Base branch: `origin/main`.
 - Base commit: `58a5a2b2d236449d788e0f26a988d1eadb6e2591`.
-- Head commit: `7ad4136967a1c57cb15c460c556c9fe7f82fec2e`.
-- Changed scope: delayed-order eligibility, WhatsApp templates, persistence schema/query, aggregate service, cron route, migration, tests, runbook, and governance artifacts.
+- Head commit: `000f4e9a70a85b690baeadb41628989b2e366258`.
+- Changed scope includes eligibility/payload helpers, WhatsApp template registration, per-order alert persistence, aggregate service, protected cron route, migration, tests, and runbook.
 
 ## Requirement Reconciliation
 
-- `REQ-244-1`: PASS. `src/app/api/cron/delayed-whatsapp-alerts/route.ts` uses the external 17:00 UTC schedule documented in the runbook and returns the schedule metadata.
-- `REQ-244-2`: PASS. `src/lib/whatsapp/delayed-order-alerts.ts` implements paid pending/processing 48-hour eligibility.
-- `REQ-244-3`: PASS. The same module implements paid shipped seven-day shipment eligibility and terminal exclusions.
-- `REQ-244-4`: FAIL. The aggregate service sends one variable and the approved templates use a static `/dashboard/general/orders` button; no order identifier is passed to a button URL. This contradicts the Linear requirement for an order-specific authenticated admin order-detail action button.
-- `REQ-244-5`: PASS. `runDelayedWhatsAppAlerts` normalizes/deduplicates recipients and creates one aggregate send per alert type/recipient.
-- `REQ-244-6`: PASS. `whatsapp_delayed_order_alerts` persists per-order/alert/recipient state and claims batches before sending.
-- `REQ-244-7`: PASS. The route invokes `requireCronSecret` before the run service.
+- `REQ-244-1`: PASS — the cron route documents and returns the 17:00 UTC / 23:00 Asia/Kolkata schedule.
+- `REQ-244-2`: PASS — paid pending/processing 48-hour eligibility is implemented.
+- `REQ-244-3`: PASS — paid shipped seven-day shipment eligibility and terminal exclusions are implemented.
+- `REQ-244-4`: PASS — aggregate messages include order/product/quantity/status/shipment/tracking data and use the runtime-host authenticated admin orders CTA required by the updated Linear description.
+- `REQ-244-5`: PASS — recipients are normalized/deduplicated and each aggregate is sent independently to all configured recipients.
+- `REQ-244-6`: PASS — per-order/alert/recipient state and batch claims support deduplication and retry.
+- `REQ-244-7`: PASS — the route invokes `requireCronSecret` before run work.
 
 ## Scenario Reconciliation
 
 - `SCN-244-1`: PASS — exact 48-hour boundary is unit-tested.
 - `SCN-244-2`: PASS — exact seven-day boundary and terminal exclusions are unit-tested.
-- `SCN-244-3`: FAIL — aggregate product/status/tracking data is rendered, but the action button is not order-specific.
-- `SCN-244-4`: PASS — multi-order aggregation and three-recipient fan-out are tested.
-- `SCN-244-5`: PASS — successful suppression and failed retry are tested with an in-memory store.
+- `SCN-244-3`: PASS — aggregate order details and the authenticated `/dashboard/general/orders` CTA are represented.
+- `SCN-244-4`: PASS — multiple orders aggregate by type and fan out to three recipients.
+- `SCN-244-5`: PASS — successful suppression and failed retry are covered with a fake store.
 - `SCN-244-6`: PARTIAL — atomic claim code exists, but no database-backed concurrency test is present.
-- `SCN-244-7`: PARTIAL — route source wiring is tested, while runtime request authorization is delegated to existing tested `requireCronSecret` behavior.
-- `SCN-244-8`: PASS — multi-order continuation and isolated failure are covered by the service tests.
+- `SCN-244-7`: PARTIAL — route wiring is statically tested while runtime authorization is delegated to the existing tested helper.
+- `SCN-244-8`: PASS — multi-order processing continues after isolated failure.
 
 ## Invariant Reconciliation
 
-- `INV-244-1`: PASS — injected `now` and inclusive thresholds are implemented.
-- `INV-244-2`: PASS — cancelled/delivered orders and terminal shipment states are excluded.
-- `INV-244-3`: PASS — unique identity plus atomic `sending` claim is implemented.
-- `INV-244-4`: PASS — per-order rows retain sent/failed state and retry data.
-- `INV-244-5`: FAIL — the CTA uses runtime host configuration but does not include an order ID because the approved aggregate template has a static URL.
-- `INV-244-6`: PASS — aggregate failures are marked without changing other batches.
-- `INV-244-7`: PASS — processing is per alert type/recipient and does not abort after one failed batch.
+- `INV-244-1`: PASS — injected clock and inclusive thresholds are implemented.
+- `INV-244-2`: PASS — cancelled/delivered and terminal shipment states are excluded.
+- `INV-244-3`: PASS — unique identity and atomic `sending` claims are implemented.
+- `INV-244-4`: PASS — per-order rows retain success/failure and retry data.
+- `INV-244-5`: PASS — the CTA uses the existing authenticated admin orders route and runtime host configuration.
+- `INV-244-6`: PASS — failed aggregate batches do not erase other recipient outcomes.
+- `INV-244-7`: PASS — one order does not suppress or abort another order's batch.
 
 ## Flow and Architecture Review
 
-The pure eligibility layer, per-order delivery table, atomic claim layer, aggregate service, and cron boundary match `FLOW-244-1` and `FLOW-244-2`. The architecture is `PARTIAL` overall because the aggregate CTA architecture cannot satisfy the original per-order button contract without either per-order messages, dynamic button URLs, or a contract change in Linear.
+The pure eligibility layer, per-order delivery table, atomic claim layer, aggregate service, Twilio template mapping, and cron boundary match `FLOW-244-1` and `FLOW-244-2`. The migration and runbook stay within the approved dependency and integration boundaries.
 
 ## Security and Integration Review
 
-- Cron authorization is protected by the existing timing-safe Bearer-secret path (`src/lib/auth/cron-access.ts`, `route.ts`), supporting `SEC-244-1`.
-- No Twilio credentials are written to logs or templates, supporting `SEC-244-3`.
-- The aggregate CTA points at the existing authenticated orders page, but it is not order-specific; `SEC-244-2` is only partially satisfied.
-- Twilio integration SIDs are checked into application configuration as approved content identifiers, and the send path uses one aggregate variable per template.
-- PostgreSQL persistence includes a unique identity and batch claim, but database concurrency behavior is not runtime-tested in this review.
+- `SEC-244-1`: PASS — the route uses the existing timing-safe Bearer cron-secret path.
+- `SEC-244-2`: PASS — the CTA uses the authenticated general admin orders page and embeds no credentials.
+- `SEC-244-3`: PASS — no Twilio credentials are persisted or logged by changed code.
+- `INT-244-1`: PASS — both supplied approved SIDs are registered with one aggregate variable each.
+- `INT-244-2`: PASS — persistence includes unique identity and atomic batch claims.
+- Failed aggregate batches remain eligible for later retry.
 
 ## Scope and Drift Review
 
-`MATERIAL_DRIFT`: the implementation changes the requested action-button semantics from one order-specific admin URL per alert to one static aggregate orders-page URL. This affects an explicit Linear requirement, scenario, invariant, and external template contract. The aggregate behavior was user-requested in conversation, but Linear remains unchanged and the mismatch must be reconciled through governance.
+`MINOR_DRIFT`: database concurrency and direct route request tests are not present; the implementation uses the approved architecture and preserves required behavior. No material drift or unauthorized scope expansion was found.
 
 ## Test Expectation Review
 
-- `TEXP-244-1`: PASS statically — pure unit tests cover boundaries, exclusions, formatting, and host URL construction.
-- `TEXP-244-2`: PARTIAL statically — service tests cover fan-out, aggregation, success suppression, and retry with a fake store; no live database concurrency test.
-- `TEXP-244-3`: PARTIAL statically — existing shipment notification code was not changed, but no dedicated regression test asserts compatibility with the new schema.
-- `TEXP-244-4`: PARTIAL statically — route delegates to the existing tested cron helper, but the new route has no direct runtime request test.
-- `TEXP-244-5`: FAIL — tests cover aggregate template names and one variable but cannot prove the required order-specific button parameter because the supplied templates do not contain one.
-- `TEXP-244-6`: PASS statically — schedule is documented in the route and runbook.
+- `TEXP-244-1`: PASS statically — boundaries, exclusions, formatting, and host URL construction are covered.
+- `TEXP-244-2`: PARTIAL statically — service tests cover fan-out, aggregation, suppression, and retry with a fake store; no live database concurrency test.
+- `TEXP-244-3`: PARTIAL statically — existing shipment notification code is unchanged, but no dedicated schema-compatibility regression test was added.
+- `TEXP-244-4`: PARTIAL statically — route wiring and existing helper tests exist; no direct runtime route request test was added.
+- `TEXP-244-5`: PASS statically — both approved SIDs and the admin orders URL are mapped/tested.
+- `TEXP-244-6`: PASS statically — schedule is documented in route and runbook.
 
 ## Findings
 
-### REV-001
+### REV-002
 
-- Severity: BLOCKER
-- Category: requirement
-- Description: Aggregate templates use a static `Open Orders` CTA, so an alert does not carry a relevant order-specific admin action-button URL as required by REN-244.
-- Evidence: `REQ-244-4`, `SCN-244-3`, `INV-244-5`; `src/lib/services/delayed-whatsapp-alerts.ts` sends one aggregate variable; `src/lib/whatsapp/index.ts` registers both templates with `parameterCount: 1`; `docs/runbooks/REN-244_DELAYED_WHATSAPP_ALERTS.md` documents the static `/dashboard/general/orders` destination.
-- Impact: Operators cannot jump directly from an alert to the specific delayed order, and the implementation does not satisfy the explicit Linear acceptance criterion.
-- Recommendation: Choose one governed resolution: create per-order CTA templates/messages with an order-ID URL variable; change the Linear acceptance to explicitly allow an aggregate static orders-page CTA; or add a supported multi-order action mechanism and update the contract before rerunning REVIEW.
+- Severity: LOW
+- Category: test
+- Description: Database-backed concurrency and direct route authorization tests are not included; coverage relies on pure/in-memory service tests and existing cron-helper tests.
+- Evidence: `TEXP-244-2`, `TEXP-244-4`; `src/lib/services/delayed-whatsapp-alerts.test.ts`; `src/app/api/cron/delayed-whatsapp-alerts/route.test.ts`.
+- Impact: A production database race or route integration regression could be detected later than a pure unit failure.
+- Recommendation: Add database-backed claim-concurrency and direct `NextRequest` route tests when the integration-test harness is available.
 
 ## Decisions Requiring Attention
 
-The user-approved aggregate digest design conflicts with the unchanged Linear requirement for order-specific buttons. This is a Class C contract decision because it changes an external integration and operator workflow. No implementation-side assumption can resolve it.
+None.
 
 ## Final Recommendation
 
-Do not treat REN-244 as review-passed. Resolve `REV-001` through Linear/spec governance, then rerun `renivet-review REN-244`. The current aggregate implementation may be retained only if the requirement is formally changed; otherwise the Twilio templates and send strategy must be redesigned.
+`REVIEW_PASSED_WITH_FINDINGS`. The implementation matches the updated Linear contract and approved work-item design. No governance re-entry is required; REV-002 is non-blocking.

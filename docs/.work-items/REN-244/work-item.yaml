@@ -4,7 +4,7 @@ task:
   title: Daily WhatsApp alerts for delayed fulfillment orders
   source: linear
   branch: ayanganguly333/ren-244-daily-whatsapp-alerts-for-delayed-fulfillment-orders
-  status: IN_REVIEW
+  status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-244/daily-whatsapp-alerts-for-delayed-fulfillment-orders
     priority: 0
@@ -78,14 +78,14 @@ requirements:
   - {id: REQ-244-1, description: A protected job evaluates delayed fulfillment orders daily at 23:00 Asia/Kolkata., type: explicit}
   - {id: REQ-244-2, description: Paid pending/processing orders older than 48 hours without a shipped shipment produce one unshipped_48h alert unless cancelled or delivered., type: explicit}
   - {id: REQ-244-3, description: Paid shipped orders with a shipment at least seven days old and not delivered produce one undelivered_7d alert unless cancelled., type: explicit}
-  - {id: REQ-244-4, description: Alerts include order/product/quantity/status/shipment/tracking details and an order-specific authenticated admin action URL in the verified template button parameter., type: explicit}
+  - {id: REQ-244-4, description: Alerts include order/product/quantity/status/shipment/tracking details and a static authenticated admin orders-page action URL in the verified template button parameter; multiple qualifying orders may be combined into one digest., type: explicit}
   - {id: REQ-244-5, description: Each alert fans out independently to the existing three configured recipients., type: explicit}
   - {id: REQ-244-6, description: Successful sends are idempotent per order, alert type, and recipient; failures are recorded and safely retryable across runs containing multiple orders., type: explicit}
   - {id: REQ-244-7, description: Cancelled/delivered orders are excluded and the scheduled endpoint enforces the existing cron secret., type: explicit}
 scenarios:
   - {id: SCN-244-1, description: Exact 48-hour boundary selection for paid unshipped orders., requirement_ids: [REQ-244-1, REQ-244-2]}
   - {id: SCN-244-2, description: Exact seven-day boundary selection and shipment/order status exclusions., requirement_ids: [REQ-244-1, REQ-244-3, REQ-244-7]}
-  - {id: SCN-244-3, description: Both alert aggregates render complete order details and the authenticated admin orders action URL., requirement_ids: [REQ-244-4]}
+  - {id: SCN-244-3, description: Both alert aggregates render complete details for each included order and the authenticated admin orders-page action URL., requirement_ids: [REQ-244-4]}
   - {id: SCN-244-4, description: Multiple qualifying orders aggregate by alert type and fan out to three deduplicated configured recipients., requirement_ids: [REQ-244-5]}
   - {id: SCN-244-5, description: Successful sends suppress duplicates while failed recipients are audited and retried., requirement_ids: [REQ-244-6]}
   - {id: SCN-244-6, description: Concurrent job runs cannot duplicate the same successful recipient alert., requirement_ids: [REQ-244-6]}
@@ -107,7 +107,7 @@ test_expectations:
   - {id: TEXP-244-2, category: integration, classification: REQUIRED, reason: Proves recipient fan-out, unique claims, success deduplication, failed-send retry, and partial failure isolation., scenarios: [SCN-244-4, SCN-244-5, SCN-244-6]}
   - {id: TEXP-244-3, category: regression, classification: REQUIRED, reason: Proves existing shipment WhatsApp notifications remain compatible with the log changes., scenarios: [SCN-244-5]}
   - {id: TEXP-244-4, category: security, classification: REQUIRED, reason: Proves cron secret enforcement and no work on denied requests., scenarios: [SCN-244-7]}
-  - {id: TEXP-244-5, category: external_integration, classification: REQUIRED, reason: Proves authoritative template SID/name/parameter count/button position and order-specific admin URL for both alert types., scenarios: [SCN-244-3]}
+  - {id: TEXP-244-5, category: external_integration, classification: REQUIRED, reason: Proves authoritative template SID/name/parameter count/button position and static authenticated admin orders-page URL for both aggregate alert types., scenarios: [SCN-244-3]}
   - {id: TEXP-244-6, category: performance, classification: REQUIRED, reason: Proves candidate processing and per-recipient sends are bounded/observable for daily operation across multiple qualifying orders., scenarios: [SCN-244-4, SCN-244-5, SCN-244-8]}
 critic:
   required: true
@@ -128,30 +128,6 @@ approval:
   state: APPROVED
   design_blockers: []
   approved_by: User confirmation in conversation on 2026-09-29.
-implementation_review:
-  artifact: REVIEW.md
-  result: REVIEW_FAILED
-  base_branch: origin/main
-  base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
-  head_commit: "7ad4136967a1c57cb15c460c556c9fe7f82fec2e"
-  pr_url: null
-  material_drift: MATERIAL_DRIFT
-  reconciliation:
-    requirements: FAIL
-    scenarios: FAIL
-    invariants: FAIL
-    architecture: PARTIAL
-    security: PARTIAL
-    test_coverage: PARTIAL
-    scope: PASS
-  blocking_findings:
-    - "REV-001: Aggregate templates use a static CTA and do not provide an order-specific admin action-button URL."
-  required_actions:
-    - "Resolve whether REN-244 keeps the order-specific button requirement or formally changes it to an aggregate orders-page CTA, then rerun SPEC/REVIEW governance."
-  evidence:
-    - "Compared origin/main merge-base 58a5a2b2d236449d788e0f26a988d1eadb6e2591 with HEAD 7ad4136967a1c57cb15c460c556c9fe7f82fec2e."
-    - "The service sends one aggregate variable per alert type and recipient; both configured templates have parameterCount 1 and a static orders-page CTA."
-  governance_reentry_required: true
 traceability:
   requirement_to_scenarios:
     - {requirement_id: REQ-244-1, scenario_ids: [SCN-244-1, SCN-244-2]}
@@ -179,3 +155,27 @@ traceability:
     - {scenario_id: SCN-244-6, test_expectation_ids: [TEXP-244-2]}
     - {scenario_id: SCN-244-7, test_expectation_ids: [TEXP-244-4]}
     - {scenario_id: SCN-244-8, test_expectation_ids: [TEXP-244-2, TEXP-244-6]}
+
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: origin/main
+  base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
+  head_commit: "000f4e9a70a85b690baeadb41628989b2e366258"
+  pr_url: null
+  material_drift: MINOR_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PARTIAL
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-002: Add database-backed claim concurrency and direct route authorization tests when the integration-test harness is available."
+  evidence:
+    - "Compared origin/main merge-base 58a5a2b2d236449d788e0f26a988d1eadb6e2591 with HEAD 000f4e9a70a85b690baeadb41628989b2e366258."
+    - "Linear REN-244 now explicitly permits aggregate digests and a static authenticated Open Orders CTA."
+  governance_reentry_required: false
