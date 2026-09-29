@@ -1,0 +1,165 @@
+schema_version: "1.0"
+task:
+  id: REN-245
+  title: Improve grievance submission, identity matching, and customer grievance portal
+  source: linear
+  branch: ayanganguly333/ren-245-improve-grievance-submission-identity-matching-and-customer
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-245/improve-grievance-submission-identity-matching-and-customer
+    priority: 0
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: null
+risk:
+  initial_risk: L3
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  reasons: [Customer identity matching and account access are security-sensitive., Grievance tickets contain customer/order context and authenticated replies., Guest account creation integrates with Clerk verification.]
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [Linear issue/comments/relations, public grievance form, legal mutation, user-support schema/router, Help Center pages/components, profile navigation, user schema, Clerk webhook/auth flows, admin grievance queue, SLA/audit/alert paths]
+  excluded_areas: [production account matching, raw customer enumeration, external Clerk mutation, admin queue redesign, unrelated support categories]
+  dependencies: [DEP-245-1, DEP-245-2, DEP-245-3]
+  integrations: [INT-245-1, INT-245-2, INT-245-3]
+  security_boundaries: [SEC-245-1, SEC-245-2, SEC-245-3]
+  state_transitions: [submitted, normalized, account-match-one, account-match-conflict, account-match-none, consented, verification-pending, linked, visible-to-owner, replied, rejected-safe]
+  tests: [TEXP-245-1, TEXP-245-2, TEXP-245-3, TEXP-245-4, TEXP-245-5, TEXP-245-6]
+  uncertainties: [Shared email validator scope must be regression-tested.]
+dependencies:
+  - {id: DEP-245-1, name: user_support_tickets, purpose: grievance persistence and ownership, description: Existing ticket/message tables retain SLA and audit context, status: resolved}
+  - {id: DEP-245-2, name: user-support-router, purpose: protected customer ticket operations, description: Existing list/detail/messages/reply procedures enforce user ownership, status: resolved}
+  - {id: DEP-245-3, name: Clerk-auth, purpose: verified guest access, description: Existing phone-first sign-up/sign-in and webhook synchronization, status: resolved}
+integrations:
+  - {id: INT-245-1, system: Clerk, purpose: verified account access, failure_mode: verification or claim handoff fails, retry_idempotency: claim is short-lived and single-use}
+  - {id: INT-245-2, system: PostgreSQL/Drizzle, purpose: normalized matching and ownership persistence, failure_mode: conflicting identifiers or partial insert, retry_idempotency: matching and creation are atomic}
+  - {id: INT-245-3, system: support/audit/alert services, purpose: preserve operations, failure_mode: ticket exists without audit/alert, retry_idempotency: existing dedupe keys remain effective}
+personas:
+  - {id: PER-245-1, role: guest_customer, applicability: Submits grievance and obtains verified access.}
+  - {id: PER-245-2, role: authenticated_customer, applicability: Views and replies to owned grievances.}
+  - {id: PER-245-3, role: support_admin, applicability: Handles grievances in the existing queue.}
+security_boundaries:
+  - {id: SEC-245-1, description: Only authenticated owner IDs may list, view, or reply to grievances.}
+  - {id: SEC-245-2, description: Guest responses must not enumerate account existence or expose another customer.}
+  - {id: SEC-245-3, description: Credentials and raw auth tokens are never stored; pending claims are opaque, short-lived, and single-use.}
+business_rules:
+  - {id: BR-245-1, description: Phone is required and normalizes to exactly 10 Indian digits; email is required, trimmed, lowercased, and shared-validated.}
+  - {id: BR-245-2, description: Authenticated contact values are prefilled but editable only through explicit action and do not silently change the profile.}
+  - {id: BR-245-3, description: Exactly one identity match links; conflicting phone/email matches never merge or guess.}
+  - {id: BR-245-4, description: No-match account creation requires explicit consent and verified access.}
+  - {id: BR-245-5, description: Existing grievance category/order/SLA/admin/audit/alert behavior remains intact.}
+requirements:
+  - {id: REQ-245-1, description: Public grievance submission requires server-and-client validation and normalized storage of phone/email and existing fields., type: explicit}
+  - {id: REQ-245-2, description: Authenticated customers see known phone/email prefilled with explicit edit behavior and validated submission., type: explicit}
+  - {id: REQ-245-3, description: Customers have a dedicated My Grievances experience for owned history, status, timestamps, category, order reference, messages, and replies., type: explicit}
+  - {id: REQ-245-4, description: Guest matching links exactly-one matches, safely handles conflicts, and does not expose account existence., type: explicit}
+  - {id: REQ-245-5, description: No-match guest submission creates an account only after consent and provides secure verified access., type: explicit}
+  - {id: REQ-245-6, description: Every grievance list/detail/message/reply operation enforces authenticated ownership and prevents ticket-ID tampering., type: security}
+  - {id: REQ-245-7, description: Existing admin queue, SLA, audit, alerts, categories, order linkage, and ticket behavior remain intact., type: compatibility}
+scenarios:
+  - {id: SCN-245-1, description: Invalid/formatted phone/email values produce field errors and no ticket; valid values normalize., requirement_ids: [REQ-245-1]}
+  - {id: SCN-245-2, description: Authenticated customer sees prefilled values, explicitly edits them, and submits without profile overwrite., requirement_ids: [REQ-245-2]}
+  - {id: SCN-245-3, description: Customer opens My Grievances, sees owned cases/messages/status, and replies., requirement_ids: [REQ-245-3, REQ-245-6]}
+  - {id: SCN-245-4, description: Guest matches exactly one account and links through secure access without enumeration., requirement_ids: [REQ-245-4, REQ-245-5]}
+  - {id: SCN-245-5, description: Phone/email match different accounts; no merge/guess occurs and support gets safe review outcome., requirement_ids: [REQ-245-4]}
+  - {id: SCN-245-6, description: No-match guest accepts consent and completes verified access before tracking the grievance., requirement_ids: [REQ-245-5]}
+  - {id: SCN-245-7, description: Missing consent, failed verification, duplicate retry, or expired claim has a safe retry path and no duplicate access., requirement_ids: [REQ-245-5, REQ-245-6]}
+  - {id: SCN-245-8, description: Customer attempts another ticket ID and receives denial without data leakage., requirement_ids: [REQ-245-6]}
+  - {id: SCN-245-9, description: Existing admin queue/SLA/audit/alerts/category/order behavior remains intact., requirement_ids: [REQ-245-7]}
+invariants:
+  - {id: INV-245-1, description: No invalid normalized identity reaches persistence or matching.}
+  - {id: INV-245-2, description: Customer access is limited to tickets whose userId equals authenticated user ID.}
+  - {id: INV-245-3, description: Conflicting matches never merge, guess, or expose accounts.}
+  - {id: INV-245-4, description: Guest claims become visible only after verified access and are single-use.}
+  - {id: INV-245-5, description: Retry cannot create duplicate linkage or duplicate grievance for one claim.}
+  - {id: INV-245-6, description: Existing SLA, audit, alert, category, order, and message semantics are preserved.}
+flows:
+  - {id: FLOW-245-1, description: Public form -> shared validation -> identity resolution -> ticket persistence -> existing audit/alert/SLA., state_transitions: [submitted, normalized, account-match-one, account-match-conflict, account-match-none, linked, rejected-safe]}
+  - {id: FLOW-245-2, description: Authenticated profile -> prefilled form -> owned grievance list/detail -> authorized reply., state_transitions: [normalized, visible-to-owner, replied]}
+  - {id: FLOW-245-3, description: No-match consent -> Clerk verification -> opaque claim -> owner-visible grievance., state_transitions: [consented, verification-pending, linked, visible-to-owner]}
+decisions:
+  - {id: DEC-245-1, question: How should a no-match guest gain access?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Use existing Clerk verification with an opaque short-lived server-side pending claim consumed after verified sign-in/sign-up., basis: User confirmation in conversation on 2026-09-30; reuses existing auth and avoids credential storage or identifier disclosure., confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: User confirmation in conversation on 2026-09-30}
+  - {id: DEC-245-2, question: Should authenticated contact fields be editable?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Yes, explicit edit action with no profile mutation., basis: Explicit Linear requirement., confidence: high, consequence: medium, human_confirmation_required: true, confirmation_source: Linear REN-245 description on 2026-09-29}
+  - {id: DEC-245-3, question: What happens when phone/email match different accounts?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Do not associate or merge; return safe outcome and route for support review., basis: Explicit Linear security requirement., confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: Linear REN-245 description on 2026-09-29}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {id: CRIT-245-001, severity: DESIGN_BLOCKER, status: addressed, summary: Guest account/access handoff confirmed as an opaque Clerk verification claim flow.}
+    - {id: CRIT-245-002, severity: MAJOR, status: addressed, summary: Account enumeration protections are specified.}
+    - {id: CRIT-245-003, severity: MAJOR, status: addressed, summary: Ownership and IDOR coverage are required.}
+    - {id: CRIT-245-004, severity: MAJOR, status: addressed, summary: Shared email validator scope is constrained to the grievance schema and covered by regression tests.}
+    - {id: CRIT-245-005, severity: MINOR, status: addressed, summary: Indian phone normalization edge cases are test requirements.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User confirmation in conversation on 2026-09-30
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-245-1, scenario_ids: [SCN-245-1]}
+    - {requirement_id: REQ-245-2, scenario_ids: [SCN-245-2]}
+    - {requirement_id: REQ-245-3, scenario_ids: [SCN-245-3]}
+    - {requirement_id: REQ-245-4, scenario_ids: [SCN-245-4, SCN-245-5]}
+    - {requirement_id: REQ-245-5, scenario_ids: [SCN-245-4, SCN-245-6, SCN-245-7]}
+    - {requirement_id: REQ-245-6, scenario_ids: [SCN-245-3, SCN-245-7, SCN-245-8]}
+    - {requirement_id: REQ-245-7, scenario_ids: [SCN-245-9]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-245-1, invariant_ids: [INV-245-1]}
+    - {scenario_id: SCN-245-2, invariant_ids: [INV-245-1, INV-245-6]}
+    - {scenario_id: SCN-245-3, invariant_ids: [INV-245-2, INV-245-6]}
+    - {scenario_id: SCN-245-4, invariant_ids: [INV-245-3, INV-245-4, INV-245-5]}
+    - {scenario_id: SCN-245-5, invariant_ids: [INV-245-3]}
+    - {scenario_id: SCN-245-6, invariant_ids: [INV-245-4, INV-245-5]}
+    - {scenario_id: SCN-245-7, invariant_ids: [INV-245-4, INV-245-5]}
+    - {scenario_id: SCN-245-8, invariant_ids: [INV-245-2]}
+    - {scenario_id: SCN-245-9, invariant_ids: [INV-245-6]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-245-1, test_expectation_ids: [TEXP-245-1]}
+    - {scenario_id: SCN-245-2, test_expectation_ids: [TEXP-245-2]}
+    - {scenario_id: SCN-245-3, test_expectation_ids: [TEXP-245-3]}
+    - {scenario_id: SCN-245-4, test_expectation_ids: [TEXP-245-4]}
+    - {scenario_id: SCN-245-5, test_expectation_ids: [TEXP-245-4]}
+    - {scenario_id: SCN-245-6, test_expectation_ids: [TEXP-245-4, TEXP-245-5]}
+    - {scenario_id: SCN-245-7, test_expectation_ids: [TEXP-245-5]}
+    - {scenario_id: SCN-245-8, test_expectation_ids: [TEXP-245-3]}
+    - {scenario_id: SCN-245-9, test_expectation_ids: [TEXP-245-6]}
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: main
+  base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
+  head_commit: "4cb7fd40a0bc10822b798ad4e6216902209afd55"
+  pr_url: null
+  material_drift: MINOR_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-001: Add component and route/integration tests for the approved grievance scenarios before merge."
+  evidence:
+    - "Compared the approved REN-245 contract with the base-to-head Git diff from main at 58a5a2b2d236449d788e0f26a988d1eadb6e2591 to head 4cb7fd40a0bc10822b798ad4e6216902209afd55."
+    - "Focused grievance unit tests cover validation, identity matching, guest-flow decisions, claim primitives, and ownership predicate behavior."
+    - "The changed route and UI integration paths lack dedicated tests for component prefill, route-level IDOR, Clerk handoff, claim transaction, and regression side effects."
+  governance_reentry_required: false
+test_expectations:
+  - {id: TEXP-245-1, category: unit, classification: REQUIRED, reason: Proves shared email/phone validation, normalization, and field errors., scenarios: [SCN-245-1]}
+  - {id: TEXP-245-2, category: component, classification: REQUIRED, reason: Proves authenticated prefill, explicit edit, and no profile overwrite., scenarios: [SCN-245-2]}
+  - {id: TEXP-245-3, category: security, classification: REQUIRED, reason: Proves owned list/detail/messages/reply operations and IDOR denial., scenarios: [SCN-245-3, SCN-245-8]}
+  - {id: TEXP-245-4, category: integration, classification: REQUIRED, reason: Proves exactly-one, conflict, and no-match handling without enumeration., scenarios: [SCN-245-4, SCN-245-5, SCN-245-6]}
+  - {id: TEXP-245-5, category: integration, classification: REQUIRED, reason: Proves confirmed Clerk verification/claim handoff, consent, expiry, single-use, and safe retry., scenarios: [SCN-245-6, SCN-245-7]}
+  - {id: TEXP-245-6, category: regression, classification: REQUIRED, reason: Proves admin queue, SLA, audit, alerts, categories, order linkage, and existing ticket behavior., scenarios: [SCN-245-9]}
