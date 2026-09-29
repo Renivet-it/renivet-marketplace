@@ -334,3 +334,84 @@ describe("AQ-60a clearer is not the executor", () => {
         expect(updated.executedBy).toBe("finance-3");
     });
 });
+
+describe("AQ-60b payout idempotency", () => {
+    async function withProvider(run: (calls: Array<Record<string, string>>) => Promise<void>) {
+        const calls: Array<Record<string, string>> = [];
+        const originalFetch = globalThis.fetch;
+        const originalAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+        process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = "test-source-account";
+        globalThis.fetch = (async (_url: string, init: RequestInit) => {
+            calls.push(init.headers as Record<string, string>);
+            return new Response(JSON.stringify({ id: "pout_1", status: "processing" }), {
+                status: 200,
+            });
+        }) as unknown as typeof fetch;
+        try {
+            await run(calls);
+        } finally {
+            globalThis.fetch = originalFetch;
+            if (originalAccount === undefined) {
+                delete process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+            } else {
+                process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = originalAccount;
+            }
+        }
+    }
+
+    test("sends a deterministic X-Payout-Idempotency key derived from cycle and brand", async () => {
+        const { buildPayoutIdempotencyKey } = await import("./payout-execution-gate");
+        await prepareExecutableCycle("finance-2");
+
+        await withProvider(async (calls) => {
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+
+            expect(calls).toHaveLength(1);
+            expect(calls[0]["X-Payout-Idempotency"]).toBe(
+                buildPayoutIdempotencyKey("cycle-1", brandId)
+            );
+        });
+    });
+
+    test("a concurrent replay of the same execution reuses the same key", async () => {
+        await prepareExecutableCycle("finance-2");
+
+        await withProvider(async (calls) => {
+            // Both requests read the same approved cycle before either persists.
+            await Promise.all([
+                payouts.executePayoutCycle("cycle-1", "finance-3"),
+                payouts.executePayoutCycle("cycle-1", "finance-3"),
+            ]);
+
+            expect(calls).toHaveLength(2);
+            expect(new Set(calls.map((headers) => headers["X-Payout-Idempotency"])).size).toBe(1);
+        });
+    });
+
+    test("a brand payout that was already sent is not re-sent", async () => {
+        for (const executionStatus of ["processing", "submitted", "completed"]) {
+            await prepareExecutableCycle("finance-2");
+            const summary = state.cycle!.calculationSummary;
+            state.cycle = cycle("approved", {
+                ...summary,
+                brands: summary.brands.map((brand: Row) => ({ ...brand, executionStatus })),
+            });
+
+            await withProvider(async (calls) => {
+                await payouts.executePayoutCycle("cycle-1", "finance-3");
+                expect(calls).toHaveLength(0);
+            });
+        }
+
+        await prepareExecutableCycle("finance-2");
+        const summary = state.cycle!.calculationSummary;
+        state.cycle = cycle("approved", {
+            ...summary,
+            brands: summary.brands.map((brand: Row) => ({ ...brand, transactionId: "pout_1" })),
+        });
+        await withProvider(async (calls) => {
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+            expect(calls).toHaveLength(0);
+        });
+    });
+});

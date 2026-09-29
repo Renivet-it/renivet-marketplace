@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type HumanClearance = {
     clearedBy: string | null;
     evidenceReference: string | null;
@@ -112,4 +114,23 @@ export function isPayoutOverrideApproved(input: {
             input.createdBy?.trim() &&
             input.approvedBy !== input.createdBy
     );
+}
+
+// Razorpay maps every request carrying the same X-Payout-Idempotency key to one
+// payout, so a retry or replay for the same cycle and brand cannot pay twice.
+// The key is derived only from stable identifiers (AQ-60).
+export function buildPayoutIdempotencyKey(cycleId: string, brandId: string) {
+    if (!cycleId.trim() || !brandId.trim()) {
+        throw new Error("Payout idempotency key requires a cycle and brand.");
+    }
+    const hex = createHash("sha256")
+        .update(`renivet-payout:${cycleId.trim()}:${brandId.trim()}`)
+        .digest("hex");
+    return [
+        hex.slice(0, 8),
+        hex.slice(8, 12),
+        hex.slice(12, 16),
+        hex.slice(16, 20),
+        hex.slice(20, 32),
+    ].join("-");
 }

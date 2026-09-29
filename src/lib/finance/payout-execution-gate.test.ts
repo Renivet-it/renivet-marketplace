@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    buildPayoutIdempotencyKey,
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
@@ -125,5 +126,26 @@ describe("REN-206 payout execution gate", () => {
         expect(
             isPayoutOverrideApproved({ createdBy: "maker", approvedBy: "checker" })
         ).toBe(true);
+    });
+});
+
+describe("AQ-60 payout idempotency key", () => {
+    test("is deterministic for the same cycle and brand", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-1")).toBe(key);
+        expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    });
+
+    test("differs across cycles and brands", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-2", "brand-1")).not.toBe(key);
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-2")).not.toBe(key);
+    });
+
+    test("rejects missing identifiers", () => {
+        expect(() => buildPayoutIdempotencyKey("", "brand-1")).toThrow();
+        expect(() => buildPayoutIdempotencyKey("cycle-1", " ")).toThrow();
     });
 });

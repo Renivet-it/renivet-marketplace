@@ -21,6 +21,7 @@ import {
     getHoldbackPolicyMetadata,
 } from "./payout-holdback";
 import {
+    buildPayoutIdempotencyKey,
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
@@ -869,6 +870,7 @@ async function createRazorpayPayout(input: {
     bankIfscCode?: string | null;
     reference: string;
     rzpAccountId?: string | null;
+    idempotencyKey: string;
 }) {
     const sourceAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
     if (!sourceAccount) {
@@ -888,6 +890,7 @@ async function createRazorpayPayout(input: {
         headers: {
             Authorization: `Basic ${auth}`,
             "Content-Type": "application/json",
+            "X-Payout-Idempotency": input.idempotencyKey,
         },
         body: JSON.stringify({
             account_number: sourceAccount,
@@ -1119,7 +1122,13 @@ export async function executePayoutCycle(
         if (brand.reviewStatus !== "approved") {
             throw new Error(`Approve payout for ${brand.brandName} before execution.`);
         }
-        if (["completed", "awaiting_manual_confirmation"].includes(brand.executionStatus)) {
+        // A brand payout that was already sent (or is in flight) is never re-sent (AQ-60).
+        if (
+            ["completed", "awaiting_manual_confirmation", "processing", "submitted"].includes(
+                brand.executionStatus
+            ) ||
+            brand.transactionId
+        ) {
             continue;
         }
 
@@ -1146,6 +1155,7 @@ export async function executePayoutCycle(
                     bankIfscCode: String(metadata.bankIfscCode ?? ""),
                     reference: `${cycle.cycleKey}-${brand.brandId}`,
                     rzpAccountId: String(metadata.rzpAccountId ?? ""),
+                    idempotencyKey: buildPayoutIdempotencyKey(cycleId, brand.brandId),
                 });
 
                 brand.executionStatus = "completed";
