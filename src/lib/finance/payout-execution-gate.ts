@@ -13,6 +13,7 @@ export type PayoutExecutionChecks = {
     holdbackSuspension: boolean;
     realTransactionValidation: boolean;
     humanClearance: HumanClearance | null;
+    executedBy: string | null;
 };
 
 export type PayoutExecutionGateResult = {
@@ -88,6 +89,14 @@ export function evaluatePayoutExecutionGate(
         reasons.push({
             code: "human_clearance_expired",
             message: "BIZ-3 human clearance is expired.",
+        });
+    } else if (
+        !checks.executedBy?.trim() ||
+        checks.executedBy.trim() === clearance.clearedBy.trim()
+    ) {
+        reasons.push({
+            code: "clearer_is_executor",
+            message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
         });
     }
 

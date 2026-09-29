@@ -259,3 +259,78 @@ describe("AQ-18 recalculation status guard", () => {
         expect(state.replacedLineItems).toBeNull();
     });
 });
+
+const approvedRule = {
+    id: "rule-1",
+    brandId,
+    categoryId: null,
+    productTypeId: null,
+    ruleName: "Brand One approved",
+    commissionPercentBps: 1500,
+    holdbackPercentBps: 0,
+    priority: 1,
+    isActive: true,
+    effectiveFrom: "2026-01-01",
+    effectiveTo: null,
+};
+
+async function prepareExecutableCycle(clearedBy: string) {
+    state.commissionRules = [approvedRule];
+    state.cycle = cycle("calculated");
+    await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+    const calculated = state.cycle!.calculationSummary;
+    state.cycle = cycle("approved", {
+        ...calculated,
+        brands: calculated.brands.map((brand: Row) => ({
+            ...brand,
+            reviewStatus: "approved",
+            executionStatus: "approved",
+        })),
+    });
+    state.clearance = {
+        id: "clearance-1",
+        cycleId: "cycle-1",
+        clearedBy,
+        evidenceReference: "BIZ-3-approval",
+        transactionValidationReference: "txn-validation-1",
+        transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+        clearedAt: new Date("2026-09-10T00:00:00.000Z"),
+        expiresAt: null,
+        revokedAt: null,
+    };
+}
+
+describe("AQ-60a clearer is not the executor", () => {
+    test("blocks execution by the admin who recorded the clearance before any payout", async () => {
+        await prepareExecutableCycle("finance-2");
+        const originalFetch = globalThis.fetch;
+        let providerCalls = 0;
+        globalThis.fetch = (async () => {
+            providerCalls += 1;
+            return new Response("{}");
+        }) as unknown as typeof fetch;
+
+        try {
+            await expect(
+                payouts.executePayoutCycle("cycle-1", "finance-2")
+            ).rejects.toThrow("clearer_is_executor");
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+        expect(providerCalls).toBe(0);
+        expect(state.cycle!.status).toBe("approved");
+        expect(
+            state.financeAudits.find(
+                (event) => event.actionType === "payout_execution_gate_evaluated"
+            )?.reason
+        ).toBe("gate_blocked");
+    });
+
+    test("allows execution by a different admin", async () => {
+        await prepareExecutableCycle("finance-2");
+
+        const updated = await payouts.executePayoutCycle("cycle-1", "finance-3");
+
+        expect(updated.executedBy).toBe("finance-3");
+    });
+});

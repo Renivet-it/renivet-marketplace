@@ -20,6 +20,7 @@ function checks(overrides: Record<string, boolean> = {}) {
             expiresAt: "2026-09-19T10:00:00.000Z",
             revokedAt: null,
         },
+        executedBy: "finance-executor-1",
         ...overrides,
     };
 }
@@ -91,6 +92,20 @@ describe("REN-206 payout execution gate", () => {
             code: "human_clearance_revoked",
             message: "BIZ-3 human clearance is revoked.",
         });
+    });
+
+    test("AQ-60: rejects execution by the admin who recorded the clearance", () => {
+        const reason = {
+            code: "clearer_is_executor",
+            message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
+        };
+
+        for (const executedBy of ["manager-1", " manager-1 ", "", null]) {
+            const result = evaluatePayoutExecutionGate(checks({ executedBy }), now);
+
+            expect(result.allowed).toBe(false);
+            expect(result.reasons).toContainEqual(reason);
+        }
     });
 
     test("allows only a valid clearance with all controls passing", () => {

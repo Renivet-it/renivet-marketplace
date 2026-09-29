@@ -933,7 +933,8 @@ function buildExecutionGateChecks(
         clearedAt: Date;
         expiresAt: Date | null;
         revokedAt: Date | null;
-    } | null
+    } | null,
+    executedBy: string
 ) {
     const summary = cycle.calculationSummary as CycleCalculationSummary | undefined;
     const brands = summary?.brands ?? [];
@@ -975,6 +976,7 @@ function buildExecutionGateChecks(
                   revokedAt: clearance.revokedAt,
               }
             : null,
+        executedBy,
     };
 }
 
@@ -986,7 +988,7 @@ async function evaluateAndAuditPayoutExecutionGate(
     >
 ) {
     const result = evaluatePayoutExecutionGate(
-        buildExecutionGateChecks(cycle, clearance),
+        buildExecutionGateChecks(cycle, clearance, actorId),
         new Date()
     );
     await writeFinanceAuditEvent({
@@ -1001,7 +1003,7 @@ async function evaluateAndAuditPayoutExecutionGate(
         },
         metadata: {
             cycleId: cycle.id,
-            checks: buildExecutionGateChecks(cycle, clearance),
+            checks: buildExecutionGateChecks(cycle, clearance, actorId),
         },
     });
     return result;
