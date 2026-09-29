@@ -3,6 +3,7 @@ export * from "./cart-page";
 export * from "./corporate-orders-page";
 export * from "./general-page";
 export * from "./help-center-page";
+export * from "./grievances-page";
 export * from "./notifications-page";
 export * from "./orders-page";
 export * from "./security-page";
