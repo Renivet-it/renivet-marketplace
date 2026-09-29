@@ -1,6 +1,5 @@
 "use client";
 
-import { preserveCatalogSearch } from "@/lib/shop/catalog-filter-state";
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
     CachedCategory,
@@ -871,19 +870,17 @@ function CategoryFilter({
         subCategoryId,
         subcategoryId: legacySubCategoryId,
         productTypeId,
-        search,
     } = filterState;
     const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
     const updateSubCategoryId = (id: string) =>
-        setFilterState(
-            preserveCatalogSearch(search, {
-                subCategoryId: id,
-                // Clear legacy key once we write the canonical one.
-                subcategoryId: null,
-                productTypeId: "",
-                shopPage: 1,
-            })
-        );
+        setFilterState({
+            subCategoryId: id,
+            // Clear legacy key once we write the canonical one.
+            subcategoryId: null,
+            productTypeId: "",
+            shopPage: 1,
+            search: "",
+        });
     const toggleSubCategoryId = (id: string) => {
         return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
     };
@@ -989,15 +986,14 @@ function CategoryFilter({
                 <RadioGroup
                     value={categoryId}
                     onValueChange={(id) => {
-                        void setFilterState(
-                            preserveCatalogSearch(search, {
-                                categoryId: id === categoryId ? "" : id,
-                                subCategoryId: "",
-                                subcategoryId: null,
-                                productTypeId: "",
-                                shopPage: 1,
-                            })
-                        );
+                        void setFilterState({
+                            categoryId: id === categoryId ? "" : id,
+                            subCategoryId: "",
+                            subcategoryId: null,
+                            productTypeId: "",
+                            shopPage: 1,
+                            search: "",
+                        });
                     }}
                     className="space-y-2"
                 >
@@ -1087,13 +1083,12 @@ function CategoryFilter({
                         <RadioGroup
                             value={productTypeId}
                             onValueChange={(id) => {
-                                void setFilterState(
-                                    preserveCatalogSearch(search, {
-                                        productTypeId:
-                                            id === productTypeId ? "" : id,
-                                        shopPage: 1,
-                                    })
-                                );
+                                void setFilterState({
+                                    productTypeId:
+                                        id === productTypeId ? "" : id,
+                                    shopPage: 1,
+                                    search: "",
+                                });
                             }}
                             className="space-y-2"
                         >
