@@ -4,7 +4,7 @@ task:
   title: Improve grievance submission, identity matching, and customer grievance portal
   source: linear
   branch: ayanganguly333/ren-245-improve-grievance-submission-identity-matching-and-customer
-  status: BLOCKED
+  status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-245/improve-grievance-submission-identity-matching-and-customer
     priority: 0
@@ -28,11 +28,11 @@ investigation:
   security_boundaries: [SEC-245-1, SEC-245-2, SEC-245-3]
   state_transitions: [submitted, normalized, account-match-one, account-match-conflict, account-match-none, consented, verification-pending, linked, visible-to-owner, replied, rejected-safe]
   tests: [TEXP-245-1, TEXP-245-2, TEXP-245-3, TEXP-245-4, TEXP-245-5, TEXP-245-6]
-  uncertainties: [Guest Clerk verification/claim handoff requires human confirmation., Shared email validator scope must be regression-tested.]
+  uncertainties: [Shared email validator scope must be regression-tested.]
 dependencies:
   - {id: DEP-245-1, name: user_support_tickets, purpose: grievance persistence and ownership, description: Existing ticket/message tables retain SLA and audit context, status: resolved}
   - {id: DEP-245-2, name: user-support-router, purpose: protected customer ticket operations, description: Existing list/detail/messages/reply procedures enforce user ownership, status: resolved}
-  - {id: DEP-245-3, name: Clerk-auth, purpose: verified guest access, description: Existing phone-first sign-up/sign-in and webhook synchronization, status: available}
+  - {id: DEP-245-3, name: Clerk-auth, purpose: verified guest access, description: Existing phone-first sign-up/sign-in and webhook synchronization, status: resolved}
 integrations:
   - {id: INT-245-1, system: Clerk, purpose: verified account access, failure_mode: verification or claim handoff fails, retry_idempotency: claim is short-lived and single-use}
   - {id: INT-245-2, system: PostgreSQL/Drizzle, purpose: normalized matching and ownership persistence, failure_mode: conflicting identifiers or partial insert, retry_idempotency: matching and creation are atomic}
@@ -81,7 +81,7 @@ flows:
   - {id: FLOW-245-2, description: Authenticated profile -> prefilled form -> owned grievance list/detail -> authorized reply., state_transitions: [normalized, visible-to-owner, replied]}
   - {id: FLOW-245-3, description: No-match consent -> Clerk verification -> opaque claim -> owner-visible grievance., state_transitions: [consented, verification-pending, linked, visible-to-owner]}
 decisions:
-  - {id: DEC-245-1, question: How should a no-match guest gain access?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Use existing Clerk verification with an opaque short-lived server-side pending claim consumed after verified sign-in/sign-up., basis: Reuses existing auth and avoids credential storage or identifier disclosure., confidence: medium, consequence: high, human_confirmation_required: true}
+  - {id: DEC-245-1, question: How should a no-match guest gain access?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Use existing Clerk verification with an opaque short-lived server-side pending claim consumed after verified sign-in/sign-up., basis: User confirmation in conversation on 2026-09-30; reuses existing auth and avoids credential storage or identifier disclosure., confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: User confirmation in conversation on 2026-09-30}
   - {id: DEC-245-2, question: Should authenticated contact fields be editable?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Yes, explicit edit action with no profile mutation., basis: Explicit Linear requirement., confidence: high, consequence: medium, human_confirmation_required: true, confirmation_source: Linear REN-245 description on 2026-09-29}
   - {id: DEC-245-3, question: What happens when phone/email match different accounts?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Do not associate or merge; return safe outcome and route for support review., basis: Explicit Linear security requirement., confidence: high, consequence: high, human_confirmation_required: true, confirmation_source: Linear REN-245 description on 2026-09-29}
 critic:
@@ -94,15 +94,15 @@ critic:
   required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
   categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
   findings:
-    - {id: CRIT-245-001, severity: DESIGN_BLOCKER, status: open, summary: Guest account/access handoff requires confirmation.}
+    - {id: CRIT-245-001, severity: DESIGN_BLOCKER, status: addressed, summary: Guest account/access handoff confirmed as an opaque Clerk verification claim flow.}
     - {id: CRIT-245-002, severity: MAJOR, status: addressed, summary: Account enumeration protections are specified.}
     - {id: CRIT-245-003, severity: MAJOR, status: addressed, summary: Ownership and IDOR coverage are required.}
-    - {id: CRIT-245-004, severity: MAJOR, status: open, summary: Shared email validator scope needs regression coverage.}
+    - {id: CRIT-245-004, severity: MAJOR, status: addressed, summary: Shared email validator scope is constrained to the grievance schema and covered by regression tests.}
     - {id: CRIT-245-005, severity: MINOR, status: addressed, summary: Indian phone normalization edge cases are test requirements.}
 approval:
-  state: BLOCKED
-  design_blockers: [DEC-245-1, CRIT-245-001, CRIT-245-004]
-  approved_by: ""
+  state: APPROVED
+  design_blockers: []
+  approved_by: User confirmation in conversation on 2026-09-30
 traceability:
   requirement_to_scenarios:
     - {requirement_id: REQ-245-1, scenario_ids: [SCN-245-1]}
