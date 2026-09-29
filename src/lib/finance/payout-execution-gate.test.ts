@@ -102,7 +102,10 @@ describe("REN-206 payout execution gate", () => {
         };
 
         for (const executedBy of ["manager-1", " manager-1 ", "", null]) {
-            const result = evaluatePayoutExecutionGate(checks({ executedBy }), now);
+            const result = evaluatePayoutExecutionGate(
+                checks({ executedBy } as unknown as Record<string, boolean>),
+                now
+            );
 
             expect(result.allowed).toBe(false);
             expect(result.reasons).toContainEqual(reason);
