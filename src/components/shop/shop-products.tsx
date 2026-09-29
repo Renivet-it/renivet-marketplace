@@ -1,6 +1,7 @@
 "use client";
 
 import { sendProductClickEvent } from "@/lib/analytics/product-click";
+import { shouldStopCatalogPagination } from "@/lib/shop/catalog-pagination";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
@@ -280,7 +281,12 @@ export function ShopProducts({
     );
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasReachedEnd, setHasReachedEnd] = useState(
-        () => (initialData?.data?.length ?? 0) < limit
+        () =>
+            shouldStopCatalogPagination({
+                loadedCount: initialData?.data?.length ?? 0,
+                totalCount: initialData?.count ?? 0,
+                lastPageCount: initialData?.data?.length ?? 0,
+            })
     );
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -309,15 +315,24 @@ export function ShopProducts({
             setAllProducts(visibleProducts);
             setTotalCount(count);
             setHasReachedEnd(
-                visibleProducts.length < limit ||
-                    visibleProducts.length >= count
+                shouldStopCatalogPagination({
+                    loadedCount: visibleProducts.length,
+                    totalCount: count,
+                    lastPageCount: visibleProducts.length,
+                })
             );
             setIsLoadingMore(false);
             return;
         }
 
         if (loadedPagesRef.current.has(currentPage)) {
-            if (visibleProducts.length < limit) {
+            if (
+                shouldStopCatalogPagination({
+                    loadedCount: allProducts.length,
+                    totalCount: count,
+                    lastPageCount: visibleProducts.length,
+                })
+            ) {
                 setHasReachedEnd(true);
             }
             setIsLoadingMore(false);
@@ -334,9 +349,11 @@ export function ShopProducts({
             const nextProducts = [...previousProducts, ...uniqueNewProducts];
 
             if (
-                visibleProducts.length < limit ||
-                uniqueNewProducts.length === 0 ||
-                nextProducts.length >= count
+                shouldStopCatalogPagination({
+                    loadedCount: nextProducts.length,
+                    totalCount: count,
+                    lastPageCount: visibleProducts.length,
+                })
             ) {
                 setHasReachedEnd(true);
             }
