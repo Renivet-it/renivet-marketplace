@@ -35,6 +35,7 @@ export * from "./search";
 export * from "./types";
 export * from "./capi-logs";
 export * from "./whatsapp";
+export * from "./whatsapp-delayed-alert";
 export * from "./email";
 export * from "./monitoring-sla";
 export * from "./swap-reward";

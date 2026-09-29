@@ -1,0 +1,157 @@
+schema_version: "1.0"
+task:
+  id: REN-244
+  title: Daily WhatsApp alerts for delayed fulfillment orders
+  source: linear
+  branch: ayanganguly333/ren-244-daily-whatsapp-alerts-for-delayed-fulfillment-orders
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-244/daily-whatsapp-alerts-for-delayed-fulfillment-orders
+    priority: 0
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: null
+    milestone: null
+risk:
+  initial_risk: L3
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  reasons:
+    - Order lifecycle and fulfillment state are used to trigger operational action.
+    - The workflow calls an external WhatsApp/Twilio integration and requires retry-safe idempotency.
+    - The workflow generates authenticated admin URLs and is protected by a security-sensitive cron boundary.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas: [Linear issue/comments/relations, order schema, shipment schema, order queries, WhatsApp sender/templates, WhatsApp logs/queries, configured recipients, cron authorization, shipping webhook, admin and customer order routes, scheduler/configuration files]
+  excluded_areas: [production sends, production data, Twilio account inspection, deployment mutation, customer-facing notification policy]
+  dependencies: [DEP-244-1, DEP-244-2, DEP-244-3]
+  integrations: [INT-244-1, INT-244-2]
+  security_boundaries: [SEC-244-1, SEC-244-2, SEC-244-3]
+  state_transitions: [authorized, candidates-selected, payload-rendered, recipient-claimed, sent, failed-retryable, summarized]
+  tests: [TEXP-244-1, TEXP-244-2, TEXP-244-3, TEXP-244-4, TEXP-244-5, TEXP-244-6]
+  uncertainties: []
+dependencies:
+  - {id: DEP-244-1, name: order and shipment records, purpose: authoritative candidate and payload data, description: Existing orders/order_items/order_shipments tables and relations, status: resolved}
+  - {id: DEP-244-2, name: WhatsApp recipient configuration, purpose: existing three-recipient fan-out, description: Existing operational WhatsApp routing and fallback configuration, status: resolved}
+  - {id: DEP-244-3, name: cron authorization and scheduler, purpose: protected daily invocation, description: requireCronSecret is available and the repository uses an external cron service; the runbook will document the 17:00 UTC schedule, status: resolved}
+integrations:
+  - {id: INT-244-1, system: Twilio WhatsApp templates, name: delayed-order digest templates, boundary: external, purpose: deliver aggregated delayed-order alerts, status: resolved}
+  - {id: INT-244-2, system: PostgreSQL/Drizzle, name: alert persistence, boundary: internal, purpose: candidate reads, idempotency claims, and audit logs, status: available}
+personas:
+  - {id: PER-244-1, role: fulfillment_operator, applicability: Receives alerts and follows the admin order action link.}
+  - {id: PER-244-2, role: cron_scheduler, applicability: Invokes the protected endpoint at the daily schedule.}
+security_boundaries:
+  - {id: SEC-244-1, description: Only valid Authorization Bearer CRON_SECRET requests may execute the job.}
+  - {id: SEC-244-2, description: Action URLs target the existing authenticated admin order page and contain no credentials.}
+  - {id: SEC-244-3, description: Operational logs exclude Twilio credentials and unnecessary customer PII.}
+business_rules:
+  - {id: BR-244-1, description: 48-hour unshipped and seven-day shipped-undelivered thresholds are inclusive.}
+  - {id: BR-244-2, description: Cancelled and delivered orders are excluded; failed/RTO terminal shipments do not count as active undelivered shipments.}
+  - {id: BR-244-3, description: Successful sends are suppressed per order, alert type, and recipient; failed sends remain retryable.}
+decisions:
+  - {id: DEC-244-1, question: How should the issue's ready state map to the existing schema?, class: AUTO_DECIDE, status: resolved, recommendation: Use paid pending/processing orders with no shipped shipment, basis: No ready status exists in the order schema, confidence: high, consequence: medium, human_confirmation_required: false}
+  - {id: DEC-244-2, question: Should exact thresholds be inclusive and clock-injected?, class: AUTO_DECIDE, status: resolved, recommendation: Yes, basis: Acceptance criteria require threshold timing and deterministic tests, confidence: high, consequence: low, human_confirmation_required: false}
+  - id: DEC-244-3
+    question: What exact Twilio template SID/name and button parameter position should delayed-order alerts use?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Use the approved aggregate templates delayed_fulfillment_digest_48h and delayed_delivery_digest_7d, each with one aggregate variable.
+    basis: User supplied approved SIDs HX66935bd1bb1d457b0a943640fd75b6c2 and HX4410ca3f94e43b70cc1d6761ddda7134.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+    confirmation_source: User confirmation in conversation on 2026-09-29.
+  - id: DEC-244-4
+    question: What is the exact authenticated admin order-detail route?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Use the existing authenticated `/dashboard/general/orders` admin orders page as the aggregate CTA destination.
+    basis: Repository contains the protected general admin orders page at `src/app/(protected)/dashboard/general/orders/page.tsx`, and the user approved the aggregate Open Orders destination.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+    confirmation_source: User confirmation in conversation on 2026-09-29.
+requirements:
+  - {id: REQ-244-1, description: A protected job evaluates delayed fulfillment orders daily at 23:00 Asia/Kolkata., type: explicit}
+  - {id: REQ-244-2, description: Paid pending/processing orders older than 48 hours without a shipped shipment produce one unshipped_48h alert unless cancelled or delivered., type: explicit}
+  - {id: REQ-244-3, description: Paid shipped orders with a shipment at least seven days old and not delivered produce one undelivered_7d alert unless cancelled., type: explicit}
+  - {id: REQ-244-4, description: Alerts include order/product/quantity/status/shipment/tracking details and an order-specific authenticated admin action URL in the verified template button parameter., type: explicit}
+  - {id: REQ-244-5, description: Each alert fans out independently to the existing three configured recipients., type: explicit}
+  - {id: REQ-244-6, description: Successful sends are idempotent per order, alert type, and recipient; failures are recorded and safely retryable across runs containing multiple orders., type: explicit}
+  - {id: REQ-244-7, description: Cancelled/delivered orders are excluded and the scheduled endpoint enforces the existing cron secret., type: explicit}
+scenarios:
+  - {id: SCN-244-1, description: Exact 48-hour boundary selection for paid unshipped orders., requirement_ids: [REQ-244-1, REQ-244-2]}
+  - {id: SCN-244-2, description: Exact seven-day boundary selection and shipment/order status exclusions., requirement_ids: [REQ-244-1, REQ-244-3, REQ-244-7]}
+  - {id: SCN-244-3, description: Both alert aggregates render complete order details and the authenticated admin orders action URL., requirement_ids: [REQ-244-4]}
+  - {id: SCN-244-4, description: Multiple qualifying orders aggregate by alert type and fan out to three deduplicated configured recipients., requirement_ids: [REQ-244-5]}
+  - {id: SCN-244-5, description: Successful sends suppress duplicates while failed recipients are audited and retried., requirement_ids: [REQ-244-6]}
+  - {id: SCN-244-6, description: Concurrent job runs cannot duplicate the same successful recipient alert., requirement_ids: [REQ-244-6]}
+  - {id: SCN-244-7, description: Invalid cron authorization prevents all selection and send work., requirement_ids: [REQ-244-7]}
+  - {id: SCN-244-8, description: A run with multiple qualifying orders processes every order and continues after isolated order or recipient failures., requirement_ids: [REQ-244-5, REQ-244-6]}
+invariants:
+  - {id: INV-244-1, description: Eligibility uses an injected clock and inclusive thresholds.}
+  - {id: INV-244-2, description: Cancelled or delivered orders never alert.}
+  - {id: INV-244-3, description: A successful order/alert/recipient idempotency key permits at most one external send.}
+  - {id: INV-244-4, description: Every attempted recipient has an auditable success or retryable failure result.}
+  - {id: INV-244-5, description: Action URLs use runtime host configuration and order ID without embedded credentials.}
+  - {id: INV-244-6, description: Partial external failure preserves successful recipient outcomes and does not block other sends.}
+  - {id: INV-244-7, description: One qualifying order cannot suppress or abort another qualifying order except through an explicitly recorded run-level failure.}
+flows:
+  - {id: FLOW-244-1, description: Cron authorization -> candidate query -> per-order classification -> per-order payload -> per-recipient claim -> Twilio -> audit -> full multi-order summary, state_transitions: [authorized, candidates-selected, payload-rendered, recipient-claimed, sent, failed-retryable, summarized]}
+  - {id: FLOW-244-2, description: Existing WhatsApp log compatibility -> alert identity persistence -> unique claim -> safe retry, state_transitions: [existing-log, identity-extended, claimed, retried]}
+test_expectations:
+  - {id: TEXP-244-1, category: unit, classification: REQUIRED, reason: Proves threshold timing, status exclusions, deterministic clock, and payload formatting., scenarios: [SCN-244-1, SCN-244-2, SCN-244-3]}
+  - {id: TEXP-244-2, category: integration, classification: REQUIRED, reason: Proves recipient fan-out, unique claims, success deduplication, failed-send retry, and partial failure isolation., scenarios: [SCN-244-4, SCN-244-5, SCN-244-6]}
+  - {id: TEXP-244-3, category: regression, classification: REQUIRED, reason: Proves existing shipment WhatsApp notifications remain compatible with the log changes., scenarios: [SCN-244-5]}
+  - {id: TEXP-244-4, category: security, classification: REQUIRED, reason: Proves cron secret enforcement and no work on denied requests., scenarios: [SCN-244-7]}
+  - {id: TEXP-244-5, category: external_integration, classification: REQUIRED, reason: Proves authoritative template SID/name/parameter count/button position and order-specific admin URL for both alert types., scenarios: [SCN-244-3]}
+  - {id: TEXP-244-6, category: performance, classification: REQUIRED, reason: Proves candidate processing and per-recipient sends are bounded/observable for daily operation across multiple qualifying orders., scenarios: [SCN-244-4, SCN-244-5, SCN-244-8]}
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Independent read-only contract critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - {severity: major, category: integrations_idempotency, finding: Aggregate sends require per-order delivery state because one Twilio message covers multiple orders, resolution: Contract requires per-order delivery state plus atomic aggregate batch claims.}
+    - {severity: major, category: state_data_consistency, finding: Existing WhatsApp logs cannot uniquely identify order/alert/recipient sends, resolution: Add an atomic idempotency claim and retry model in implementation.}
+    - {severity: major, category: failure_recovery, finding: Existing failed logs are append-only without retry semantics, resolution: Record failed attempts and suppress only successful identities.}
+    - {severity: major, category: requirements_scenarios, finding: “Ready” and shipment terminal states are underspecified by existing schema, resolution: Explicit schema-based mapping and exclusions are recorded in BR-244-1/2.}
+    - {severity: minor, category: observability_testability, finding: Scheduler manifest was not established by repository evidence, resolution: Locate and test the real deployment configuration before implementation.}
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: User confirmation in conversation on 2026-09-29.
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-244-1, scenario_ids: [SCN-244-1, SCN-244-2]}
+    - {requirement_id: REQ-244-2, scenario_ids: [SCN-244-1]}
+    - {requirement_id: REQ-244-3, scenario_ids: [SCN-244-2]}
+    - {requirement_id: REQ-244-4, scenario_ids: [SCN-244-3]}
+    - {requirement_id: REQ-244-5, scenario_ids: [SCN-244-4]}
+    - {requirement_id: REQ-244-6, scenario_ids: [SCN-244-5, SCN-244-6]}
+    - {requirement_id: REQ-244-7, scenario_ids: [SCN-244-2, SCN-244-7]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-244-1, invariant_ids: [INV-244-1, INV-244-2]}
+    - {scenario_id: SCN-244-2, invariant_ids: [INV-244-1, INV-244-2]}
+    - {scenario_id: SCN-244-3, invariant_ids: [INV-244-5]}
+    - {scenario_id: SCN-244-4, invariant_ids: [INV-244-6]}
+    - {scenario_id: SCN-244-5, invariant_ids: [INV-244-3, INV-244-4, INV-244-6]}
+    - {scenario_id: SCN-244-6, invariant_ids: [INV-244-3]}
+    - {scenario_id: SCN-244-7, invariant_ids: [INV-244-2]}
+    - {scenario_id: SCN-244-8, invariant_ids: [INV-244-4, INV-244-6, INV-244-7]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-244-1, test_expectation_ids: [TEXP-244-1]}
+    - {scenario_id: SCN-244-2, test_expectation_ids: [TEXP-244-1, TEXP-244-4]}
+    - {scenario_id: SCN-244-3, test_expectation_ids: [TEXP-244-1, TEXP-244-5]}
+    - {scenario_id: SCN-244-4, test_expectation_ids: [TEXP-244-2, TEXP-244-6]}
+    - {scenario_id: SCN-244-5, test_expectation_ids: [TEXP-244-2, TEXP-244-3]}
+    - {scenario_id: SCN-244-6, test_expectation_ids: [TEXP-244-2]}
+    - {scenario_id: SCN-244-7, test_expectation_ids: [TEXP-244-4]}
+    - {scenario_id: SCN-244-8, test_expectation_ids: [TEXP-244-2, TEXP-244-6]}
