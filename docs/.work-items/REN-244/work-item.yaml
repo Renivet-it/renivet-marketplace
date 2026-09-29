@@ -4,7 +4,7 @@ task:
   title: Daily WhatsApp alerts for delayed fulfillment orders
   source: linear
   branch: ayanganguly333/ren-244-daily-whatsapp-alerts-for-delayed-fulfillment-orders
-  status: READY_FOR_DEV
+  status: IN_REVIEW
   linear:
     url: https://linear.app/renivet/issue/REN-244/daily-whatsapp-alerts-for-delayed-fulfillment-orders
     priority: 0
@@ -128,6 +128,30 @@ approval:
   state: APPROVED
   design_blockers: []
   approved_by: User confirmation in conversation on 2026-09-29.
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_FAILED
+  base_branch: origin/main
+  base_commit: "58a5a2b2d236449d788e0f26a988d1eadb6e2591"
+  head_commit: "7ad4136967a1c57cb15c460c556c9fe7f82fec2e"
+  pr_url: null
+  material_drift: MATERIAL_DRIFT
+  reconciliation:
+    requirements: FAIL
+    scenarios: FAIL
+    invariants: FAIL
+    architecture: PARTIAL
+    security: PARTIAL
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings:
+    - "REV-001: Aggregate templates use a static CTA and do not provide an order-specific admin action-button URL."
+  required_actions:
+    - "Resolve whether REN-244 keeps the order-specific button requirement or formally changes it to an aggregate orders-page CTA, then rerun SPEC/REVIEW governance."
+  evidence:
+    - "Compared origin/main merge-base 58a5a2b2d236449d788e0f26a988d1eadb6e2591 with HEAD 7ad4136967a1c57cb15c460c556c9fe7f82fec2e."
+    - "The service sends one aggregate variable per alert type and recipient; both configured templates have parameterCount 1 and a static orders-page CTA."
+  governance_reentry_required: true
 traceability:
   requirement_to_scenarios:
     - {requirement_id: REQ-244-1, scenario_ids: [SCN-244-1, SCN-244-2]}
