@@ -15,6 +15,7 @@ import { generatePickupLocationCode, hasPermission } from "@/lib/utils";
 import { getFinanceModuleAccess } from "@/lib/finance/access";
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { buildReturnAttributionUpdate, requiresReturnAttributionNotes } from "@/lib/finance/return-attribution";
+import { checkRtoAttributionWritable, recordRtoAttributionAudit } from "@/lib/finance/rto-attribution";
 import { requiresNotesForCostAllocation, type RefundCostAllocation } from "@/lib/finance/refund-policy";
 import Razorpay from "razorpay";
 function formatIndianWhatsAppNumber(phone: string) {
@@ -411,16 +412,14 @@ export const returnReplaceRouter = createTRPCRouter({
         });
         if (!rto) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No RTO disposition exists for this request." });
 
-        const lockedCycle = await financeComplianceQueries.findLockedPayoutCycleForReferences([
-          rto.id,
-          request.orderId,
-        ]);
-        if (lockedCycle) {
-          throw new TRPCError({ code: "CONFLICT", message: "RTO attribution is locked because this case is in an approved payout cycle." });
-        }
-        if (rto.faultOwner !== input.faultOwner && !input.notes?.trim()) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Notes are required when reclassifying RTO attribution." });
-        }
+        const check = await checkRtoAttributionWritable({
+          orderId: request.orderId,
+          rtoId: rto.id,
+          previousFaultOwner: rto.faultOwner,
+          nextFaultOwner: input.faultOwner,
+          notes: input.notes,
+        });
+        if (!check.ok) throw new TRPCError({ code: check.code, message: check.message });
 
         await ctx.db.update(rtoDispositions).set({
           faultOwner: input.faultOwner,
@@ -429,15 +428,12 @@ export const returnReplaceRouter = createTRPCRouter({
           dispositionAt: new Date(),
           updatedAt: new Date(),
         }).where(eq(rtoDispositions.id, rto.id));
-        await writeFinanceAuditEvent({
+        await recordRtoAttributionAudit({
           actorId: ctx.user.id,
-          actorType: "admin",
-          actionType: "rto_attribution_set",
-          entityType: "rto_disposition",
-          entityId: rto.id,
+          rtoId: rto.id,
           reason: input.notes,
-          beforeValue: { faultOwner: rto.faultOwner, notes: rto.notes },
-          afterValue: { faultOwner: input.faultOwner, notes: input.notes?.trim() || rto.notes },
+          before: { faultOwner: rto.faultOwner, notes: rto.notes },
+          after: { faultOwner: input.faultOwner, notes: input.notes?.trim() || rto.notes },
         });
         return { success: true };
       }),

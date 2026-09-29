@@ -15,6 +15,8 @@ const state = {
     overrideUpdates: [] as Row[],
     override: null as Row | null,
     financeAudits: [] as Row[],
+    lockedCycle: null as Row | null,
+    lockReferences: [] as string[][],
 };
 
 const brandId = "brand-1";
@@ -89,6 +91,10 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
             return { id: "override-1", ...values };
         },
         getPayoutOverride: async () => state.override,
+        findLockedPayoutCycleForReferences: async (references: string[]) => {
+            state.lockReferences.push(references);
+            return state.lockedCycle;
+        },
         updatePayoutOverride: async (id: string, values: Row) => {
             state.overrideUpdates.push(values);
             return { ...state.override, ...values, id };
@@ -119,6 +125,8 @@ beforeEach(() => {
     state.overrideUpdates = [];
     state.override = null;
     state.financeAudits = [];
+    state.lockedCycle = null;
+    state.lockReferences = [];
 });
 
 describe("AQ-01 commission fallback removed", () => {
@@ -413,5 +421,117 @@ describe("AQ-60b payout idempotency", () => {
             await payouts.executePayoutCycle("cycle-1", "finance-3");
             expect(calls).toHaveLength(0);
         });
+    });
+});
+
+describe("AQ-61 RTO fault writes go through the payout lock", () => {
+    test("rejects a fault-owner write for a case in a locked payout cycle", async () => {
+        const rto = await import("./rto-attribution");
+        state.lockedCycle = { cycle: cycle("approved") };
+
+        expect(
+            await rto.checkRtoAttributionWritable({
+                orderId: "order-1",
+                rtoId: "rto-1",
+                previousFaultOwner: "carrier",
+                nextFaultOwner: "brand",
+                notes: "Brand packed the wrong address label",
+            })
+        ).toEqual({
+            ok: false,
+            code: "CONFLICT",
+            message: "RTO attribution is locked because this case is in an approved payout cycle.",
+        });
+        expect(state.lockReferences[0]).toEqual(["rto-1", "order-1"]);
+    });
+
+    test("checks the order reference when creating a new disposition", async () => {
+        const rto = await import("./rto-attribution");
+        state.lockedCycle = { cycle: cycle("completed") };
+
+        const result = await rto.checkRtoAttributionWritable({
+            orderId: "order-1",
+            nextFaultOwner: "brand",
+        });
+
+        expect(result.ok).toBe(false);
+        expect(state.lockReferences[0]).toContain("order-1");
+    });
+
+    test("allows an unlocked write and audits it", async () => {
+        const rto = await import("./rto-attribution");
+
+        expect(
+            await rto.checkRtoAttributionWritable({
+                orderId: "order-1",
+                rtoId: "rto-1",
+                previousFaultOwner: "carrier",
+                nextFaultOwner: "brand",
+                notes: "Brand packed the wrong address label",
+            })
+        ).toEqual({ ok: true });
+
+        await rto.recordRtoAttributionAudit({
+            actorId: "ops-1",
+            rtoId: "rto-1",
+            reason: "Brand packed the wrong address label",
+            before: { faultOwner: "carrier", notes: null },
+            after: { faultOwner: "brand", notes: "Brand packed the wrong address label" },
+        });
+        expect(state.financeAudits).toContainEqual(
+            expect.objectContaining({
+                actorId: "ops-1",
+                actionType: "rto_attribution_set",
+                entityType: "rto_disposition",
+                entityId: "rto-1",
+                beforeValue: { faultOwner: "carrier", notes: null },
+            })
+        );
+    });
+
+    test("requires notes to reclassify an existing fault owner", async () => {
+        const rto = await import("./rto-attribution");
+
+        expect(
+            await rto.checkRtoAttributionWritable({
+                orderId: "order-1",
+                rtoId: "rto-1",
+                previousFaultOwner: "carrier",
+                nextFaultOwner: "brand",
+            })
+        ).toMatchObject({ ok: false, code: "BAD_REQUEST" });
+    });
+
+    test("only a new disposition or a changed fault owner needs the check", async () => {
+        const { rtoFaultOwnerChanges } = await import("./rto-attribution");
+
+        expect(rtoFaultOwnerChanges({ existing: null, nextFaultOwner: "unknown" })).toBe(true);
+        expect(
+            rtoFaultOwnerChanges({ existing: { faultOwner: "carrier" }, nextFaultOwner: "brand" })
+        ).toBe(true);
+        expect(
+            rtoFaultOwnerChanges({ existing: { faultOwner: "brand" }, nextFaultOwner: "brand" })
+        ).toBe(false);
+    });
+
+    test("every RTO fault-owner writer checks the lock before writing and audits after", async () => {
+        const writers = [
+            ["../trpc/routes/general/order-ops.ts", "upsertRtoDisposition:", ".insert(ctx.schemas.rtoDispositions)"],
+            ["../../app/(protected)/dashboard/general/order-ops/page.tsx", "async function saveRtoDisposition", ".insert(rtoDispositions)"],
+            ["../trpc/routes/general/returnReplace.ts", "setRtoAttribution:", ".update(rtoDispositions)"],
+        ] as const;
+
+        for (const [path, start, write] of writers) {
+            const source = await Bun.file(new URL(path, import.meta.url)).text();
+            const begin = source.indexOf(start);
+            const check = source.indexOf("checkRtoAttributionWritable(", begin);
+            const writeAt = source.indexOf(write, begin);
+            const audit = source.indexOf("recordRtoAttributionAudit(", begin);
+
+            expect(begin).toBeGreaterThanOrEqual(0);
+            expect(check).toBeGreaterThan(begin);
+            expect(check).toBeLessThan(writeAt);
+            expect(audit).toBeGreaterThan(writeAt);
+        }
     });
 });
