@@ -46,3 +46,4 @@ export * from "./unicommerce";
 export * from "./review";
 export * from "./finance-compliance";
 export * from "./product-slug-migration";
+export * from "./grievance-claim";
