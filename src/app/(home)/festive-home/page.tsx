@@ -1,3 +1,4 @@
+import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";
 import { FestiveBrandShowcase } from "@/components/festive-home/festive-brand-showcase";
 import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
 import { buildFestiveCatalogOrdering } from "@/lib/catalog/merchandising";
@@ -56,45 +57,6 @@ const getFestiveEditProducts = unstable_cache(
     ["festive-home-edit-products-v5"],
     { revalidate: 300 }
 );
-
-const editorialCards = [
-    {
-        title: "Festive dressing",
-        titleLines: ["Festive", "dressing"],
-        copy: "Thoughtfully chosen festive wear.",
-        action: "Shop apparel",
-        href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
-        tone: "from-[#572c2a] to-[#b47d6d]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQwOnMhg0rgXZuWwadPABUqnljV5RbJMFsx1",
-        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap",
-        objectPosition: "center 30%",
-        overlay: "from-black/50 via-black/10 to-transparent",
-    },
-    {
-        title: "Gifts with a story",
-        titleLines: ["Gifts", "with a story"],
-        copy: "Made with care, meant to be remembered.",
-        action: "Explore gifts",
-        href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
-        tone: "from-[#53624d] to-[#9e8b70]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoMBQif0WvnGEidmOVIP6xXt4S7befYUykMJq",
-        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA",
-        objectPosition: "center 45%",
-        overlay: "from-black/70 via-black/15 to-black/5",
-    },
-    {
-        title: "Home for the season",
-        titleLines: ["Home", "for the season"],
-        copy: "Create warmth around every ritual.",
-        action: "Shop home",
-        href: "/festive?subCategoryId=cd98e50e-02d6-4bc4-bc1e-7b0ba5b6dd0e",
-        tone: "from-[#3d1714] to-[#7d463d]",
-        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2dYwWpMQOYTpvrXwqtZHon4P85jVxyMmDkf3",
-        desktopImage: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl",
-        objectPosition: "center 55%",
-        overlay: "from-black/50 via-black/10 to-transparent",
-    },
-] as const;
 
 const giftItems = [
     {
@@ -320,55 +282,7 @@ export default async function FestiveHomePage() {
                     />
                 </div>
 
-                <section
-                    data-festive-section="editorial-cards"
-                    className="grid gap-5 px-3 pb-10 pt-8 md:gap-6 md:px-8 md:pt-0 lg:grid-cols-3"
-                >
-                    {editorialCards.map((card) => (
-                        <Link
-                            href={card.href}
-                            key={card.title}
-                            className="group relative aspect-[0.94] overflow-hidden md:aspect-[1.75]"
-                        >
-                            <Image
-                                data-festive-editorial-image="true"
-                                src={card.image}
-                                alt=""
-                                fill
-                                sizes="(min-width: 1024px) 32vw, calc(100vw - 24px)"
-                                className="object-cover md:hidden"
-                                style={{ objectPosition: card.objectPosition }}
-                            />
-                            <Image
-                                data-festive-editorial-image="true"
-                                src={card.desktopImage}
-                                alt=""
-                                fill
-                                sizes="(min-width: 1024px) 32vw, 0px"
-                                className="hidden object-cover md:block"
-                                style={{ objectPosition: card.objectPosition }}
-                            />
-                            <div
-                                className={`absolute inset-0 bg-gradient-to-t ${card.overlay}`}
-                            />
-                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:hidden">
-                                <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
-                                    {card.titleLines.map((line) => (
-                                        <span key={line} className="block">
-                                            {line}
-                                        </span>
-                                    ))}
-                                </h2>
-                                <p className="mt-4 max-w-[82%] text-[11px] leading-4 text-white/80">
-                                    {card.copy}
-                                </p>
-                                <span className="w-fit border-b border-white/55 pb-2">
-                                    <MiniLink>{card.action}</MiniLink>
-                                </span>
-                            </div>
-                        </Link>
-                    ))}
-                </section>
+                <FestiveEditorialCarousel />
 
                 <FestiveProductCarousel
                     products={festiveProducts}
