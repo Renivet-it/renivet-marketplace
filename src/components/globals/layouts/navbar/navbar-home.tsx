@@ -845,8 +845,12 @@ export function NavbarHome({
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
-                                wrapper:
-                                    "hidden min-w-0 xl:flex xl:w-[clamp(140px,14vw,320px)] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                wrapper: cn(
+                                    "hidden min-w-0 xl:flex [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                    showUserActions
+                                        ? "xl:w-[clamp(140px,calc(45vw-436px),420px)]"
+                                        : "xl:w-[clamp(140px,14vw,320px)]"
+                                ),
                             }}
                         />
                         {/* âœ… Guest-only Wishlist & Cart */}

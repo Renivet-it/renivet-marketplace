@@ -12,8 +12,10 @@ describe("shop desktop layout", () => {
         expect(source).toContain("shouldShowCategoryFallback");
         expect(source).toContain("xl:flex");
         expect(source).toContain(
-            "xl:w-[clamp(140px,14vw,320px)]"
+            "xl:w-[clamp(140px,calc(45vw-436px),420px)]"
         );
+        expect(source).toContain("xl:w-[clamp(140px,14vw,320px)]");
+        expect(source).toContain("showUserActions");
         expect(source).not.toContain("xl:min-w-[360px]");
     });
 
