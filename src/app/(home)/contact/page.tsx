@@ -259,7 +259,7 @@ export default function ContactPage() {
                                     if (!parsed.success) {
                                         setFieldErrors(
                                             Object.fromEntries(
-                                                Object.entries(parsed.flatten().fieldErrors).map(([key, errors]) => [
+                                                Object.entries(parsed.error.flatten().fieldErrors).map(([key, errors]) => [
                                                     key,
                                                     errors?.[0] ?? "Please check this field.",
                                                 ])
@@ -363,17 +363,25 @@ export default function ContactPage() {
                                         ))}
                                     </select>
                                 </div>
-                                <Textarea
-                                    minRows={6}
-                                    placeholder="Describe the complaint"
-                                    value={grievanceForm.description}
-                                    onChange={(event) =>
-                                        setGrievanceForm((current) => ({
-                                            ...current,
-                                            description: event.target.value,
-                                        }))
-                                    }
-                                />
+                                <div>
+                                    <Textarea
+                                        minRows={6}
+                                        placeholder="Describe the complaint"
+                                        aria-invalid={Boolean(fieldErrors.description)}
+                                        value={grievanceForm.description}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                description: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    {fieldErrors.description ? (
+                                        <p className="mt-1 text-xs text-red-600">
+                                            {fieldErrors.description}
+                                        </p>
+                                    ) : null}
+                                </div>
                                 {!currentUser ? (
                                     <label className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-xs leading-5 text-slate-700">
                                         <input
