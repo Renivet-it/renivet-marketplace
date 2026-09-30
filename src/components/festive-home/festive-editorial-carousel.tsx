@@ -44,6 +44,7 @@ export function FestiveEditorialCarousel() {
                                     alt=""
                                     fill
                                     sizes="100vw"
+                                    unoptimized
                                     className="object-cover md:hidden"
                                     priority={index === 0}
                                 />
@@ -53,6 +54,7 @@ export function FestiveEditorialCarousel() {
                                     alt=""
                                     fill
                                     sizes="(min-width: 768px) calc(100vw - 64px), 0px"
+                                    unoptimized
                                     className="hidden object-cover md:block"
                                     priority={index === 0}
                                 />
