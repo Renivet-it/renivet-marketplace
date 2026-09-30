@@ -16,13 +16,13 @@ describe("grievance identity resolution", () => {
         ).resolves.toEqual({ kind: "exact_match", userId: "user-1" });
     });
 
-    test("returns a conflict when phone and email match different accounts", async () => {
+    test("uses the matching email account when the phone belongs to another account", async () => {
         await expect(
             resolveGrievanceIdentity(
                 { email: "one@example.com", phone: "9123456789" },
                 async () => users
             )
-        ).resolves.toEqual({ kind: "conflict" });
+        ).resolves.toEqual({ kind: "exact_match", userId: "user-1" });
     });
 
     test("returns no match without revealing account details", async () => {
@@ -39,9 +39,33 @@ describe("grievance identity resolution", () => {
             resolveGrievanceIdentity(
                 { email: "new@example.com", phone: "9988776655" },
                 async () => [
-                    { id: "legacy", email: "legacy@example.com", phone: "not-a-phone" },
+                    {
+                        id: "legacy",
+                        email: "legacy@example.com",
+                        phone: "not-a-phone",
+                    },
                 ]
             )
         ).resolves.toEqual({ kind: "none" });
+    });
+
+    test("matches a secondary Clerk email that is not stored as the local primary email", async () => {
+        await expect(
+            resolveGrievanceIdentity(
+                { email: "customer@gmail.com", phone: "9988776655" },
+                async () => [
+                    {
+                        id: "user-1",
+                        email: "919876543210@phone.renivet.com",
+                        phone: "9876543210",
+                        emails: [
+                            "919876543210@phone.renivet.com",
+                            "customer@gmail.com",
+                        ],
+                        phones: ["+91 98765 43210"],
+                    },
+                ]
+            )
+        ).resolves.toEqual({ kind: "exact_match", userId: "user-1" });
     });
 });

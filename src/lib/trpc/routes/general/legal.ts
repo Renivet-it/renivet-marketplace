@@ -1,3 +1,4 @@
+import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
 import {
     grievanceClaims,
@@ -5,6 +6,7 @@ import {
     userSupportTickets,
 } from "@/lib/db/schema";
 import {
+    canAuthenticatedUserConsumeClaim,
     createGrievanceClaimToken,
     GRIEVANCE_CLAIM_TTL_MS,
     hashGrievanceClaimToken,
@@ -12,12 +14,14 @@ import {
 } from "@/lib/grievance/claims";
 import { decideGuestGrievanceResolution } from "@/lib/grievance/guest-flow";
 import { resolveGrievanceIdentity } from "@/lib/grievance/identity";
-import { grievanceSubmissionSchema } from "@/lib/grievance/validation";
+import {
+    grievanceSubmissionSchema,
+    normalizeIndianGrievancePhone,
+} from "@/lib/grievance/validation";
 import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
-import { BitFieldSitePermission } from "@/config/permissions";
 import { legalCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -26,6 +30,7 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { createLegalSchema } from "@/lib/validations";
+import { clerkClient } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -33,14 +38,14 @@ import { z } from "zod";
 async function insertGrievanceTicketRecord(
     executor: any,
     input: {
-    userId: string;
-    actorId: string | null;
-    name: string;
-    email: string;
-    phone: string;
-    orderId?: string;
-    category: string;
-    description: string;
+        userId: string;
+        actorId: string | null;
+        name: string;
+        email: string;
+        phone: string;
+        orderId?: string;
+        category: string;
+        description: string;
     }
 ) {
     const now = new Date();
@@ -126,7 +131,6 @@ async function recordGrievanceSideEffects(input: {
             orderId: input.orderId ?? null,
         },
     });
-
 }
 
 async function createGrievanceTicket(input: {
@@ -147,6 +151,32 @@ async function createGrievanceTicket(input: {
         category: input.category,
     });
     return ticket;
+}
+
+async function createPendingGrievanceClaim(input: {
+    name: string;
+    email: string;
+    phone: string;
+    orderId?: string;
+    category: string;
+    description: string;
+    expectedUserId: string | null;
+    accountCreationConsent: boolean;
+}) {
+    const claimToken = createGrievanceClaimToken();
+    await db.insert(grievanceClaims).values({
+        tokenHash: hashGrievanceClaimToken(claimToken),
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        orderId: input.orderId ?? null,
+        category: input.category,
+        description: input.description,
+        expectedUserId: input.expectedUserId,
+        consentedAt: input.accountCreationConsent ? new Date() : null,
+        expiresAt: new Date(Date.now() + GRIEVANCE_CLAIM_TTL_MS),
+    });
+    return claimToken;
 }
 
 export const legalRouter = createTRPCRouter({
@@ -171,10 +201,52 @@ export const legalRouter = createTRPCRouter({
 
             const identity = await resolveGrievanceIdentity(
                 { email: input.email, phone: input.phone },
-                async () =>
-                    db.query.users.findMany({
+                async () => {
+                    const localUsers = await db.query.users.findMany({
                         columns: { id: true, email: true, phone: true },
-                    })
+                    });
+
+                    try {
+                        const client = await clerkClient();
+                        const [emailMatches, phoneMatches] = await Promise.all([
+                            client.users.getUserList({
+                                emailAddress: [
+                                    input.email.trim().toLowerCase(),
+                                ],
+                                limit: 10,
+                            }),
+                            client.users.getUserList({
+                                phoneNumber: [
+                                    normalizeIndianGrievancePhone(input.phone),
+                                ],
+                                limit: 10,
+                            }),
+                        ]);
+                        const clerkUsers = new Map(
+                            [...emailMatches.data, ...phoneMatches.data].map(
+                                (user) => [user.id, user]
+                            )
+                        );
+
+                        return localUsers.map((user) => {
+                            const clerkUser = clerkUsers.get(user.id);
+                            if (!clerkUser) return user;
+                            return {
+                                ...user,
+                                emails: clerkUser.emailAddresses.map(
+                                    (email) => email.emailAddress
+                                ),
+                                phones: clerkUser.phoneNumbers.map(
+                                    (phone) => phone.phoneNumber
+                                ),
+                            };
+                        });
+                    } catch {
+                        // A temporary Clerk lookup failure must not block a
+                        // grievance; local identity matching remains available.
+                        return localUsers;
+                    }
+                }
             );
             const decision = decideGuestGrievanceResolution(
                 identity,
@@ -184,44 +256,34 @@ export const legalRouter = createTRPCRouter({
             if (decision.kind === "consent_required") {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Please accept the account-tracking notice to continue.",
+                    message:
+                        "Please accept the account-tracking notice to continue.",
                 });
             }
 
             if (decision.kind === "link_existing") {
-                await createGrievanceTicket({
-                    userId: decision.userId,
-                    actorId: null,
+                const claimToken = await createPendingGrievanceClaim({
                     ...input,
+                    expectedUserId: decision.userId,
                 });
                 return {
                     success: true,
                     requiresAccountAccess: true,
-                    accessPath: "/auth/signin?redirect_url=/profile/grievances",
+                    accessPath: `/auth/signin?redirect_url=${encodeURIComponent(`/profile/grievances?claim=${encodeURIComponent(claimToken)}`)}`,
                 };
             }
 
             if (decision.kind === "support_review") {
-                const reviewOwner = `guest:conflict:${hashGrievanceClaimToken(`${input.email}:${input.phone}`)}`;
-                await createGrievanceTicket({
-                    userId: reviewOwner,
-                    actorId: null,
-                    ...input,
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "We could not verify these details against one account.",
                 });
-                return { success: true, requiresAccountAccess: true };
             }
 
-            const claimToken = createGrievanceClaimToken();
-            await db.insert(grievanceClaims).values({
-                tokenHash: hashGrievanceClaimToken(claimToken),
-                name: input.name,
-                email: input.email,
-                phone: input.phone,
-                orderId: input.orderId ?? null,
-                category: input.category,
-                description: input.description,
-                consentedAt: new Date(),
-                expiresAt: new Date(Date.now() + GRIEVANCE_CLAIM_TTL_MS),
+            const claimToken = await createPendingGrievanceClaim({
+                ...input,
+                expectedUserId: null,
             });
 
             const redirectPath = `/profile/grievances?claim=${encodeURIComponent(claimToken)}`;
@@ -238,7 +300,10 @@ export const legalRouter = createTRPCRouter({
             const ticket = await db.transaction(async (tx) => {
                 const claim = await tx.query.grievanceClaims.findFirst({
                     where: and(
-                        eq(grievanceClaims.tokenHash, hashGrievanceClaimToken(input.token)),
+                        eq(
+                            grievanceClaims.tokenHash,
+                            hashGrievanceClaimToken(input.token)
+                        ),
                         isNull(grievanceClaims.consumedAt)
                     ),
                 });
@@ -246,7 +311,22 @@ export const legalRouter = createTRPCRouter({
                 if (!claim || isGrievanceClaimExpired(now, claim.expiresAt)) {
                     throw new TRPCError({
                         code: "BAD_REQUEST",
-                        message: "This grievance access link is invalid or expired.",
+                        message:
+                            "This grievance access link is invalid or expired.",
+                    });
+                }
+
+                if (
+                    !canAuthenticatedUserConsumeClaim(claim, {
+                        id: ctx.user.id,
+                        email: ctx.user.email,
+                        phone: ctx.user.phone,
+                    })
+                ) {
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message:
+                            "This grievance must be completed with the matching account.",
                     });
                 }
 
@@ -269,7 +349,8 @@ export const legalRouter = createTRPCRouter({
                 if (!claimed) {
                     throw new TRPCError({
                         code: "BAD_REQUEST",
-                        message: "This grievance access link is invalid or expired.",
+                        message:
+                            "This grievance access link is invalid or expired.",
                     });
                 }
 

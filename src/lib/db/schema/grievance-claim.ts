@@ -1,4 +1,11 @@
-import { uuid, pgTable, text, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+    index,
+    pgTable,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 
 export const grievanceClaims = pgTable(
@@ -12,7 +19,8 @@ export const grievanceClaims = pgTable(
         orderId: text("order_id"),
         category: text("category").notNull(),
         description: text("description").notNull(),
-        consentedAt: timestamp("consented_at").notNull(),
+        expectedUserId: text("expected_user_id"),
+        consentedAt: timestamp("consented_at"),
         expiresAt: timestamp("expires_at").notNull(),
         consumedAt: timestamp("consumed_at"),
         consumedByUserId: text("consumed_by_user_id"),
@@ -23,7 +31,9 @@ export const grievanceClaims = pgTable(
         tokenHashUnique: uniqueIndex("grievance_claims_token_hash_idx").on(
             table.tokenHash
         ),
-        expiresAtIdx: index("grievance_claims_expires_at_idx").on(table.expiresAt),
+        expiresAtIdx: index("grievance_claims_expires_at_idx").on(
+            table.expiresAt
+        ),
         consumedByUserIdx: index("grievance_claims_consumed_by_user_idx").on(
             table.consumedByUserId
         ),

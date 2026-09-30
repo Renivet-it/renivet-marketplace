@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS "grievance_claims" (
     "order_id" text,
     "category" text NOT NULL,
     "description" text NOT NULL,
-    "consented_at" timestamp NOT NULL,
+    "expected_user_id" text,
+    "consented_at" timestamp,
     "expires_at" timestamp NOT NULL,
     "consumed_at" timestamp,
     "consumed_by_user_id" text,
@@ -18,3 +19,10 @@ CREATE TABLE IF NOT EXISTS "grievance_claims" (
 CREATE UNIQUE INDEX IF NOT EXISTS "grievance_claims_token_hash_idx" ON "grievance_claims" ("token_hash");
 CREATE INDEX IF NOT EXISTS "grievance_claims_expires_at_idx" ON "grievance_claims" ("expires_at");
 CREATE INDEX IF NOT EXISTS "grievance_claims_consumed_by_user_idx" ON "grievance_claims" ("consumed_by_user_id");
+
+-- If the table was created by the earlier unregistered migration, add the
+-- ownership column without changing existing claim rows.
+ALTER TABLE "grievance_claims"
+    ADD COLUMN IF NOT EXISTS "expected_user_id" text;
+ALTER TABLE "grievance_claims"
+    ALTER COLUMN "consented_at" DROP NOT NULL;
