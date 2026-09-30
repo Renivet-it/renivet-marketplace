@@ -62,8 +62,8 @@ export function FestiveEditorialCarousel() {
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                <CarouselPrevious className="left-3 hidden border-white/60 bg-black/25 text-white hover:bg-black/45 md:flex" />
-                <CarouselNext className="right-3 hidden border-white/60 bg-black/25 text-white hover:bg-black/45 md:flex" />
+                <CarouselPrevious className="!top-1/2 !bottom-auto left-3 hidden !-translate-y-1/2 border-white/60 bg-black/25 text-white hover:bg-black/45 md:flex" />
+                <CarouselNext className="!top-1/2 !bottom-auto right-3 hidden !-translate-y-1/2 border-white/60 bg-black/25 text-white hover:bg-black/45 md:flex" />
             </Carousel>
         </section>
     );
