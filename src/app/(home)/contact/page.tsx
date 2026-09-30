@@ -67,6 +67,10 @@ export default function ContactPage() {
     const submitGrievance = trpc.general.legal.submitGrievance.useMutation({
         onSuccess: (result) => {
             if (result.accessPath) {
+                if (result.requiresAccountAccess && !result.requiresAccountCreation) {
+                    window.location.assign(result.accessPath);
+                    return;
+                }
                 setSubmissionAccessPath(result.accessPath);
                 toast.success(
                     result.requiresAccountCreation
