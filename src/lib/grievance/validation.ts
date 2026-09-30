@@ -36,6 +36,25 @@ const normalizedPhoneSchema = z.string().refine(
     "Enter a valid 10-digit Indian phone number."
 );
 
+const blockedEmailDomains = new Set([
+    "example.com",
+    "example.org",
+    "example.net",
+    "test.com",
+    "localhost",
+]);
+
+function hasUsableEmailDomain(value: string) {
+    const domain = value.trim().toLowerCase().split("@").at(-1) ?? "";
+    return (
+        domain.includes(".") &&
+        !blockedEmailDomains.has(domain) &&
+        !domain.startsWith(".") &&
+        !domain.endsWith(".") &&
+        !domain.includes("..")
+    );
+}
+
 export const grievanceSubmissionSchema = z.object({
     name: z.string().trim().min(2, "Name must be at least 2 characters."),
     phone: normalizedPhoneSchema.transform(normalizeIndianGrievancePhone),
@@ -43,7 +62,8 @@ export const grievanceSubmissionSchema = z.object({
         .string()
         .trim()
         .toLowerCase()
-        .email("Enter a valid email address."),
+        .email("Enter a valid email address.")
+        .refine(hasUsableEmailDomain, "Enter an email address with a valid domain."),
     orderId: z
         .string()
         .trim()

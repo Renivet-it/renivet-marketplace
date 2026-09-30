@@ -25,7 +25,7 @@ describe("grievance identity validation", () => {
         const result = normalizeGrievanceSubmission({
             name: "  Ayan Ganguly ",
             phone: "+91 98765 43210",
-            email: "  AYAN@Example.COM ",
+            email: "  AYAN@GMAIL.COM ",
             orderId: "ORDER-1",
             category: "order_issue",
             description: "The delivered item is damaged.",
@@ -35,7 +35,7 @@ describe("grievance identity validation", () => {
         expect(result).toMatchObject({
             name: "Ayan Ganguly",
             phone: "9876543210",
-            email: "ayan@example.com",
+            email: "ayan@gmail.com",
             orderId: "ORDER-1",
             accountCreationConsent: false,
         });
@@ -59,6 +59,24 @@ describe("grievance identity validation", () => {
         );
         expect(parsed.error.flatten().fieldErrors.email).toContain(
             "Enter a valid email address."
+        );
+    });
+
+    test("rejects placeholder email domains", () => {
+        const parsed = grievanceSubmissionSchema.safeParse({
+            name: "Ayan",
+            phone: "9876543210",
+            email: "AYAN@TEST.COM",
+            category: "order_issue",
+            description: "A sufficiently long grievance description.",
+            accountCreationConsent: false,
+        });
+
+        expect(parsed.success).toBe(false);
+        if (parsed.success) return;
+
+        expect(parsed.error.flatten().fieldErrors.email).toContain(
+            "Enter an email address with a valid domain."
         );
     });
 });
