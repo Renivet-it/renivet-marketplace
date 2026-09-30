@@ -47,6 +47,7 @@ test("festive home mirrors the approved desktop section proportions", async () =
     expect(editorial.match(/unoptimized/g) ?? []).toHaveLength(2);
     expect(editorial.match(/!top-1\/2/g) ?? []).toHaveLength(2);
     expect(editorial.match(/!-translate-y-1\/2/g) ?? []).toHaveLength(2);
+    expect(editorial.match(/!absolute/g) ?? []).toHaveLength(2);
     expect(editorial).toContain("!left-3 !right-auto");
     expect(editorial).toContain("!right-3 !left-auto");
     expect(carousel).toContain('data-festive-section="festive-edit"');
