@@ -148,6 +148,14 @@ const ANNOUNCEMENT_MESSAGES = [
     },
 ];
 
+const FALLBACK_CATEGORY_LINKS = [
+    { label: "MEN", href: "/men" },
+    { label: "WOMEN", href: "/women" },
+    { label: "KIDS", href: "/kids" },
+    { label: "HOME AND LIVING", href: "/home-living" },
+    { label: "BEAUTY AND PERSONAL CARE", href: "/beauty-personal" },
+] as const;
+
 export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
@@ -215,6 +223,8 @@ export function NavbarHome({
         isCategoriesFetching ||
         isSubcategoriesFetching ||
         isProductTypesFetching;
+    const shouldShowCategoryFallback =
+        isCategoriesLoading || !categories || !subcategories || !productTypes;
 
     const {
         data: storefrontBrands = [],
@@ -534,8 +544,19 @@ export function NavbarHome({
                                 )}
                             </NavigationMenuList> */}
                                 <NavigationMenuList>
-                                    {isCategoriesLoading ? (
-                                        <></>
+                                    {shouldShowCategoryFallback ? (
+                                        FALLBACK_CATEGORY_LINKS.map(
+                                            ({ label, href }) => (
+                                                <NavigationMenuItem key={href}>
+                                                    <Link
+                                                        href={href}
+                                                        className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
+                                                    >
+                                                        {label}
+                                                    </Link>
+                                                </NavigationMenuItem>
+                                            )
+                                        )
                                     ) : (
                                         categories &&
                                         subcategories &&
@@ -824,8 +845,12 @@ export function NavbarHome({
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
-                                wrapper:
-                                    "hidden min-w-0 xl:flex xl:w-[clamp(220px,24vw,360px)] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                wrapper: cn(
+                                    "hidden min-w-0 xl:flex [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                                    showUserActions
+                                        ? "xl:w-[clamp(140px,calc(45vw-436px),420px)]"
+                                        : "xl:w-[clamp(140px,14vw,320px)]"
+                                ),
                             }}
                         />
                         {/* âœ… Guest-only Wishlist & Cart */}

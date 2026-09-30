@@ -8,9 +8,14 @@ describe("shop desktop layout", () => {
             "utf8"
         );
 
-        expect(source).toContain("min-w-0 flex-1");
-        expect(source).toContain("shrink-0");
-        expect(source).toContain("xl:w-[clamp(220px,24vw,360px)]");
+        expect(source).toContain("FALLBACK_CATEGORY_LINKS");
+        expect(source).toContain("shouldShowCategoryFallback");
+        expect(source).toContain("xl:flex");
+        expect(source).toContain(
+            "xl:w-[clamp(140px,calc(45vw-436px),420px)]"
+        );
+        expect(source).toContain("xl:w-[clamp(140px,14vw,320px)]");
+        expect(source).toContain("showUserActions");
         expect(source).not.toContain("xl:min-w-[360px]");
     });
 
