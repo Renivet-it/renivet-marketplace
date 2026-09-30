@@ -10,9 +10,9 @@ describe("shop desktop layout", () => {
 
         expect(source).toContain("min-w-0 flex-1");
         expect(source).toContain("shrink-0");
-        expect(source).toContain("min-[1650px]:flex");
+        expect(source).toContain("xl:flex");
         expect(source).toContain(
-            "min-[1650px]:w-[clamp(220px,20vw,320px)]"
+            "xl:w-[140px] min-[1360px]:w-[180px] min-[1500px]:w-[220px] min-[1650px]:w-[320px]"
         );
         expect(source).not.toContain("xl:min-w-[360px]");
     });
