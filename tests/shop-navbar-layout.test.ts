@@ -8,11 +8,11 @@ describe("shop desktop layout", () => {
             "utf8"
         );
 
-        expect(source).toContain("min-w-0 flex-1");
-        expect(source).toContain("shrink-0");
+        expect(source).toContain("FALLBACK_CATEGORY_LINKS");
+        expect(source).toContain("shouldShowCategoryFallback");
         expect(source).toContain("xl:flex");
         expect(source).toContain(
-            "xl:w-[140px] min-[1360px]:w-[180px] min-[1500px]:w-[220px] min-[1650px]:w-[320px]"
+            "xl:w-[clamp(140px,14vw,320px)]"
         );
         expect(source).not.toContain("xl:min-w-[360px]");
     });
