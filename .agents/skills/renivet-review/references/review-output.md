@@ -11,6 +11,8 @@ Use these headings exactly and in this order:
 
 ## Review Scope and Git Evidence
 
+## Deterministic Pre-check
+
 ## Requirement Reconciliation
 
 ## Scenario Reconciliation
@@ -31,6 +33,8 @@ Use these headings exactly and in this order:
 
 ## Final Recommendation
 ```
+
+The Deterministic Pre-check section lists each pre-check result (`PASS`, `FLAG`, or `CANNOT_ESTABLISH`) with its detail, and states how every `FLAG` is handled. It adds no field to the normalized YAML.
 
 The executive result states the result, drift, base/head commits, and whether governance re-entry is required. Reconciliation sections cover every stable contract ID or an evidenced `NOT_APPLICABLE` reason. The final recommendation repeats blockers and required actions without introducing new findings.
 

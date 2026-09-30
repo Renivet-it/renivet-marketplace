@@ -44,6 +44,10 @@ Aggregate a category as `FAIL` if any item fails; otherwise `PARTIAL` if any ite
 | `MINOR_DRIFT`    | A reversible, behaviorally compatible variation does not change an approved contract, invariant, public interface, architecture, security boundary, integration contract, or required test outcome. Record a non-blocking finding.                                                                 |
 | `MATERIAL_DRIFT` | The implementation adds, removes, or changes approved behavior, requirements, scenarios, invariants, state flow, architecture, API/data contract, dependency, security/privacy boundary, integration semantics, destructive behavior, or required test strategy. Governance re-entry is mandatory. |
 
+**Risk escalation.** The pre-check recomputes path rule risk from the real diff with `scripts/governance/risk-rules.yaml`. If it exceeds the contract's `risk.final_risk`, classify `MATERIAL_DRIFT`: the work touches a domain the approved risk level did not cover, so the contract must be re-specified at the higher level. Use the existing material-drift handling below; do not add a state or result value.
+
+**Pre-check facts.** Script-established `PASS` lines are direct evidence of the fact they state (for example changed paths, base and head SHAs). `FLAG` items must each be addressed in REVIEW.md. `CANNOT_ESTABLISH` counts as `PARTIAL` or a blocker, never `PASS`. At L3 the evidence duty for every contract item is unchanged.
+
 Material drift requires `governance_reentry_required: true`, a non-ready task status, and `REVIEW_FAILED`; never edit the approved SPEC to erase the difference.
 
 ## Decisions

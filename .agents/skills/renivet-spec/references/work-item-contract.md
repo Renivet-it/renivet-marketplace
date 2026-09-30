@@ -18,6 +18,15 @@ Each test expectation has a category (`unit`, `component`, `api`, `integration`,
 
 For `READY_FOR_DEV`, non-L0 contracts require requirements, scenarios, and test expectations. L2/L3 contracts additionally require invariants, flows, and an independent Critic attestation: non-empty artifact and reviewer, `fresh_context: true`, `read_only: true`, all required review categories, and a findings array (which may be empty). READY approval requires an explicit `design_blockers` array and a non-empty `approved_by` value.
 
+## Compact V2 conventions (no schema change)
+
+The contract shape, `schema_version: "1.0"`, and every validated field are unchanged. The conventions below use existing fields, unvalidated keys, and SPEC.md headings:
+
+- `risk.path_rule_risk` is written from `compact-check risk`, never below the computed value.
+- `investigation.depth` uses `L1_LIGHT`, `L2_TARGETED`, or `L3_DEEP` (older spellings remain accepted). An optional `investigation.budget_exception` string records why the recorded-file budget was exceeded; the validator ignores it.
+- SPEC.md headings read by the helper: `What are we fixing?`, `Affected surface`, `Implementation plan`, `Acceptance criteria`, `Rollback` (from L2), and optional `Conditions`.
+- `LAUNCH.md` is generated beside the contract by `compact-check launch`. It is a projection: the contract wins, it is never edited by hand, and no validator reads it.
+
 SPEC does not populate `implementation_review`. After implementation, invoke `$renivet-review <LINEAR-ID>` to reconcile the actual Git diff against this approved contract.
 
 Allowed lifecycle states are `DRAFT`, `IN_REVIEW`, `BLOCKED`, and `READY_FOR_DEV`. A Class C decision uses `human_confirmation_required: true` and cannot remain unresolved in `READY_FOR_DEV`.

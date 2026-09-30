@@ -1,0 +1,82 @@
+schema_version: "1.0"
+task:
+    id: REN-CT1
+    title: Compact V2 fixture
+    source: linear
+    branch: feature/ren-ct1
+    status: READY_FOR_DEV
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - Contained behaviour change in one module.
+    escalation_history: []
+investigation:
+    depth: L1_LIGHT
+    investigated_areas:
+        - src/example.ts
+    excluded_areas:
+        - area: src/unrelated
+          reason: No dependency path found.
+    dependencies:
+        - DEP-001
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+    related_tests:
+        - src/example.test.ts
+    uncertainties: []
+requirements:
+    - id: REQ-001
+      description: The example module returns the documented value.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      requirement_ids:
+          - REQ-001
+      description: A caller receives the documented value.
+invariants:
+    - id: INV-001
+      description: The documented value is never changed by callers.
+flows: []
+dependencies:
+    - id: DEP-001
+      description: Existing example helper.
+      status: resolved
+integrations: []
+personas: []
+security_boundaries: []
+business_rules: []
+decisions:
+    - id: DEC-001
+      question: Reuse the existing helper?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Reuse the helper.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: The value has a focused unit boundary.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids:
+              - SCN-001
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids:
+              - INV-001
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids:
+              - TEXP-001
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Governance fixture

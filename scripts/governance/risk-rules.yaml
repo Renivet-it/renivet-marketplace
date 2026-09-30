@@ -1,0 +1,561 @@
+# Path and domain risk rules for the Compact V2 governance helper.
+#
+# Used only by scripts/governance/compact-check.ts. The validator does not read
+# this file. A rule maps a repository path glob to a risk domain and a minimum
+# risk level; the highest matching level is the computed `path_rule_risk`.
+#
+# Seed: the domains come from the existing policy in
+# .agents/skills/renivet-spec/references/governance-workflow.md
+# (authentication, authorization, tenant isolation, customer identity and PII,
+# payment, finance, inventory, order lifecycle, schema changes, destructive
+# operations, security-sensitive APIs, external integrations). Each path family
+# comes from a path that exists in this repository today (the test suite fails
+# if a glob matches no tracked file). Levels are initial values; calibrate them
+# from the dry run and the pilot. Owner: the engineering lead role.
+#
+# Glob syntax: `*` matches within a path segment, `**` matches across segments,
+# `?` matches one character. No other glob features are supported.
+
+version: 1
+
+# Level given to a changed path that matches no rule and is not non-behavioural.
+default_level: L1
+
+# Paths that carry no runtime behaviour. They never raise risk (level L0).
+non_behavioural:
+    - "docs/**"
+    - "**/*.md"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "scripts/governance/fixtures/**"
+    - "scripts/governance/fixtures-compact/**"
+
+# Investigation budget by final risk level. Bounded guidance and a lint of the
+# scope recorded in the contract; it is not a live count of session reads.
+budgets:
+    L1:
+        files: 8
+        hops: 1
+    L2:
+        files: 25
+        hops: 2
+    L3:
+        files: 60
+        hops: 3
+
+# Domains whose presence at L3 requires a recorded investigation in that domain.
+mandatory_trace_domains:
+    - authn_authz
+    - tenant_isolation
+    - pii_identity
+    - payment
+    - orders
+    - inventory
+    - financial
+    - schema_migration
+
+# L2 Critic: categories examined in depth, selected from the domains hit.
+# Keys of each list are the categories already required by the contract
+# (requirements_scenarios, failure_recovery, security_privacy,
+# state_data_consistency, integrations_idempotency, compatibility_migration,
+# observability_testability, assumptions_dependencies). Every other category
+# still receives a one-line answer; nothing is marked not applicable unchecked.
+critic_focus:
+    authn_authz: [security_privacy, state_data_consistency]
+    tenant_isolation: [security_privacy, assumptions_dependencies]
+    pii_identity: [security_privacy, compatibility_migration]
+    payment:
+        [state_data_consistency, integrations_idempotency, failure_recovery]
+    orders: [state_data_consistency, failure_recovery]
+    inventory: [state_data_consistency, failure_recovery]
+    financial: [state_data_consistency, integrations_idempotency]
+    schema_migration: [compatibility_migration, failure_recovery]
+    destructive: [failure_recovery, compatibility_migration]
+    external_provider: [integrations_idempotency, failure_recovery]
+    customer_critical_flow: [requirements_scenarios, failure_recovery]
+    default: [requirements_scenarios, observability_testability]
+
+# Pilot preparation. Read by people, not by the helper. All values are INITIAL
+# thresholds from the Compact V2 plan and are fixed by the owner before the
+# pilot starts; they are not findings. Run each side in a fresh scratch worktree
+# (current skills from the default branch, Compact V2 from this branch) with no
+# Linear writes. Tokens are recorded as NOT MEASURED when session logs are
+# unavailable.
+pilot:
+    issues:
+        spec_lower: REN-250 # proposed L1; the final level comes from `compact-check risk`
+        spec_l3: REN-251 # authorization and security path
+        review_l2: REN-108 # existing L2 review specimen (its recorded range is stale: see dry run)
+        review_l3: REN-115 # existing L3 review specimen
+    gates:
+        G1: L3 rigour preserved (all eight Critic categories, AI evidence on every contract ID)
+        G2: every seeded fault the current system catches is caught, plus F1 to F7
+        G3: existing validator tests pass unchanged and every pilot contract validates
+        G4: validator failures and missing evidence are not higher than current
+    benefits:
+        B1_l1_l2: at least one of repository reads, execution time or artifact size falls by 20 percent or more with none rising by more than 10 percent
+        B2_l3: no increase above 10 percent in reads, time or artifact size
+        B3: time to first correct action is no worse than current
+    measure_only:
+        - execution time
+        - repository reads and searches
+        - Linear reads
+        - artifact size
+        - Critic invocations and cycles
+        - developer time to first correct action
+        - governance coverage and seeded-fault parity
+        - rework and missing evidence
+
+rules:
+    # Authentication and authorization
+    - id: R-AUTH-001
+      glob: "src/middleware.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Route protection and the permission gate run here.
+      source: policy
+    - id: R-AUTH-002
+      glob: "src/app/api/permission/**"
+      domain: authn_authz
+      min_level: L3
+      reason: Permission decisions and identity lookups for protected routes.
+      source: policy
+    - id: R-AUTH-003
+      glob: "src/config/permissions.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Permission bit model.
+      source: policy
+    - id: R-AUTH-004
+      glob: "src/lib/trpc/trpc.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Procedure tiers and authorization middleware.
+      source: policy
+    - id: R-AUTH-005
+      glob: "src/lib/trpc/context.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Request context and identity resolution.
+      source: policy
+    - id: R-AUTH-006
+      glob: "src/lib/auth/**"
+      domain: authn_authz
+      min_level: L3
+      reason: Access helpers for cron, logistics and secret comparison.
+      source: policy
+    - id: R-AUTH-007
+      glob: "src/lib/jose/**"
+      domain: authn_authz
+      min_level: L3
+      reason: Token handling.
+      source: policy
+    - id: R-AUTH-008
+      glob: "src/lib/redis/methods/user.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: The user cache carries permission bits used for authorization.
+      source: inventory
+    - id: R-AUTH-009
+      glob: "src/lib/finance/access.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Finance access control.
+      source: policy
+    - id: R-AUTH-010
+      glob: "src/lib/brand-agreements/access.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Agreement access control.
+      source: policy
+    - id: R-AUTH-011
+      glob: "src/app/api/admin/**"
+      domain: authn_authz
+      min_level: L2
+      reason: Administrator-only API routes (security-sensitive).
+      source: policy
+    - id: R-AUTH-012
+      glob: "src/app/api/internal/**"
+      domain: authn_authz
+      min_level: L2
+      reason: Internal API routes (security-sensitive).
+      source: policy
+    - id: R-AUTH-013
+      glob: "src/app/(auth)/**"
+      domain: authn_authz
+      min_level: L2
+      reason: Sign-in and sign-up flows.
+      source: policy
+
+    # Tenant isolation and brand membership
+    - id: R-TEN-001
+      glob: "src/lib/trpc/routes/brands/**"
+      domain: tenant_isolation
+      min_level: L2
+      reason: Brand-scoped procedures; each must scope to the caller's brand.
+      source: inventory
+    - id: R-TEN-002
+      glob: "src/lib/trpc/routes/brands/confidential.ts"
+      domain: tenant_isolation
+      min_level: L3
+      reason: Brand confidential and payee data.
+      source: inventory
+    - id: R-TEN-003
+      glob: "src/lib/trpc/routes/brands/{members,roles,bans,invites}.ts"
+      domain: tenant_isolation
+      min_level: L3
+      reason: Brand membership and roles.
+      source: inventory
+    - id: R-TEN-004
+      glob: "src/lib/db/queries/{brand-confidential,brand-member,banned-brand-member,brand-invite}.ts"
+      domain: tenant_isolation
+      min_level: L3
+      reason: Data access for brand membership and confidential data.
+      source: inventory
+    - id: R-TEN-005
+      glob: "src/actions/brand-invite-accept.ts"
+      domain: tenant_isolation
+      min_level: L3
+      reason: Accepting a brand invitation changes membership.
+      source: inventory
+
+    # Customer identity and PII
+    - id: R-PII-001
+      glob: "src/app/api/account-merge/**"
+      domain: pii_identity
+      min_level: L3
+      reason: Moves orders between identities and deletes the source identity.
+      source: inventory
+    - id: R-PII-002
+      glob: "src/app/api/account/**"
+      domain: pii_identity
+      min_level: L3
+      reason: Identity synchronisation.
+      source: inventory
+    - id: R-PII-003
+      glob: "src/app/api/webhooks/clerk/**"
+      domain: pii_identity
+      min_level: L3
+      reason: Identity webhook with delete cascade.
+      source: inventory
+    - id: R-PII-004
+      glob: "src/lib/finance/dpdp.ts"
+      domain: pii_identity
+      min_level: L3
+      reason: Data-deletion and anonymisation executor.
+      source: inventory
+    - id: R-PII-005
+      glob: "src/lib/db/queries/{user,address}.ts"
+      domain: pii_identity
+      min_level: L2
+      reason: Customer identity and address data access.
+      source: policy
+    - id: R-PII-006
+      glob: "src/lib/trpc/routes/general/{users,address}.ts"
+      domain: pii_identity
+      min_level: L2
+      reason: Customer identity and address procedures.
+      source: policy
+
+    # Payment
+    - id: R-PAY-001
+      glob: "src/lib/razorpay/**"
+      domain: payment
+      min_level: L3
+      reason: Payment provider client and cancellation.
+      source: inventory
+    - id: R-PAY-002
+      glob: "src/app/api/webhooks/razorpay/**"
+      domain: payment
+      min_level: L3
+      reason: Payment and refund webhooks establish the paid fact.
+      source: inventory
+    - id: R-PAY-003
+      glob: "src/actions/{get-shiprocket-balance,process-order-after-payment,update-payment-status,verify-subscription}.ts"
+      domain: payment
+      min_level: L3
+      reason: Server actions that create payment orders or set the paid fact.
+      source: inventory
+    - id: R-PAY-004
+      glob: "src/lib/checkout/**"
+      domain: payment
+      min_level: L3
+      reason: Checkout logic.
+      source: policy
+    - id: R-PAY-005
+      glob: "src/lib/trpc/routes/general/orders-intent.ts"
+      domain: payment
+      min_level: L3
+      reason: Payment intent status procedures.
+      source: inventory
+    - id: R-PAY-006
+      glob: "src/app/api/corporate-payment-requests/**"
+      domain: payment
+      min_level: L3
+      reason: Corporate payment requests.
+      source: inventory
+    - id: R-PAY-007
+      glob: "src/lib/services/corporate-payment-request.tsx"
+      domain: payment
+      min_level: L3
+      reason: Corporate payment request service.
+      source: inventory
+
+    # Order lifecycle and refunds
+    - id: R-ORD-001
+      glob: "src/lib/db/queries/{order,refund}.ts"
+      domain: orders
+      min_level: L3
+      reason: Order status and refund writers.
+      source: inventory
+    - id: R-ORD-002
+      glob: "src/lib/trpc/routes/general/{orders,order-ops,order-return,returnReplace}.ts"
+      domain: orders
+      min_level: L3
+      reason: Order, return and order-operations procedures.
+      source: inventory
+    - id: R-ORD-003
+      glob: "src/lib/support/{cancel-order-helper,dispute-replacement-order}.ts"
+      domain: orders
+      min_level: L3
+      reason: Order cancellation and replacement-order creation.
+      source: inventory
+    - id: R-ORD-004
+      glob: "src/app/api/cron/refund-reconciliation/**"
+      domain: orders
+      min_level: L3
+      reason: Refund reconciliation job.
+      source: inventory
+    - id: R-ORD-005
+      glob: "src/actions/update-order-address.ts"
+      domain: orders
+      min_level: L2
+      reason: Changes the address on an existing order.
+      source: inventory
+    - id: R-ORD-006
+      glob: "src/lib/customer-order-access.ts"
+      domain: orders
+      min_level: L2
+      reason: Who may see an order.
+      source: policy
+
+    # Inventory
+    - id: R-INV-001
+      glob: "src/lib/unicommerce/**"
+      domain: inventory
+      min_level: L3
+      reason: Inventory synchronisation overwrites stock.
+      source: inventory
+    - id: R-INV-002
+      glob: "src/lib/inventory/**"
+      domain: inventory
+      min_level: L3
+      reason: Stock logic.
+      source: policy
+    - id: R-INV-003
+      glob: "src/app/api/cron/unicommerce/**"
+      domain: inventory
+      min_level: L3
+      reason: Scheduled inventory synchronisation.
+      source: inventory
+
+    # Finance
+    - id: R-FIN-001
+      glob: "src/lib/finance/**"
+      domain: financial
+      min_level: L3
+      reason: Settlement, payout, commission, tax and compliance calculations.
+      source: policy
+    - id: R-FIN-002
+      glob: "src/app/api/finance/**"
+      domain: financial
+      min_level: L3
+      reason: Finance exports and reconciliation endpoints.
+      source: inventory
+    - id: R-FIN-003
+      glob: "src/app/api/cron/finance/**"
+      domain: financial
+      min_level: L3
+      reason: Scheduled finance jobs.
+      source: inventory
+    - id: R-FIN-004
+      glob: "src/lib/trpc/routes/general/finance.ts"
+      domain: financial
+      min_level: L3
+      reason: Finance compliance procedures, including payout execution.
+      source: inventory
+    - id: R-FIN-005
+      glob: "src/lib/db/queries/finance-compliance.ts"
+      domain: financial
+      min_level: L3
+      reason: Finance data access.
+      source: inventory
+    - id: R-FIN-006
+      glob: "src/lib/order-invoice*.ts"
+      domain: financial
+      min_level: L2
+      reason: Invoice numbering and content.
+      source: policy
+    - id: R-FIN-007
+      glob: "src/app/api/invoices/**"
+      domain: financial
+      min_level: L2
+      reason: Invoice download endpoints.
+      source: policy
+
+    # Schema and migrations
+    - id: R-SCH-001
+      glob: "drizzle/**"
+      domain: schema_migration
+      min_level: L3
+      reason: Database migrations apply to the production database.
+      source: policy
+    - id: R-SCH-002
+      glob: "drizzle.config.ts"
+      domain: schema_migration
+      min_level: L3
+      reason: Migration tooling configuration.
+      source: policy
+    - id: R-SCH-003
+      glob: "src/lib/db/schema/**"
+      domain: schema_migration
+      min_level: L2
+      reason: Schema definitions (schema changes increase risk).
+      source: policy
+
+    # Destructive operations
+    - id: R-DES-001
+      glob: "src/app/api/cron/privacy/**"
+      domain: destructive
+      min_level: L3
+      reason: Scheduled data-deletion execution.
+      source: inventory
+
+    # External integrations
+    - id: R-EXT-001
+      glob: "src/lib/{delhivery,shiprocket}/**"
+      domain: external_provider
+      min_level: L2
+      reason: Carrier clients.
+      source: inventory
+    - id: R-EXT-002
+      glob: "src/app/api/{delhivery,shiprocket}/**"
+      domain: external_provider
+      min_level: L2
+      reason: Carrier routes and crons.
+      source: inventory
+    - id: R-EXT-003
+      glob: "src/app/api/webhooks/shipping/**"
+      domain: external_provider
+      min_level: L3
+      reason: Shipping webhook updates order status.
+      source: inventory
+    - id: R-EXT-004
+      glob: "src/lib/{resend,whatsapp,uploadthing}/**"
+      domain: external_provider
+      min_level: L2
+      reason: Notification and upload provider clients.
+      source: inventory
+    - id: R-EXT-005
+      glob: "src/app/api/uploadthing/**"
+      domain: external_provider
+      min_level: L2
+      reason: Upload routes authorize from the user cache; some are private.
+      source: inventory
+    - id: R-EXT-006
+      glob: "src/lib/fb-capi.ts"
+      domain: external_provider
+      min_level: L2
+      reason: Conversions API client.
+      source: inventory
+    - id: R-EXT-007
+      glob: "src/app/api/cron/**"
+      domain: external_provider
+      min_level: L2
+      reason: Scheduled jobs change state and call providers.
+      source: inventory
+    - id: R-EXT-008
+      glob: "src/actions/{sendBulkEmail,send-*,whatsapp/**,shiprocket/**}"
+      domain: external_provider
+      min_level: L2
+      reason: Server actions that call notification and carrier providers.
+      source: inventory
+
+    # Customer-critical flows
+    - id: R-CCF-001
+      glob: "src/app/(protected)/checkout/**"
+      domain: customer_critical_flow
+      min_level: L3
+      reason: Checkout.
+      source: policy
+    - id: R-CCF-002
+      glob: "src/app/(protected)/{mycart,orders}/**"
+      domain: customer_critical_flow
+      min_level: L2
+      reason: Cart and customer orders.
+      source: policy
+    - id: R-CCF-003
+      glob: "src/lib/cart/**"
+      domain: customer_critical_flow
+      min_level: L2
+      reason: Cart guards and transactions.
+      source: policy
+
+    # Added after the historical dry run (recent merges that matched no rule but
+    # sit in a registry-listed mutation family)
+    - id: R-AUTH-014
+      glob: "src/lib/trpc/routes/general/roles.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Site role and permission administration.
+      source: inventory
+    - id: R-AUTH-015
+      glob: "src/lib/db/queries/role.ts"
+      domain: authn_authz
+      min_level: L3
+      reason: Role data access.
+      source: inventory
+    - id: R-INV-004
+      glob: "src/lib/db/queries/product.ts"
+      domain: inventory
+      min_level: L2
+      reason: Hosts the stock writer (relative stock update) and product writes.
+      source: inventory
+    - id: R-INV-005
+      glob: "src/lib/trpc/routes/general/product-review.ts"
+      domain: inventory
+      min_level: L2
+      reason: Bulk product add overwrites stock and sets publication.
+      source: inventory
+    - id: R-ORD-007
+      glob: "src/app/api/corporate-*/**"
+      domain: orders
+      min_level: L2
+      reason: Corporate order, proforma and payment-request routes.
+      source: inventory
+    - id: R-ORD-008
+      glob: "src/lib/trpc/routes/general/{corporate-orders,corporate-platform}.ts"
+      domain: orders
+      min_level: L2
+      reason: Corporate order and platform procedures.
+      source: inventory
+    - id: R-ORD-009
+      glob: "src/lib/services/corporate-*.ts*"
+      domain: orders
+      min_level: L2
+      reason: Corporate order, document and settlement services.
+      source: inventory
+    - id: R-EXT-009
+      glob: "src/lib/trpc/routes/general/{tickets,legal,support,user-support,notifications,whatsapp-notifications}.ts"
+      domain: external_provider
+      min_level: L2
+      reason: Public and support mutations that create alerts fanning out to e-mail and WhatsApp.
+      source: inventory
+    - id: R-FIN-008
+      glob: "src/components/pdf/{brand-payout-statement,invoice}-template.tsx"
+      domain: financial
+      min_level: L2
+      reason: Payout statement and invoice documents.
+      source: policy
