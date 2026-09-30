@@ -25,7 +25,7 @@ The contract shape, `schema_version: "1.0"`, and every validated field are uncha
 - `risk.path_rule_risk` is written from `compact-check risk`, never below the computed value.
 - `investigation.depth` uses `L1_LIGHT`, `L2_TARGETED`, or `L3_DEEP` (older spellings remain accepted). An optional `investigation.budget_exception` string records why the recorded-file budget was exceeded; the validator ignores it.
 - SPEC.md headings read by the helper: `What are we fixing?`, `Affected surface`, `Implementation plan`, `Acceptance criteria`, `Rollback` (from L2), and optional `Conditions`.
-- `LAUNCH.md` is generated beside the contract by `compact-check launch`. It is a projection: the contract wins, it is never edited by hand, and no validator reads it.
+- `LAUNCH.md` is generated beside the contract by `compact-check launch`. It is a projection: the contract wins, it is never edited by hand, and no validator reads it. A missing list shows as `MISSING`, an empty list as `NONE RECORDED`, and a missing SPEC.md heading as `SECTION MISSING`; it ends with a source stamp so a stale page can be detected.
 
 SPEC does not populate `implementation_review`. After implementation, invoke `$renivet-review <LINEAR-ID>` to reconcile the actual Git diff against this approved contract.
 
