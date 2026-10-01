@@ -8,6 +8,7 @@ Close the ten approved Stage 3A security guard gaps without redesigning the perm
 
 - The 51 cross-brand authorization procedures belong to REN-172. REN-254 verifies and links REN-172 evidence; it does not duplicate that implementation.
 - User deletion must anonymize or soft-delete identity data while preserving order, sales, tax, payout, and other required business history. The final legal retention period remains a Legal/CA decision outside this task.
+- The deletion implementation is an in-place anonymization of the existing `users` row: keep the Clerk/user id for foreign keys, set a deterministic deleted-user name, replace the unique email with an id-derived `deleted+<userId>@invalid.renivet` value, clear nullable contact/avatar data, and make repeated webhook delivery a no-op. Brand ownership/membership relationships are not transferred or removed by this task.
 - Ayan collects technical evidence. Akshay reviews it and owns the release decision.
 - Existing role and tenant boundaries remain authoritative; unauthorized actor/tenant combinations are denied.
 
@@ -30,7 +31,13 @@ In scope are exactly these ten items and their focused negative/regression tests
 
 ## Design
 
-Use existing `isTRPCAuth`, site/brand permission bitfields, finance/module access patterns, Clerk webhook handling, and query conventions. Authorization checks must happen before target-brand reads, writes, or external calls. Where REN-172 owns a procedure, REN-254 records the linked evidence instead of changing it. For user deletion, preserve the row needed by foreign keys and replace identity fields with a deterministic deleted-user representation; verify database relations so sale, tax, and payout history cannot cascade-delete.
+Use existing `isTRPCAuth`, site/brand permission bitfields, finance/module access patterns, Clerk webhook handling, and query conventions. Authorization checks must happen before target-brand reads, writes, or external calls. Where REN-172 owns a procedure, REN-254 records the linked evidence instead of changing it. For user deletion, preserve the row needed by foreign keys and replace identity fields with the deterministic deleted-user representation above; verify database relations so sale, tax, and payout history cannot cascade-delete.
+
+For bulk messaging, preserve the permissions already exposed by the dashboard: email requires the existing `MANAGE_CATEGORIES` site permission; WhatsApp requires the existing `MANAGE_CATEGORIES` or `MANAGE_BRANDS` site permission. The server actions must enforce the same rule independently of page visibility, including read/retry/clear-log actions.
+
+For brand invites, validate the authenticated user from `auth()`, load the invite by code, require the supplied brand id to match the invite, reject expired or exhausted invites, and increment usage only after successful membership creation. The invite query must enforce the usage condition atomically or the implementation must document and test the chosen concurrency-safe approach.
+
+For return/replace actions, `create` checks the authenticated caller owns the customer request before reading sensitive related data. `approveRequest`, `createRTOShipment`, and `markCompleted` require refund-module manage access and an explicit current-status precondition before any state change, refund, shipment, or notification side effect. Existing request statuses and transitions must be confirmed from the schema/query code during implementation; no new business status is introduced.
 
 The implementation must keep cache behavior explicit: after deployment, flush `user:*` and record the evidence because role changes otherwise remain cached for up to 24 hours.
 
