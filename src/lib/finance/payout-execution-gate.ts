@@ -104,3 +104,15 @@ export function isPayoutOverrideApproved(input: {
             input.approvedBy !== input.createdBy
     );
 }
+
+export function isPayoutExecutionSeparated(input: {
+    executorId: string;
+    clearedBy?: string | null;
+    approvedBy?: string | null;
+}) {
+    return Boolean(
+        input.executorId.trim() &&
+            input.executorId !== input.clearedBy?.trim() &&
+            input.executorId !== input.approvedBy?.trim()
+    );
+}

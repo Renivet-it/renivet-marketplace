@@ -9,6 +9,13 @@ type FinanceAccessRole = {
     isSiteRole?: boolean | null;
 };
 
+export function hasPayoutStatementAccess(access: {
+    canView: boolean;
+    canManage: boolean;
+}) {
+    return access.canView || access.canManage;
+}
+
 export function hasFinanceAdminAccess(params: {
     sitePermissions: number;
     roles?: FinanceAccessRole[];

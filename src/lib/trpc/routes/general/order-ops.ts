@@ -4,6 +4,7 @@ import {
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
 import { executeOrderCancellation } from "@/lib/support/cancel-order-helper";
+import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -533,6 +534,16 @@ export const orderOpsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             await ensureOrder(ctx, input.orderId);
             const now = new Date();
+            const existing = await ctx.db.query.rtoDispositions.findFirst({
+                where: eq(ctx.schemas.rtoDispositions.orderId, input.orderId),
+            });
+            if (existing && existing.faultOwner !== input.faultOwner) {
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message:
+                        "RTO fault-owner changes must use Return/Replace setRtoAttribution so the lock and audit checks are applied.",
+                });
+            }
             const disposition = await ctx.db
                 .insert(ctx.schemas.rtoDispositions)
                 .values({
@@ -552,7 +563,6 @@ export const orderOpsRouter = createTRPCRouter({
                         shipmentId: input.shipmentId,
                         status: input.status,
                         rtoReason: input.rtoReason,
-                        faultOwner: input.faultOwner,
                         recoveryDecision: input.recoveryDecision,
                         notes: input.notes,
                         handledBy: ctx.user.id,
@@ -567,6 +577,19 @@ export const orderOpsRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((rows: any[]) => rows[0]);
+
+            if (!existing) {
+                await writeFinanceAuditEvent({
+                    actorId: ctx.user.id,
+                    actorType: "admin",
+                    actionType: "rto_attribution_set",
+                    entityType: "rto_disposition",
+                    entityId: disposition.id,
+                    beforeValue: null,
+                    afterValue: { faultOwner: input.faultOwner, notes: input.notes },
+                    reason: input.notes,
+                });
+            }
 
             await setOrderOpsState({
                 ctx,

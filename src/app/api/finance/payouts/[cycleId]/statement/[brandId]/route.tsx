@@ -1,5 +1,9 @@
 import { BrandPayoutStatementTemplate } from "@/components/pdf/brand-payout-statement-template";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
+import { getFinanceModuleAccess, hasPayoutStatementAccess } from "@/lib/finance/access";
+import { userCache } from "@/lib/redis/methods";
+import { getUserPermissions } from "@/lib/utils";
+import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,6 +16,23 @@ export async function GET(
         }>;
     }
 ) {
+    const { userId } = await auth();
+    if (!userId) {
+        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await userCache.get(userId);
+    const sitePermissions = user ? getUserPermissions(user.roles).sitePermissions : 0;
+    const access = await getFinanceModuleAccess({
+        userId,
+        sitePermissions,
+        roles: user?.roles,
+        moduleKey: "payouts",
+    });
+    if (!hasPayoutStatementAccess(access)) {
+        return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    }
+
     const { cycleId, brandId } = await context.params;
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) {

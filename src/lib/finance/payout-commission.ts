@@ -113,3 +113,19 @@ export function resolveCommissionRuleFromCandidates(input: {
         })[0] ?? null
     );
 }
+
+export function requireCommissionRule(input: {
+    brandId: string;
+    categoryId?: string | null;
+    productTypeId?: string | null;
+    targetDate: Date;
+    rules: CommissionRuleCandidate[];
+}) {
+    const rule = resolveCommissionRuleFromCandidates(input);
+    if (!rule) {
+        throw new Error(
+            `No approved commission rule for brand ${input.brandId} at ${input.targetDate.toISOString()}.`
+        );
+    }
+    return rule;
+}

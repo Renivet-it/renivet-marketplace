@@ -8,8 +8,7 @@ import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 import {
     calculateCommissionPaise,
-    categoryCommissionPercentToBps,
-    resolveCommissionRuleFromCandidates,
+    requireCommissionRule,
     type CommissionRuleCandidate,
 } from "./payout-commission";
 import {
@@ -23,6 +22,7 @@ import {
 } from "./payout-holdback";
 import {
     evaluatePayoutExecutionGate,
+    isPayoutExecutionSeparated,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
 import {
@@ -151,23 +151,10 @@ async function resolveCommissionRuleForItem(input: {
         isActive: true,
     });
 
-    const winner = resolveCommissionRuleFromCandidates({
+    const winner = requireCommissionRule({
         ...input,
         rules,
     });
-
-    if (!winner) {
-        if (input.categoryCommissionPercent == null) return null;
-
-        return {
-            commissionPercentBps: categoryCommissionPercentToBps(
-                input.categoryCommissionPercent
-            ),
-            holdbackPercentBps: 0,
-            ruleName: "category_fallback",
-            source: "category_fallback",
-        } satisfies ResolvedRule;
-    }
 
     return {
         commissionPercentBps: winner.commissionPercentBps,
@@ -368,9 +355,10 @@ async function buildBrandPayoutSummaries(cycleId: string) {
 
             const grossItemPaise =
                 Number(item.variant?.price ?? item.product?.price ?? 0) * item.quantity;
-            const commissionPaise = rule
-                ? calculateCommissionPaise(grossItemPaise, rule.commissionPercentBps)
-                : 0;
+            const commissionPaise = calculateCommissionPaise(
+                grossItemPaise,
+                rule.commissionPercentBps
+            );
 
             const existing =
                 summaries.get(brandId) ??
@@ -423,9 +411,9 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 referenceId: order.id,
                     metadata: {
                         deliveredAt: deliveredAt.toISOString(),
-                        commissionStatus: rule ? "applied" : "blocked_unconfigured",
-                        commissionSource: rule?.source,
-                        commissionPercentBps: rule?.commissionPercentBps,
+                        commissionStatus: "applied",
+                        commissionSource: rule.source,
+                        commissionPercentBps: rule.commissionPercentBps,
                         holdbackPercentBps: 0,
                         ruleName: rule?.ruleName,
                         ruleId: rule?.ruleId,
@@ -439,11 +427,11 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 amountPaise: -commissionPaise,
                 referenceId: order.id,
                 metadata: {
-                    commissionStatus: rule ? "applied" : "blocked_unconfigured",
-                    commissionPercentBps: rule?.commissionPercentBps,
-                    commissionSource: rule?.source,
-                    ruleName: rule?.ruleName,
-                    ruleId: rule?.ruleId,
+                    commissionStatus: "applied",
+                    commissionPercentBps: rule.commissionPercentBps,
+                    commissionSource: rule.source,
+                    ruleName: rule.ruleName,
+                    ruleId: rule.ruleId,
                 },
             });
 
@@ -756,9 +744,28 @@ function deriveCycleStatus(brands: BrandCycleSummary[]) {
     return "calculated";
 }
 
+export function canRecalculatePayoutCycle(status: string) {
+    return status === "draft" || status === "calculated";
+}
+
+export function shouldSkipPayoutBrandExecution(status: string) {
+    return ["completed", "submitted", "awaiting_manual_confirmation", "skipped"].includes(
+        status
+    );
+}
+
+export function getPayoutExecutionReference(cycleKey: string, brandId: string) {
+    return `${cycleKey}-${brandId}`;
+}
+
 export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    if (!canRecalculatePayoutCycle(cycle.status)) {
+        throw new Error(
+            `Payout recalculation blocked: cycle status is ${cycle.status}.`
+        );
+    }
 
     const { brands: summaries, eligibilityDiagnostics } =
         await buildBrandPayoutSummaries(cycleId);
@@ -1102,6 +1109,20 @@ export async function executePayoutCycle(
     const clearance = await financeComplianceQueries.getActivePayoutExecutionClearance(
         cycleId
     );
+    const cycleSummary = cycle.calculationSummary as CycleCalculationSummary | undefined;
+    const approvedBy = cycleSummary?.brands?.find((brand) => brand.approvedBy)?.approvedBy;
+    if (
+        !clearance ||
+        !isPayoutExecutionSeparated({
+            executorId: actorId,
+            clearedBy: clearance.clearedBy,
+            approvedBy,
+        })
+    ) {
+        throw new Error(
+            "Payout execution blocked: approval, clearance, and execution must be separated."
+        );
+    }
     const gate = await evaluateAndAuditPayoutExecutionGate(
         cycle,
         actorId,
@@ -1122,7 +1143,7 @@ export async function executePayoutCycle(
         if (brand.reviewStatus !== "approved") {
             throw new Error(`Approve payout for ${brand.brandName} before execution.`);
         }
-        if (["completed", "awaiting_manual_confirmation"].includes(brand.executionStatus)) {
+        if (shouldSkipPayoutBrandExecution(brand.executionStatus)) {
             continue;
         }
 
@@ -1147,7 +1168,7 @@ export async function executePayoutCycle(
                     bankAccountHolderName: String(metadata.bankAccountHolderName ?? ""),
                     bankAccountNumber: String(metadata.bankAccountNumber ?? ""),
                     bankIfscCode: String(metadata.bankIfscCode ?? ""),
-                    reference: `${cycle.cycleKey}-${brand.brandId}`,
+                    reference: getPayoutExecutionReference(cycle.cycleKey, brand.brandId),
                     rzpAccountId: String(metadata.rzpAccountId ?? ""),
                 });
 
@@ -1245,7 +1266,7 @@ export async function executePayoutCycle(
                     accountNumberLast4: metadata.bankAccountNumberLast4,
                     ifsc: metadata.bankIfscCode,
                     amountPaise: brand.netPayablePaise,
-                    reference: `${cycle.cycleKey}-${brand.brandId}`,
+                    reference: getPayoutExecutionReference(cycle.cycleKey, brand.brandId),
                 },
             });
         }

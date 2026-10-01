@@ -4,7 +4,7 @@ task:
     title: "[C0] Payout Containment — residual payout-path controls (no payout authorised)"
     source: linear
     branch: ayanganguly333/ren-253-c0-payout-containment-residual-payout-path-controls-no
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-253/c0-payout-containment-residual-payout-path-controls-no-payout
         priority: Urgent
