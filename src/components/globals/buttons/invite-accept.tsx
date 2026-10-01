@@ -39,7 +39,6 @@ export function InviteAcceptButton({ user, invite }: PageProps) {
             onClick={() =>
                 acceptInvite({
                     brandId: invite.brand.id,
-                    memberId: user.id,
                     code: invite.id,
                 })
             }

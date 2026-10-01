@@ -78,6 +78,7 @@ export const rolesRouter = createTRPCRouter({
                     .insert(schemas.roles)
                     .values({
                         ...sanitizedInput,
+                        sitePermissions: "0",
                         slug,
                         position: +brandRolesCount + 1,
                     })
@@ -144,6 +145,7 @@ export const rolesRouter = createTRPCRouter({
             const [updatedRole] = await Promise.all([
                 queries.roles.updateRole(roleId, {
                     ...sanitizedData,
+                    sitePermissions: "0",
                     slug,
                 }),
                 brandCache.remove(brandId),

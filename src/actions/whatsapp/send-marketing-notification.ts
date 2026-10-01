@@ -1,8 +1,22 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { getUserPermissions, hasPermission } from "@/lib/utils";
+import { userCache } from "@/lib/redis/methods";
 import { whatsappMessageLogQueries } from "@/lib/db/queries/whatsapp";
 import { sendPromoOfferMessage } from "@/lib/whatsapp/index";
 import twilio from "twilio";
+
+async function requireWhatsAppMessagingAccess() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  const user = await userCache.get(userId);
+  const permissions = user ? getUserPermissions(user.roles).sitePermissions : 0;
+  if (!hasPermission(permissions, [BitFieldSitePermission.MANAGE_CATEGORIES, BitFieldSitePermission.MANAGE_BRANDS], "any")) {
+    throw new Error("Forbidden");
+  }
+}
 
 export type CampaignTemplateKey =
   | "renivet_story_1"
@@ -74,6 +88,7 @@ export async function sendSingleWhatsAppMessage(recipient: {
   templateKey?: CampaignTemplateKey;
   attempts?: number;
 }) {
+  await requireWhatsAppMessagingAccess();
   const templateName = recipient.templateKey || "renivet_story_1";
   const attempts = recipient.attempts ?? 1;
 
@@ -138,6 +153,7 @@ export async function sendSingleWhatsAppMessage(recipient: {
 }
 
 export async function getWhatsAppMessageLogs() {
+  await requireWhatsAppMessagingAccess();
   const logs = await whatsappMessageLogQueries.getLogs();
   return logs.map(serializeLog);
 }
@@ -170,6 +186,7 @@ export async function importTwilioWhatsAppMessageLogs({
   days?: number;
   limit?: number;
 } = {}) {
+  await requireWhatsAppMessagingAccess();
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
     throw new Error("Twilio configuration missing");
   }
@@ -239,6 +256,7 @@ export async function importTwilioWhatsAppMessageLogs({
 }
 
 export async function retryWhatsAppMessageLog(logId: string) {
+  await requireWhatsAppMessagingAccess();
   const logs = await whatsappMessageLogQueries.getLogsByIds([logId]);
   const log = logs[0];
 
@@ -267,6 +285,7 @@ export async function retryWhatsAppMessageLog(logId: string) {
 }
 
 export async function retrySelectedWhatsAppMessageLogs(logIds: string[]) {
+  await requireWhatsAppMessagingAccess();
   const logs = await whatsappMessageLogQueries.getLogsByIds(logIds);
   const results = [];
 
@@ -294,6 +313,7 @@ export async function retrySelectedWhatsAppMessageLogs(logIds: string[]) {
 }
 
 export async function clearWhatsAppMessageLogs() {
+  await requireWhatsAppMessagingAccess();
   await whatsappMessageLogQueries.clearLogs();
   return { success: true };
 }

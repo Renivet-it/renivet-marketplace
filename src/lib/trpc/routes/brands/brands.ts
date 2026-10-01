@@ -1,5 +1,5 @@
 import { utApi } from "@/app/api/uploadthing/core";
-import { BitFieldBrandPermission } from "@/config/permissions";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
 import { brandUnicommerceIntegrations, brands } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { brandCache } from "@/lib/redis/methods";
@@ -596,6 +596,11 @@ export const brandsRouter = createTRPCRouter({
     getBrandWithConfidential: protectedProcedure
   .input(z.object({ brandId: z.string() }))
   .query(async ({ ctx, input }) => {
+    const brand = await brandCache.get(input.brandId);
+    const isSiteViewer = (ctx.user.sitePermissions & BitFieldSitePermission.VIEW_BRANDS) !== 0;
+    if (!brand || (!isSiteViewer && brand.ownerId !== ctx.user.id)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Brand access denied." });
+    }
     return await ctx.db.query.brands.findFirst({
       where: eq(brands.id, input.brandId),
       with: {

@@ -1,8 +1,21 @@
 "use server";
 
 import React from "react";
+import { auth } from "@clerk/nextjs/server";
+import { BitFieldSitePermission } from "@/config/permissions";
 import { emailMessageLogQueries } from "@/lib/db/queries/email";
 import { DynamicMarketingEmailTemplate } from "@/lib/resend/emails/bulk-email-marketing-template";
+import { getUserPermissions, hasPermission } from "@/lib/utils";
+import { userCache } from "@/lib/redis/methods";
+
+async function requireEmailMessagingAccess() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  const user = await userCache.get(userId);
+  if (!user || !hasPermission(getUserPermissions(user.roles).sitePermissions, [BitFieldSitePermission.MANAGE_CATEGORIES])) {
+    throw new Error("Forbidden");
+  }
+}
 import {
   buildUnsubscribeUrl,
   createMarketingCampaign,
@@ -150,6 +163,7 @@ async function sendSingleMarketingEmail({
 }
 
 export async function sendBulkEmail(formData: FormData) {
+  await requireEmailMessagingAccess();
   try {
     const recipientsString = formData.get("recipients") as string;
     const subject = formData.get("subject") as string;
@@ -221,11 +235,13 @@ export async function sendBulkEmail(formData: FormData) {
 }
 
 export async function getEmailMessageLogs() {
+  await requireEmailMessagingAccess();
   const logs = await emailMessageLogQueries.getLogs();
   return logs.map(serializeEmailLog);
 }
 
 export async function retrySelectedEmailMessageLogs(logIds: string[]) {
+  await requireEmailMessagingAccess();
   const logs = await emailMessageLogQueries.getLogsByIds(logIds);
   const results = [];
 
@@ -250,6 +266,7 @@ export async function retrySelectedEmailMessageLogs(logIds: string[]) {
 }
 
 export async function clearEmailMessageLogs() {
+  await requireEmailMessagingAccess();
   await emailMessageLogQueries.clearLogs();
   return { success: true };
 }
