@@ -386,17 +386,16 @@ class OrderQuery {
                     );
                     break;
                 case "shipped":
-                    // Shipped: STRICTLY exclude orders where shipment status is pending
-                    // Then only show orders with status = 'processing'
+                    // Shipping updates persist the order status as `shipped`.
+                    // Exclude orders that still have a pending shipment so they remain
+                    // in the ready-to-pickup flow until shipment processing completes.
                     whereConditions.push(
                         and(
-                            // 1. FIRST: Strictly exclude orders with pending shipment status
                             sql`${orders.id} NOT IN (
                                 SELECT order_id FROM order_shipments 
                                 WHERE status = 'pending'
                             )`,
-                            // 2. SECOND: Only show orders with status = 'processing'
-                            eq(orders.status, "processing")
+                            eq(orders.status, "shipped")
                         )
                     );
                     break;
@@ -671,7 +670,7 @@ class OrderQuery {
                 )
             ),
 
-            // Shipped: Strictly exclude orders where shipment status is pending, then only show processing
+            // Shipped: match the order status written by the shipping webhook/Delhivery flow.
             db.$count(
                 orders,
                 and(
@@ -679,7 +678,7 @@ class OrderQuery {
                         SELECT order_id FROM order_shipments 
                         WHERE status = 'pending'
                     )`,
-                    eq(orders.status, "processing"),
+                    eq(orders.status, "shipped"),
                     baseFilter
                 )
             ),

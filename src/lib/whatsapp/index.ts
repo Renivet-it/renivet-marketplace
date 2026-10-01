@@ -69,6 +69,14 @@ export async function sendWhatsAppMessage({
             contentSid: "HX6446237c526fb08d9b1be5be7df538be",
             parameterCount: 10,
         },
+        delayed_fulfillment_digest_48h: {
+            contentSid: "HX3a9e8bb2093de7a953e9ef06b5689ab5",
+            parameterCount: 1,
+        },
+        delayed_delivery_digest_7d: {
+            contentSid: "HXb9f8eec8f815c073c69a42d970f60ee5",
+            parameterCount: 1,
+        },
         support_alert: {
             contentSid: "HX4b8a035fdc5ef83ff4c70f9ae14c4f98",
             parameterCount: 4,
