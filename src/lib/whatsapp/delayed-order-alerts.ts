@@ -108,11 +108,11 @@ export function buildDelayedDigestVariable(orders: DelayedDigestOrder[]) {
             if (order.tracking) parts.push(order.tracking);
             return parts.join(" | ");
         })
-        .join("; ");
+        .join(" • ");
 }
 
 export function buildDelayedDigestVariableFromLines(lines: string[]) {
-    return lines.filter(Boolean).join("; ");
+    return lines.filter(Boolean).join(" • ");
 }
 
 export function buildDelayedOrdersActionUrl(host: string) {

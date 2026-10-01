@@ -70,11 +70,11 @@ export async function sendWhatsAppMessage({
             parameterCount: 10,
         },
         delayed_fulfillment_digest_48h: {
-            contentSid: "HX66935bd1bb1d457b0a943640fd75b6c2",
+            contentSid: "HX3a9e8bb2093de7a953e9ef06b5689ab5",
             parameterCount: 1,
         },
         delayed_delivery_digest_7d: {
-            contentSid: "HX4410ca3f94e43b70cc1d6761ddda7134",
+            contentSid: "HXb9f8eec8f815c073c69a42d970f60ee5",
             parameterCount: 1,
         },
         support_alert: {

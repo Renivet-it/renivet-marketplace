@@ -72,7 +72,7 @@ describe("delayed order eligibility", () => {
                 },
             ])
         ).toBe(
-            "ORD-1001 | Necklace | Qty 2 | Status processing; ORD-1002 | Bracelet | Qty 1 | Status shipped | Shipped 20 Sep 2026 | AWB 123456"
+            "ORD-1001 | Necklace | Qty 2 | Status processing • ORD-1002 | Bracelet | Qty 1 | Status shipped | Shipped 20 Sep 2026 | AWB 123456"
         );
     });
 

@@ -100,31 +100,29 @@ export async function runDelayedWhatsAppAlerts({
                 continue;
             }
 
-            try {
-                const result = await send({
-                    recipientPhoneNumber: phoneNumber,
-                    templateName: TEMPLATE_BY_ALERT_TYPE[alertType],
-                    parameters: [
-                        buildDelayedDigestVariableFromLines(
-                            claimed.map((row) => row.digestLine)
-                        ),
-                    ],
-                });
-                await store.markBatchSent({
-                    batchId,
-                    ids: claimed.map((row) => row.id),
-                    sid: result.sid,
-                    now,
-                });
-                sent += claimed.length;
-            } catch (error) {
-                await store.markBatchFailed({
-                    batchId,
-                    ids: claimed.map((row) => row.id),
-                    error: error instanceof Error ? error.message : "Unknown error",
-                    now,
-                });
-                failed += claimed.length;
+            for (const row of claimed) {
+                try {
+                    const result = await send({
+                        recipientPhoneNumber: phoneNumber,
+                        templateName: TEMPLATE_BY_ALERT_TYPE[alertType],
+                        parameters: [row.digestLine],
+                    });
+                    await store.markBatchSent({
+                        batchId,
+                        ids: [row.id],
+                        sid: result.sid,
+                        now,
+                    });
+                    sent += 1;
+                } catch (error) {
+                    await store.markBatchFailed({
+                        batchId,
+                        ids: [row.id],
+                        error: error instanceof Error ? error.message : "Unknown error",
+                        now,
+                    });
+                    failed += 1;
+                }
             }
         }
     }
@@ -188,12 +186,7 @@ export async function loadDelayedOrderCandidates(now: Date): Promise<DelayedAler
                 orderId: order.id,
                 alertType: "unshipped_48h" as const,
                 digestLine: buildDelayedDigestVariableFromLines([
-                    [
-                        base.orderId,
-                        base.productDetails || "Product unavailable",
-                        `Qty ${base.quantity}`,
-                        `Status ${base.status}`,
-                    ].join(" | "),
+                    `Order: ${base.orderId} • Product: ${base.productDetails || "Product unavailable"} • Qty: ${base.quantity} • Status: ${base.status}`,
                 ]),
             }];
         }
@@ -214,15 +207,15 @@ export async function loadDelayedOrderCandidates(now: Date): Promise<DelayedAler
                 orderId: order.id,
                 alertType: "undelivered_7d" as const,
                 digestLine: [
-                    base.orderId,
-                    base.productDetails || "Product unavailable",
-                    `Qty ${base.quantity}`,
-                    `Status ${base.status}`,
+                    `Order: ${base.orderId}`,
+                    `Product: ${base.productDetails || "Product unavailable"}`,
+                    `Qty: ${base.quantity}`,
+                    `Status: ${base.status}`,
                     base.shipmentDate
-                        ? `Shipped ${base.shipmentDate.toISOString().slice(0, 10)}`
+                        ? `Shipped: ${base.shipmentDate.toISOString().slice(0, 10)}`
                         : null,
-                    base.tracking,
-                ].filter(Boolean).join(" | "),
+                    base.tracking?.replace(/^AWB /, "AWB: ").replace(/^Tracking /, "Tracking: "),
+                ].filter(Boolean).join(" • "),
             }];
         }
 

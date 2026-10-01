@@ -45,7 +45,7 @@ const candidates = [
 ];
 
 describe("delayed WhatsApp alert run", () => {
-    test("aggregates multiple orders and fans out to three recipients", async () => {
+    test("sends each order separately to every recipient", async () => {
         const store = storeFactory();
         const sends: Array<{ recipient: string; templateName: string; parameters: string[] }> = [];
 
@@ -60,10 +60,10 @@ describe("delayed WhatsApp alert run", () => {
             },
         });
 
-        expect(sends).toHaveLength(3);
+        expect(sends).toHaveLength(6);
         expect(sends[0]?.templateName).toBe("delayed_fulfillment_digest_48h");
         expect(sends[0]?.parameters[0]).toContain("ORD-1");
-        expect(sends[0]?.parameters[0]).toContain("ORD-2");
+        expect(sends[0]?.parameters[0]).not.toContain("ORD-2");
         expect(result.sent).toBe(6);
     });
 
