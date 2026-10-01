@@ -3,7 +3,7 @@ task:
   id: REN-244
   title: Daily WhatsApp alerts for delayed fulfillment orders
   source: linear
-  branch: ayanganguly333/ren-244-daily-whatsapp-alerts-for-delayed-fulfillment-orders
+  branch: ayanganguly333/ren-244-daily-whatsapp-alerts-from-master
   status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-244/daily-whatsapp-alerts-for-delayed-fulfillment-orders
