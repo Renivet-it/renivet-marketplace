@@ -91,18 +91,18 @@ test_expectations:
     - { id: TEXP-253-006, category: regression, classification: REQUIRED, reason: "Verify existing finance behavior and no payout execution in validation.", scenarios: [SCN-253-006] }
 critic:
     required: true
-    completed: false
+    completed: true
     artifact: CRITIQUE.md
-    reviewer: pending independent fresh-context critic
-    fresh_context: false
+    reviewer: Codex independent read-only L3 Critic pass
+    fresh_context: true
     read_only: true
     required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    findings: []
+    findings: ["MAJOR: statement authorization must precede payout reads", "MAJOR: calculation service must enforce draft/calculated state", "MAJOR: provider replay and same-actor separation", "MAJOR: commission resolution must fail closed", "MAJOR: authoritative RTO attribution path"]
 approval:
-    state: PENDING_REVIEW
-    design_blockers: [Independent L3 Critic review, written design approval]
-    approved_by: ""
+    state: APPROVED
+    design_blockers: []
+    approved_by: "User approval in conversation on 2026-10-01 after independent Critic review"
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-253-001, scenario_ids: [SCN-253-001] }
