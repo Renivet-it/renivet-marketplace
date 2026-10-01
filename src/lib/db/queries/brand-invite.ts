@@ -1,6 +1,6 @@
 import { brandCache } from "@/lib/redis/methods";
 import { CreateBrandInvite } from "@/lib/validations";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 import { db } from "..";
 import { brandInvites } from "../schema";
 
@@ -54,13 +54,19 @@ class BrandInviteQuery {
         return newInvite;
     }
 
-    async updateInviteUses(code: string) {
+    async updateInviteUses(code: string, brandId: string) {
         const updated = await db
             .update(brandInvites)
             .set({
                 uses: sql`${brandInvites.uses} + 1`,
             })
-            .where(eq(brandInvites.id, code))
+            .where(
+                and(
+                    eq(brandInvites.id, code),
+                    eq(brandInvites.brandId, brandId),
+                    or(eq(brandInvites.maxUses, 0), lt(brandInvites.uses, brandInvites.maxUses))
+                )
+            )
             .returning()
             .then((res) => res[0]);
 

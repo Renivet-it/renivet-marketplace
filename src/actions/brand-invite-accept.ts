@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { brandInviteQueries, brandMemberQueries } from "@/lib/db/queries";
 import { posthog } from "@/lib/posthog/server";
@@ -7,13 +8,19 @@ import { brandCache, userCache } from "@/lib/redis/methods";
 
 export async function acceptBrandInvite({
     brandId,
-    memberId,
     code,
 }: {
     brandId: string;
-    memberId: string;
     code: string;
 }) {
+    const { userId: memberId } = await auth();
+    if (!memberId) throw new Error("You must be signed in to accept an invite.");
+
+    const invite = await brandInviteQueries.getBrandInvite(code);
+    if (!invite || invite.brandId !== brandId) throw new Error("Invalid brand invite.");
+    if (invite.expiresAt && new Date(invite.expiresAt) <= new Date()) throw new Error("This invite has expired.");
+    if (invite.maxUses > 0 && invite.uses >= invite.maxUses) throw new Error("This invite has no remaining uses.");
+
     const existingMember =
         await brandMemberQueries.getBrandMemberByMemberId(memberId);
     if (existingMember) {
@@ -24,13 +31,15 @@ export async function acceptBrandInvite({
             );
     }
 
+    const updatedInvite = await brandInviteQueries.updateInviteUses(code, brandId);
+    if (!updatedInvite) throw new Error("This invite has no remaining uses.");
+
     await Promise.all([
         brandMemberQueries.createBrandMember({
             brandId,
             memberId,
             isOwner: false,
         }),
-        brandInviteQueries.updateInviteUses(code),
         userCache.remove(memberId),
         brandCache.remove(brandId),
     ]);

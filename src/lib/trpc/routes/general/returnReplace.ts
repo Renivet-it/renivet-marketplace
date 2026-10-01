@@ -105,6 +105,10 @@ export const returnReplaceRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const ownedOrder = await ctx.db.query.orders.findFirst({
+                where: and(eq(orders.id, input.orderId), eq(orders.userId, ctx.user.id)),
+            });
+            if (!ownedOrder) throw new TRPCError({ code: "FORBIDDEN", message: "You can only return your own order." });
             await ctx.db.insert(orderReturnRequests).values({
                 id: crypto.randomUUID(),
                 ...input,
@@ -465,6 +469,7 @@ export const returnReplaceRouter = createTRPCRouter({
     })
   )
   .mutation(async ({ ctx, input }) => {
+    await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
     // 1️⃣ Update status
     const [request] = await ctx.db
       .update(orderReturnRequests)
@@ -472,7 +477,7 @@ export const returnReplaceRouter = createTRPCRouter({
         status: "approved",
         updatedAt: new Date(),
       })
-      .where(eq(orderReturnRequests.id, input.id))
+      .where(and(eq(orderReturnRequests.id, input.id), eq(orderReturnRequests.status, "pending")))
       .returning();
 
     if (!request) {
@@ -557,6 +562,7 @@ rejectRequest: protectedProcedure
     })
   )
   .mutation(async ({ ctx, input }) => {
+    await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
     // 1️⃣ Update status
     const [request] = await ctx.db
       .update(orderReturnRequests)
@@ -565,7 +571,7 @@ rejectRequest: protectedProcedure
         comment: input.comment ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(orderReturnRequests.id, input.id))
+      .where(and(eq(orderReturnRequests.id, input.id), eq(orderReturnRequests.status, "pending")))
       .returning();
 
     // 2️⃣ Fetch order + user
@@ -612,13 +618,14 @@ rejectRequest: protectedProcedure
             })
         )
         .mutation(async ({ ctx, input }) => {
+            await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
             const [request] = await ctx.db
                 .update(orderReturnRequests)
                 .set({
                     status: "completed",
                     updatedAt: new Date(),
                 })
-                .where(eq(orderReturnRequests.id, input.id))
+                .where(and(eq(orderReturnRequests.id, input.id), eq(orderReturnRequests.status, "approved")))
                 .returning();
 
             if (request?.requestType === "return") {
@@ -748,6 +755,7 @@ rejectRequest: protectedProcedure
 createRTOShipment: protectedProcedure
   .input(z.object({ requestId: z.string() }))
   .mutation(async ({ ctx, input }) => {
+    await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
     // Fetch the return request
     const request = await ctx.db.query.orderReturnRequests.findFirst({
       where: (r, { eq }) => eq(r.id, input.requestId),
@@ -767,7 +775,7 @@ createRTOShipment: protectedProcedure
     });
 
     if (!request) throw new Error("Request not found");
-    if (request.requestType !== "return")
+    if (request.requestType !== "return" || request.status !== "approved")
       throw new Error("Not a return request");
 
     const customer = request.order;
@@ -895,7 +903,7 @@ createRTOShipment: protectedProcedure
         status: "processing",
         updatedAt: new Date(),
       })
-      .where(eq(orderReturnRequests.id, request.id));
+      .where(and(eq(orderReturnRequests.id, request.id), eq(orderReturnRequests.status, "approved")));
 
     return { success: true, delhivery: delhiveryResponse };
   }),
@@ -905,6 +913,7 @@ createRTOShipment: protectedProcedure
 createReplShipment: protectedProcedure
   .input(z.object({ requestId: z.string() }))
   .mutation(async ({ ctx, input }) => {
+    await requireRefundModuleAccess(ctx as AuthenticatedContext, "manage");
 
     // Fetch request with relations
     const request = await ctx.db.query.orderReturnRequests.findFirst({
@@ -925,7 +934,7 @@ createReplShipment: protectedProcedure
     });
 
     if (!request) throw new Error("Request not found");
-    if (request.requestType !== "replace")
+    if (request.requestType !== "replace" || request.status !== "approved")
       throw new Error("Not a replace request");
 
     if (!request.newVariantId) throw new Error("New variant ID is required for replace request");
@@ -1023,7 +1032,7 @@ const newVariantSize = newVariant?.sku || "Default Size";
     await ctx.db
       .update(orderReturnRequests)
       .set({ status: "processing", updatedAt: new Date() })
-      .where(eq(orderReturnRequests.id, request.id));
+      .where(and(eq(orderReturnRequests.id, request.id), eq(orderReturnRequests.status, "approved")));
 
     return { success: true, data: delhiveryResponse };
   }),

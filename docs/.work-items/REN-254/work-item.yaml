@@ -4,7 +4,7 @@ task:
     title: "[C1] Security Guard Hardening — Stage 3A ten-item no-schema checklist"
     source: linear
     branch: ayanganguly333/ren-254-c1-security-guard-hardening
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-254/c1-security-guard-hardening-stage-3a-ten-item-no-schema-checklist
         priority: High

@@ -221,7 +221,9 @@ export async function POST(req: NextRequest) {
                             phone?.verification?.status === "verified",
                         updatedAt: webhookUser.updated_at,
                     })
-                    .where(eq(users.id, webhookUser.id));
+                    .where(
+                        sql`${eq(users.id, webhookUser.id)} and ${users.email} not like 'deleted+%@invalid.renivet'`
+                    );
 
                 if (verifiedEmailAddress) {
                     await Promise.all([
@@ -258,10 +260,20 @@ export async function POST(req: NextRequest) {
                     event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
                 });
 
-                await Promise.all([
-                    db.delete(users).where(eq(users.id, id)),
-                    userCache.remove(id),
-                ]);
+                await db
+                    .update(users)
+                    .set({
+                        firstName: "Deleted User",
+                        lastName: "",
+                        email: `deleted+${id}@invalid.renivet`,
+                        phone: null,
+                        avatarUrl: null,
+                        isEmailVerified: false,
+                        isPhoneVerified: false,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(users.id, id));
+                await userCache.remove(id);
                 break;
             }
         }
