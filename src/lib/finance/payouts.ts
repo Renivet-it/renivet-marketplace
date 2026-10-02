@@ -998,6 +998,32 @@ export async function approvePayoutCycle(
     return updated;
 }
 
+const PAYOUT_SOURCE_ACCOUNT_ENV = "RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER";
+
+// Invariant (REN-253 F-5, EDR-0001): a payout is never recorded as sent when no provider
+// money movement happened. A missing source account is a configuration refusal raised
+// before any state change; it is not a failed payout and never a "completed" one.
+export class PayoutConfigurationError extends Error {
+    constructor(readonly missing: string[]) {
+        super(`Payout execution blocked: ${missing.join(", ")} is not configured.`);
+        this.name = "PayoutConfigurationError";
+    }
+}
+
+function getPayoutSourceAccount() {
+    const value = process.env[PAYOUT_SOURCE_ACCOUNT_ENV]?.trim();
+    return value ? value : null;
+}
+
+// A brand payout that was already sent (or is in flight) is never re-sent (AQ-60).
+function isBrandPayoutAlreadySent(brand: BrandCycleSummary) {
+    return (
+        ["completed", "awaiting_manual_confirmation", "processing", "submitted"].includes(
+            brand.executionStatus
+        ) || Boolean(brand.transactionId)
+    );
+}
+
 async function createRazorpayPayout(input: {
     amountPaise: number;
     brandName: string;
@@ -1008,13 +1034,9 @@ async function createRazorpayPayout(input: {
     rzpAccountId?: string | null;
     idempotencyKey: string;
 }) {
-    const sourceAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+    const sourceAccount = getPayoutSourceAccount();
     if (!sourceAccount) {
-        return {
-            mode: "razorpay_route",
-            status: "queued_manual_fallback",
-            reference: input.reference,
-        };
+        throw new PayoutConfigurationError([PAYOUT_SOURCE_ACCOUNT_ENV]);
     }
 
     const auth = Buffer.from(
@@ -1251,6 +1273,33 @@ export async function executePayoutCycle(
         );
     }
 
+    // Configuration pre-flight (F-5): refuse before any state change when a brand that
+    // would be sent through the provider has no payout source account configured.
+    const brandsNeedingProvider = brands.filter(
+        (brand) =>
+            (!brandId || brand.brandId === brandId) &&
+            brand.reviewStatus === "approved" &&
+            !isBrandPayoutAlreadySent(brand) &&
+            brand.netPayablePaise > 0 &&
+            brand.payoutMethod === "razorpay_route"
+    );
+    if (brandsNeedingProvider.length > 0 && !getPayoutSourceAccount()) {
+        await writeFinanceAuditEvent({
+            actorId,
+            actionType: "payout_execution_blocked_unconfigured",
+            entityType: "payout_cycle",
+            entityId: cycleId,
+            reason: "payout_source_account_not_configured",
+            afterValue: {
+                cycleId,
+                missing: [PAYOUT_SOURCE_ACCOUNT_ENV],
+                brandIds: brandsNeedingProvider.map((brand) => brand.brandId),
+            },
+            metadata: { cycleId },
+        });
+        throw new PayoutConfigurationError([PAYOUT_SOURCE_ACCOUNT_ENV]);
+    }
+
     const executions: Array<Record<string, unknown>> = [];
 
     for (const brand of brands) {
@@ -1258,15 +1307,7 @@ export async function executePayoutCycle(
         if (brand.reviewStatus !== "approved") {
             throw new Error(`Approve payout for ${brand.brandName} before execution.`);
         }
-        // A brand payout that was already sent (or is in flight) is never re-sent (AQ-60).
-        if (
-            ["completed", "awaiting_manual_confirmation", "processing", "submitted"].includes(
-                brand.executionStatus
-            ) ||
-            brand.transactionId
-        ) {
-            continue;
-        }
+        if (isBrandPayoutAlreadySent(brand)) continue;
 
         const metadata = brand.metadata ?? {};
         brand.executionStatus = "processing";
@@ -1347,6 +1388,9 @@ export async function executePayoutCycle(
                     });
                 }
             } catch (error) {
+                // A configuration refusal is not a payout failure and must not become a
+                // terminal brand/cycle state (F-5).
+                if (error instanceof PayoutConfigurationError) throw error;
                 brand.executionStatus = "failed";
                 executions.push({
                     brandId: brand.brandId,
@@ -1515,7 +1559,6 @@ export async function createPayoutOverride(input: {
     notes: string;
     proofFileUrl: string;
     actorId: string;
-    approverId?: string;
 }) {
     if (!input.notes.trim()) {
         throw new Error("Override notes are required.");
@@ -1523,13 +1566,9 @@ export async function createPayoutOverride(input: {
     if (!input.proofFileUrl) {
         throw new Error("Override proof is required.");
     }
-    if (!input.approverId) {
-        throw new Error("Every payout override requires a second admin approver.");
-    }
-    if (input.approverId === input.actorId) {
-        throw new Error("Checker and maker must be different admins.");
-    }
-    // An approved override triggers recalculation, so reject it before it is stored.
+    // Invariant (REN-253 F-2, EDR-0001): the maker never supplies the checker. An
+    // override is stored unapproved and only approvePayoutOverride, run by a different
+    // authenticated admin, applies it. A locked cycle rejects the override up front.
     const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
     assertPayoutCycleRecalculable(cycle);
@@ -1543,7 +1582,7 @@ export async function createPayoutOverride(input: {
         notes: input.notes,
         proofFileUrl: input.proofFileUrl,
         createdBy: input.actorId,
-        approvedBy: input.approverId,
+        approvedBy: null,
     });
 
     await auditAndAlert({
@@ -1554,7 +1593,7 @@ export async function createPayoutOverride(input: {
         afterValue: row as unknown as Record<string, unknown>,
         reason: input.reasonCode,
         title: "Payout override recorded",
-        message: `Override recorded for brand ${input.brandId}.`,
+        message: `Override recorded for brand ${input.brandId}; a second admin must approve it before it applies.`,
         severity: "warning",
         ownerRole: "finance_admin",
         type: "payout_override_created",
@@ -1568,10 +1607,6 @@ export async function createPayoutOverride(input: {
         },
     });
 
-    if (row.approvedBy) {
-        await calculatePayoutCycle(input.cycleId, input.actorId);
-    }
-
     return row;
 }
 
@@ -1580,6 +1615,9 @@ export async function approvePayoutOverride(overrideId: string, actorId: string)
     if (!row) throw new Error("Payout override not found.");
     if (row.createdBy === actorId) {
         throw new Error("The same admin cannot approve this override.");
+    }
+    if (row.approvedBy) {
+        throw new Error("This override is already approved.");
     }
     const cycle = await financeComplianceQueries.getPayoutCycle(row.cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");

@@ -107,7 +107,6 @@ export function PayoutsWorkspace({
         amountPaise: "",
         reasonCode: "",
         notes: "",
-        approverId: "",
     });
     const [overrideFiles, setOverrideFiles] = useState<File[]>([]);
     const [manualTxns, setManualTxns] = useState<Record<string, string>>({});
@@ -191,14 +190,13 @@ export function PayoutsWorkspace({
 
     const createOverride = trpc.general.financeCompliance.createPayoutOverride.useMutation({
         onSuccess: async () => {
-            toast.success("Override recorded");
+            toast.success("Override recorded; a second admin must approve it");
             setOverrideFiles([]);
             setOverrideForm({
                 adjustmentType: "manual_correction",
                 amountPaise: "",
                 reasonCode: "",
                 notes: "",
-                approverId: "",
             });
             await refresh();
         },
@@ -287,7 +285,6 @@ export function PayoutsWorkspace({
             reasonCode: overrideForm.reasonCode,
             notes: overrideForm.notes,
             proofFileUrl,
-            approverId: overrideForm.approverId || undefined,
         });
     };
 
@@ -663,16 +660,6 @@ export function PayoutsWorkspace({
                                             setOverrideForm((current) => ({
                                                 ...current,
                                                 reasonCode: event.target.value,
-                                            }))
-                                        }
-                                    />
-                                    <Input
-                                        placeholder="Second approver user ID for > Rs. 500"
-                                        value={overrideForm.approverId}
-                                        onChange={(event) =>
-                                            setOverrideForm((current) => ({
-                                                ...current,
-                                                approverId: event.target.value,
                                             }))
                                         }
                                     />

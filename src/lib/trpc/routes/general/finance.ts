@@ -672,7 +672,6 @@ export const financeComplianceRouter = createTRPCRouter({
                 reasonCode: z.string().min(2),
                 notes: z.string().min(3),
                 proofFileUrl: z.string().url(),
-                approverId: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {

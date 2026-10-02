@@ -23,6 +23,7 @@ const state = {
     alerts: [] as Row[],
     revokedClearances: [] as Row[],
     revokeSnapshots: [] as Row[],
+    tdsUpserts: [] as Row[],
 };
 
 const brandId = "brand-1";
@@ -81,7 +82,10 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
         listPayoutLineItems: async () => [],
         listCommissionRules: async () => state.commissionRules,
         getBrandTdsTracking: async () => null,
-        upsertBrandTdsTracking: async () => ({}),
+        upsertBrandTdsTracking: async (values: Row) => {
+            state.tdsUpserts.push(values);
+            return {};
+        },
         replacePayoutLineItems: async (_cycleId: string, values: Row[]) => {
             state.replacedLineItems = values;
             return values;
@@ -125,16 +129,23 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
         },
         addPayoutOverride: async (values: Row) => {
             state.overrideInserts.push(values);
-            state.overrides.push({ id: "override-1", ...values });
-            return { id: "override-1", ...values };
+            const row = { id: `override-${state.overrides.length + 1}`, ...values };
+            state.overrides.push(row);
+            return row;
         },
-        getPayoutOverride: async () => state.override,
+        getPayoutOverride: async (id: string) =>
+            state.override ?? state.overrides.find((row) => row.id === id) ?? null,
         findLockedPayoutCycleForReferences: async (references: string[]) => {
             state.lockReferences.push(references);
             return state.lockedCycle;
         },
         updatePayoutOverride: async (id: string, values: Row) => {
             state.overrideUpdates.push(values);
+            const stored = state.overrides.find((row) => row.id === id);
+            if (stored) {
+                Object.assign(stored, values);
+                return stored;
+            }
             return { ...state.override, ...values, id };
         },
     },
@@ -156,6 +167,17 @@ mock.module("@/lib/monitoring-sla/audit", () => ({
 
 const payouts = await import("./payouts");
 
+// An override is recorded by the maker and applied only when a different admin approves
+// it (REN-253 F-2): this helper performs both steps.
+async function createAndApproveOverride(
+    input: Parameters<typeof payouts.createPayoutOverride>[0],
+    approverId: string
+) {
+    const row = await payouts.createPayoutOverride(input);
+    await payouts.approvePayoutOverride(row.id, approverId);
+    return row;
+}
+
 beforeEach(() => {
     state.cycle = null;
     state.commissionRules = [];
@@ -174,6 +196,7 @@ beforeEach(() => {
     state.alerts = [];
     state.revokedClearances = [];
     state.revokeSnapshots = [];
+    state.tdsUpserts = [];
 });
 
 describe("AQ-01 commission fallback removed", () => {
@@ -274,7 +297,6 @@ describe("AQ-18 recalculation status guard", () => {
         notes: "Correct a shipping deduction",
         proofFileUrl: "https://files.example.com/proof.pdf",
         actorId: "finance-1",
-        approverId: "finance-2",
     };
 
     test("rejects creating an override on a locked cycle before storing it", async () => {
@@ -287,13 +309,19 @@ describe("AQ-18 recalculation status guard", () => {
         expect(state.replacedLineItems).toBeNull();
     });
 
-    test("creates and applies an override on a calculated cycle", async () => {
+    test("records an override on a calculated cycle without applying it, then a different admin approves and applies it", async () => {
         state.cycle = cycle("calculated");
 
-        await payouts.createPayoutOverride(overrideInput);
+        const row = await payouts.createPayoutOverride(overrideInput);
 
         expect(state.overrideInserts).toHaveLength(1);
+        expect(state.overrideInserts[0].approvedBy).toBeNull();
+        expect(state.replacedLineItems).toBeNull();
+
+        await payouts.approvePayoutOverride(row.id, "finance-2");
+
         expect(state.replacedLineItems).not.toBeNull();
+        expect(state.overrideUpdates).toEqual([{ approvedBy: "finance-2" }]);
     });
 
     test("rejects approving an override on a locked cycle before updating it", async () => {
@@ -384,9 +412,13 @@ describe("AQ-60a clearer is not the executor", () => {
     test("allows execution by a different admin", async () => {
         await prepareExecutableCycle("finance-2");
 
-        const updated = await payouts.executePayoutCycle("cycle-1", "finance-3");
+        // A configured source account is part of the execution contract (F-5): without it
+        // execution is refused, so this test supplies one.
+        await withRazorpay(providerAccepts, async () => {
+            const updated = await payouts.executePayoutCycle("cycle-1", "finance-3");
 
-        expect(updated.executedBy).toBe("finance-3");
+            expect(updated.executedBy).toBe("finance-3");
+        });
     });
 });
 
@@ -558,7 +590,6 @@ describe("REN-253 F-1 an approved amount never stays approved after it changes",
         notes: "Correct a shipping deduction",
         proofFileUrl: "https://files.example.com/proof.pdf",
         actorId: "finance-1",
-        approverId: "finance-2",
     };
 
     test("a partially approved cycle is still calculated, so recalculation is reachable", async () => {
@@ -575,7 +606,7 @@ describe("REN-253 F-1 an approved amount never stays approved after it changes",
         await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
         const approvedAmount = brandSummary(brandA).netPayablePaise;
 
-        await payouts.createPayoutOverride(overrideForA);
+        await createAndApproveOverride(overrideForA, "finance-2");
 
         const changed = brandSummary(brandA);
         expect(changed.netPayablePaise).toBe(approvedAmount + 5_000);
@@ -654,7 +685,7 @@ describe("REN-253 F-1 an approved amount never stays approved after it changes",
         const approvedAmount = brandSummary(brandA).netPayablePaise;
         state.alerts = [];
 
-        await payouts.createPayoutOverride(overrideForA);
+        await createAndApproveOverride(overrideForA, "finance-2");
 
         const calculated = state.alerts.find(
             (event) => event.actionType === "payout_cycle_calculated"
@@ -853,17 +884,19 @@ describe("REN-253 F-3 recalculation revokes the BIZ-3 clearance of a changed pay
     test("an applied override revokes the clearance", async () => {
         const clearance = await clearAtFirstAmount();
 
-        await payouts.createPayoutOverride({
-            cycleId: "cycle-1",
-            brandId,
-            adjustmentType: "manual_correction",
-            amountPaise: 5_000,
-            reasonCode: "correction",
-            notes: "Correct a shipping deduction",
-            proofFileUrl: "https://files.example.com/proof.pdf",
-            actorId: "finance-1",
-            approverId: "finance-2",
-        });
+        await createAndApproveOverride(
+            {
+                cycleId: "cycle-1",
+                brandId,
+                adjustmentType: "manual_correction",
+                amountPaise: 5_000,
+                reasonCode: "correction",
+                notes: "Correct a shipping deduction",
+                proofFileUrl: "https://files.example.com/proof.pdf",
+                actorId: "finance-1",
+            },
+            "finance-2"
+        );
 
         expect(brandSummary(brandId).netPayablePaise).toBe(94_900);
         expect(state.revokedClearances.map((row) => row.id)).toEqual([clearance.id]);
@@ -1054,5 +1087,251 @@ describe("AQ-61 RTO fault writes go through the payout lock", () => {
             expect(check).toBeLessThan(writeAt);
             expect(audit).toBeGreaterThan(writeAt);
         }
+    });
+});
+
+describe("REN-253 F-2 the maker never supplies the override checker", () => {
+    const overrideBase = {
+        cycleId: "cycle-1",
+        brandId: brandA,
+        adjustmentType: "manual_correction",
+        amountPaise: 5_000,
+        reasonCode: "correction",
+        notes: "Correct a shipping deduction",
+        proofFileUrl: "https://files.example.com/proof.pdf",
+        actorId: "finance-1",
+    };
+
+    async function clearedPartiallyApprovedCycle() {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+        expect(state.cycle!.status).toBe("calculated");
+        return payouts.recordPayoutExecutionClearance({
+            cycleId: "cycle-1",
+            actorId: "finance-2",
+            evidenceReference: "BIZ-3-approval",
+            transactionValidationReference: "txn-validation-1",
+            transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+        });
+    }
+
+    test("a recorded override is unapproved, applies no amount and revokes no clearance", async () => {
+        const clearance = await clearedPartiallyApprovedCycle();
+        const before = brandSummary(brandA).netPayablePaise;
+        state.replacedLineItems = null;
+
+        const row = await payouts.createPayoutOverride(overrideBase);
+
+        expect(row.approvedBy).toBeNull();
+        expect(state.overrideInserts[0].createdBy).toBe("finance-1");
+        expect(state.replacedLineItems).toBeNull();
+        expect(brandSummary(brandA).netPayablePaise).toBe(before);
+        expect(brandSummary(brandA).reviewStatus).toBe("approved");
+        expect(state.revokedClearances).toHaveLength(0);
+        expect(state.clearance?.id).toBe(clearance.id);
+    });
+
+    test("an approver smuggled in with the request is ignored", async () => {
+        await calculateTwoBrandCycle();
+        state.replacedLineItems = null;
+
+        const row = await payouts.createPayoutOverride({
+            ...overrideBase,
+            approverId: "any-user-id-that-never-acted",
+        } as typeof overrideBase);
+
+        expect(row.approvedBy).toBeNull();
+        expect(state.overrideInserts[0].approvedBy).toBeNull();
+        expect(state.replacedLineItems).toBeNull();
+    });
+
+    test("the creator cannot approve their own override", async () => {
+        await calculateTwoBrandCycle();
+        const row = await payouts.createPayoutOverride(overrideBase);
+        state.overrideUpdates = [];
+
+        await expect(payouts.approvePayoutOverride(row.id, "finance-1")).rejects.toThrow(
+            "The same admin cannot approve this override."
+        );
+        expect(state.overrideUpdates).toHaveLength(0);
+    });
+
+    test("a different admin's approval applies the override, drops the approval and revokes the clearance", async () => {
+        const clearance = await clearedPartiallyApprovedCycle();
+        const before = brandSummary(brandA).netPayablePaise;
+        const row = await payouts.createPayoutOverride(overrideBase);
+
+        await payouts.approvePayoutOverride(row.id, "finance-3");
+
+        expect(state.overrides[0].approvedBy).toBe("finance-3");
+        expect(brandSummary(brandA).netPayablePaise).toBe(before + 5_000);
+        expect(brandSummary(brandA).reviewStatus).toBe("pending");
+        expect(state.revokedClearances.map((item) => item.id)).toEqual([clearance.id]);
+    });
+
+    test("an override that is already approved cannot be approved again", async () => {
+        await calculateTwoBrandCycle();
+        const row = await payouts.createPayoutOverride(overrideBase);
+        await payouts.approvePayoutOverride(row.id, "finance-2");
+        state.overrideUpdates = [];
+
+        await expect(payouts.approvePayoutOverride(row.id, "finance-3")).rejects.toThrow(
+            "This override is already approved."
+        );
+        expect(state.overrideUpdates).toHaveLength(0);
+    });
+
+    test("neither the router input nor the workspace form carries an approver field", async () => {
+        const router = await Bun.file(
+            new URL("../trpc/routes/general/finance.ts", import.meta.url)
+        ).text();
+        const begin = router.indexOf("createPayoutOverride: adminProcedure");
+        const end = router.indexOf("approvePayoutOverride: adminProcedure", begin);
+        expect(begin).toBeGreaterThanOrEqual(0);
+        expect(router.slice(begin, end)).not.toContain("approverId");
+
+        const ui = await Bun.file(
+            new URL(
+                "../../components/dashboard/general/finance/payouts-workspace.tsx",
+                import.meta.url
+            )
+        ).text();
+        expect(ui).not.toContain("approverId");
+    });
+});
+
+describe("REN-253 F-5 a missing payout source account fails closed", () => {
+    async function withoutSourceAccount(
+        value: string | undefined,
+        run: (providerCalls: () => number) => Promise<void>
+    ) {
+        let calls = 0;
+        const originalFetch = globalThis.fetch;
+        const originalAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+        if (value === undefined) delete process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+        else process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = value;
+        globalThis.fetch = (async () => {
+            calls += 1;
+            return providerAccepts();
+        }) as unknown as typeof fetch;
+        try {
+            await run(() => calls);
+        } finally {
+            globalThis.fetch = originalFetch;
+            if (originalAccount === undefined) {
+                delete process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+            } else {
+                process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = originalAccount;
+            }
+        }
+    }
+
+    for (const [label, value] of [
+        ["unset", undefined],
+        ["empty", ""],
+        ["whitespace only", "   "],
+    ] as const) {
+        test(`execution is refused before any state change when the source account is ${label}`, async () => {
+            await prepareExecutableCycle("finance-2");
+            const cycleWritesBefore = state.cycleUpdates.length;
+            state.alerts = [];
+            state.financeAudits = [];
+
+            await withoutSourceAccount(value, async (providerCalls) => {
+                await expect(
+                    payouts.executePayoutCycle("cycle-1", "finance-3")
+                ).rejects.toThrow(
+                    "Payout execution blocked: RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER is not configured."
+                );
+                expect(providerCalls()).toBe(0);
+            });
+
+            expect(state.cycle!.status).toBe("approved");
+            expect(brandSummary(brandId).executionStatus).toBe("approved");
+            expect(brandSummary(brandId).transactionId ?? null).toBeNull();
+            expect(state.cycleUpdates).toHaveLength(cycleWritesBefore);
+            expect(state.tdsUpserts).toHaveLength(0);
+            expect(
+                state.alerts.filter((event) => event.actionType === "brand_payout_executed")
+            ).toHaveLength(0);
+            expect(
+                state.financeAudits.filter(
+                    (event) => event.actionType === "tds_deduction.applied"
+                )
+            ).toHaveLength(0);
+            const blocked = state.financeAudits.find(
+                (event) => event.actionType === "payout_execution_blocked_unconfigured"
+            );
+            expect(blocked?.afterValue.missing).toEqual(["RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER"]);
+            expect(blocked?.afterValue.brandIds).toEqual([brandId]);
+        });
+    }
+
+    test("a refused configuration is not terminal: the cycle can be executed once configured", async () => {
+        await prepareExecutableCycle("finance-2");
+
+        await withoutSourceAccount(undefined, async () => {
+            await expect(payouts.executePayoutCycle("cycle-1", "finance-3")).rejects.toThrow(
+                "is not configured"
+            );
+        });
+        await withoutSourceAccount("test-source-account", async (providerCalls) => {
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+            expect(providerCalls()).toBe(1);
+        });
+
+        expect(brandSummary(brandId).executionStatus).toBe("completed");
+    });
+
+    test("a cycle with only manual NEFT brands still produces instructions without a source account", async () => {
+        state.brands = [
+            {
+                brandId,
+                brandName: "Brand One",
+                payoutMethod: "manual_neft",
+                bankAccountHolderName: "Brand One Pvt Ltd",
+                bankAccountNumber: accountX,
+                bankIfscCode: "HDFC0000001",
+            },
+        ];
+        await prepareExecutableCycle("finance-2");
+
+        await withoutSourceAccount(undefined, async (providerCalls) => {
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+            expect(providerCalls()).toBe(0);
+        });
+
+        expect(brandSummary(brandId).executionStatus).toBe("awaiting_manual_confirmation");
+        expect(brandSummary(brandId).transactionId ?? null).toBeNull();
+    });
+
+    test("a mixed cycle is refused whole: no manual instruction is generated either", async () => {
+        await calculateTwoBrandCycle();
+        brandSummary(brandB).payoutMethod = "manual_neft";
+        await payouts.approvePayoutCycle("cycle-1", "finance-2");
+        await payouts.recordPayoutExecutionClearance({
+            cycleId: "cycle-1",
+            actorId: "finance-2",
+            evidenceReference: "BIZ-3-approval",
+            transactionValidationReference: "txn-validation-1",
+            transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+        });
+        expect(state.cycle!.status).toBe("approved");
+
+        await withoutSourceAccount(undefined, async (providerCalls) => {
+            await expect(payouts.executePayoutCycle("cycle-1", "finance-3")).rejects.toThrow(
+                "is not configured"
+            );
+            expect(providerCalls()).toBe(0);
+        });
+
+        expect(brandSummary(brandB).executionStatus).toBe("approved");
+        expect(state.cycle!.status).toBe("approved");
+    });
+
+    test("the success-shaped manual fallback is gone from the provider adapter", async () => {
+        const source = await Bun.file(new URL("./payouts.ts", import.meta.url)).text();
+        expect(source).not.toContain("queued_manual_fallback");
+        expect(source).toContain("export class PayoutConfigurationError");
     });
 });
