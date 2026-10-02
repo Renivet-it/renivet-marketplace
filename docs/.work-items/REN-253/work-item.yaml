@@ -1,0 +1,155 @@
+schema_version: "1.0"
+task:
+    id: REN-253
+    title: "[C0] Payout Containment — residual payout-path controls (no payout authorised)"
+    source: linear
+    branch: ayanganguly333/ren-253-c0-canonical
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-253/c0-payout-containment-residual-payout-path-controls-no-payout
+        priority: Urgent
+        status: In Progress
+        assignee: Ayan Ganguly
+        project: "Renivet — Financial & Compliance Control Program"
+        parent: REN-202
+        linear_branch: ayanganguly333/ren-253-c0-payout-containment-residual-payout-path-controls-no
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Payout calculations and execution affect company money."
+        - "The task crosses authorization, audit, provider replay, and RTO financial attribution boundaries."
+        - "Production deployment and migration evidence are access-dependent and must remain read-only."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue and relations, commission fallback, payout cycle state transitions, finance module access, statement route, payout execution gate, RTO attribution paths, existing finance tests]
+    excluded_areas: [payout execution, production data mutation, new commission policy, C1 payee identity controls, RTO fee policy, tax policy]
+    dependencies: [DEP-253-001, DEP-253-002, DEP-253-003]
+    integrations: [INT-253-001, INT-253-002]
+    security_boundaries: [SEC-253-001, SEC-253-002, SEC-253-003]
+    state_transitions: [draft, calculated, approved, processing, completed, failed, locked_rto, unlocked_rto]
+    related_tests: [TEXP-253-001, TEXP-253-002, TEXP-253-003, TEXP-253-004, TEXP-253-005, TEXP-253-006]
+    uncertainties: ["The provider idempotency field is the X-Payout-Idempotency request header, derived deterministically from cycle id and brand id. Whether Razorpay actually deduplicates a repeated key has NOT been verified against the provider (no test-mode evidence).", "Two concurrent executions of the same cycle both reach the provider and rely on provider deduplication; there is no local mutual exclusion.", "Statement route response behavior preserves the existing PDF output (covered by a route-level test with mocked boundaries)."]
+requirements:
+    - { id: REQ-253-001, description: "Fail closed when no approved commission rule exists.", type: safety }
+    - { id: REQ-253-002, description: "Allow recalculation only for draft and calculated cycles.", type: state_transition }
+    - { id: REQ-253-003, description: "Protect payout statement reads with existing finance access.", type: security }
+    - { id: REQ-253-004, description: "Prevent same-actor execution and duplicate cycle-and-brand payout submission.", type: safety }
+    - { id: REQ-253-005, description: "Use one lock-aware audited RTO fault-owner authority.", type: security }
+    - { id: REQ-253-006, description: "Do not clear or execute payouts.", type: boundary }
+scenarios:
+    - { id: SCN-253-001, description: "Missing commission rule fails closed.", requirement_ids: [REQ-253-001] }
+    - { id: SCN-253-002, description: "Allowed and rejected recalculation states behave explicitly.", requirement_ids: [REQ-253-002] }
+    - { id: SCN-253-003, description: "Only authorized payout viewers can read statements.", requirement_ids: [REQ-253-003] }
+    - { id: SCN-253-004, description: "Execution separation and replay protection hold under retry.", requirement_ids: [REQ-253-004, REQ-253-006] }
+    - { id: SCN-253-005, description: "RTO attribution respects locks and audit authority.", requirement_ids: [REQ-253-005] }
+    - { id: SCN-253-006, description: "Validation is non-production and does not execute a payout.", requirement_ids: [REQ-253-006] }
+invariants:
+    - { id: INV-253-001, description: "No missing commission policy becomes a numeric fallback." }
+    - { id: INV-253-002, description: "Approved or later cycles cannot be recalculated." }
+    - { id: INV-253-003, description: "Unauthorized statement requests cannot read payout data." }
+    - { id: INV-253-004, description: "One cycle-and-brand identity cannot create two effective payouts." }
+    - { id: INV-253-005, description: "Locked RTO attribution cannot be changed." }
+    - { id: INV-253-006, description: "REN-253 does not clear or execute payouts." }
+flows:
+    - { id: FLOW-253-001, description: "Payout calculation validates cycle state, resolves commission fail-closed, and persists only an allowed calculation.", state_transitions: [draft, calculated] }
+    - { id: FLOW-253-002, description: "Statement request authenticates and authorizes before loading payout data and rendering the existing PDF.", state_transitions: [statement_requested, statement_denied, statement_rendered] }
+    - { id: FLOW-253-003, description: "Execution gate validates separation and stable cycle-and-brand replay identity before provider submission.", state_transitions: [approved, processing, completed, replay_rejected] }
+    - { id: FLOW-253-004, description: "RTO attribution uses the lock-aware audited Return/Replace authority.", state_transitions: [unlocked_rto, locked_rto] }
+dependencies:
+    - { id: DEP-253-001, name: REN-203, purpose: "Approved commission fallback disposition", description: "Existing issue defines fail-closed commission behavior and prohibits unapproved rates.", status: resolved }
+    - { id: DEP-253-002, name: finance access, purpose: "Existing payout view/manage and site-admin authorization", description: "Existing module_access and finance access helpers provide per-user payout permissions.", status: resolved }
+    - { id: DEP-253-003, name: release evidence, purpose: "Read-only deployment/migration verification and release ownership", description: "Ayan records evidence; Akshay reviews and owns the release decision.", status: resolved }
+integrations:
+    - { id: INT-253-001, system: Razorpay payouts, purpose: "Provider payout submission", failure_mode: "Retry or ambiguous response could duplicate a payout", retry_idempotency: "Deterministic X-Payout-Idempotency header derived from cycle id and brand id, plus a local skip of brands that already hold a transaction id or are completed, processing, submitted or awaiting manual confirmation. Provider deduplication is not yet verified." }
+    - { id: INT-253-002, system: finance audit, purpose: "Record control decisions and RTO attribution", failure_mode: "Untraceable financial mutation", retry_idempotency: "Existing audit conventions and dedupe keys" }
+security_boundaries:
+    - { id: SEC-253-001, description: "Only existing payout finance access or site Admin may read statements." }
+    - { id: SEC-253-002, description: "Clearer and executor identities must be distinct where required." }
+    - { id: SEC-253-003, description: "RTO attribution changes require lock enforcement and audit evidence." }
+personas:
+    - { id: PER-253-001, role: finance_operator, applicability: "May calculate or review payout information according to existing finance access." }
+    - { id: PER-253-002, role: programme_release_reviewer, applicability: "Reviews evidence and owns the C0 release decision." }
+business_rules:
+    - { id: BR-253-001, description: "No payout is cleared or executed by REN-253." }
+    - { id: BR-253-002, description: "Missing commission policy never becomes a silent numeric fallback." }
+    - { id: BR-253-003, description: "Only draft and calculated cycles may be recalculated." }
+decisions:
+    - { id: DEC-253-001, question: "Which payout-cycle statuses may be recalculated?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Allow draft and calculated only.", basis: "Prevents changes after approval or execution activity.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-253-002, question: "Who may view payout statements?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Existing payouts finance view/manage access or site Admin inheritance.", basis: "Matches existing role and module access without inventing a brand role.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-253-003, question: "How are duplicate payouts identified?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use a stable cycle-and-brand reference and reject or deduplicate repeats.", basis: "Prevents replayed payout submission.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-253-004, question: "Which RTO path is authoritative?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Return/Replace lock-aware audited path only.", basis: "It already enforces payout locking and audit evidence.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-253-001, category: unit, classification: REQUIRED, reason: "Verify commission fallback cannot create an unapproved payout amount.", scenarios: [SCN-253-001] }
+    - { id: TEXP-253-002, category: integration, classification: REQUIRED, reason: "Verify all allowed and rejected payout-cycle states.", scenarios: [SCN-253-002] }
+    - { id: TEXP-253-003, category: security, classification: REQUIRED, reason: "Verify statement authentication and finance authorization.", scenarios: [SCN-253-003] }
+    - { id: TEXP-253-004, category: integration, classification: REQUIRED, reason: "Verify separation, retry, and duplicate payout protection without live provider execution.", scenarios: [SCN-253-004] }
+    - { id: TEXP-253-005, category: security, classification: REQUIRED, reason: "Verify locked RTO attribution rejection and audit behavior.", scenarios: [SCN-253-005] }
+    - { id: TEXP-253-006, category: regression, classification: REQUIRED, reason: "Verify existing finance behavior and no payout execution in validation.", scenarios: [SCN-253-006] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex independent read-only L3 Critic pass
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings: ["MAJOR: statement authorization must precede payout reads", "MAJOR: calculation service must enforce draft/calculated state", "MAJOR: provider replay and same-actor separation", "MAJOR: commission resolution must fail closed", "MAJOR: authoritative RTO attribution path"]
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "User approval in conversation on 2026-10-01 after independent Critic review"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-253-001, scenario_ids: [SCN-253-001] }
+        - { requirement_id: REQ-253-002, scenario_ids: [SCN-253-002] }
+        - { requirement_id: REQ-253-003, scenario_ids: [SCN-253-003] }
+        - { requirement_id: REQ-253-004, scenario_ids: [SCN-253-004] }
+        - { requirement_id: REQ-253-005, scenario_ids: [SCN-253-005] }
+        - { requirement_id: REQ-253-006, scenario_ids: [SCN-253-004, SCN-253-006] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-253-001, invariant_ids: [INV-253-001] }
+        - { scenario_id: SCN-253-002, invariant_ids: [INV-253-002] }
+        - { scenario_id: SCN-253-003, invariant_ids: [INV-253-003] }
+        - { scenario_id: SCN-253-004, invariant_ids: [INV-253-004, INV-253-006] }
+        - { scenario_id: SCN-253-005, invariant_ids: [INV-253-005] }
+        - { scenario_id: SCN-253-006, invariant_ids: [INV-253-006] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-253-001, test_expectation_ids: [TEXP-253-001] }
+        - { scenario_id: SCN-253-002, test_expectation_ids: [TEXP-253-002] }
+        - { scenario_id: SCN-253-003, test_expectation_ids: [TEXP-253-003] }
+        - { scenario_id: SCN-253-004, test_expectation_ids: [TEXP-253-004] }
+        - { scenario_id: SCN-253-005, test_expectation_ids: [TEXP-253-005] }
+        - { scenario_id: SCN-253-006, test_expectation_ids: [TEXP-253-006] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: master
+    base_commit: "e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be"
+    head_commit: "296472ea19bdd248067404ae1b0cace09a6de854"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Verify Razorpay deduplication of a repeated X-Payout-Idempotency key in a non-production, test-mode setup before any release; until then INV-253-004 is unproven at the provider."
+        - "REV-002: Decide whether the concurrent-execution residual (two parallel executions both reach the provider) is acceptable on provider deduplication alone, or needs a local guard in a separate, bounded change."
+        - "REV-003: Add environment-backed negative tests during staging validation for the statement route (401, 403) and for the locked RTO write; current evidence uses mocked boundaries."
+        - "REV-004: Record read-only deployment and migration verification and a Neon snapshot or branch before any deploy (Ayan), then the C0 release decision (Akshay). The change contains no migration files."
+    evidence:
+        - "Canonical branch ayanganguly333/ren-253-c0-canonical is current master e6ebd297 plus seven cherry-picked C0 commits (from 7cc3ff9d) and one test commit; head_commit is the last code commit. A governance-only commit follows it."
+        - "Focused finance tests pass; the single failing test (REN-206 execution-gate migration contract) fails identically on master."
+        - "Type check: no new errors versus master (master has 821 pre-existing errors)."
+        - "No payout was cleared or executed; no provider was called; no production data was touched."
+    governance_reentry_required: false
