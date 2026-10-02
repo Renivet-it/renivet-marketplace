@@ -152,4 +152,5 @@ implementation_review:
         - "Focused finance tests pass; the single failing test (REN-206 execution-gate migration contract) fails identically on master."
         - "Type check: no new errors versus master (master has 821 pre-existing errors)."
         - "No payout was cleared or executed; no provider was called; no production data was touched."
+        - "Ratified by Akshay on 2026-10-03: canonical C0 source is the implementation derived from 7cc3ff9d; fail-closed commission disposition; the approver-must-differ-from-executor rule is not adopted. C0 is not production-approved."
     governance_reentry_required: false

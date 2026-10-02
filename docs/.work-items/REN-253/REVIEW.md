@@ -12,7 +12,7 @@ Changed code (13 C0 files plus one new test file): `payouts.ts`, `payout-commiss
 
 ## Requirement Reconciliation
 
-- REQ-253-001: PASS — the category commission fallback is removed from payout item resolution; a line with no matching approved rule gets `blocked_unconfigured` and the execution gate refuses a cycle that contains one. No rate is invented. The business ratification of the fail-closed disposition is recorded in Linear only as a resolution comment; its approver is not named.
+- REQ-253-001: PASS — the category commission fallback is removed from payout item resolution; a line with no matching approved rule gets `blocked_unconfigured` and the execution gate refuses a cycle that contains one. No rate is invented. The fail-closed disposition was ratified by Akshay on 2026-10-03: unconfigured commission lines stay blocked and engineering must not invent a fallback rate.
 - REQ-253-002: PASS — `calculatePayoutCycle` rejects any cycle not in `draft` or `calculated` before reading or replacing line items; creating or approving a payout override on a non-recalculable cycle is rejected as well (see drift note).
 - REQ-253-003: PASS — the route authorizes before reading payout data: 401 without a session, 403 without payouts finance view/manage access (site Admin inherits). Route-level tests with mocked boundaries cover 401, 403, an authorized view that reaches the data layer, and an authorized PDF response.
 - REQ-253-004: PARTIAL — the clearer cannot execute (enforced through the existing execution gate). Repeated execution is guarded by a deterministic `X-Payout-Idempotency` header derived from cycle id and brand id, and by skipping brands that already hold a transaction id or are completed, processing, submitted or awaiting manual confirmation. Whether Razorpay actually deduplicates a repeated key is unverified.
@@ -78,7 +78,7 @@ MINOR_DRIFT. All changes are inside the five controls and the evidence gate. Two
 
 ## Decisions Requiring Attention
 
-- Ratify the fail-closed commission disposition (REN-253 names the FOUNDER with the finance lead; the approver is not recorded).
+- Ratified 2026-10-03 (Akshay): the fail-closed commission disposition, and the implementation derived from `7cc3ff9d` as the canonical C0 source. Ayan's extra rule (the approver must also differ from the executor) is NOT adopted unless separately approved. C0 is not production-approved.
 - Whether the concurrent-execution residual is acceptable (REV-002).
 
 ## Final Recommendation
