@@ -581,6 +581,28 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
+    async revokeActivePayoutExecutionClearances(
+        cycleId: string,
+        revokedBy: string,
+        revocationReason: string
+    ) {
+        return db
+            .update(payoutExecutionClearances)
+            .set({
+                revokedAt: new Date(),
+                revokedBy,
+                revocationReason,
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(payoutExecutionClearances.cycleId, cycleId),
+                    isNull(payoutExecutionClearances.revokedAt)
+                )
+            )
+            .returning();
+    }
+
     async addPayoutLineItems(
         values: Array<typeof brandPayoutLineItems.$inferInsert>
     ) {

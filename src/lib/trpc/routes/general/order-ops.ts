@@ -1,5 +1,10 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import {
+    checkRtoAttributionWritable,
+    recordRtoAttributionAudit,
+    rtoFaultOwnerChanges,
+} from "@/lib/finance/rto-attribution";
+import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
@@ -532,6 +537,25 @@ export const orderOpsRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .mutation(async ({ ctx, input }) => {
             await ensureOrder(ctx, input.orderId);
+            const existing = await ctx.db.query.rtoDispositions.findFirst({
+                where: eq(ctx.schemas.rtoDispositions.orderId, input.orderId),
+            });
+            const faultOwnerChanges = rtoFaultOwnerChanges({
+                existing,
+                nextFaultOwner: input.faultOwner,
+            });
+            if (faultOwnerChanges) {
+                const check = await checkRtoAttributionWritable({
+                    orderId: input.orderId,
+                    rtoId: existing?.id,
+                    previousFaultOwner: existing?.faultOwner,
+                    nextFaultOwner: input.faultOwner,
+                    notes: input.notes,
+                });
+                if (!check.ok) {
+                    throw new TRPCError({ code: check.code, message: check.message });
+                }
+            }
             const now = new Date();
             const disposition = await ctx.db
                 .insert(ctx.schemas.rtoDispositions)
@@ -567,6 +591,18 @@ export const orderOpsRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((rows: any[]) => rows[0]);
+
+            if (faultOwnerChanges) {
+                await recordRtoAttributionAudit({
+                    actorId: ctx.user.id,
+                    rtoId: disposition.id,
+                    reason: input.notes,
+                    before: existing
+                        ? { faultOwner: existing.faultOwner, notes: existing.notes }
+                        : null,
+                    after: { faultOwner: input.faultOwner, notes: input.notes ?? null },
+                });
+            }
 
             await setOrderOpsState({
                 ctx,

@@ -8,7 +8,6 @@ import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 import {
     calculateCommissionPaise,
-    categoryCommissionPercentToBps,
     resolveCommissionRuleFromCandidates,
     type CommissionRuleCandidate,
 } from "./payout-commission";
@@ -22,6 +21,7 @@ import {
     getHoldbackPolicyMetadata,
 } from "./payout-holdback";
 import {
+    buildPayoutIdempotencyKey,
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
@@ -41,7 +41,6 @@ type ResolvedRule = {
     holdbackPercentBps: number;
     ruleName: string;
     ruleId?: string;
-    source: "commission_rule" | "category_fallback";
 };
 
 type PayoutExecutionStatus =
@@ -144,7 +143,6 @@ async function resolveCommissionRuleForItem(input: {
     brandId: string;
     categoryId?: string | null;
     productTypeId?: string | null;
-    categoryCommissionPercent?: number | null;
     targetDate: Date;
 }) {
     const rules = await financeComplianceQueries.listCommissionRules({
@@ -156,25 +154,13 @@ async function resolveCommissionRuleForItem(input: {
         rules,
     });
 
-    if (!winner) {
-        if (input.categoryCommissionPercent == null) return null;
-
-        return {
-            commissionPercentBps: categoryCommissionPercentToBps(
-                input.categoryCommissionPercent
-            ),
-            holdbackPercentBps: 0,
-            ruleName: "category_fallback",
-            source: "category_fallback",
-        } satisfies ResolvedRule;
-    }
+    if (!winner) return null;
 
     return {
         commissionPercentBps: winner.commissionPercentBps,
         holdbackPercentBps: winner.holdbackPercentBps,
         ruleName: winner.ruleName,
         ruleId: winner.id,
-        source: "commission_rule",
     } satisfies ResolvedRule;
 }
 
@@ -362,7 +348,6 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     brandId,
                     categoryId: item.product?.categoryId,
                     productTypeId: item.product?.productTypeId,
-                    categoryCommissionPercent: item.product?.category?.commissionRate,
                     targetDate: deliveredAt,
                 });
 
@@ -424,7 +409,6 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                     metadata: {
                         deliveredAt: deliveredAt.toISOString(),
                         commissionStatus: rule ? "applied" : "blocked_unconfigured",
-                        commissionSource: rule?.source,
                         commissionPercentBps: rule?.commissionPercentBps,
                         holdbackPercentBps: 0,
                         ruleName: rule?.ruleName,
@@ -440,8 +424,6 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                 referenceId: order.id,
                 metadata: {
                     commissionStatus: rule ? "applied" : "blocked_unconfigured",
-                    commissionPercentBps: rule?.commissionPercentBps,
-                    commissionSource: rule?.source,
                     ruleName: rule?.ruleName,
                     ruleId: rule?.ruleId,
                 },
@@ -756,12 +738,146 @@ function deriveCycleStatus(brands: BrandCycleSummary[]) {
     return "calculated";
 }
 
+// Once a cycle is approved its amounts are what the approver signed off, and from
+// processing onwards money may have moved, so only draft/calculated cycles can be
+// recalculated (AQ-18).
+const RECALCULABLE_PAYOUT_CYCLE_STATUSES = ["draft", "calculated"];
+
+function assertPayoutCycleRecalculable(cycle: { status: string }) {
+    if (!RECALCULABLE_PAYOUT_CYCLE_STATUSES.includes(cycle.status)) {
+        throw new Error(
+            `Payout cycle recalculation blocked: cycle status is ${cycle.status}.`
+        );
+    }
+}
+
+// The payout authority of a brand is what an approver and the BIZ-3 clearer sign off:
+// how much is paid, how it was arrived at, and who receives it. These are the fields
+// execution sends to the provider or prints on the manual NEFT instruction.
+function getPayoutAuthority(brand: BrandCycleSummary) {
+    const metadata = brand.metadata ?? {};
+    return {
+        netPayablePaise: brand.netPayablePaise,
+        grossSalesPaise: brand.grossSalesPaise,
+        commissionPaise: brand.commissionPaise,
+        paymentFeePaise: brand.paymentFeePaise,
+        returnsPaise: brand.returnsPaise,
+        carrierClaimsPaise: brand.carrierClaimsPaise,
+        holdbackPaise: brand.holdbackPaise,
+        holdbackReleasePaise: brand.holdbackReleasePaise,
+        overrideNetPaise: brand.overrideNetPaise,
+        tdsPaise: brand.tdsPaise,
+        payoutMethod: brand.payoutMethod,
+        bankAccountNumber: metadata.bankAccountNumber ?? null,
+        bankIfscCode: metadata.bankIfscCode ?? null,
+        bankAccountHolderName: metadata.bankAccountHolderName ?? null,
+    };
+}
+
+function getChangedPayoutAuthorityFields(
+    previous: BrandCycleSummary,
+    next: BrandCycleSummary
+) {
+    const before = getPayoutAuthority(previous);
+    const after = getPayoutAuthority(next);
+    return (Object.keys(after) as Array<keyof typeof after>).filter(
+        (field) => before[field] !== after[field]
+    );
+}
+
+// Invariant (REN-253 F-1, N-1): an approved brand payout never stays approved after its
+// payout authority changes. The cycle stays "calculated" until every brand is
+// approved, so a partially approved cycle can be recalculated; the approval carried
+// over from the previous summary is therefore dropped for any brand whose amount or
+// payee differs, and that brand must be approved again.
+function invalidateChangedBrandApprovals(
+    previousBrands: BrandCycleSummary[],
+    nextBrands: BrandCycleSummary[]
+) {
+    const previousByBrand = new Map(previousBrands.map((brand) => [brand.brandId, brand]));
+    const invalidated: Array<{
+        brandId: string;
+        previousNetPayablePaise: number;
+        netPayablePaise: number;
+        changedFields: string[];
+    }> = [];
+
+    for (const brand of nextBrands) {
+        const previous = previousByBrand.get(brand.brandId);
+        if (previous?.reviewStatus !== "approved") continue;
+        const changedFields = getChangedPayoutAuthorityFields(previous, brand);
+        if (!changedFields.length) continue;
+
+        brand.reviewStatus = "pending";
+        brand.executionStatus = "pending_review";
+        brand.approvedBy = null;
+        brand.approvedAt = null;
+        invalidated.push({
+            brandId: brand.brandId,
+            previousNetPayablePaise: previous.netPayablePaise,
+            netPayablePaise: brand.netPayablePaise,
+            changedFields,
+        });
+    }
+
+    return invalidated;
+}
+
+function payoutBasisChanged(
+    previousBrands: BrandCycleSummary[],
+    nextBrands: BrandCycleSummary[]
+) {
+    if (previousBrands.length !== nextBrands.length) return true;
+    const previousByBrand = new Map(previousBrands.map((brand) => [brand.brandId, brand]));
+    return nextBrands.some((brand) => {
+        const previous = previousByBrand.get(brand.brandId);
+        return !previous || getChangedPayoutAuthorityFields(previous, brand).length > 0;
+    });
+}
+
+// Invariant (REN-253 F-3): a BIZ-3 clearance covers the payout basis that existed when
+// it was recorded. A recalculation that changes any brand's payout authority, or the
+// set of brands, revokes every unrevoked clearance of the cycle, so execution needs a
+// fresh clearance of the new basis. The payout path has no transaction, so this runs
+// before the new amounts are written: a failure in between leaves the old amounts
+// without a clearance, never new amounts under an old clearance.
+async function revokeClearancesForChangedPayoutBasis(cycleId: string, actorId: string) {
+    const revoked = await financeComplianceQueries.revokeActivePayoutExecutionClearances(
+        cycleId,
+        actorId,
+        "payout_basis_recalculated"
+    );
+    for (const row of revoked) {
+        await writeFinanceAuditEvent({
+            actorId,
+            actionType: "payout_execution_clearance_revoked",
+            entityType: "payout_execution_clearance",
+            entityId: row.id,
+            reason: "biz_3_clearance_revoked_by_recalculation",
+            afterValue: {
+                cycleId: row.cycleId,
+                revokedBy: actorId,
+                revokedAt: row.revokedAt,
+                revocationReason: row.revocationReason,
+            },
+        });
+    }
+    return revoked.map((row) => row.id);
+}
+
 export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const { brands: summaries, eligibilityDiagnostics } =
         await buildBrandPayoutSummaries(cycleId);
+    const previousBrands = getCycleBrands(cycle);
+    const basisChanged = payoutBasisChanged(previousBrands, summaries);
+    const invalidatedApprovals = invalidateChangedBrandApprovals(previousBrands, summaries);
+    const revokedClearanceIds = basisChanged
+        ? await revokeClearancesForChangedPayoutBasis(cycleId, actorId)
+        : [];
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -803,10 +919,25 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         channels: ["admin"],
         metadata: {
             module: "finance_compliance",
+            invalidatedApprovals,
+            revokedClearanceIds,
         },
     });
 
     return updated;
+}
+
+// A cycle that is failed, processing or completed has been through execution. Money
+// may have moved, so the ordinary approval action must never make it payable again
+// (REN-253 F-4). Any retry needs its own explicit, audited action.
+const APPROVABLE_PAYOUT_CYCLE_STATUSES = ["draft", "calculated", "approved"];
+
+function assertPayoutCycleApprovable(cycle: { status: string }) {
+    if (!APPROVABLE_PAYOUT_CYCLE_STATUSES.includes(cycle.status)) {
+        throw new Error(
+            `Payout cycle approval blocked: cycle status is ${cycle.status}.`
+        );
+    }
 }
 
 export async function approvePayoutCycle(
@@ -816,6 +947,7 @@ export async function approvePayoutCycle(
 ) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleApprovable(cycle);
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     if (!brands.length) throw new Error("Run calculation before approval.");
@@ -874,6 +1006,7 @@ async function createRazorpayPayout(input: {
     bankIfscCode?: string | null;
     reference: string;
     rzpAccountId?: string | null;
+    idempotencyKey: string;
 }) {
     const sourceAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
     if (!sourceAccount) {
@@ -893,6 +1026,7 @@ async function createRazorpayPayout(input: {
         headers: {
             Authorization: `Basic ${auth}`,
             "Content-Type": "application/json",
+            "X-Payout-Idempotency": input.idempotencyKey,
         },
         body: JSON.stringify({
             account_number: sourceAccount,
@@ -938,7 +1072,8 @@ function buildExecutionGateChecks(
         clearedAt: Date;
         expiresAt: Date | null;
         revokedAt: Date | null;
-    } | null
+    } | null,
+    executedBy: string
 ) {
     const summary = cycle.calculationSummary as CycleCalculationSummary | undefined;
     const brands = summary?.brands ?? [];
@@ -980,6 +1115,7 @@ function buildExecutionGateChecks(
                   revokedAt: clearance.revokedAt,
               }
             : null,
+        executedBy,
     };
 }
 
@@ -991,7 +1127,7 @@ async function evaluateAndAuditPayoutExecutionGate(
     >
 ) {
     const result = evaluatePayoutExecutionGate(
-        buildExecutionGateChecks(cycle, clearance),
+        buildExecutionGateChecks(cycle, clearance, actorId),
         new Date()
     );
     await writeFinanceAuditEvent({
@@ -1006,7 +1142,7 @@ async function evaluateAndAuditPayoutExecutionGate(
         },
         metadata: {
             cycleId: cycle.id,
-            checks: buildExecutionGateChecks(cycle, clearance),
+            checks: buildExecutionGateChecks(cycle, clearance, actorId),
         },
     });
     return result;
@@ -1122,7 +1258,13 @@ export async function executePayoutCycle(
         if (brand.reviewStatus !== "approved") {
             throw new Error(`Approve payout for ${brand.brandName} before execution.`);
         }
-        if (["completed", "awaiting_manual_confirmation"].includes(brand.executionStatus)) {
+        // A brand payout that was already sent (or is in flight) is never re-sent (AQ-60).
+        if (
+            ["completed", "awaiting_manual_confirmation", "processing", "submitted"].includes(
+                brand.executionStatus
+            ) ||
+            brand.transactionId
+        ) {
             continue;
         }
 
@@ -1149,6 +1291,7 @@ export async function executePayoutCycle(
                     bankIfscCode: String(metadata.bankIfscCode ?? ""),
                     reference: `${cycle.cycleKey}-${brand.brandId}`,
                     rzpAccountId: String(metadata.rzpAccountId ?? ""),
+                    idempotencyKey: buildPayoutIdempotencyKey(cycleId, brand.brandId),
                 });
 
                 brand.executionStatus = "completed";
@@ -1386,6 +1529,10 @@ export async function createPayoutOverride(input: {
     if (input.approverId === input.actorId) {
         throw new Error("Checker and maker must be different admins.");
     }
+    // An approved override triggers recalculation, so reject it before it is stored.
+    const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const row = await financeComplianceQueries.addPayoutOverride({
         cycleId: input.cycleId,
@@ -1434,6 +1581,9 @@ export async function approvePayoutOverride(overrideId: string, actorId: string)
     if (row.createdBy === actorId) {
         throw new Error("The same admin cannot approve this override.");
     }
+    const cycle = await financeComplianceQueries.getPayoutCycle(row.cycleId);
+    if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleRecalculable(cycle);
 
     const updated = await financeComplianceQueries.updatePayoutOverride(overrideId, {
         approvedBy: actorId,

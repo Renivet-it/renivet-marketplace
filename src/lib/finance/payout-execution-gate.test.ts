@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    buildPayoutIdempotencyKey,
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
@@ -20,6 +21,7 @@ function checks(overrides: Record<string, boolean> = {}) {
             expiresAt: "2026-09-19T10:00:00.000Z",
             revokedAt: null,
         },
+        executedBy: "finance-executor-1",
         ...overrides,
     };
 }
@@ -93,6 +95,23 @@ describe("REN-206 payout execution gate", () => {
         });
     });
 
+    test("AQ-60: rejects execution by the admin who recorded the clearance", () => {
+        const reason = {
+            code: "clearer_is_executor",
+            message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
+        };
+
+        for (const executedBy of ["manager-1", " manager-1 ", "", null]) {
+            const result = evaluatePayoutExecutionGate(
+                checks({ executedBy } as unknown as Record<string, boolean>),
+                now
+            );
+
+            expect(result.allowed).toBe(false);
+            expect(result.reasons).toContainEqual(reason);
+        }
+    });
+
     test("allows only a valid clearance with all controls passing", () => {
         expect(evaluatePayoutExecutionGate(checks(), now)).toEqual({
             allowed: true,
@@ -110,5 +129,26 @@ describe("REN-206 payout execution gate", () => {
         expect(
             isPayoutOverrideApproved({ createdBy: "maker", approvedBy: "checker" })
         ).toBe(true);
+    });
+});
+
+describe("AQ-60 payout idempotency key", () => {
+    test("is deterministic for the same cycle and brand", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-1")).toBe(key);
+        expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    });
+
+    test("differs across cycles and brands", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-2", "brand-1")).not.toBe(key);
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-2")).not.toBe(key);
+    });
+
+    test("rejects missing identifiers", () => {
+        expect(() => buildPayoutIdempotencyKey("", "brand-1")).toThrow();
+        expect(() => buildPayoutIdempotencyKey("cycle-1", " ")).toThrow();
     });
 });
