@@ -751,11 +751,45 @@ function assertPayoutCycleRecalculable(cycle: { status: string }) {
     }
 }
 
-// Invariant (REN-253 F-1): an approved brand amount never stays approved after its
-// authoritative amount (netPayablePaise) changes. The cycle stays "calculated" until
-// every brand is approved, so a partially approved cycle can be recalculated; the
-// approval carried over from the previous summary is therefore dropped for any brand
-// whose recalculated amount differs, and that brand must be approved again.
+// The payout authority of a brand is what an approver and the BIZ-3 clearer sign off:
+// how much is paid, how it was arrived at, and who receives it. These are the fields
+// execution sends to the provider or prints on the manual NEFT instruction.
+function getPayoutAuthority(brand: BrandCycleSummary) {
+    const metadata = brand.metadata ?? {};
+    return {
+        netPayablePaise: brand.netPayablePaise,
+        grossSalesPaise: brand.grossSalesPaise,
+        commissionPaise: brand.commissionPaise,
+        paymentFeePaise: brand.paymentFeePaise,
+        returnsPaise: brand.returnsPaise,
+        carrierClaimsPaise: brand.carrierClaimsPaise,
+        holdbackPaise: brand.holdbackPaise,
+        holdbackReleasePaise: brand.holdbackReleasePaise,
+        overrideNetPaise: brand.overrideNetPaise,
+        tdsPaise: brand.tdsPaise,
+        payoutMethod: brand.payoutMethod,
+        bankAccountNumber: metadata.bankAccountNumber ?? null,
+        bankIfscCode: metadata.bankIfscCode ?? null,
+        bankAccountHolderName: metadata.bankAccountHolderName ?? null,
+    };
+}
+
+function getChangedPayoutAuthorityFields(
+    previous: BrandCycleSummary,
+    next: BrandCycleSummary
+) {
+    const before = getPayoutAuthority(previous);
+    const after = getPayoutAuthority(next);
+    return (Object.keys(after) as Array<keyof typeof after>).filter(
+        (field) => before[field] !== after[field]
+    );
+}
+
+// Invariant (REN-253 F-1, N-1): an approved brand payout never stays approved after its
+// payout authority changes. The cycle stays "calculated" until every brand is
+// approved, so a partially approved cycle can be recalculated; the approval carried
+// over from the previous summary is therefore dropped for any brand whose amount or
+// payee differs, and that brand must be approved again.
 function invalidateChangedBrandApprovals(
     previousBrands: BrandCycleSummary[],
     nextBrands: BrandCycleSummary[]
@@ -765,12 +799,14 @@ function invalidateChangedBrandApprovals(
         brandId: string;
         previousNetPayablePaise: number;
         netPayablePaise: number;
+        changedFields: string[];
     }> = [];
 
     for (const brand of nextBrands) {
         const previous = previousByBrand.get(brand.brandId);
         if (previous?.reviewStatus !== "approved") continue;
-        if (previous.netPayablePaise === brand.netPayablePaise) continue;
+        const changedFields = getChangedPayoutAuthorityFields(previous, brand);
+        if (!changedFields.length) continue;
 
         brand.reviewStatus = "pending";
         brand.executionStatus = "pending_review";
@@ -780,10 +816,53 @@ function invalidateChangedBrandApprovals(
             brandId: brand.brandId,
             previousNetPayablePaise: previous.netPayablePaise,
             netPayablePaise: brand.netPayablePaise,
+            changedFields,
         });
     }
 
     return invalidated;
+}
+
+function payoutBasisChanged(
+    previousBrands: BrandCycleSummary[],
+    nextBrands: BrandCycleSummary[]
+) {
+    if (previousBrands.length !== nextBrands.length) return true;
+    const previousByBrand = new Map(previousBrands.map((brand) => [brand.brandId, brand]));
+    return nextBrands.some((brand) => {
+        const previous = previousByBrand.get(brand.brandId);
+        return !previous || getChangedPayoutAuthorityFields(previous, brand).length > 0;
+    });
+}
+
+// Invariant (REN-253 F-3): a BIZ-3 clearance covers the payout basis that existed when
+// it was recorded. A recalculation that changes any brand's payout authority, or the
+// set of brands, revokes every unrevoked clearance of the cycle, so execution needs a
+// fresh clearance of the new basis. The payout path has no transaction, so this runs
+// before the new amounts are written: a failure in between leaves the old amounts
+// without a clearance, never new amounts under an old clearance.
+async function revokeClearancesForChangedPayoutBasis(cycleId: string, actorId: string) {
+    const revoked = await financeComplianceQueries.revokeActivePayoutExecutionClearances(
+        cycleId,
+        actorId,
+        "payout_basis_recalculated"
+    );
+    for (const row of revoked) {
+        await writeFinanceAuditEvent({
+            actorId,
+            actionType: "payout_execution_clearance_revoked",
+            entityType: "payout_execution_clearance",
+            entityId: row.id,
+            reason: "biz_3_clearance_revoked_by_recalculation",
+            afterValue: {
+                cycleId: row.cycleId,
+                revokedBy: actorId,
+                revokedAt: row.revokedAt,
+                revocationReason: row.revocationReason,
+            },
+        });
+    }
+    return revoked.map((row) => row.id);
 }
 
 export async function calculatePayoutCycle(cycleId: string, actorId: string) {
@@ -793,10 +872,12 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
 
     const { brands: summaries, eligibilityDiagnostics } =
         await buildBrandPayoutSummaries(cycleId);
-    const invalidatedApprovals = invalidateChangedBrandApprovals(
-        getCycleBrands(cycle),
-        summaries
-    );
+    const previousBrands = getCycleBrands(cycle);
+    const basisChanged = payoutBasisChanged(previousBrands, summaries);
+    const invalidatedApprovals = invalidateChangedBrandApprovals(previousBrands, summaries);
+    const revokedClearanceIds = basisChanged
+        ? await revokeClearancesForChangedPayoutBasis(cycleId, actorId)
+        : [];
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -839,6 +920,7 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         metadata: {
             module: "finance_compliance",
             invalidatedApprovals,
+            revokedClearanceIds,
         },
     });
 

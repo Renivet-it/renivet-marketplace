@@ -21,6 +21,8 @@ const state = {
     brands: null as Row[] | null,
     overrides: [] as Row[],
     alerts: [] as Row[],
+    revokedClearances: [] as Row[],
+    revokeSnapshots: [] as Row[],
 };
 
 const brandId = "brand-1";
@@ -89,7 +91,38 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
             state.cycle = { ...state.cycle, ...values, id };
             return state.cycle;
         },
-        getActivePayoutExecutionClearance: async () => state.clearance,
+        getActivePayoutExecutionClearance: async () =>
+            state.clearance && !state.clearance.revokedAt ? state.clearance : null,
+        createPayoutExecutionClearance: async (values: Row) => {
+            state.clearance = {
+                id: `clearance-${state.revokedClearances.length + 1}`,
+                clearedAt: new Date(),
+                expiresAt: null,
+                revokedAt: null,
+                ...values,
+            };
+            return state.clearance;
+        },
+        revokeActivePayoutExecutionClearances: async (
+            _cycleId: string,
+            revokedBy: string,
+            revocationReason: string
+        ) => {
+            state.revokeSnapshots.push({
+                lineItemsWritten: state.replacedLineItems !== null,
+                cycleUpdates: state.cycleUpdates.length,
+            });
+            if (!state.clearance || state.clearance.revokedAt) return [];
+            const revoked = {
+                ...state.clearance,
+                revokedAt: new Date(),
+                revokedBy,
+                revocationReason,
+            };
+            state.revokedClearances.push(revoked);
+            state.clearance = null;
+            return [revoked];
+        },
         addPayoutOverride: async (values: Row) => {
             state.overrideInserts.push(values);
             state.overrides.push({ id: "override-1", ...values });
@@ -139,6 +172,8 @@ beforeEach(() => {
     state.brands = null;
     state.overrides = [];
     state.alerts = [];
+    state.revokedClearances = [];
+    state.revokeSnapshots = [];
 });
 
 describe("AQ-01 commission fallback removed", () => {
@@ -438,6 +473,8 @@ describe("AQ-60b payout idempotency", () => {
 
 const brandA = "11111111-1111-4111-8111-111111111111";
 const brandB = "22222222-2222-4222-8222-222222222222";
+const accountX = "111100001111";
+const accountY = "999900009999";
 
 function orderForBrand(orderId: string, forBrand: string, price: number) {
     const base = order();
@@ -485,8 +522,22 @@ const providerAccepts = () =>
 
 async function calculateTwoBrandCycle() {
     state.brands = [
-        { brandId: brandA, brandName: "Brand A", payoutMethod: "razorpay_route" },
-        { brandId: brandB, brandName: "Brand B", payoutMethod: "razorpay_route" },
+        {
+            brandId: brandA,
+            brandName: "Brand A",
+            payoutMethod: "razorpay_route",
+            bankAccountHolderName: "Brand A Pvt Ltd",
+            bankAccountNumber: accountX,
+            bankIfscCode: "HDFC0000001",
+        },
+        {
+            brandId: brandB,
+            brandName: "Brand B",
+            payoutMethod: "razorpay_route",
+            bankAccountHolderName: "Brand B Pvt Ltd",
+            bankAccountNumber: "222200002222",
+            bankIfscCode: "HDFC0000002",
+        },
     ];
     state.orders = [
         orderForBrand("order-a", brandA, 100_000),
@@ -613,8 +664,224 @@ describe("REN-253 F-1 an approved amount never stays approved after it changes",
                 brandId: brandA,
                 previousNetPayablePaise: approvedAmount,
                 netPayablePaise: approvedAmount + 5_000,
+                changedFields: ["netPayablePaise", "overrideNetPaise"],
             },
         ]);
+    });
+});
+
+describe("REN-253 N-1 an approval is bound to the payee as well as the amount", () => {
+    test("a changed bank account with the same amount drops the approval and cannot be paid under it", async () => {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+        const approvedAmount = brandSummary(brandA).netPayablePaise;
+        expect(brandSummary(brandA).metadata.bankAccountNumber).toBe(accountX);
+
+        state.brands![0] = { ...state.brands![0], bankAccountNumber: accountY };
+        state.alerts = [];
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        const changed = brandSummary(brandA);
+        expect(changed.netPayablePaise).toBe(approvedAmount);
+        expect(changed.metadata.bankAccountNumber).toBe(accountY);
+        expect(changed.reviewStatus).toBe("pending");
+        expect(changed.executionStatus).toBe("pending_review");
+        expect(changed.approvedBy).toBeNull();
+        expect(changed.approvedAt).toBeNull();
+        expect(
+            state.alerts.find((event) => event.actionType === "payout_cycle_calculated")
+                ?.metadata.invalidatedApprovals
+        ).toEqual([
+            {
+                brandId: brandA,
+                previousNetPayablePaise: approvedAmount,
+                netPayablePaise: approvedAmount,
+                changedFields: ["bankAccountNumber"],
+            },
+        ]);
+
+        // The old approval of account X cannot authorize a payment to account Y.
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandB);
+        expect(state.cycle!.status).toBe("calculated");
+        await payouts.recordPayoutExecutionClearance({
+            cycleId: "cycle-1",
+            actorId: "finance-2",
+            evidenceReference: "BIZ-3-approval",
+            transactionValidationReference: "txn-validation-1",
+            transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+        });
+
+        await withRazorpay(providerAccepts, async (bodies) => {
+            await expect(
+                payouts.executePayoutCycle("cycle-1", "finance-3")
+            ).rejects.toThrow("Payout execution blocked: cycle status is calculated.");
+            expect(bodies).toHaveLength(0);
+
+            await payouts.approvePayoutCycle("cycle-1", "finance-4", brandA);
+            expect(brandSummary(brandA).approvedBy).toBe("finance-4");
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+
+            const accounts = bodies.map(
+                (body) => body.fund_account.bank_account.account_number
+            );
+            expect(accounts).toContain(accountY);
+            expect(accounts).not.toContain(accountX);
+            const paidToA = bodies.find((body) => body.reference_id.endsWith(brandA));
+            expect(paidToA?.fund_account.bank_account.account_number).toBe(accountY);
+            expect(paidToA?.amount).toBe(approvedAmount);
+        });
+    });
+
+    const payeeChanges = [
+        ["bankIfscCode", { bankIfscCode: "ICIC0000009" }],
+        ["bankAccountHolderName", { bankAccountHolderName: "Someone Else" }],
+        ["payoutMethod", { payoutMethod: "manual_neft" }],
+    ] as const;
+
+    for (const [field, change] of payeeChanges) {
+        test(`a changed ${field} drops the approval`, async () => {
+            await calculateTwoBrandCycle();
+            await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+            await payouts.approvePayoutCycle("cycle-1", "finance-2", brandB);
+            state.cycle = { ...state.cycle!, status: "calculated" };
+
+            state.brands![0] = { ...state.brands![0], ...change };
+            state.alerts = [];
+            await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+            expect(brandSummary(brandA).reviewStatus).toBe("pending");
+            expect(brandSummary(brandA).approvedBy).toBeNull();
+            expect(brandSummary(brandB).reviewStatus).toBe("approved");
+            expect(
+                state.alerts.find((event) => event.actionType === "payout_cycle_calculated")
+                    ?.metadata.invalidatedApprovals[0].changedFields
+            ).toEqual([field]);
+        });
+    }
+});
+
+describe("REN-253 F-3 recalculation revokes the BIZ-3 clearance of a changed payout basis", () => {
+    const tenPercentRule = { ...approvedRule, commissionPercentBps: 1000 };
+    const clearanceInput = {
+        cycleId: "cycle-1",
+        actorId: "finance-2",
+        evidenceReference: "BIZ-3-approval",
+        transactionValidationReference: "txn-validation-1",
+        transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+    };
+
+    async function clearAtFirstAmount() {
+        state.commissionRules = [tenPercentRule];
+        state.cycle = cycle("draft");
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+        expect(brandSummary(brandId).netPayablePaise).toBe(89_900);
+        return payouts.recordPayoutExecutionClearance(clearanceInput);
+    }
+
+    test("a clearance of 89,900 cannot pay 899,000 after recalculation", async () => {
+        const oldClearance = await clearAtFirstAmount();
+        state.financeAudits = [];
+        state.alerts = [];
+        state.replacedLineItems = null;
+        state.cycleUpdates = [];
+        state.revokeSnapshots = [];
+
+        state.orders = [order(), orderForBrand("order-2", brandId, 900_000)];
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        expect(brandSummary(brandId).netPayablePaise).toBe(899_000);
+        // The old clearance is revoked, with who and why, before the new amounts land.
+        expect(state.clearance).toBeNull();
+        expect(state.revokedClearances).toHaveLength(1);
+        expect(state.revokedClearances[0].id).toBe(oldClearance.id);
+        expect(state.revokedClearances[0].revokedBy).toBe("finance-1");
+        expect(state.revokedClearances[0].revocationReason).toBe("payout_basis_recalculated");
+        expect(state.revokeSnapshots).toEqual([{ lineItemsWritten: false, cycleUpdates: 0 }]);
+        const revocationAudit = state.financeAudits.find(
+            (event) => event.actionType === "payout_execution_clearance_revoked"
+        );
+        expect(revocationAudit?.entityId).toBe(oldClearance.id);
+        expect(revocationAudit?.reason).toBe("biz_3_clearance_revoked_by_recalculation");
+        expect(revocationAudit?.actorId).toBe("finance-1");
+        expect(
+            state.alerts.find((event) => event.actionType === "payout_cycle_calculated")
+                ?.metadata.revokedClearanceIds
+        ).toEqual([oldClearance.id]);
+
+        await payouts.approvePayoutCycle("cycle-1", "finance-1");
+        await withRazorpay(providerAccepts, async (bodies) => {
+            // No active clearance is left for the cycle.
+            await expect(
+                payouts.executePayoutCycle("cycle-1", "finance-3")
+            ).rejects.toThrow("human_clearance_missing");
+            expect(bodies).toHaveLength(0);
+            expect(state.cycle!.status).toBe("approved");
+
+            // A fresh clearance of the new basis pays the new amount, once.
+            await payouts.recordPayoutExecutionClearance(clearanceInput);
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+            expect(bodies.map((body) => body.amount)).toEqual([899_000]);
+        });
+    });
+
+    test("a recalculation that leaves the payout basis unchanged keeps the clearance", async () => {
+        const clearance = await clearAtFirstAmount();
+        state.financeAudits = [];
+
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        expect(state.clearance?.id).toBe(clearance.id);
+        expect(state.revokedClearances).toHaveLength(0);
+        expect(
+            state.financeAudits.some(
+                (event) => event.actionType === "payout_execution_clearance_revoked"
+            )
+        ).toBe(false);
+    });
+
+    test("a changed payee with the same amount revokes the clearance", async () => {
+        await calculateTwoBrandCycle();
+        const clearance = await payouts.recordPayoutExecutionClearance(clearanceInput);
+
+        state.brands![0] = { ...state.brands![0], bankAccountNumber: accountY };
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        expect(state.clearance).toBeNull();
+        expect(state.revokedClearances.map((row) => row.id)).toEqual([clearance.id]);
+    });
+
+    test("an applied override revokes the clearance", async () => {
+        const clearance = await clearAtFirstAmount();
+
+        await payouts.createPayoutOverride({
+            cycleId: "cycle-1",
+            brandId,
+            adjustmentType: "manual_correction",
+            amountPaise: 5_000,
+            reasonCode: "correction",
+            notes: "Correct a shipping deduction",
+            proofFileUrl: "https://files.example.com/proof.pdf",
+            actorId: "finance-1",
+            approverId: "finance-2",
+        });
+
+        expect(brandSummary(brandId).netPayablePaise).toBe(94_900);
+        expect(state.revokedClearances.map((row) => row.id)).toEqual([clearance.id]);
+    });
+
+    test("a brand entering the cycle revokes the clearance", async () => {
+        const clearance = await clearAtFirstAmount();
+
+        state.brands = [
+            { brandId, brandName: "Brand One", payoutMethod: "razorpay_route" },
+            { brandId: brandB, brandName: "Brand B", payoutMethod: "razorpay_route" },
+        ];
+        state.orders = [order(), orderForBrand("order-b", brandB, 100_000)];
+        state.commissionRules = [tenPercentRule, ruleForBrand(brandB)];
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        expect(brandSummary(brandId).netPayablePaise).toBe(89_900);
+        expect(state.revokedClearances.map((row) => row.id)).toEqual([clearance.id]);
     });
 });
 
