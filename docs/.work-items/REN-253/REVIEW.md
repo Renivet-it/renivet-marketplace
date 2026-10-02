@@ -13,7 +13,7 @@ Changed code (13 C0 files plus one new test file): `payouts.ts`, `payout-commiss
 ## Requirement Reconciliation
 
 - REQ-253-001: PASS — the category commission fallback is removed from payout item resolution; a line with no matching approved rule gets `blocked_unconfigured` and the execution gate refuses a cycle that contains one. No rate is invented. The fail-closed disposition was ratified by Akshay on 2026-10-03: unconfigured commission lines stay blocked and engineering must not invent a fallback rate.
-- REQ-253-002: PASS — `calculatePayoutCycle` rejects any cycle not in `draft` or `calculated` before reading or replacing line items; creating or approving a payout override on a non-recalculable cycle is rejected as well (see drift note).
+- REQ-253-002: PASS (after remediation, see Remediation F-1/F-4) — `calculatePayoutCycle` rejects any cycle not in `draft` or `calculated` before reading or replacing line items; creating or approving a payout override on a non-recalculable cycle is rejected as well (see drift note). The independent review found that this guard alone left a partially approved cycle (still `calculated`) recalculable with the old brand approval preserved on a changed amount; recalculation now drops the approval of any brand whose amount changed.
 - REQ-253-003: PASS — the route authorizes before reading payout data: 401 without a session, 403 without payouts finance view/manage access (site Admin inherits). Route-level tests with mocked boundaries cover 401, 403, an authorized view that reaches the data layer, and an authorized PDF response.
 - REQ-253-004: PARTIAL — the clearer cannot execute (enforced through the existing execution gate). Repeated execution is guarded by a deterministic `X-Payout-Idempotency` header derived from cycle id and brand id, and by skipping brands that already hold a transaction id or are completed, processing, submitted or awaiting manual confirmation. Whether Razorpay actually deduplicates a repeated key is unverified.
 - REQ-253-005: PASS — all three known `faultOwner` writers (Return/Replace `setRtoAttribution`, the Order Operations router, the Order Operations dashboard page) call `checkRtoAttributionWritable` before the write and `recordRtoAttributionAudit` after it. The check and the write are not atomic (see Findings).
@@ -32,7 +32,7 @@ INV-253-001, -002, -003, -005 and -006 hold on the evidence above. INV-253-004 (
 FLOW-253-001 to FLOW-253-004 stay inside the existing finance query/service, API route, execution gate and Return/Replace boundaries. Two behaviours of the execution flow matter for recovery and are stated plainly:
 
 - `executionStatus = "processing"` is only ever assigned in memory inside `executePayoutCycle` and is overwritten before the summary is persisted, so a persisted brand in `processing` cannot arise from this code path. The `processing` and `submitted` entries in the skip list are therefore defensive (`submitted` is never assigned anywhere). The skip that actually matters is the transaction-id check, which also covers a failure after a successful provider call.
-- A brand that fails makes the cycle `failed`, and `executePayoutCycle` refuses any cycle that is not `approved`. Re-execution after a failure is therefore blocked at the cycle level (unchanged from master); the fixed idempotency key does not create that block.
+- A brand that fails makes the cycle `failed`, and `executePayoutCycle` refuses any cycle that is not `approved`. CORRECTION: the earlier text here claimed re-execution after a failure was blocked at the cycle level. That was wrong: `approvePayoutCycle` had no status guard and reopened a `failed` cycle to `approved`, after which execution sent a second provider POST (reproduced in the independent review). `approvePayoutCycle` now rejects `failed`, `processing` and `completed` cycles.
 
 ## Security and Integration Review
 
@@ -75,6 +75,16 @@ MINOR_DRIFT. All changes are inside the five controls and the evidence gate. Two
 - Category: test
 - Description: Route authorization and the locked RTO write are tested with mocked boundaries; the three-writer claim is a source-order assertion.
 - Recommendation: Environment-backed negative tests during staging validation, without production data.
+
+## Remediation after the independent review (F-1, F-4)
+
+Independent adversarial review of this branch at `11769bfc` (read-only, 2026-10-03) found two C0 blockers, both reproduced with probe tests. This section records only the fixes made for them; it is not a fresh review and does not change any PARTIAL or UNKNOWN verdict above.
+
+- F-1 (recalculation after partial approval): approving one brand leaves the cycle `calculated` until every brand is approved, so recalculation (including an applied override) stayed reachable and carried the brand's `reviewStatus`, `approvedBy` and `approvedAt` onto a changed amount. Invariant now enforced in `calculatePayoutCycle` (`invalidateChangedBrandApprovals`): an approved brand amount never stays approved after its `netPayablePaise` changes. A brand whose recalculated amount differs goes back to `pending` / `pending_review` with `approvedBy` and `approvedAt` cleared; a brand whose amount is unchanged keeps its approval. The invalidation is recorded in the `payout_cycle_calculated` audit metadata (`invalidatedApprovals`). The cycle then cannot reach `approved` until the changed brand is approved again, so the changed amount cannot be paid under the old approval.
+- F-4 (failed cycle reopened by ordinary approval): `approvePayoutCycle` now only accepts `draft`, `calculated` and `approved` cycles. `failed`, `processing` and `completed` are rejected before any read or write. There is no retry action: a `failed` cycle now stays `failed` until an explicit, audited retry is designed (owner decision, not built here).
+- Tests: seven new runtime tests fail on `11769bfc` and pass now; see `payouts.containment.test.ts` (`REN-253 F-1`, `REN-253 F-4`).
+- Still open, deliberately not fixed here: provider idempotency remains UNKNOWN and local duplicate-send protection remains incomplete (a crash after the provider accepted and before the summary is persisted still leaves no local mark, and concurrent executions have no local mutual exclusion). Staging, provider and deployment evidence are all still required.
+- Known follow-ups, out of this remediation: F-2 override approver is a free-text value supplied by the maker (pre-existing); F-3 whether a BIZ-3 clearance must be invalidated by recalculation (owner decision); F-5 an unset `RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER` marks a brand `completed` with no money moved (pre-existing); F-6 possible Razorpay `reference_id`/`narration` length limits (unverified).
 
 ## Decisions Requiring Attention
 

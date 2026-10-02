@@ -751,6 +751,41 @@ function assertPayoutCycleRecalculable(cycle: { status: string }) {
     }
 }
 
+// Invariant (REN-253 F-1): an approved brand amount never stays approved after its
+// authoritative amount (netPayablePaise) changes. The cycle stays "calculated" until
+// every brand is approved, so a partially approved cycle can be recalculated; the
+// approval carried over from the previous summary is therefore dropped for any brand
+// whose recalculated amount differs, and that brand must be approved again.
+function invalidateChangedBrandApprovals(
+    previousBrands: BrandCycleSummary[],
+    nextBrands: BrandCycleSummary[]
+) {
+    const previousByBrand = new Map(previousBrands.map((brand) => [brand.brandId, brand]));
+    const invalidated: Array<{
+        brandId: string;
+        previousNetPayablePaise: number;
+        netPayablePaise: number;
+    }> = [];
+
+    for (const brand of nextBrands) {
+        const previous = previousByBrand.get(brand.brandId);
+        if (previous?.reviewStatus !== "approved") continue;
+        if (previous.netPayablePaise === brand.netPayablePaise) continue;
+
+        brand.reviewStatus = "pending";
+        brand.executionStatus = "pending_review";
+        brand.approvedBy = null;
+        brand.approvedAt = null;
+        invalidated.push({
+            brandId: brand.brandId,
+            previousNetPayablePaise: previous.netPayablePaise,
+            netPayablePaise: brand.netPayablePaise,
+        });
+    }
+
+    return invalidated;
+}
+
 export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
@@ -758,6 +793,10 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
 
     const { brands: summaries, eligibilityDiagnostics } =
         await buildBrandPayoutSummaries(cycleId);
+    const invalidatedApprovals = invalidateChangedBrandApprovals(
+        getCycleBrands(cycle),
+        summaries
+    );
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -799,10 +838,24 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         channels: ["admin"],
         metadata: {
             module: "finance_compliance",
+            invalidatedApprovals,
         },
     });
 
     return updated;
+}
+
+// A cycle that is failed, processing or completed has been through execution. Money
+// may have moved, so the ordinary approval action must never make it payable again
+// (REN-253 F-4). Any retry needs its own explicit, audited action.
+const APPROVABLE_PAYOUT_CYCLE_STATUSES = ["draft", "calculated", "approved"];
+
+function assertPayoutCycleApprovable(cycle: { status: string }) {
+    if (!APPROVABLE_PAYOUT_CYCLE_STATUSES.includes(cycle.status)) {
+        throw new Error(
+            `Payout cycle approval blocked: cycle status is ${cycle.status}.`
+        );
+    }
 }
 
 export async function approvePayoutCycle(
@@ -812,6 +865,7 @@ export async function approvePayoutCycle(
 ) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    assertPayoutCycleApprovable(cycle);
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     if (!brands.length) throw new Error("Run calculation before approval.");

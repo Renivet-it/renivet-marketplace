@@ -17,6 +17,10 @@ const state = {
     financeAudits: [] as Row[],
     lockedCycle: null as Row | null,
     lockReferences: [] as string[][],
+    orders: null as Row[] | null,
+    brands: null as Row[] | null,
+    overrides: [] as Row[],
+    alerts: [] as Row[],
 };
 
 const brandId = "brand-1";
@@ -64,10 +68,10 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
     financeComplianceQueries: {
         getPayoutCycle: async () => state.cycle,
         listPayoutCycles: async () => (state.cycle ? [state.cycle] : []),
-        listOrdersForFinanceWindow: async () => [order()],
+        listOrdersForFinanceWindow: async () => state.orders ?? [order()],
         listRefundsForPayoutWindow: async () => [],
-        listPayoutOverrides: async () => [],
-        listBrandsForPayout: async () => [
+        listPayoutOverrides: async () => state.overrides,
+        listBrandsForPayout: async () => state.brands ?? [
             { brandId, brandName: "Brand One", payoutMethod: "razorpay_route" },
         ],
         listCarrierClaimsForFinanceWindow: async () => [],
@@ -88,6 +92,7 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
         getActivePayoutExecutionClearance: async () => state.clearance,
         addPayoutOverride: async (values: Row) => {
             state.overrideInserts.push(values);
+            state.overrides.push({ id: "override-1", ...values });
             return { id: "override-1", ...values };
         },
         getPayoutOverride: async () => state.override,
@@ -110,7 +115,10 @@ mock.module("@/lib/finance/audit", () => ({
 }));
 
 mock.module("@/lib/monitoring-sla/audit", () => ({
-    auditAndAlert: async () => ({}),
+    auditAndAlert: async (event: Row) => {
+        state.alerts.push(event);
+        return {};
+    },
 }));
 
 const payouts = await import("./payouts");
@@ -127,6 +135,10 @@ beforeEach(() => {
     state.financeAudits = [];
     state.lockedCycle = null;
     state.lockReferences = [];
+    state.orders = null;
+    state.brands = null;
+    state.overrides = [];
+    state.alerts = [];
 });
 
 describe("AQ-01 commission fallback removed", () => {
@@ -421,6 +433,248 @@ describe("AQ-60b payout idempotency", () => {
             await payouts.executePayoutCycle("cycle-1", "finance-3");
             expect(calls).toHaveLength(0);
         });
+    });
+});
+
+const brandA = "11111111-1111-4111-8111-111111111111";
+const brandB = "22222222-2222-4222-8222-222222222222";
+
+function orderForBrand(orderId: string, forBrand: string, price: number) {
+    const base = order();
+    base.id = orderId;
+    base.paymentId = `pay_${orderId}`;
+    base.items[0].product.brandId = forBrand;
+    base.items[0].product.price = price;
+    return base;
+}
+
+function ruleForBrand(forBrand: string) {
+    return { ...approvedRule, id: `rule-${forBrand}`, brandId: forBrand };
+}
+
+function brandSummary(name: string) {
+    return state.cycle!.calculationSummary.brands.find((item: Row) => item.brandId === name);
+}
+
+async function withRazorpay(
+    respond: (call: number) => Response,
+    run: (bodies: Row[]) => Promise<void>
+) {
+    const bodies: Row[] = [];
+    const originalFetch = globalThis.fetch;
+    const originalAccount = process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+    process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = "test-source-account";
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(String(init.body)));
+        return respond(bodies.length);
+    }) as unknown as typeof fetch;
+    try {
+        await run(bodies);
+    } finally {
+        globalThis.fetch = originalFetch;
+        if (originalAccount === undefined) {
+            delete process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER;
+        } else {
+            process.env.RAZORPAY_PAYOUT_SOURCE_ACCOUNT_NUMBER = originalAccount;
+        }
+    }
+}
+
+const providerAccepts = () =>
+    new Response(JSON.stringify({ id: "pout_1", status: "processing" }), { status: 200 });
+
+async function calculateTwoBrandCycle() {
+    state.brands = [
+        { brandId: brandA, brandName: "Brand A", payoutMethod: "razorpay_route" },
+        { brandId: brandB, brandName: "Brand B", payoutMethod: "razorpay_route" },
+    ];
+    state.orders = [
+        orderForBrand("order-a", brandA, 100_000),
+        orderForBrand("order-b", brandB, 100_000),
+    ];
+    state.commissionRules = [ruleForBrand(brandA), ruleForBrand(brandB)];
+    state.cycle = cycle("draft");
+    await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+}
+
+describe("REN-253 F-1 an approved amount never stays approved after it changes", () => {
+    const overrideForA = {
+        cycleId: "cycle-1",
+        brandId: brandA,
+        adjustmentType: "manual_correction",
+        amountPaise: 5_000,
+        reasonCode: "correction",
+        notes: "Correct a shipping deduction",
+        proofFileUrl: "https://files.example.com/proof.pdf",
+        actorId: "finance-1",
+        approverId: "finance-2",
+    };
+
+    test("a partially approved cycle is still calculated, so recalculation is reachable", async () => {
+        await calculateTwoBrandCycle();
+
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+
+        expect(state.cycle!.status).toBe("calculated");
+        expect(brandSummary(brandA).reviewStatus).toBe("approved");
+    });
+
+    test("an override that changes an approved brand drops its approval and blocks payment", async () => {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+        const approvedAmount = brandSummary(brandA).netPayablePaise;
+
+        await payouts.createPayoutOverride(overrideForA);
+
+        const changed = brandSummary(brandA);
+        expect(changed.netPayablePaise).toBe(approvedAmount + 5_000);
+        expect(changed.reviewStatus).toBe("pending");
+        expect(changed.executionStatus).toBe("pending_review");
+        expect(changed.approvedBy).toBeNull();
+        expect(changed.approvedAt).toBeNull();
+
+        // Approving the other brand must not complete the cycle while A is unapproved.
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandB);
+        expect(state.cycle!.status).toBe("calculated");
+        state.clearance = {
+            id: "clearance-1",
+            cycleId: "cycle-1",
+            clearedBy: "finance-2",
+            evidenceReference: "BIZ-3-approval",
+            transactionValidationReference: "txn-validation-1",
+            transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
+            clearedAt: new Date("2026-09-10T00:00:00.000Z"),
+            expiresAt: null,
+            revokedAt: null,
+        };
+
+        await withRazorpay(providerAccepts, async (bodies) => {
+            await expect(
+                payouts.executePayoutCycle("cycle-1", "finance-3")
+            ).rejects.toThrow("Payout execution blocked: cycle status is calculated.");
+            expect(bodies).toHaveLength(0);
+
+            // Only a fresh approval of the changed amount makes it payable, and only that
+            // amount is sent.
+            await payouts.approvePayoutCycle("cycle-1", "finance-4", brandA);
+            expect(state.cycle!.status).toBe("approved");
+            expect(brandSummary(brandA).approvedBy).toBe("finance-4");
+            await payouts.executePayoutCycle("cycle-1", "finance-3");
+            expect(bodies.map((body) => body.amount).sort()).toEqual(
+                [approvedAmount, approvedAmount + 5_000].sort()
+            );
+        });
+    });
+
+    test("a recalculation that does not change the amount keeps the approval", async () => {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        const kept = brandSummary(brandA);
+        expect(kept.reviewStatus).toBe("approved");
+        expect(kept.executionStatus).toBe("approved");
+        expect(kept.approvedBy).toBe("finance-2");
+    });
+
+    test("only the brand whose amount changed loses its approval", async () => {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandB);
+        // Both brands approved makes the cycle "approved", so make B the only change by
+        // calculating against a state where the cycle is still "calculated".
+        state.cycle = { ...state.cycle!, status: "calculated" };
+        state.orders = [
+            orderForBrand("order-a", brandA, 100_000),
+            orderForBrand("order-b", brandB, 250_000),
+        ];
+
+        await payouts.calculatePayoutCycle("cycle-1", "finance-1");
+
+        expect(brandSummary(brandA).reviewStatus).toBe("approved");
+        expect(brandSummary(brandB).reviewStatus).toBe("pending");
+        expect(brandSummary(brandB).approvedBy).toBeNull();
+    });
+
+    test("the invalidation is recorded in the calculation audit metadata", async () => {
+        await calculateTwoBrandCycle();
+        await payouts.approvePayoutCycle("cycle-1", "finance-2", brandA);
+        const approvedAmount = brandSummary(brandA).netPayablePaise;
+        state.alerts = [];
+
+        await payouts.createPayoutOverride(overrideForA);
+
+        const calculated = state.alerts.find(
+            (event) => event.actionType === "payout_cycle_calculated"
+        );
+        expect(calculated?.metadata.invalidatedApprovals).toEqual([
+            {
+                brandId: brandA,
+                previousNetPayablePaise: approvedAmount,
+                netPayablePaise: approvedAmount + 5_000,
+            },
+        ]);
+    });
+});
+
+describe("REN-253 F-4 ordinary approval cannot reopen an executed cycle", () => {
+    for (const status of ["failed", "processing", "completed"]) {
+        test(`rejects approving a ${status} cycle without writing`, async () => {
+            state.cycle = cycle(status, { brands: [] });
+
+            await expect(
+                payouts.approvePayoutCycle("cycle-1", "finance-1")
+            ).rejects.toThrow(`Payout cycle approval blocked: cycle status is ${status}.`);
+            await expect(
+                payouts.approvePayoutCycle("cycle-1", "finance-1", brandId)
+            ).rejects.toThrow(`Payout cycle approval blocked: cycle status is ${status}.`);
+            expect(state.cycleUpdates).toHaveLength(0);
+        });
+    }
+
+    test("approving a draft cycle still asks for calculation first", async () => {
+        state.cycle = cycle("draft");
+
+        await expect(
+            payouts.approvePayoutCycle("cycle-1", "finance-1")
+        ).rejects.toThrow("Run calculation before approval.");
+    });
+
+    test("a calculated cycle can be approved and an approved cycle can be executed", async () => {
+        await prepareExecutableCycle("finance-2");
+        expect(state.cycle!.status).toBe("approved");
+
+        await withRazorpay(providerAccepts, async (bodies) => {
+            const updated = await payouts.executePayoutCycle("cycle-1", "finance-3");
+
+            expect(bodies).toHaveLength(1);
+            expect(updated.status).toBe("completed");
+        });
+    });
+
+    test("a provider failure does not become a second payout through ordinary re-approval", async () => {
+        await prepareExecutableCycle("finance-2");
+
+        await withRazorpay(
+            (call) =>
+                call === 1 ? new Response("gateway timeout", { status: 504 }) : providerAccepts(),
+            async (bodies) => {
+                await payouts.executePayoutCycle("cycle-1", "finance-3");
+                expect(state.cycle!.status).toBe("failed");
+                expect(bodies).toHaveLength(1);
+
+                await expect(
+                    payouts.approvePayoutCycle("cycle-1", "finance-2")
+                ).rejects.toThrow("Payout cycle approval blocked: cycle status is failed.");
+                await expect(
+                    payouts.executePayoutCycle("cycle-1", "finance-3")
+                ).rejects.toThrow("Payout execution blocked: cycle status is failed.");
+
+                expect(state.cycle!.status).toBe("failed");
+                expect(bodies).toHaveLength(1);
+            }
+        );
     });
 });
 
