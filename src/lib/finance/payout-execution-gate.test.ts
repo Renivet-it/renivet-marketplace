@@ -7,7 +7,7 @@ import {
 
 const now = new Date("2026-09-18T12:00:00.000Z");
 
-function checks(overrides: Record<string, boolean> = {}) {
+function checks(overrides: Record<string, unknown> = {}) {
     return {
         commissionValidation: true,
         eligibilityGating: true,
@@ -21,6 +21,7 @@ function checks(overrides: Record<string, boolean> = {}) {
             expiresAt: "2026-09-19T10:00:00.000Z",
             revokedAt: null,
         },
+        clearanceBasis: { clearance: "basis-a", current: "basis-a" },
         executedBy: "finance-executor-1",
         ...overrides,
     };
@@ -103,12 +104,35 @@ describe("REN-206 payout execution gate", () => {
 
         for (const executedBy of ["manager-1", " manager-1 ", "", null]) {
             const result = evaluatePayoutExecutionGate(
-                checks({ executedBy } as unknown as Record<string, boolean>),
+                checks({ executedBy }),
                 now
             );
 
             expect(result.allowed).toBe(false);
             expect(result.reasons).toContainEqual(reason);
+        }
+    });
+
+    test("REN-253 G-1/G-2: a clearance bound to a different or missing basis is rejected", () => {
+        const mismatch = evaluatePayoutExecutionGate(
+            checks({ clearanceBasis: { clearance: "basis-a", current: "basis-b" } }),
+            now
+        );
+        expect(mismatch.allowed).toBe(false);
+        expect(mismatch.reasons.map((reason) => reason.code)).toEqual([
+            "clearance_basis_mismatch",
+        ]);
+
+        for (const clearanceBasis of [
+            null,
+            { clearance: null, current: "basis-a" },
+            { clearance: "basis-a", current: null },
+        ]) {
+            const missing = evaluatePayoutExecutionGate(checks({ clearanceBasis }), now);
+            expect(missing.allowed).toBe(false);
+            expect(missing.reasons.map((reason) => reason.code)).toEqual([
+                "clearance_basis_missing",
+            ]);
         }
     });
 

@@ -15,6 +15,9 @@ export type PayoutExecutionChecks = {
     holdbackSuspension: boolean;
     realTransactionValidation: boolean;
     humanClearance: HumanClearance | null;
+    // The payout basis fingerprint stored on the clearance when it was recorded, and the
+    // fingerprint of the cycle as it stands now (REN-253 G-1, G-2). They must be equal.
+    clearanceBasis: { clearance: string | null; current: string | null } | null;
     executedBy: string | null;
 };
 
@@ -100,6 +103,23 @@ export function evaluatePayoutExecutionGate(
             code: "clearer_is_executor",
             message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
         });
+    }
+
+    if (clearance) {
+        const basis = checks.clearanceBasis;
+        if (!basis?.clearance || !basis.current) {
+            reasons.push({
+                code: "clearance_basis_missing",
+                message:
+                    "The BIZ-3 clearance is not bound to a payout basis; record a new clearance of the current basis.",
+            });
+        } else if (basis.clearance !== basis.current) {
+            reasons.push({
+                code: "clearance_basis_mismatch",
+                message:
+                    "The payout basis changed after the BIZ-3 clearance was recorded; a fresh clearance is required.",
+            });
+        }
     }
 
     return { allowed: reasons.length === 0, reasons };

@@ -77,6 +77,13 @@ const adjustmentTypes = [
     "other",
 ] as const;
 
+// The payout basis fingerprint the screen is showing. Approve and execute send it back, and
+// the server refuses them if the cycle's basis has changed since (REN-253 G-4).
+function getBasisFingerprint(cycle?: CycleRow | null) {
+    const summary = cycle?.calculationSummary as { basisFingerprint?: string } | undefined;
+    return summary?.basisFingerprint ?? "";
+}
+
 function getBrandSummaries(cycle?: CycleRow | null) {
     const summary = cycle?.calculationSummary as
         | {
@@ -459,7 +466,11 @@ export function PayoutsWorkspace({
                                     variant="secondary"
                                     disabled={!cycle || approveCycle.isPending}
                                     onClick={() =>
-                                        cycle && approveCycle.mutate({ cycleId: cycle.id })
+                                        cycle &&
+                                        approveCycle.mutate({
+                                            cycleId: cycle.id,
+                                            expectedBasis: getBasisFingerprint(cycle),
+                                        })
                                     }
                                 >
                                     Approve All Clean
@@ -467,7 +478,11 @@ export function PayoutsWorkspace({
                                 <Button
                                     disabled={!cycle || executeCycle.isPending}
                                     onClick={() =>
-                                        cycle && executeCycle.mutate({ cycleId: cycle.id })
+                                        cycle &&
+                                        executeCycle.mutate({
+                                            cycleId: cycle.id,
+                                            expectedBasis: getBasisFingerprint(cycle),
+                                        })
                                     }
                                 >
                                     Execute Approved
@@ -547,6 +562,7 @@ export function PayoutsWorkspace({
                                                     approveCycle.mutate({
                                                         cycleId: cycle.id,
                                                         brandId: brand.brandId,
+                                                        expectedBasis: getBasisFingerprint(cycle),
                                                     })
                                                 }
                                             >
@@ -559,6 +575,7 @@ export function PayoutsWorkspace({
                                                     executeCycle.mutate({
                                                         cycleId: cycle.id,
                                                         brandId: brand.brandId,
+                                                        expectedBasis: getBasisFingerprint(cycle),
                                                     })
                                                 }
                                             >

@@ -6,6 +6,15 @@ import {
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { getSection194OThresholdPaise } from "@/lib/finance/tds-policy";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
+import { computePayoutBasisFingerprint, getPayoutAuthority } from "./payout-basis";
+import {
+    PayoutCycleConflictError,
+    PayoutPersistenceAfterAcceptanceError,
+    PayoutProviderRejectedError,
+    PayoutProviderUnknownOutcomeError,
+    findPriorPayoutBlocks,
+    priorPayoutDiagnostic,
+} from "./payout-recovery";
 import {
     calculateCommissionPaise,
     resolveCommissionRuleFromCandidates,
@@ -110,6 +119,8 @@ type PayoutExecutionClearanceInput = {
     transactionValidationReference: string;
     transactionValidatedAt: Date;
     expiresAt?: Date | null;
+    // The payout basis fingerprint the clearer was shown (REN-253 G-4).
+    expectedBasis: string;
 };
 
 function toDate(value?: string | Date | null) {
@@ -274,6 +285,12 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             .filter((item) => item.referenceType === "sale" && item.referenceId)
             .map((item) => item.referenceId as string)
     );
+    // N-2: what other cycles already paid, hold in flight or leave unresolved, read from their
+    // persisted brand summaries regardless of the other cycle's status or payout date.
+    const priorPayoutBlocks = findPriorPayoutBlocks(
+        await financeComplianceQueries.listAllPayoutCycles(),
+        cycleId
+    );
     const paymentIdCounts = new Map<string, number>();
     for (const order of orders) {
         const deliveredAt = getDeliveredAt(order);
@@ -343,6 +360,15 @@ async function buildBrandPayoutSummaries(cycleId: string) {
             const brand = brandDirectory.get(brandId);
             if (!brand) continue;
 
+            const priorBlock = priorPayoutBlocks.get(`${brandId}:${order.id}`);
+            if (priorBlock) {
+                eligibilityDiagnostics.push({
+                    orderId: order.id,
+                    ...priorPayoutDiagnostic(priorBlock),
+                });
+                continue;
+            }
+
             const previous = previousSummaryMap.get(brandId);
             const rule = await resolveCommissionRuleForItem({
                     brandId,
@@ -389,6 +415,8 @@ async function buildBrandPayoutSummaries(cycleId: string) {
                         bankAccountNumber: brand.bankAccountNumber,
                         bankAccountNumberLast4: brand.bankAccountNumber?.slice(-4),
                         bankIfscCode: brand.bankIfscCode,
+                        confidentialVerificationStatus:
+                            brand.confidentialVerificationStatus ?? null,
                         entityType: brand.entityType,
                         rzpAccountId: brand.rzpAccountId,
                         gstin: brand.gstin,
@@ -635,35 +663,11 @@ async function buildBrandPayoutSummaries(cycleId: string) {
     };
 }
 
-async function persistCycleSummary(params: {
-    cycleId: string;
-    actorId: string;
-    status: "calculated" | "approved" | "processing" | "completed" | "failed";
-    brands: BrandCycleSummary[];
-    eligibilityDiagnostics?: CycleCalculationSummary["eligibilityDiagnostics"];
-    previousSummary?: CycleCalculationSummary;
-    calculatedBy?: string;
-    approvedBy?: string;
-    executedBy?: string;
-    executions?: Array<Record<string, unknown>>;
-}) {
-    const base = buildCycleTotals(params.brands);
-    const updated = await financeComplianceQueries.updatePayoutCycle(params.cycleId, {
-        status: params.status,
-        calculatedBy: params.calculatedBy,
-        approvedBy: params.approvedBy,
-        executedBy: params.executedBy,
-        calculationSummary: {
-            ...base,
-            eligibilityDiagnostics:
-                params.eligibilityDiagnostics ??
-                params.previousSummary?.eligibilityDiagnostics,
-            executions: params.executions,
-            executedAt: params.executions?.length ? new Date().toISOString() : undefined,
-        },
-    });
-
-    for (const summary of params.brands) {
+async function applyTdsLedger(
+    brands: BrandCycleSummary[],
+    updated: { id: string; payoutDate: string }
+) {
+    for (const summary of brands) {
         if (!["completed", "skipped"].includes(summary.executionStatus)) {
             continue;
         }
@@ -705,6 +709,61 @@ async function persistCycleSummary(params: {
             tdsRateBps: currentTracking?.tdsRateBps ?? 100,
             lastAppliedCycleId: updated.id,
         });
+    }
+}
+
+async function persistCycleSummary(params: {
+    cycleId: string;
+    actorId: string;
+    status: "calculated" | "approved" | "processing" | "completed" | "failed";
+    brands: BrandCycleSummary[];
+    eligibilityDiagnostics?: CycleCalculationSummary["eligibilityDiagnostics"];
+    previousSummary?: CycleCalculationSummary;
+    calculatedBy?: string;
+    approvedBy?: string;
+    executedBy?: string;
+    executions?: Array<Record<string, unknown>>;
+    // When set the write is conditional (REN-253 AR-21): it applies only if the cycle is
+    // still in one of these states (and still carries this basis fingerprint, if given),
+    // otherwise the caller lost a race and gets a conflict instead of overwriting.
+    condition?: { statusIn: string[]; basisFingerprint?: string };
+    // The TDS ledger is bookkeeping after a recorded payment; payout execution applies it
+    // separately so a ledger failure cannot disturb the persisted outcome.
+    applyTds?: boolean;
+}) {
+    const base = buildCycleTotals(params.brands);
+    const values = {
+        status: params.status,
+        calculatedBy: params.calculatedBy,
+        approvedBy: params.approvedBy,
+        executedBy: params.executedBy,
+        calculationSummary: {
+            ...base,
+            // The payout basis of this summary (G-1, G-2, G-4): approvals, clearances and
+            // execution are checked against it.
+            basisFingerprint: computePayoutBasisFingerprint(params.cycleId, params.brands),
+            eligibilityDiagnostics:
+                params.eligibilityDiagnostics ??
+                params.previousSummary?.eligibilityDiagnostics,
+            executions: params.executions,
+            executedAt: params.executions?.length ? new Date().toISOString() : undefined,
+        },
+    };
+    const updated = params.condition
+        ? await financeComplianceQueries.updatePayoutCycleIf(
+              params.cycleId,
+              params.condition,
+              values
+          )
+        : await financeComplianceQueries.updatePayoutCycle(params.cycleId, values);
+    if (!updated) {
+        throw new PayoutCycleConflictError(
+            "The payout cycle changed state or basis while it was being written; reload it. A cycle calculated before basis binding must be recalculated."
+        );
+    }
+
+    if (params.applyTds !== false) {
+        await applyTdsLedger(params.brands, updated);
     }
 
     return updated;
@@ -749,29 +808,6 @@ function assertPayoutCycleRecalculable(cycle: { status: string }) {
             `Payout cycle recalculation blocked: cycle status is ${cycle.status}.`
         );
     }
-}
-
-// The payout authority of a brand is what an approver and the BIZ-3 clearer sign off:
-// how much is paid, how it was arrived at, and who receives it. These are the fields
-// execution sends to the provider or prints on the manual NEFT instruction.
-function getPayoutAuthority(brand: BrandCycleSummary) {
-    const metadata = brand.metadata ?? {};
-    return {
-        netPayablePaise: brand.netPayablePaise,
-        grossSalesPaise: brand.grossSalesPaise,
-        commissionPaise: brand.commissionPaise,
-        paymentFeePaise: brand.paymentFeePaise,
-        returnsPaise: brand.returnsPaise,
-        carrierClaimsPaise: brand.carrierClaimsPaise,
-        holdbackPaise: brand.holdbackPaise,
-        holdbackReleasePaise: brand.holdbackReleasePaise,
-        overrideNetPaise: brand.overrideNetPaise,
-        tdsPaise: brand.tdsPaise,
-        payoutMethod: brand.payoutMethod,
-        bankAccountNumber: metadata.bankAccountNumber ?? null,
-        bankIfscCode: metadata.bankIfscCode ?? null,
-        bankAccountHolderName: metadata.bankAccountHolderName ?? null,
-    };
 }
 
 function getChangedPayoutAuthorityFields(
@@ -891,7 +927,8 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         }))
     );
 
-    await financeComplianceQueries.replacePayoutLineItems(cycleId, lineItems);
+    // The conditional summary write comes first: if the cycle moved on (approved, claimed)
+    // while this recalculation ran, nothing is overwritten, line items included.
     const updated = await persistCycleSummary({
         cycleId,
         actorId,
@@ -900,7 +937,9 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         eligibilityDiagnostics,
         previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         calculatedBy: actorId,
+        condition: { statusIn: RECALCULABLE_PAYOUT_CYCLE_STATUSES },
     });
+    await financeComplianceQueries.replacePayoutLineItems(cycleId, lineItems);
 
     await auditAndAlert({
         actorId,
@@ -943,7 +982,8 @@ function assertPayoutCycleApprovable(cycle: { status: string }) {
 export async function approvePayoutCycle(
     cycleId: string,
     actorId: string,
-    brandId?: string
+    brandId: string | undefined,
+    expectedBasis: string
 ) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
@@ -951,6 +991,11 @@ export async function approvePayoutCycle(
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     if (!brands.length) throw new Error("Run calculation before approval.");
+
+    // G-4: the approver names the basis shown on the screen; an approval of a basis that
+    // has since changed is refused.
+    const currentBasis = computePayoutBasisFingerprint(cycle.id, brands);
+    assertExpectedBasis(expectedBasis, currentBasis, "approval");
 
     const now = new Date().toISOString();
     for (const brand of brands) {
@@ -969,6 +1014,11 @@ export async function approvePayoutCycle(
         brands,
         previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         approvedBy: actorId,
+        // G-5: the write applies only if no recalculation replaced the summary meanwhile.
+        condition: {
+            statusIn: APPROVABLE_PAYOUT_CYCLE_STATUSES,
+            basisFingerprint: currentBasis,
+        },
     });
 
     await auditAndAlert({
@@ -1075,18 +1125,39 @@ async function createRazorpayPayout(input: {
                 linkedAccountId: input.rzpAccountId ?? "",
             },
         }),
+    }).catch((error: unknown) => {
+        // A network error or timeout does not tell whether the payout was created.
+        throw new PayoutProviderUnknownOutcomeError(
+            `request error (${error instanceof Error ? error.message : "unknown"})`
+        );
     });
 
     if (!response.ok) {
-        throw new Error(`Razorpay payout failed with ${response.status}.`);
+        // 4xx: the provider refused the request, nothing was paid. 408/409 and 5xx can
+        // mean the payout exists or is in progress, so they are unknown.
+        if (response.status >= 400 && response.status < 500 && ![408, 409].includes(response.status)) {
+            throw new PayoutProviderRejectedError(response.status);
+        }
+        throw new PayoutProviderUnknownOutcomeError(`HTTP ${response.status}`);
     }
 
-    return (await response.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+        body = (await response.json()) as Record<string, unknown>;
+    } catch {
+        throw new PayoutProviderUnknownOutcomeError("unreadable response body");
+    }
+    // Accepted means a provider payout id exists; without one the payout has no identity.
+    if (typeof body?.id !== "string" || !body.id.trim()) {
+        throw new PayoutProviderUnknownOutcomeError("response without a payout id");
+    }
+    return body;
 }
 
 function buildExecutionGateChecks(
-    cycle: { calculationSummary?: Record<string, unknown> | null },
+    cycle: { id: string; calculationSummary?: Record<string, unknown> | null },
     clearance: {
+        metadata?: Record<string, unknown> | null;
         clearedBy: string;
         evidenceReference: string;
         transactionValidationReference: string;
@@ -1137,6 +1208,13 @@ function buildExecutionGateChecks(
                   revokedAt: clearance.revokedAt,
               }
             : null,
+        clearanceBasis: clearance
+            ? {
+                  clearance:
+                      (clearance.metadata?.basisFingerprint as string | undefined) ?? null,
+                  current: computePayoutBasisFingerprint(cycle.id, brands),
+              }
+            : null,
         executedBy,
     };
 }
@@ -1178,6 +1256,12 @@ export async function recordPayoutExecutionClearance(
     if (!["calculated", "approved"].includes(cycle.status)) {
         throw new Error("Clearance can only be recorded before payout execution.");
     }
+    const clearedBrands = getCycleBrands(cycle);
+    if (!clearedBrands.length) throw new Error("Run calculation before clearance.");
+    // G-1/G-2/G-4: a clearance is recorded for the basis the clearer was shown, and it
+    // stores that basis, so a later change of the basis can never execute under it.
+    const basisFingerprint = computePayoutBasisFingerprint(cycle.id, clearedBrands);
+    assertExpectedBasis(input.expectedBasis, basisFingerprint, "clearance");
     if (!input.evidenceReference.trim() || !input.transactionValidationReference.trim()) {
         throw new Error("Clearance evidence and transaction validation references are required.");
     }
@@ -1195,6 +1279,7 @@ export async function recordPayoutExecutionClearance(
         transactionValidationReference: input.transactionValidationReference.trim(),
         transactionValidatedAt: input.transactionValidatedAt,
         expiresAt: input.expiresAt ?? null,
+        metadata: { basisFingerprint, basisVersion: "renivet-payout-basis-v1" },
     });
     await writeFinanceAuditEvent({
         actorId: input.actorId,
@@ -1209,6 +1294,7 @@ export async function recordPayoutExecutionClearance(
             transactionValidationReference: row.transactionValidationReference,
             transactionValidatedAt: row.transactionValidatedAt,
             expiresAt: row.expiresAt,
+            basisFingerprint,
         },
     });
     return row;
@@ -1242,20 +1328,112 @@ export async function revokePayoutExecutionClearance(
     return row;
 }
 
+function assertExpectedBasis(expectedBasis: string, currentBasis: string, action: string) {
+    if (!expectedBasis || expectedBasis !== currentBasis) {
+        throw new PayoutCycleConflictError(
+            `Payout ${action} blocked: the payout basis changed since this screen was loaded. Reload the cycle and review it again.`
+        );
+    }
+}
+
+type LivePayeeRow = Awaited<
+    ReturnType<typeof financeComplianceQueries.listBrandsForPayout>
+>[number];
+
+// Invariant (REN-253 G-8): money moves only to a payee that is verified NOW and is the
+// payee that was approved. This reads the current brand/payee record, not the
+// calculation-time snapshot. Reasons name fields, never values.
+function getPayeeIneligibilityReasons(
+    brand: BrandCycleSummary,
+    live: LivePayeeRow | undefined
+) {
+    if (!live) return ["brand_not_active_or_missing"];
+    const reasons: string[] = [];
+    if (live.confidentialVerificationStatus !== "approved") {
+        reasons.push(`payee_not_verified:${live.confidentialVerificationStatus ?? "unknown"}`);
+    }
+    const livePayoutMethod =
+        live.payoutMethod === "razorpay_route" ? "razorpay_route" : "manual_neft";
+    if (livePayoutMethod !== brand.payoutMethod) reasons.push("payout_method_changed");
+    const approved = brand.metadata ?? {};
+    const changedBankFields = [
+        ["bankAccountNumber", live.bankAccountNumber],
+        ["bankIfscCode", live.bankIfscCode],
+        ["bankAccountHolderName", live.bankAccountHolderName],
+    ].filter(([field, value]) => (value ?? null) !== (approved[field as string] ?? null));
+    if (changedBankFields.length) {
+        reasons.push(`bank_details_changed:${changedBankFields.map(([field]) => field).join(",")}`);
+    }
+    return reasons;
+}
+
+async function getPayeeIneligibility(brands: BrandCycleSummary[]) {
+    const liveRows = await financeComplianceQueries.listBrandsForPayout();
+    return brands
+        .map((brand) => ({
+            brand,
+            reasons: getPayeeIneligibilityReasons(
+                brand,
+                liveRows.find((row) => row.brandId === brand.brandId)
+            ),
+        }))
+        .filter((item) => item.reasons.length > 0);
+}
+
+// Post-acceptance work is bookkeeping: it can never change the money-movement outcome.
+// A failure is logged and recorded on the brand as pending bookkeeping, then execution
+// carries on (REN-253 N-2, ARC-ENT-017 AR-16).
+async function runPostPaymentBookkeeping(
+    brand: BrandCycleSummary,
+    step: string,
+    work: () => Promise<unknown>
+) {
+    try {
+        await work();
+    } catch (error) {
+        console.error(`Payout bookkeeping failed after provider acceptance (${step}).`, {
+            brandId: brand.brandId,
+            transactionId: brand.transactionId,
+            error: error instanceof Error ? error.message : "unknown",
+        });
+        const pending = Array.isArray(brand.metadata?.bookkeepingPending)
+            ? (brand.metadata.bookkeepingPending as Array<Record<string, unknown>>)
+            : [];
+        brand.metadata = {
+            ...brand.metadata,
+            bookkeepingPending: [
+                ...pending,
+                {
+                    step,
+                    at: new Date().toISOString(),
+                    message: error instanceof Error ? error.message : "unknown",
+                },
+            ],
+        };
+        return false;
+    }
+    return true;
+}
+
 export async function executePayoutCycle(
     cycleId: string,
     actorId: string,
-    brandId?: string
+    brandId: string | undefined,
+    expectedBasis: string
 ) {
     const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
 
-    const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
-    if (!brands.length) throw new Error("Run calculation before execution.");
+    const readBrands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
+    if (!readBrands.length) throw new Error("Run calculation before execution.");
 
     if (cycle.status !== "approved") {
         throw new Error(`Payout execution blocked: cycle status is ${cycle.status}.`);
     }
+
+    // Stale-screen rejection (REN-253 G-4): the caller must name the basis it was shown.
+    const currentBasis = computePayoutBasisFingerprint(cycle.id, readBrands);
+    assertExpectedBasis(expectedBasis, currentBasis, "execution");
 
     const clearance = await financeComplianceQueries.getActivePayoutExecutionClearance(
         cycleId
@@ -1273,16 +1451,19 @@ export async function executePayoutCycle(
         );
     }
 
+    const scopedBrands = readBrands.filter((brand) => !brandId || brand.brandId === brandId);
+    for (const brand of scopedBrands) {
+        if (brand.reviewStatus !== "approved") {
+            throw new Error(`Approve payout for ${brand.brandName} before execution.`);
+        }
+    }
+    const brandsToSend = scopedBrands.filter((brand) => !isBrandPayoutAlreadySent(brand));
+    const brandsNeedingProvider = brandsToSend.filter(
+        (brand) => brand.netPayablePaise > 0 && brand.payoutMethod === "razorpay_route"
+    );
+
     // Configuration pre-flight (F-5): refuse before any state change when a brand that
     // would be sent through the provider has no payout source account configured.
-    const brandsNeedingProvider = brands.filter(
-        (brand) =>
-            (!brandId || brand.brandId === brandId) &&
-            brand.reviewStatus === "approved" &&
-            !isBrandPayoutAlreadySent(brand) &&
-            brand.netPayablePaise > 0 &&
-            brand.payoutMethod === "razorpay_route"
-    );
     if (brandsNeedingProvider.length > 0 && !getPayoutSourceAccount()) {
         await writeFinanceAuditEvent({
             actorId,
@@ -1300,17 +1481,99 @@ export async function executePayoutCycle(
         throw new PayoutConfigurationError([PAYOUT_SOURCE_ACCOUNT_ENV]);
     }
 
+    // Payee pre-flight (G-8): current verification state and payee details.
+    const ineligibleBeforeClaim = await getPayeeIneligibility(
+        brandsToSend.filter((brand) => brand.netPayablePaise > 0)
+    );
+    if (ineligibleBeforeClaim.length > 0) {
+        await writeFinanceAuditEvent({
+            actorId,
+            actionType: "payout_execution_blocked_payee_ineligible",
+            entityType: "payout_cycle",
+            entityId: cycleId,
+            reason: "payee_not_eligible_at_execution",
+            afterValue: {
+                cycleId,
+                brands: ineligibleBeforeClaim.map((item) => ({
+                    brandId: item.brand.brandId,
+                    reasons: item.reasons,
+                })),
+            },
+            metadata: { cycleId },
+        });
+        throw new Error(
+            `Payout execution blocked: payee is not eligible at execution for ${ineligibleBeforeClaim
+                .map((item) => `${item.brand.brandName} (${item.reasons.join("; ")})`)
+                .join(", ")}.`
+        );
+    }
+
+    // Cross-cycle guard (N-2): the same orders must not be paid, in flight or unresolved
+    // in another cycle (also covers two cycles calculated before either was executed).
+    const priorBlocks = findPriorPayoutBlocks(
+        await financeComplianceQueries.listAllPayoutCycles(),
+        cycleId
+    );
+    const overlapping = brandsToSend.filter((brand) =>
+        brand.lineItems.some(
+            (line) =>
+                line.lineType === "sale" &&
+                line.referenceId &&
+                priorBlocks.has(`${brand.brandId}:${line.referenceId}`)
+        )
+    );
+    if (overlapping.length > 0) {
+        await writeFinanceAuditEvent({
+            actorId,
+            actionType: "payout_execution_blocked_prior_payout",
+            entityType: "payout_cycle",
+            entityId: cycleId,
+            reason: "orders_already_paid_in_flight_or_unresolved_in_another_cycle",
+            afterValue: { cycleId, brandIds: overlapping.map((brand) => brand.brandId) },
+            metadata: { cycleId },
+        });
+        throw new Error(
+            `Payout execution blocked: orders of ${overlapping
+                .map((brand) => brand.brandName)
+                .join(", ")} are already paid, in flight or unresolved in another cycle.`
+        );
+    }
+
+    // Atomic execution claim (REN-253 C-1/C-2): one conditional UPDATE moves the cycle
+    // approved -> processing only if it is still approved and still carries the basis that
+    // was cleared. Only the claim holder may reach the provider. This is application
+    // concurrency control; provider idempotency is a separate, unverified control.
+    const claimed = await financeComplianceQueries.updatePayoutCycleIf(
+        cycleId,
+        { statusIn: ["approved"], basisFingerprint: currentBasis },
+        { status: "processing", executedBy: actorId }
+    );
+    if (!claimed) {
+        throw new PayoutCycleConflictError(
+            "Payout execution blocked: the cycle was already claimed by another execution, or its basis or status changed since it was read."
+        );
+    }
+
+    const brands = getCycleBrands(claimed).map((brand) => ({ ...brand }));
     const executions: Array<Record<string, unknown>> = [];
+    const persistWhileClaimed = () =>
+        persistCycleSummary({
+            cycleId,
+            actorId,
+            status: "processing",
+            brands,
+            previousSummary: claimed.calculationSummary as CycleCalculationSummary | undefined,
+            executedBy: actorId,
+            executions,
+            condition: { statusIn: ["processing"] },
+            applyTds: false,
+        });
 
     for (const brand of brands) {
         if (brandId && brand.brandId !== brandId) continue;
-        if (brand.reviewStatus !== "approved") {
-            throw new Error(`Approve payout for ${brand.brandName} before execution.`);
-        }
         if (isBrandPayoutAlreadySent(brand)) continue;
 
         const metadata = brand.metadata ?? {};
-        brand.executionStatus = "processing";
 
         if (brand.netPayablePaise <= 0) {
             brand.executionStatus = "skipped";
@@ -1322,105 +1585,7 @@ export async function executePayoutCycle(
             continue;
         }
 
-        if (brand.payoutMethod === "razorpay_route") {
-            try {
-                const payout = await createRazorpayPayout({
-                    amountPaise: brand.netPayablePaise,
-                    brandName: brand.brandName,
-                    bankAccountHolderName: String(metadata.bankAccountHolderName ?? ""),
-                    bankAccountNumber: String(metadata.bankAccountNumber ?? ""),
-                    bankIfscCode: String(metadata.bankIfscCode ?? ""),
-                    reference: `${cycle.cycleKey}-${brand.brandId}`,
-                    rzpAccountId: String(metadata.rzpAccountId ?? ""),
-                    idempotencyKey: buildPayoutIdempotencyKey(cycleId, brand.brandId),
-                });
-
-                brand.executionStatus = "completed";
-                brand.transactionId = String(
-                    payout.id ?? payout.reference_id ?? `${cycle.cycleKey}-${brand.brandId}`
-                );
-                brand.statementUrl = `/api/finance/payouts/${cycleId}/statement/${brand.brandId}`;
-                executions.push({
-                    brandId: brand.brandId,
-                    status: "submitted",
-                    mode: "razorpay_route",
-                    payout,
-                });
-
-                await auditAndAlert({
-                    actorId,
-                    actionType: "brand_payout_executed",
-                    entityType: "brand_payout",
-                    entityId: brand.brandId,
-                    afterValue: brand as unknown as Record<string, unknown>,
-                    reason: "razorpay_route_execution",
-                    title: "Brand payout executed",
-                    message: `Payout of ${(brand.netPayablePaise / 100).toFixed(2)} processed for ${brand.brandName}.`,
-                    severity: "info",
-                    ownerRole: "finance_admin",
-                    type: "brand_payout_executed",
-                    dedupeKey: `brand-payout:${cycleId}:${brand.brandId}:executed`,
-                    channels: ["admin", "email", "whatsapp"],
-                    metadata: {
-                        module: "finance_compliance",
-                        cycleId,
-                        brandId: brand.brandId,
-                    },
-                });
-                if (brand.tdsPaise > 0) {
-                    await writeFinanceAuditEvent({
-                        actorId,
-                        actionType: "tds_deduction.applied",
-                        entityType: "brand_tds_tracking",
-                        entityId: brand.brandId,
-                        reason: "tds_applied_during_payout_execution",
-                        afterValue: {
-                            brandId: brand.brandId,
-                            cycleId,
-                            tdsPaise: brand.tdsPaise,
-                            commissionPaise: brand.commissionPaise,
-                            financialYear: getFinancialYearForDate(new Date(cycle.payoutDate)),
-                        },
-                        metadata: {
-                            cycleId,
-                            brandId: brand.brandId,
-                        },
-                    });
-                }
-            } catch (error) {
-                // A configuration refusal is not a payout failure and must not become a
-                // terminal brand/cycle state (F-5).
-                if (error instanceof PayoutConfigurationError) throw error;
-                brand.executionStatus = "failed";
-                executions.push({
-                    brandId: brand.brandId,
-                    status: "failed",
-                    mode: "razorpay_route",
-                    reason: error instanceof Error ? error.message : "Unknown Razorpay failure",
-                });
-
-                await auditAndAlert({
-                    actorId,
-                    actionType: "brand_payout_failed",
-                    entityType: "brand_payout",
-                    entityId: brand.brandId,
-                    afterValue: brand as unknown as Record<string, unknown>,
-                    reason: "razorpay_route_execution_failed",
-                    title: "Payout execution failed",
-                    message: `Payout failed for ${brand.brandName}: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    severity: "critical",
-                    ownerRole: "finance_admin",
-                    type: "brand_payout_failed",
-                    dedupeKey: `brand-payout:${cycleId}:${brand.brandId}:failed`,
-                    channels: ["admin", "email"],
-                    metadata: {
-                        module: "finance_compliance",
-                        cycleId,
-                        brandId: brand.brandId,
-                    },
-                });
-            }
-        } else {
+        if (brand.payoutMethod !== "razorpay_route") {
             brand.executionStatus = "awaiting_manual_confirmation";
             brand.statementUrl = `/api/finance/payouts/${cycleId}/statement/${brand.brandId}`;
             executions.push({
@@ -1435,6 +1600,232 @@ export async function executePayoutCycle(
                     reference: `${cycle.cycleKey}-${brand.brandId}`,
                 },
             });
+            continue;
+        }
+
+        // G-8 at the final boundary: re-read the current payee immediately before the call.
+        const [stillIneligible] = await getPayeeIneligibility([brand]);
+        if (stillIneligible) {
+            executions.push({
+                brandId: brand.brandId,
+                status: "blocked",
+                reason: "payee_not_eligible_at_execution",
+                details: stillIneligible.reasons,
+            });
+            continue;
+        }
+
+        const reference = `${cycle.cycleKey}-${brand.brandId}`;
+        const idempotencyKey = buildPayoutIdempotencyKey(cycleId, brand.brandId);
+
+        // Durable intent BEFORE the provider call: a crash after the provider accepts
+        // leaves this brand `processing` in the database, i.e. unresolved, never unpaid.
+        brand.executionStatus = "processing";
+        brand.metadata = {
+            ...metadata,
+            providerCall: {
+                state: "started",
+                idempotencyKey,
+                reference,
+                startedAt: new Date().toISOString(),
+            },
+        };
+        await persistWhileClaimed();
+
+        let payout: Record<string, unknown>;
+        try {
+            payout = await createRazorpayPayout({
+                amountPaise: brand.netPayablePaise,
+                brandName: brand.brandName,
+                bankAccountHolderName: String(metadata.bankAccountHolderName ?? ""),
+                bankAccountNumber: String(metadata.bankAccountNumber ?? ""),
+                bankIfscCode: String(metadata.bankIfscCode ?? ""),
+                reference,
+                rzpAccountId: String(metadata.rzpAccountId ?? ""),
+                idempotencyKey,
+            });
+        } catch (error) {
+            if (error instanceof PayoutProviderRejectedError) {
+                // The provider refused the request: definitely not paid.
+                brand.executionStatus = "failed";
+                brand.metadata = {
+                    ...brand.metadata,
+                    providerOutcome: "rejected",
+                    providerStatus: error.status,
+                };
+                executions.push({
+                    brandId: brand.brandId,
+                    status: "failed",
+                    mode: "razorpay_route",
+                    outcome: "rejected",
+                    reason: error.message,
+                });
+                await persistWhileClaimed();
+                await runPostPaymentBookkeeping(brand, "failure_alert", () =>
+                    auditAndAlert({
+                        actorId,
+                        actionType: "brand_payout_failed",
+                        entityType: "brand_payout",
+                        entityId: brand.brandId,
+                        afterValue: { brandId: brand.brandId, outcome: "rejected" },
+                        reason: "razorpay_route_execution_rejected",
+                        title: "Payout rejected by the provider",
+                        message: `Payout rejected for ${brand.brandName}: ${error.message}`,
+                        severity: "critical",
+                        ownerRole: "finance_admin",
+                        type: "brand_payout_failed",
+                        dedupeKey: `brand-payout:${cycleId}:${brand.brandId}:failed`,
+                        channels: ["admin", "email"],
+                        metadata: { module: "finance_compliance", cycleId, brandId: brand.brandId },
+                    })
+                );
+                continue;
+            }
+            if (error instanceof PayoutProviderUnknownOutcomeError) {
+                // The payout may exist at the provider: unresolved, never re-sent, not "failed".
+                brand.executionStatus = "processing";
+                brand.metadata = {
+                    ...brand.metadata,
+                    providerOutcome: "unknown",
+                    unresolvedReason: error.reason,
+                };
+                executions.push({
+                    brandId: brand.brandId,
+                    status: "unknown_outcome",
+                    mode: "razorpay_route",
+                    reason: error.message,
+                });
+                try {
+                    await persistWhileClaimed();
+                } catch (persistError) {
+                    console.error("Could not record an unknown payout outcome.", {
+                        cycleId,
+                        brandId: brand.brandId,
+                        error: persistError instanceof Error ? persistError.message : "unknown",
+                    });
+                }
+                await runPostPaymentBookkeeping(brand, "unresolved_alert", () =>
+                    auditAndAlert({
+                        actorId,
+                        actionType: "brand_payout_unresolved",
+                        entityType: "brand_payout",
+                        entityId: brand.brandId,
+                        afterValue: { brandId: brand.brandId, outcome: "unknown" },
+                        reason: "razorpay_route_outcome_unknown",
+                        title: "Payout outcome unknown",
+                        message: `The payout for ${brand.brandName} may or may not have reached the provider; it is unresolved and must be reconciled before any further execution.`,
+                        severity: "critical",
+                        ownerRole: "finance_admin",
+                        type: "brand_payout_unresolved",
+                        dedupeKey: `brand-payout:${cycleId}:${brand.brandId}:unresolved`,
+                        channels: ["admin", "email"],
+                        metadata: { module: "finance_compliance", cycleId, brandId: brand.brandId },
+                    })
+                );
+                // Do not compound an uncertain provider state with further calls.
+                executions.push({ status: "halted_after_unknown_outcome" });
+                break;
+            }
+            // Anything else was raised before the provider was contacted (including a
+            // configuration refusal): nothing was sent, so the brand returns to approved.
+            brand.executionStatus = "approved";
+            const { providerCall: _notSent, ...withoutCall } = (brand.metadata ?? {}) as Record<
+                string,
+                unknown
+            >;
+            brand.metadata = withoutCall;
+            try {
+                await persistWhileClaimed();
+            } catch {
+                // the durable intent stays `processing`: unresolved, which is the safe state
+            }
+            throw error;
+        }
+
+        // Provider accepted: the money-movement fact is recorded first and on its own.
+        const transactionId = String(payout.id);
+        brand.executionStatus = "completed";
+        brand.transactionId = transactionId;
+        brand.statementUrl = `/api/finance/payouts/${cycleId}/statement/${brand.brandId}`;
+        brand.metadata = {
+            ...brand.metadata,
+            providerOutcome: "accepted",
+            providerCall: {
+                ...((brand.metadata?.providerCall as Record<string, unknown>) ?? {}),
+                state: "accepted",
+            },
+        };
+        executions.push({
+            brandId: brand.brandId,
+            status: "submitted",
+            mode: "razorpay_route",
+            payout,
+        });
+        try {
+            await persistWhileClaimed();
+        } catch (persistError) {
+            console.error("Provider accepted a payout but the local record failed.", {
+                cycleId,
+                brandId: brand.brandId,
+                transactionId,
+                error: persistError instanceof Error ? persistError.message : "unknown",
+            });
+            // Do not invent success or failure and do not retry: the durable pre-call
+            // state (`processing`) already marks this brand unresolved.
+            throw new PayoutPersistenceAfterAcceptanceError(cycleId, brand.brandId, transactionId);
+        }
+
+        // Bookkeeping: failures are recorded, never reclassify the payout.
+        await runPostPaymentBookkeeping(brand, "executed_alert", () =>
+            auditAndAlert({
+                actorId,
+                actionType: "brand_payout_executed",
+                entityType: "brand_payout",
+                entityId: brand.brandId,
+                afterValue: {
+                    brandId: brand.brandId,
+                    transactionId,
+                    netPayablePaise: brand.netPayablePaise,
+                },
+                reason: "razorpay_route_execution",
+                title: "Brand payout executed",
+                message: `Payout of ${(brand.netPayablePaise / 100).toFixed(2)} processed for ${brand.brandName}.`,
+                severity: "info",
+                ownerRole: "finance_admin",
+                type: "brand_payout_executed",
+                dedupeKey: `brand-payout:${cycleId}:${brand.brandId}:executed`,
+                channels: ["admin", "email", "whatsapp"],
+                metadata: { module: "finance_compliance", cycleId, brandId: brand.brandId },
+            })
+        );
+        if (brand.tdsPaise > 0) {
+            await runPostPaymentBookkeeping(brand, "tds_audit", () =>
+                writeFinanceAuditEvent({
+                    actorId,
+                    actionType: "tds_deduction.applied",
+                    entityType: "brand_tds_tracking",
+                    entityId: brand.brandId,
+                    reason: "tds_applied_during_payout_execution",
+                    afterValue: {
+                        brandId: brand.brandId,
+                        cycleId,
+                        tdsPaise: brand.tdsPaise,
+                        commissionPaise: brand.commissionPaise,
+                        financialYear: getFinancialYearForDate(new Date(cycle.payoutDate)),
+                    },
+                    metadata: { cycleId, brandId: brand.brandId },
+                })
+            );
+        }
+        await runPostPaymentBookkeeping(brand, "tds_ledger", () =>
+            applyTdsLedger([brand], claimed)
+        );
+        if (Array.isArray(brand.metadata?.bookkeepingPending)) {
+            try {
+                await persistWhileClaimed();
+            } catch {
+                // the marker is also carried by the final write
+            }
         }
     }
 
@@ -1446,31 +1837,45 @@ export async function executePayoutCycle(
         previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: actorId,
         executions,
+        condition: { statusIn: ["processing"] },
+        applyTds: false,
     });
+    for (const brand of brands) {
+        if (brand.transactionId || brand.executionStatus === "skipped") {
+            await runPostPaymentBookkeeping(brand, "tds_ledger_final", () =>
+                applyTdsLedger([brand], updated)
+            );
+        }
+    }
 
-    await auditAndAlert({
-        actorId,
-        actionType: brandId ? "brand_payout_execution_started" : "payout_cycle_executed",
-        entityType: brandId ? "brand_payout" : "payout_cycle",
-        entityId: brandId ?? cycleId,
-        beforeValue: cycle as Record<string, unknown>,
-        afterValue: updated as Record<string, unknown>,
-        reason: "payout_execution",
-        title: brandId ? "Brand payout in progress" : "Payout cycle executed",
-        message: brandId
-            ? `Execution has started for brand payout ${brandId}.`
-            : `Payout cycle ${updated.cycleKey} execution completed.`,
-        severity: "info",
-        ownerRole: "finance_admin",
-        type: brandId ? "brand_payout_execution_started" : "payout_cycle_executed",
-        dedupeKey: brandId ? `payout:execution:${cycleId}:${brandId}` : `payout:executed:${cycleId}`,
-        channels: ["admin"],
-        metadata: {
-            module: "finance_compliance",
+    try {
+        await auditAndAlert({
+            actorId,
+            actionType: brandId ? "brand_payout_execution_started" : "payout_cycle_executed",
+            entityType: brandId ? "brand_payout" : "payout_cycle",
+            entityId: brandId ?? cycleId,
+            beforeValue: { cycleId, status: cycle.status },
+            afterValue: { cycleId, status: updated.status },
+            reason: "payout_execution",
+            title: brandId ? "Brand payout in progress" : "Payout cycle executed",
+            message: brandId
+                ? `Execution has started for brand payout ${brandId}.`
+                : `Payout cycle ${updated.cycleKey} execution completed.`,
+            severity: "info",
+            ownerRole: "finance_admin",
+            type: brandId ? "brand_payout_execution_started" : "payout_cycle_executed",
+            dedupeKey: brandId ? `payout:execution:${cycleId}:${brandId}` : `payout:executed:${cycleId}`,
+            channels: ["admin"],
+            metadata: { module: "finance_compliance", cycleId, brandId },
+        });
+    } catch (error) {
+        // Post-effect audit: the execution outcome is already persisted and must not be
+        // reported as a failure because this write failed.
+        console.error("Payout execution summary alert failed.", {
             cycleId,
-            brandId,
-        },
-    });
+            error: error instanceof Error ? error.message : "unknown",
+        });
+    }
 
     return updated;
 }
