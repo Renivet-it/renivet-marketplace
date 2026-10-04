@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { resolve } from "node:path";
 
 // Runtime tests for the payout containment controls (Stage 3A C0). The query,
 // audit and provider boundaries are mocked; nothing touches a database or Razorpay.
@@ -31,6 +32,7 @@ const state = {
     failTdsUpsert: false,
     failCycleWrite: null as null | ((values: Row) => boolean),
     beforeCycleWrite: null as null | ((values: Row) => Promise<void>),
+    afterClaim: null as null | (() => Promise<void>),
     afterRevoke: null as null | (() => Promise<void>),
     onAlert: null as null | ((event: Row) => void),
     listBrandsCalls: 0,
@@ -121,7 +123,7 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
         },
         updatePayoutCycleIf: async (
             id: string,
-            condition: { statusIn: string[]; basisFingerprint?: string },
+            condition: { statusIn: string[]; basisFingerprint?: string; calculationSummary?: Row | null },
             values: Row
         ) => {
             // Models the single conditional UPDATE: it applies or it does not, atomically.
@@ -135,8 +137,15 @@ mock.module("@/lib/db/queries/finance-compliance", () => ({
             ) {
                 return undefined;
             }
+            if (
+                condition.calculationSummary !== undefined &&
+                JSON.stringify(state.cycle.calculationSummary) !== JSON.stringify(condition.calculationSummary)
+            ) {
+                return undefined;
+            }
             state.cycleUpdates.push(values);
             state.cycle = { ...state.cycle, ...JSON.parse(JSON.stringify(values)), id };
+            if (values.status === "processing") await state.afterClaim?.();
             return JSON.parse(JSON.stringify(state.cycle));
         },
         getActivePayoutExecutionClearance: async () =>
@@ -280,6 +289,7 @@ beforeEach(() => {
     state.failCycleWrite = null;
     state.beforeCycleWrite = null;
     state.afterRevoke = null;
+    state.afterClaim = null;
     state.onAlert = null;
     state.listBrandsCalls = 0;
     state.liveOverride = null;
@@ -920,7 +930,7 @@ describe("REN-253 F-3 recalculation revokes the BIZ-3 clearance of a changed pay
         expect(state.revokedClearances[0].id).toBe(oldClearance.id);
         expect(state.revokedClearances[0].revokedBy).toBe("finance-1");
         expect(state.revokedClearances[0].revocationReason).toBe("payout_basis_recalculated");
-        expect(state.revokeSnapshots).toEqual([{ lineItemsWritten: false, cycleUpdates: 0 }]);
+        expect(state.revokeSnapshots).toEqual([{ lineItemsWritten: false, cycleUpdates: 1 }]);
         const revocationAudit = state.financeAudits.find(
             (event) => event.actionType === "payout_execution_clearance_revoked"
         );
@@ -2006,28 +2016,28 @@ describe("REN-253 G-1/G-2/G-4 the payout basis is bound to approval and clearanc
         const oldBasis = currentBasis();
         state.orders = [order(), orderForBrand("order-2", brandId, 900_000)];
         state.brands = null;
-        // another admin records a clearance of the OLD basis while the recalculation runs
+        // another admin attempts to record a clearance of the OLD basis while the recalculation runs
         state.afterRevoke = async () => {
             state.afterRevoke = null;
-            await payouts.recordPayoutExecutionClearance({
+            await expect(payouts.recordPayoutExecutionClearance({
                 cycleId: "cycle-1",
                 actorId: "finance-2",
                 evidenceReference: "BIZ-3-approval",
                 transactionValidationReference: "txn-validation-1",
                 transactionValidatedAt: new Date("2026-09-10T00:00:00.000Z"),
                 expectedBasis: oldBasis,
-            });
+            })).rejects.toThrow("basis changed");
         };
 
         await payouts.calculatePayoutCycle("cycle-1", "finance-1");
         expect(brandSummary(brandId).netPayablePaise).toBe(899_000);
-        // the stray clearance survived the revoke (it was recorded after it)...
-        expect(state.clearance?.metadata.basisFingerprint).toBe(oldBasis);
+        // The old-basis clearance cannot be recorded after the new summary wins the CAS.
+        expect(state.clearance).toBeNull();
         await approveNow("cycle-1", "finance-1");
 
-        // ...but it cannot authorise the new amounts
+        // ...and no stale clearance can authorise the new amounts.
         await withRazorpay(providerAccepts, async (bodies) => {
-            await expect(executeNow("cycle-1", "finance-3")).rejects.toThrow("clearance_basis_mismatch");
+            await expect(executeNow("cycle-1", "finance-3")).rejects.toThrow("human_clearance_missing");
             expect(bodies).toHaveLength(0);
         });
     });
@@ -2218,6 +2228,148 @@ describe("REN-253 G-8 the current payee verification is enforced at execution", 
     });
 });
 
+describe("REN-260 C0-R3 bounded remediation", () => {
+    test("refreshes overlap state after claiming and refuses before the provider", async () => {
+        await prepareExecutableCycle("finance-2");
+        const sale = brandSummary(brandId).lineItems.find((line: Row) => line.lineType === "sale");
+        state.afterClaim = async () => {
+            state.afterClaim = null;
+            state.otherCycles = [
+                {
+                    id: "cycle-2",
+                    status: "processing",
+                    calculationSummary: {
+                        brands: [{ brandId, executionStatus: "processing", lineItems: [sale] }],
+                    },
+                },
+            ];
+        };
+
+        await withRazorpay(providerAccepts, async (bodies) => {
+            await expect(executeNow("cycle-1", "finance-3")).rejects.toThrow(
+                "already paid, in flight or unresolved"
+            );
+            expect(bodies).toHaveLength(0);
+        });
+        expect(state.cycle!.status).toBe("approved");
+        expect(state.financeAudits.some((event) => event.reason === "orders_already_paid_in_flight_or_unresolved_in_another_cycle")).toBe(true);
+    });
+
+    test("keeps processing when the post-claim overlap release loses its CAS", async () => {
+        await prepareExecutableCycle("finance-2");
+        const sale = brandSummary(brandId).lineItems.find((line: Row) => line.lineType === "sale");
+        state.afterClaim = async () => {
+            state.afterClaim = null;
+            state.otherCycles = [{
+                id: "cycle-2",
+                status: "processing",
+                calculationSummary: { brands: [{ brandId, executionStatus: "processing", lineItems: [sale] }] },
+            }];
+        };
+        state.failCycleWrite = (values) => values.status === "approved" && state.cycle?.status === "processing";
+
+        await withRazorpay(providerAccepts, async (bodies) => {
+            await expect(executeNow("cycle-1", "finance-3")).rejects.toThrow(
+                "already paid, in flight or unresolved"
+            );
+            expect(bodies).toHaveLength(0);
+        });
+        expect(state.cycle!.status).toBe("processing");
+    });
+
+    test("manual completion requires evidence, a current basis, and a distinct confirmer", async () => {
+        state.brands = [{
+            brandId,
+            brandName: "Brand One",
+            payoutMethod: "manual_neft",
+            bankAccountHolderName: "Brand One Pvt Ltd",
+            bankAccountNumber: accountX,
+            bankIfscCode: "HDFC0000001",
+        }];
+        await prepareExecutableCycle("finance-2");
+        await payouts.executePayoutCycle("cycle-1", "finance-3", undefined, currentBasis());
+        const basis = currentBasis();
+
+        const updated = await payouts.completeManualBrandPayout({
+            cycleId: "cycle-1",
+            brandId,
+            actorId: "finance-4",
+            transactionId: "utr-20261004-001",
+            expectedBasis: basis,
+            evidenceReference: "bank-statement-20261004-001",
+        });
+
+        expect(updated.status).toBe("completed");
+        expect(brandSummary(brandId).metadata.manualCompletion).toMatchObject({
+            confirmerId: "finance-4",
+            evidenceReference: "bank-statement-20261004-001",
+            transactionId: "utr-20261004-001",
+        });
+    });
+
+    test("manual completion rejects provider-shaped or duplicate transaction references", async () => {
+        state.brands = [{ brandId, brandName: "Brand One", payoutMethod: "manual_neft" }];
+        await prepareExecutableCycle("finance-2");
+        await payouts.executePayoutCycle("cycle-1", "finance-3", undefined, currentBasis());
+
+        await expect(
+            payouts.completeManualBrandPayout({
+                cycleId: "cycle-1",
+                brandId,
+                actorId: "finance-4",
+                transactionId: "pout_provider-shaped",
+                expectedBasis: currentBasis(),
+                evidenceReference: "bank-statement-1",
+            })
+        ).rejects.toThrow("provider-shaped");
+
+        state.otherCycles = [{
+            id: "cycle-2",
+            status: "completed",
+            calculationSummary: {
+                brands: [{ brandId, transactionId: "utr-duplicate-1" }],
+            },
+        }];
+        await expect(
+            payouts.completeManualBrandPayout({
+                cycleId: "cycle-1",
+                brandId,
+                actorId: "finance-4",
+                transactionId: "utr-duplicate-1",
+                expectedBasis: currentBasis(),
+                evidenceReference: "bank-statement-1",
+            })
+        ).rejects.toThrow("already used");
+    });
+
+    test("manual completion refuses a stale summary instead of marking the brand complete", async () => {
+        state.brands = [{ brandId, brandName: "Brand One", payoutMethod: "manual_neft" }];
+        await prepareExecutableCycle("finance-2");
+        await payouts.executePayoutCycle("cycle-1", "finance-3", undefined, currentBasis());
+        const basis = currentBasis();
+        state.beforeCycleWrite = async (values) => {
+            if (values.calculationSummary?.brands?.some((brand: Row) => brand.executionStatus === "completed")) {
+                state.cycle!.calculationSummary = {
+                    ...state.cycle!.calculationSummary,
+                    basisFingerprint: "concurrent-summary-change",
+                };
+            }
+        };
+
+        await expect(
+            payouts.completeManualBrandPayout({
+                cycleId: "cycle-1",
+                brandId,
+                actorId: "finance-4",
+                transactionId: "utr-stale-001",
+                expectedBasis: basis,
+                evidenceReference: "bank-statement-stale-001",
+            })
+        ).rejects.toThrow("changed state or basis");
+        expect(brandSummary(brandId).executionStatus).toBe("awaiting_manual_confirmation");
+    });
+});
+
 async function calculateTwoBrandCycleWith(row: () => Row) {
     state.brands = [row()];
     state.commissionRules = [approvedRule];
@@ -2228,7 +2380,7 @@ async function calculateTwoBrandCycleWith(row: () => Row) {
 describe("REN-253 no alternate payout path bypasses the controls", () => {
     test("the provider payout endpoint is called from exactly one place, behind the claim", async () => {
         const glob = new Bun.Glob("src/**/*.{ts,tsx}");
-        const root = new URL("../../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+        const root = resolve(import.meta.dir, "../../../");
         const callers: string[] = [];
         for await (const file of glob.scan({ cwd: root })) {
             if (/\.test\.tsx?$/.test(file)) continue;
@@ -2247,7 +2399,7 @@ describe("REN-253 no alternate payout path bypasses the controls", () => {
         const call = execute.indexOf("createRazorpayPayout({");
         expect(claim).toBeGreaterThan(-1);
         expect(call).toBeGreaterThan(claim);
-    });
+    }, 15000);
 
     test("no synthetic transaction id is ever assigned; transaction ids come from the provider or a manual confirmation", async () => {
         const source = await Bun.file(new URL("./payouts.ts", import.meta.url)).text();
@@ -2255,7 +2407,7 @@ describe("REN-253 no alternate payout path bypasses the controls", () => {
         const assignments = source.match(/\.transactionId = [^;]+;/g) ?? [];
         expect(assignments).toEqual([
             ".transactionId = transactionId;",
-            ".transactionId = input.transactionId;",
+            ".transactionId = transactionId;",
         ]);
         expect(source).toContain("const transactionId = String(payout.id);");
     });

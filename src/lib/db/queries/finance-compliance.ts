@@ -526,7 +526,11 @@ class FinanceComplianceQuery {
     // This is also the execution claim: `statusIn: ["approved"]` -> `status: "processing"`.
     async updatePayoutCycleIf(
         id: string,
-        condition: { statusIn: string[]; basisFingerprint?: string },
+        condition: {
+            statusIn: string[];
+            basisFingerprint?: string;
+            calculationSummary?: Record<string, unknown> | null;
+        },
         values: Partial<typeof brandPayoutCycles.$inferInsert>
     ) {
         return db
@@ -543,7 +547,10 @@ class FinanceComplianceQuery {
                     ),
                     condition.basisFingerprint === undefined
                         ? undefined
-                        : sql`${brandPayoutCycles.calculationSummary} ->> 'basisFingerprint' = ${condition.basisFingerprint}`
+                        : sql`${brandPayoutCycles.calculationSummary} ->> 'basisFingerprint' = ${condition.basisFingerprint}`,
+                    condition.calculationSummary === undefined
+                        ? undefined
+                        : sql`${brandPayoutCycles.calculationSummary} = ${JSON.stringify(condition.calculationSummary)}::jsonb`
                 )
             )
             .returning()

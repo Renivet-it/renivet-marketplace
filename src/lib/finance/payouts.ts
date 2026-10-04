@@ -234,8 +234,11 @@ async function computeHoldbackRelease(params: {
     return 0;
 }
 
-async function buildBrandPayoutSummaries(cycleId: string) {
-    const cycle = await financeComplianceQueries.getPayoutCycle(cycleId);
+async function buildBrandPayoutSummaries(
+    cycleId: string,
+    cycleSnapshot?: Awaited<ReturnType<typeof financeComplianceQueries.getPayoutCycle>>
+) {
+    const cycle = cycleSnapshot ?? (await financeComplianceQueries.getPayoutCycle(cycleId));
     if (!cycle) throw new Error("Payout cycle not found.");
 
     const start = new Date(cycle.cycleStart);
@@ -907,13 +910,10 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
     assertPayoutCycleRecalculable(cycle);
 
     const { brands: summaries, eligibilityDiagnostics } =
-        await buildBrandPayoutSummaries(cycleId);
+        await buildBrandPayoutSummaries(cycleId, cycle);
     const previousBrands = getCycleBrands(cycle);
     const basisChanged = payoutBasisChanged(previousBrands, summaries);
     const invalidatedApprovals = invalidateChangedBrandApprovals(previousBrands, summaries);
-    const revokedClearanceIds = basisChanged
-        ? await revokeClearancesForChangedPayoutBasis(cycleId, actorId)
-        : [];
     const lineItems = summaries.flatMap((summary) =>
         summary.lineItems.map((line) => ({
             cycleId,
@@ -937,8 +937,14 @@ export async function calculatePayoutCycle(cycleId: string, actorId: string) {
         eligibilityDiagnostics,
         previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         calculatedBy: actorId,
-        condition: { statusIn: RECALCULABLE_PAYOUT_CYCLE_STATUSES },
+        condition: {
+            statusIn: RECALCULABLE_PAYOUT_CYCLE_STATUSES,
+            calculationSummary: cycle.calculationSummary as CycleCalculationSummary | null | undefined,
+        },
     });
+    const revokedClearanceIds = basisChanged
+        ? await revokeClearancesForChangedPayoutBasis(cycleId, actorId)
+        : [];
     await financeComplianceQueries.replacePayoutLineItems(cycleId, lineItems);
 
     await auditAndAlert({
@@ -1555,6 +1561,70 @@ export async function executePayoutCycle(
     }
 
     const brands = getCycleBrands(claimed).map((brand) => ({ ...brand }));
+    const claimedBrandsToSend = brands.filter(
+        (brand) => (!brandId || brand.brandId === brandId) && !isBrandPayoutAlreadySent(brand)
+    );
+    const freshPriorBlocks = findPriorPayoutBlocks(
+        await financeComplianceQueries.listAllPayoutCycles(),
+        cycleId
+    );
+    const freshOverlapping = claimedBrandsToSend.filter((brand) =>
+        brand.lineItems.some(
+            (line) =>
+                line.lineType === "sale" &&
+                line.referenceId &&
+                freshPriorBlocks.has(`${brand.brandId}:${line.referenceId}`)
+        )
+    );
+    if (freshOverlapping.length > 0) {
+        const overlapError = new PayoutCycleConflictError(
+            `Payout execution blocked: orders of ${freshOverlapping
+                .map((brand) => brand.brandName)
+                .join(", ")} are already paid, in flight or unresolved in another cycle.`
+        );
+        try {
+            await writeFinanceAuditEvent({
+                actorId,
+                actionType: "payout_execution_blocked_prior_payout",
+                entityType: "payout_cycle",
+                entityId: cycleId,
+                reason: "orders_already_paid_in_flight_or_unresolved_in_another_cycle",
+                afterValue: {
+                    cycleId,
+                    phase: "post_claim_overlap_check",
+                    brandIds: freshOverlapping.map((brand) => brand.brandId),
+                },
+                metadata: { cycleId },
+            });
+        } catch (error) {
+            console.error("Could not record post-claim payout overlap refusal.", {
+                cycleId,
+                error: error instanceof Error ? error.message : "unknown",
+            });
+        }
+        try {
+            const released = await financeComplianceQueries.updatePayoutCycleIf(
+                cycleId,
+                {
+                    statusIn: ["processing"],
+                    basisFingerprint: currentBasis,
+                    calculationSummary: claimed.calculationSummary as CycleCalculationSummary | null,
+                },
+                { status: "approved", executedBy: null }
+            );
+            if (!released) {
+                console.error("Could not CAS-release payout cycle after overlap refusal.", {
+                    cycleId,
+                });
+            }
+        } catch (error) {
+            console.error("Could not CAS-release payout cycle after overlap refusal.", {
+                cycleId,
+                error: error instanceof Error ? error.message : "unknown",
+            });
+        }
+        throw overlapError;
+    }
     const executions: Array<Record<string, unknown>> = [];
     const persistWhileClaimed = () =>
         persistCycleSummary({
@@ -1885,9 +1955,27 @@ export async function completeManualBrandPayout(input: {
     brandId: string;
     actorId: string;
     transactionId: string;
+    expectedBasis: string;
+    evidenceReference: string;
 }) {
     const cycle = await financeComplianceQueries.getPayoutCycle(input.cycleId);
     if (!cycle) throw new Error("Payout cycle not found.");
+    if (cycle.status !== "processing") {
+        throw new Error("Manual payout completion requires a processing payout cycle.");
+    }
+    if (!cycle.executedBy || cycle.executedBy === input.actorId) {
+        throw new Error("Manual payout confirmer must be different from the executor.");
+    }
+    if (!input.evidenceReference.trim()) {
+        throw new Error("Manual payout evidence reference is required.");
+    }
+    const transactionId = input.transactionId.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{2,127}$/.test(transactionId)) {
+        throw new Error("Manual payout transaction reference is invalid.");
+    }
+    if (/^pout_/i.test(transactionId)) {
+        throw new Error("Manual payout transaction reference cannot be provider-shaped.");
+    }
 
     const brands = getCycleBrands(cycle).map((brand) => ({ ...brand }));
     const brand = brands.find((item) => item.brandId === input.brandId);
@@ -1895,10 +1983,28 @@ export async function completeManualBrandPayout(input: {
     if (brand.executionStatus !== "awaiting_manual_confirmation") {
         throw new Error("Manual NEFT confirmation is not pending for this brand.");
     }
+    const basisFingerprint = computePayoutBasisFingerprint(cycle.id, brands);
+    assertExpectedBasis(input.expectedBasis, basisFingerprint, "manual completion");
+    const duplicateReference = (await financeComplianceQueries.listAllPayoutCycles())
+        .filter((row) => row.id !== input.cycleId)
+        .flatMap((row) => getCycleBrands(row))
+        .some((row) => row.transactionId === transactionId);
+    if (duplicateReference) {
+        throw new Error("Manual payout transaction reference was already used.");
+    }
 
     brand.executionStatus = "completed";
-    brand.transactionId = input.transactionId;
+    brand.transactionId = transactionId;
     brand.statementUrl = `/api/finance/payouts/${input.cycleId}/statement/${input.brandId}`;
+    brand.metadata = {
+        ...brand.metadata,
+        manualCompletion: {
+            confirmerId: input.actorId,
+            evidenceReference: input.evidenceReference.trim(),
+            transactionId,
+            completedAt: new Date().toISOString(),
+        },
+    };
 
     const updated = await persistCycleSummary({
         cycleId: input.cycleId,
@@ -1907,6 +2013,12 @@ export async function completeManualBrandPayout(input: {
         brands,
         previousSummary: cycle.calculationSummary as CycleCalculationSummary | undefined,
         executedBy: input.actorId,
+        condition: {
+            statusIn: ["processing"],
+            basisFingerprint,
+            calculationSummary: cycle.calculationSummary as CycleCalculationSummary | null,
+        },
+        applyTds: false,
     });
 
     await auditAndAlert({
@@ -1931,7 +2043,8 @@ export async function completeManualBrandPayout(input: {
         },
     });
     if (brand.tdsPaise > 0) {
-        await writeFinanceAuditEvent({
+        await runPostPaymentBookkeeping(brand, "tds_audit", () =>
+            writeFinanceAuditEvent({
             actorId: input.actorId,
             actionType: "tds_deduction.applied",
             entityType: "brand_tds_tracking",
@@ -1943,13 +2056,17 @@ export async function completeManualBrandPayout(input: {
                 tdsPaise: brand.tdsPaise,
                 commissionPaise: brand.commissionPaise,
                 financialYear: getFinancialYearForDate(new Date(cycle.payoutDate)),
-                transactionId: input.transactionId,
+                transactionId,
             },
             metadata: {
                 cycleId: input.cycleId,
                 brandId: input.brandId,
             },
-        });
+            })
+        );
+        await runPostPaymentBookkeeping(brand, "tds_ledger", () =>
+            applyTdsLedger([brand], updated)
+        );
     }
 
     return updated;
