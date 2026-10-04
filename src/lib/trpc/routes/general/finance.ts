@@ -600,17 +600,41 @@ export const financeComplianceRouter = createTRPCRouter({
         }),
 
     approvePayoutCycle: adminProcedure
-        .input(z.object({ cycleId: z.string().uuid(), brandId: z.string().uuid().optional() }))
+        .input(
+            z.object({
+                cycleId: z.string().uuid(),
+                brandId: z.string().uuid().optional(),
+                // The payout basis fingerprint shown on the screen (REN-253 G-4).
+                expectedBasis: z.string().min(1),
+            })
+        )
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "payouts", "manage");
-            return approvePayoutCycle(input.cycleId, ctx.user.id, input.brandId);
+            return approvePayoutCycle(
+                input.cycleId,
+                ctx.user.id,
+                input.brandId,
+                input.expectedBasis
+            );
         }),
 
     executePayoutCycle: adminProcedure
-        .input(z.object({ cycleId: z.string().uuid(), brandId: z.string().uuid().optional() }))
+        .input(
+            z.object({
+                cycleId: z.string().uuid(),
+                brandId: z.string().uuid().optional(),
+                // The payout basis fingerprint shown on the screen (REN-253 G-4).
+                expectedBasis: z.string().min(1),
+            })
+        )
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "payouts", "manage");
-            return executePayoutCycle(input.cycleId, ctx.user.id, input.brandId);
+            return executePayoutCycle(
+                input.cycleId,
+                ctx.user.id,
+                input.brandId,
+                input.expectedBasis
+            );
         }),
 
     getPayoutExecutionClearance: protectedProcedure
@@ -630,6 +654,8 @@ export const financeComplianceRouter = createTRPCRouter({
                 transactionValidationReference: z.string().min(3),
                 transactionValidatedAt: z.coerce.date(),
                 expiresAt: z.coerce.date().optional(),
+                // The payout basis fingerprint the clearer was shown (REN-253 G-4).
+                expectedBasis: z.string().min(1),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -672,7 +698,6 @@ export const financeComplianceRouter = createTRPCRouter({
                 reasonCode: z.string().min(2),
                 notes: z.string().min(3),
                 proofFileUrl: z.string().url(),
-                approverId: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {

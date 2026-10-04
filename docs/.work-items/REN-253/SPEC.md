@@ -1,6 +1,6 @@
 # REN-253 C0 Payout Containment
 
-Status: `IN_REVIEW`
+Status: `READY_FOR_DEV` (approved 2026-10-01; implementation present on the canonical branch; independent focused review pending)
 
 This specification is the governance contract for the bounded C0 containment change. It does not authorize payout clearance or execution.
 
@@ -52,4 +52,4 @@ This specification is the governance contract for the bounded C0 containment cha
 
 ## Approval gate
 
-Design review is pending. The task must not move to `READY_FOR_DEV` until the written design and independent L3 Critic review are complete, the governance YAML validates, and no design blockers remain.
+The written design and the independent L3 Critic review are complete and the governance YAML validates; no design blockers remain (see `work-item.yaml` and `CRITIQUE.md`). Implementation is reconciled in `REVIEW.md`. Provider-level idempotency evidence, staging evidence and the release decision remain open and are tracked there.

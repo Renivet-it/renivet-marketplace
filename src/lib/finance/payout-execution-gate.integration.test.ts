@@ -30,8 +30,13 @@ describe("REN-206 execution-gate integration contract", () => {
         const createEnd = source.indexOf("export async function approvePayoutOverride", createStart);
         const createSource = source.slice(createStart, createEnd);
 
-        expect(createSource).toContain("Every payout override requires a second admin approver.");
+        // REN-253 F-2: the maker never supplies the checker; an override is stored
+        // unapproved and applied only by approvePayoutOverride, whatever the amount.
+        expect(createSource).not.toContain("approverId");
+        expect(createSource).toContain("approvedBy: null");
         expect(createSource).not.toContain("Math.abs(input.amountPaise) > 50_000");
+        const approveSource = source.slice(createEnd, source.indexOf("export async function runPayoutCycleAlerts"));
+        expect(approveSource).toContain("The same admin cannot approve this override.");
     });
 
     test("persists the clearance record with an additive migration", async () => {

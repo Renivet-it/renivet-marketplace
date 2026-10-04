@@ -3,12 +3,12 @@ task:
     id: REN-253
     title: "[C0] Payout Containment — residual payout-path controls (no payout authorised)"
     source: linear
-    branch: ayanganguly333/ren-253-c0-payout-containment-residual-payout-path-controls-no
+    branch: ayanganguly333/ren-253-c0-canonical
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-253/c0-payout-containment-residual-payout-path-controls-no-payout
         priority: Urgent
-        status: Todo
+        status: In Progress
         assignee: Ayan Ganguly
         project: "Renivet — Financial & Compliance Control Program"
         parent: REN-202
@@ -32,7 +32,7 @@ investigation:
     security_boundaries: [SEC-253-001, SEC-253-002, SEC-253-003]
     state_transitions: [draft, calculated, approved, processing, completed, failed, locked_rto, unlocked_rto]
     related_tests: [TEXP-253-001, TEXP-253-002, TEXP-253-003, TEXP-253-004, TEXP-253-005, TEXP-253-006]
-    uncertainties: ["Provider-specific idempotency field and local persistence boundary must be confirmed during implementation planning without changing the approved cycle-and-brand identity.", "Statement route response behavior must preserve existing PDF output while adding authorization."]
+    uncertainties: ["The provider idempotency field is the X-Payout-Idempotency request header, derived deterministically from cycle id and brand id. Whether Razorpay actually deduplicates a repeated key has NOT been verified against the provider (no test-mode evidence).", "Two concurrent executions of the same cycle both reach the provider and rely on provider deduplication; there is no local mutual exclusion.", "Statement route response behavior preserves the existing PDF output (covered by a route-level test with mocked boundaries)."]
 requirements:
     - { id: REQ-253-001, description: "Fail closed when no approved commission rule exists.", type: safety }
     - { id: REQ-253-002, description: "Allow recalculation only for draft and calculated cycles.", type: state_transition }
@@ -64,7 +64,7 @@ dependencies:
     - { id: DEP-253-002, name: finance access, purpose: "Existing payout view/manage and site-admin authorization", description: "Existing module_access and finance access helpers provide per-user payout permissions.", status: resolved }
     - { id: DEP-253-003, name: release evidence, purpose: "Read-only deployment/migration verification and release ownership", description: "Ayan records evidence; Akshay reviews and owns the release decision.", status: resolved }
 integrations:
-    - { id: INT-253-001, system: Razorpay payouts, purpose: "Provider payout submission", failure_mode: "Retry or ambiguous response could duplicate a payout", retry_idempotency: "Stable cycle-and-brand reference with local completion guard" }
+    - { id: INT-253-001, system: Razorpay payouts, purpose: "Provider payout submission", failure_mode: "Retry or ambiguous response could duplicate a payout", retry_idempotency: "Deterministic X-Payout-Idempotency header derived from cycle id and brand id, plus a local skip of brands that already hold a transaction id or are completed, processing, submitted or awaiting manual confirmation. Provider deduplication is not yet verified." }
     - { id: INT-253-002, system: finance audit, purpose: "Record control decisions and RTO attribution", failure_mode: "Untraceable financial mutation", retry_idempotency: "Existing audit conventions and dedupe keys" }
 security_boundaries:
     - { id: SEC-253-001, description: "Only existing payout finance access or site Admin may read statements." }
@@ -130,21 +130,27 @@ implementation_review:
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: master
     base_commit: "e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be"
-    head_commit: "ba72774a12c4a62cfc864f3fc61d37f9f770cfb5"
+    head_commit: "296472ea19bdd248067404ae1b0cace09a6de854"
     pr_url: null
-    material_drift: NO_DRIFT
+    material_drift: MINOR_DRIFT
     reconciliation:
-        requirements: PASS
-        scenarios: PASS
-        invariants: PASS
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
         architecture: PASS
         security: PASS
         test_coverage: PARTIAL
         scope: PASS
     blocking_findings: []
     required_actions:
-        - "REV-001: Add environment-backed route authorization and locked-RTO negative tests during staging validation."
+        - "REV-001: Verify Razorpay deduplication of a repeated X-Payout-Idempotency key in a non-production, test-mode setup before any release; until then INV-253-004 is unproven at the provider."
+        - "REV-002: Decide whether the concurrent-execution residual (two parallel executions both reach the provider) is acceptable on provider deduplication alone, or needs a local guard in a separate, bounded change."
+        - "REV-003: Add environment-backed negative tests during staging validation for the statement route (401, 403) and for the locked RTO write; current evidence uses mocked boundaries."
+        - "REV-004: Record read-only deployment and migration verification and a Neon snapshot or branch before any deploy (Ayan), then the C0 release decision (Akshay). The change contains no migration files."
     evidence:
-        - "Compared approved REN-253 contract and repository diff from e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be to ba72774a12c4a62cfc864f3fc61d37f9f770cfb5."
-        - "Focused containment tests pass locally; staging-only route and locked-mutation evidence remains required."
+        - "Canonical branch ayanganguly333/ren-253-c0-canonical is current master e6ebd297 plus seven cherry-picked C0 commits (from 7cc3ff9d) and one test commit; head_commit is the last code commit. A governance-only commit follows it."
+        - "Focused finance tests pass; the single failing test (REN-206 execution-gate migration contract) fails identically on master."
+        - "Type check: no new errors versus master (master has 821 pre-existing errors)."
+        - "No payout was cleared or executed; no provider was called; no production data was touched."
+        - "Ratified by Akshay on 2026-10-03: canonical C0 source is the implementation derived from 7cc3ff9d; fail-closed commission disposition; the approver-must-differ-from-executor rule is not adopted. C0 is not production-approved."
     governance_reentry_required: false

@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+    buildPayoutIdempotencyKey,
     evaluatePayoutExecutionGate,
     isPayoutOverrideApproved,
 } from "./payout-execution-gate";
 
 const now = new Date("2026-09-18T12:00:00.000Z");
 
-function checks(overrides: Record<string, boolean> = {}) {
+function checks(overrides: Record<string, unknown> = {}) {
     return {
         commissionValidation: true,
         eligibilityGating: true,
@@ -20,6 +21,8 @@ function checks(overrides: Record<string, boolean> = {}) {
             expiresAt: "2026-09-19T10:00:00.000Z",
             revokedAt: null,
         },
+        clearanceBasis: { clearance: "basis-a", current: "basis-a" },
+        executedBy: "finance-executor-1",
         ...overrides,
     };
 }
@@ -93,6 +96,46 @@ describe("REN-206 payout execution gate", () => {
         });
     });
 
+    test("AQ-60: rejects execution by the admin who recorded the clearance", () => {
+        const reason = {
+            code: "clearer_is_executor",
+            message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
+        };
+
+        for (const executedBy of ["manager-1", " manager-1 ", "", null]) {
+            const result = evaluatePayoutExecutionGate(
+                checks({ executedBy }),
+                now
+            );
+
+            expect(result.allowed).toBe(false);
+            expect(result.reasons).toContainEqual(reason);
+        }
+    });
+
+    test("REN-253 G-1/G-2: a clearance bound to a different or missing basis is rejected", () => {
+        const mismatch = evaluatePayoutExecutionGate(
+            checks({ clearanceBasis: { clearance: "basis-a", current: "basis-b" } }),
+            now
+        );
+        expect(mismatch.allowed).toBe(false);
+        expect(mismatch.reasons.map((reason) => reason.code)).toEqual([
+            "clearance_basis_mismatch",
+        ]);
+
+        for (const clearanceBasis of [
+            null,
+            { clearance: null, current: "basis-a" },
+            { clearance: "basis-a", current: null },
+        ]) {
+            const missing = evaluatePayoutExecutionGate(checks({ clearanceBasis }), now);
+            expect(missing.allowed).toBe(false);
+            expect(missing.reasons.map((reason) => reason.code)).toEqual([
+                "clearance_basis_missing",
+            ]);
+        }
+    });
+
     test("allows only a valid clearance with all controls passing", () => {
         expect(evaluatePayoutExecutionGate(checks(), now)).toEqual({
             allowed: true,
@@ -110,5 +153,26 @@ describe("REN-206 payout execution gate", () => {
         expect(
             isPayoutOverrideApproved({ createdBy: "maker", approvedBy: "checker" })
         ).toBe(true);
+    });
+});
+
+describe("AQ-60 payout idempotency key", () => {
+    test("is deterministic for the same cycle and brand", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-1")).toBe(key);
+        expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    });
+
+    test("differs across cycles and brands", () => {
+        const key = buildPayoutIdempotencyKey("cycle-1", "brand-1");
+
+        expect(buildPayoutIdempotencyKey("cycle-2", "brand-1")).not.toBe(key);
+        expect(buildPayoutIdempotencyKey("cycle-1", "brand-2")).not.toBe(key);
+    });
+
+    test("rejects missing identifiers", () => {
+        expect(() => buildPayoutIdempotencyKey("", "brand-1")).toThrow();
+        expect(() => buildPayoutIdempotencyKey("cycle-1", " ")).toThrow();
     });
 });
