@@ -87,6 +87,7 @@ export type TableProduct = ProductWithBrand & {
 type ImageFilter = "with" | "without" | "all";
 type VisiblityFilter = "private" | "public" | "all";
 type QcFilter = "all" | "pass" | "warning" | "critical";
+type SizeChartFilter = "with" | "without" | "all";
 
 const STALE_INVENTORY_DAYS = 14;
 
@@ -594,6 +595,20 @@ export function ProductsReviewTable({
         "isFestiveProduct",
         parseAsStringLiteral(["all", "festive"] as const).withDefault("all")
     );
+    const [categoryId, setCategoryId] = useQueryState(
+        "categoryId",
+        parseAsString.withDefault("all")
+    );
+    const [productTypeId, setProductTypeId] = useQueryState(
+        "productTypeId",
+        parseAsString.withDefault("all")
+    );
+    const [sizeChartFilter, setSizeChartFilter] = useQueryState(
+        "sizeChartFilter",
+        parseAsStringLiteral(["with", "without", "all"] as const).withDefault(
+            "all"
+        )
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -612,6 +627,14 @@ export function ProductsReviewTable({
             initialData: brandData, // Use brandData prop
         }
     );
+    const { data: categoriesData } =
+        trpc.general.categories.getCategories.useQuery(undefined, {
+            staleTime: 5 * 60_000,
+        });
+    const { data: productTypesData } =
+        trpc.general.productTypes.getProductTypes.useQuery(undefined, {
+            staleTime: 5 * 60_000,
+        });
     const queryInitialData = useMemo(
         () => ({
             ...initialData,
@@ -629,6 +652,10 @@ export function ProductsReviewTable({
             verificationStatus:
                 verificationStatus === "all" ? undefined : verificationStatus,
             qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+            categoryId: categoryId === "all" ? undefined : categoryId,
+            productTypeId: productTypeId === "all" ? undefined : productTypeId,
+            sizeChartFilter:
+                sizeChartFilter === "all" ? undefined : sizeChartFilter,
             productImage,
             productVisiblity,
             isFestiveProduct: festiveFilter === "festive" ? true : undefined,
@@ -654,6 +681,11 @@ export function ProductsReviewTable({
                         ? undefined
                         : verificationStatus,
                 qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+                categoryId: categoryId === "all" ? undefined : categoryId,
+                productTypeId:
+                    productTypeId === "all" ? undefined : productTypeId,
+                sizeChartFilter:
+                    sizeChartFilter === "all" ? undefined : sizeChartFilter,
                 productImage,
                 productVisiblity,
             },
@@ -768,6 +800,9 @@ export function ProductsReviewTable({
         void setImageFilter("all");
         void setVisiblityFilter("all");
         void setFestiveFilter("all");
+        void setCategoryId("all");
+        void setProductTypeId("all");
+        void setSizeChartFilter("all");
         if (!isBrandScoped) void setBrandIds([]);
         void table.resetRowSelection();
     };
@@ -955,6 +990,62 @@ export function ProductsReviewTable({
                         <SelectContent>
                             <SelectItem value="festive">
                                 Festive Products
+                            </SelectItem>
+                            <SelectItem value="all">All Products</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={categoryId} onValueChange={setCategoryId}>
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {categoriesData?.data.map((category) => (
+                                <SelectItem
+                                    key={category.id}
+                                    value={category.id}
+                                >
+                                    {category.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={productTypeId}
+                        onValueChange={setProductTypeId}
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by Product Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                All Product Types
+                            </SelectItem>
+                            {productTypesData?.data.map((productType) => (
+                                <SelectItem
+                                    key={productType.id}
+                                    value={productType.id}
+                                >
+                                    {productType.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={sizeChartFilter}
+                        onValueChange={(value: SizeChartFilter) =>
+                            setSizeChartFilter(value)
+                        }
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by Size Chart" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="with">
+                                With Size Chart
+                            </SelectItem>
+                            <SelectItem value="without">
+                                Without Size Chart
                             </SelectItem>
                             <SelectItem value="all">All Products</SelectItem>
                         </SelectContent>

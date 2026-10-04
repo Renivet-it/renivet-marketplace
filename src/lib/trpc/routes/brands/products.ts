@@ -140,6 +140,7 @@ export const productsRouter = createTRPCRouter({
                 isSummerCollection: z.boolean().optional(),
                 colors: z.array(z.string()).optional(),
                 sizes: z.array(z.string()).optional(),
+                sizeChartFilter: z.enum(["with", "without", "all"]).optional(),
                 minDiscount: z.number().min(0).max(100).optional(),
                 isFestiveProduct: z.boolean().optional(),
                 prioritizeBestSellers: z.boolean().optional(),
@@ -292,6 +293,9 @@ export const productsRouter = createTRPCRouter({
                     productSchema.shape.verificationStatus.optional(),
                 qcStatus: productSchema.shape.qcStatus.optional(),
                 catalogIssue: catalogIssueSchema.optional(),
+                categoryId: productSchema.shape.categoryId.optional(),
+                productTypeId: productSchema.shape.productTypeId.optional(),
+                sizeChartFilter: z.enum(["with", "without", "all"]).optional(),
                 productImage: productSchema.shape.productImageFilter,
                 productVisiblity: productSchema.shape.productVisiblityFilter,
             })
@@ -304,6 +308,9 @@ export const productsRouter = createTRPCRouter({
                 verificationStatus: input.verificationStatus,
                 qcStatus: input.qcStatus,
                 catalogIssue: input.catalogIssue,
+                categoryId: input.categoryId,
+                productTypeId: input.productTypeId,
+                sizeChartFilter: input.sizeChartFilter,
                 productImage: input.productImage,
                 productVisiblity: input.productVisiblity,
             });

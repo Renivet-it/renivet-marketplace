@@ -34,7 +34,14 @@ interface PageProps {
             | "approved"
             | "rejected";
         qcStatus?: "all" | "pass" | "warning" | "critical";
-        catalogIssue?: "all" | "oos_but_live" | "stale_inventory" | "claim_mismatch";
+        catalogIssue?:
+            | "all"
+            | "oos_but_live"
+            | "stale_inventory"
+            | "claim_mismatch";
+        categoryId?: string;
+        productTypeId?: string;
+        sizeChartFilter?: "all" | "with" | "without";
     }>;
     params: Promise<{ bId: string }>;
 }
@@ -109,6 +116,9 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
         verificationStatus: verificationStatusRaw,
         qcStatus: qcStatusRaw,
         catalogIssue: catalogIssueRaw,
+        categoryId: categoryIdRaw,
+        productTypeId: productTypeIdRaw,
+        sizeChartFilter: sizeChartFilterRaw,
     } = await searchParams;
     const { bId } = await params;
 
@@ -126,6 +136,12 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
         catalogIssueRaw && catalogIssueRaw !== "all"
             ? catalogIssueRaw
             : undefined;
+    const categoryId = categoryIdRaw || undefined;
+    const productTypeId = productTypeIdRaw || undefined;
+    const sizeChartFilter =
+        sizeChartFilterRaw && sizeChartFilterRaw !== "all"
+            ? sizeChartFilterRaw
+            : undefined;
 
     const data = await productQueries.getProducts({
         brandIds: [bId],
@@ -135,6 +151,9 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
         verificationStatus,
         qcStatus,
         catalogIssue,
+        categoryId,
+        productTypeId,
+        sizeChartFilter,
     });
 
     return <ProductsReviewTable brandId={bId} initialData={data} />;
