@@ -696,6 +696,8 @@ export const financeComplianceRouter = createTRPCRouter({
                 cycleId: z.string().uuid(),
                 brandId: z.string().uuid(),
                 transactionId: z.string().min(3),
+                expectedBasis: z.string().min(1),
+                evidenceReference: z.string().min(3),
             })
         )
         .mutation(async ({ ctx, input }) => {
