@@ -77,6 +77,10 @@ import { runConcurrentSearchTasks } from "../search-concurrency";
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import {
+    getSizeChartFilterQuery,
+    SizeChartFilter,
+} from "./product-admin-filters";
+import {
     buildCatalogMediaPostFilterObservation,
     emitCatalogMediaPostFilterObservation,
     filterProductsByResolvedMedia,
@@ -711,6 +715,9 @@ class ProductQuery {
         verificationStatus,
         qcStatus,
         catalogIssue,
+        categoryId,
+        productTypeId,
+        sizeChartFilter,
         productImage,
         productVisiblity,
     }: {
@@ -719,6 +726,9 @@ class ProductQuery {
         verificationStatus?: Product["verificationStatus"];
         qcStatus?: Product["qcStatus"];
         catalogIssue?: CatalogIssueFilter;
+        categoryId?: string;
+        productTypeId?: string;
+        sizeChartFilter?: SizeChartFilter;
         productImage?: Product["productImageFilter"];
         productVisiblity?: Product["productVisiblityFilter"];
     } = {}) {
@@ -734,6 +744,11 @@ class ProductQuery {
                 : undefined,
             qcStatus ? eq(products.qcStatus, qcStatus) : undefined,
             getCatalogIssueFilterQuery(catalogIssue),
+            categoryId ? eq(products.categoryId, categoryId) : undefined,
+            productTypeId
+                ? eq(products.productTypeId, productTypeId)
+                : undefined,
+            getSizeChartFilterQuery(sizeChartFilter),
             productImage
                 ? productImage === "with"
                     ? hasMedia(products, "media")
@@ -1109,6 +1124,7 @@ class ProductQuery {
         curatedDefaultOrder,
         prioritizedSubcategoryIds,
         isFestiveProduct,
+        sizeChartFilter,
     }: {
         limit: number;
         page: number;
@@ -1143,6 +1159,7 @@ class ProductQuery {
         curatedDefaultOrder?: string[];
         prioritizedSubcategoryIds?: string[];
         isFestiveProduct?: boolean;
+        sizeChartFilter?: SizeChartFilter;
     }) {
         console.log(
             "[getProducts] search:",
@@ -1350,6 +1367,7 @@ class ProductQuery {
             productTypeId
                 ? eq(products.productTypeId, productTypeId)
                 : undefined,
+            getSizeChartFilterQuery(sizeChartFilter),
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,

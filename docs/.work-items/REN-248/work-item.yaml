@@ -1,0 +1,246 @@
+schema_version: "1.0"
+task:
+    id: REN-248
+    title: Add more filters on dashboard for easy navigation
+    source: linear
+    branch: ayanganguly333/ren-248-add-more-filters-on-dashboard-for-easy-navigation
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-248/add-more-filters-on-dashboard-for-easy-navigation
+        priority: 1
+        labels: []
+        status: Todo
+        assignee: Ayan Ganguly
+        project: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - Contained dashboard query and UI behavior using existing read-only product filters.
+        - No schema, migration, payment, identity, permission, or external integration change.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue and comments
+        - General dashboard product table
+        - Existing dashboard filter state and query forwarding
+        - Product tRPC input and database query predicates
+        - Existing category/product-type/option data sources
+        - Repository tests and verification scripts
+    excluded_areas:
+        - Storefront filter UI
+        - Product create/edit flows
+        - Database schemas and migrations
+        - Authorization and production data
+    dependencies: [DEP-248-1, DEP-248-2]
+    integrations: []
+    security_boundaries: [SEC-248-1]
+    state_transitions:
+        [
+            unfiltered,
+            category-filtered,
+            product-type-filtered,
+            size-chart-filtered,
+            multi-filtered,
+            cleared,
+        ]
+    tests: [TEXP-248-1, TEXP-248-2, TEXP-248-3]
+    uncertainties:
+        - Linear says “size chart filter”; implementation interprets this as products with one or more sizeChartMedia entries.
+dependencies:
+    - {
+          id: DEP-248-1,
+          name: dashboard-product-table,
+          purpose: owns filter state and rendering,
+          description: Existing general dashboard product review table,
+          status: resolved,
+      }
+    - {
+          id: DEP-248-2,
+          name: product-query-path,
+          purpose: applies server-side product predicates,
+          description: Existing brands.products.getProducts route and product query support the required fields,
+          status: resolved,
+      }
+integrations: []
+personas:
+    - {
+          id: PER-248-1,
+          role: dashboard_operator,
+          applicability: Narrows the admin product catalog with composable filters.,
+      }
+security_boundaries:
+    - {
+          id: SEC-248-1,
+          description: Reuse the existing dashboard route and query authorization; do not broaden product access.,
+      }
+business_rules:
+    - {
+          id: BR-248-1,
+          description: Selected filters combine with existing filters using AND semantics.,
+      }
+    - {
+          id: BR-248-2,
+          description: No selected category/product-type/size-chart filter preserves current results.,
+      }
+    - {
+          id: BR-248-3,
+          description: Has size chart means the product has one or more sizeChartMedia entries.,
+      }
+requirements:
+    - {
+          id: REQ-248-1,
+          description: Dashboard operators can filter products by category and product type.,
+          type: explicit,
+      }
+    - {
+          id: REQ-248-2,
+          description: Dashboard operators can filter products by whether a size chart/size option exists.,
+          type: explicit,
+      }
+    - {
+          id: REQ-248-3,
+          description: New filters compose with existing filters,
+          persist in the URL,
+          and can be cleared without changing unrelated behavior.,
+          type: inferred,
+      }
+scenarios:
+    - {
+          id: SCN-248-1,
+          description: Selecting a category or product type narrows the dashboard results to matching products.,
+          requirement_ids: [REQ-248-1],
+      }
+    - {
+          id: SCN-248-2,
+          description: Selecting the size-chart filter shows only products with a size option.,
+          requirement_ids: [REQ-248-2],
+      }
+    - {
+          id: SCN-248-3,
+          description: Category,
+          product type,
+          size-chart,
+          search,
+          brand,
+          and existing status filters can be applied together and cleared.,
+          requirement_ids: [REQ-248-3],
+      }
+invariants:
+    - {
+          id: INV-248-1,
+          description: Server-side filtering remains authoritative; the UI never relies on filtering only the current page.,
+      }
+    - {
+          id: INV-248-2,
+          description: Omitting the new filters preserves the existing product query behavior.,
+      }
+    - {
+          id: INV-248-3,
+          description: Clear-all removes only filter state and does not mutate products.,
+      }
+flows:
+    - {
+          id: FLOW-248-1,
+          description: Dashboard filter controls -> URL query state -> existing product tRPC query -> paginated table results,
+          state_transitions:
+              [
+                  unfiltered,
+                  category-filtered,
+                  product-type-filtered,
+                  size-chart-filtered,
+                  multi-filtered,
+                  cleared,
+              ],
+      }
+decisions:
+    - {
+          id: DEC-248-1,
+          question: What does “size chart filter” mean?,
+          class: RECOMMEND_CONTINUE,
+          status: resolved,
+          recommendation: Interpret it as whether the product has one or more sizeChartMedia entries,
+          because the existing product model has an explicit size chart media field.,
+          basis: Repository product schema and issue wording,
+          confidence: medium,
+          consequence: low,
+          human_confirmation_required: false,
+      }
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    required_categories: []
+    categories_reviewed: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: User implementation request and repository evidence on 2026-10-04
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-248-1, scenario_ids: [SCN-248-1] }
+        - { requirement_id: REQ-248-2, scenario_ids: [SCN-248-2] }
+        - { requirement_id: REQ-248-3, scenario_ids: [SCN-248-3] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-248-1, invariant_ids: [INV-248-1, INV-248-2] }
+        - { scenario_id: SCN-248-2, invariant_ids: [INV-248-1, INV-248-2] }
+        - {
+              scenario_id: SCN-248-3,
+              invariant_ids: [INV-248-1, INV-248-2, INV-248-3],
+          }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-248-1, test_expectation_ids: [TEXP-248-1] }
+        - { scenario_id: SCN-248-2, test_expectation_ids: [TEXP-248-2] }
+        - { scenario_id: SCN-248-3, test_expectation_ids: [TEXP-248-3] }
+test_expectations:
+    - {
+          id: TEXP-248-1,
+          category: integration,
+          classification: REQUIRED,
+          reason: Proves category/product-type values reach the server-side product query and narrow results.,
+          scenarios: [SCN-248-1],
+      }
+    - {
+          id: TEXP-248-2,
+          category: unit,
+          classification: REQUIRED,
+          reason: Proves the size-chart predicate distinguishes products with and without size chart media.,
+          scenarios: [SCN-248-2],
+      }
+    - {
+          id: TEXP-248-3,
+          category: component,
+          classification: REQUIRED,
+          reason: Proves URL-backed multi-filter state and clear-all behavior.,
+          scenarios: [SCN-248-3],
+      }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be
+    head_commit: 1e4ad2df1722117c2c944c0c47ecfb634771bf90
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add component-level and route/query integration coverage for the new dashboard filters."
+    evidence:
+        - Compared the approved REN-248 contract with the origin/master-to-head diff.
+        - "Focused static and predicate tests cover filter controls, forwarding markers, and size-chart SQL branches; runtime component and route fixture coverage remains partial."
+    governance_reentry_required: false

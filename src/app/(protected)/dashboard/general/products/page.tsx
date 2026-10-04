@@ -31,9 +31,16 @@ interface PageProps {
         limit?: string;
         verificationStatus?: Product["verificationStatus"] | "all";
         qcStatus?: Product["qcStatus"] | "all";
-        catalogIssue?: "all" | "oos_but_live" | "stale_inventory" | "claim_mismatch";
+        catalogIssue?:
+            | "all"
+            | "oos_but_live"
+            | "stale_inventory"
+            | "claim_mismatch";
         search?: string;
         isFestiveProduct?: "all" | "festive";
+        categoryId?: string;
+        productTypeId?: string;
+        sizeChartFilter?: "all" | "with" | "without";
     }>;
 }
 
@@ -76,6 +83,9 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         catalogIssue: catalogIssueRaw,
         search: searchRaw,
         isFestiveProduct: isFestiveProductRaw,
+        categoryId: categoryIdRaw,
+        productTypeId: productTypeIdRaw,
+        sizeChartFilter: sizeChartFilterRaw,
     } = await searchParams;
 
     const limit =
@@ -94,6 +104,12 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
     const search = searchRaw?.length ? searchRaw : undefined;
     const isFestiveProduct =
         isFestiveProductRaw === "festive" ? true : undefined;
+    const categoryId = categoryIdRaw || undefined;
+    const productTypeId = productTypeIdRaw || undefined;
+    const sizeChartFilter =
+        sizeChartFilterRaw && sizeChartFilterRaw !== "all"
+            ? sizeChartFilterRaw
+            : undefined;
 
     const data = await productQueries.getProducts({
         limit,
@@ -103,6 +119,9 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         qcStatus,
         catalogIssue,
         isFestiveProduct,
+        categoryId,
+        productTypeId,
+        sizeChartFilter,
     });
 
     return <ProductsReviewTable initialData={data} />;
