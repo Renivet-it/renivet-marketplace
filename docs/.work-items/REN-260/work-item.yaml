@@ -107,7 +107,7 @@ implementation_review:
     scope: PASS
   blocking_findings: []
   required_actions:
-    - "REV-001: Attach non-production Postgres concurrency, RazorpayX test-mode, and staging validation evidence before release."
+    - "REV-001: Attach staging validation evidence before release; Postgres CAS and RazorpayX Test Mode evidence are now recorded in REVIEW.md."
     - "REV-002: Resolve the mismatch between the Linear branch context and the implementation branch before PR/release traceability is finalized."
   evidence:
     - "Compared the approved REN-260 contract with the exact aligned-baseline-to-head Git diff."

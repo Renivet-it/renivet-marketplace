@@ -94,6 +94,18 @@ needed for Windows worktree execution and does not change application behavior.
   present, but non-production Postgres concurrency, RazorpayX test-mode, and
   staging evidence are operational follow-ups.
 
+## Operational Evidence Update
+
+- Non-production Postgres CAS proof completed on 2026-10-05 using a synthetic
+  `brand_payout_cycles` row that was deleted after verification: two concurrent
+  exact-summary claim updates produced exactly one winner, final state
+  `processing`, and zero provider calls.
+- RazorpayX credentials loaded from the confirmed non-production `.env.local`
+  were identified as Test Mode. A read-only authenticated provider request
+  returned HTTP 400 rather than an authentication failure; no payout was created.
+- Localhost application validation could not be completed because the environment
+  blocked starting a background development server from this review session.
+
 ## Findings
 
 ### REV-001
@@ -104,7 +116,8 @@ needed for Windows worktree execution and does not change application behavior.
 - Evidence: `TEXP-260-003`; `docs/.work-items/REN-260/SPEC.md` verification gates.
 - Impact: Release readiness cannot be established from repository evidence alone.
 - Recommendation: Attach non-production Postgres concurrency, RazorpayX test-mode,
-  and staging validation evidence before release approval.
+  and staging validation evidence before release approval. The first two now have
+  evidence above; staging validation remains outstanding.
 
 ### REV-002
 
