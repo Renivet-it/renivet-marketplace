@@ -24,6 +24,7 @@ export * from "./plan";
 export * from "./product";
 export * from "./product-type";
 export * from "./refund";
+export * from "./payment-event";
 export * from "./role";
 export * from "./sub-category";
 export * from "./subscriber";

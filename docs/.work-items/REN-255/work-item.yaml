@@ -1,0 +1,205 @@
+schema_version: "1.0"
+task:
+    id: REN-255
+    title: "[RD-1] Slice 1 — Order & Payment Truth (design preparation; R4 design gate first)"
+    source: linear
+    branch: ayanganguly333/ren-255-rd-1-slice-1-order-payment-truth-design-preparation-r4
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-255/rd-1-slice-1-order-and-payment-truth-design-preparation-r4-design-gate
+        priority: Medium
+        labels: []
+        status: Todo
+        assignee: Ayan Ganguly
+        project: null
+        parent: null
+        linear_branch: ayanganguly333/ren-255-rd-1-slice-1-order-payment-truth-design-preparation-r4
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "Payment, order, refund, inventory, and external-provider state transitions affect customer money and fulfilment."
+        - "The change spans Razorpay webhooks, server actions, database identity, retries, side effects, and migration compatibility."
+        - "A false paid state or duplicate side effect can create financial and inventory loss."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, comments, relations, and prior REN-226 evidence
+        - Razorpay payment/refund webhook routes and validation schemas
+        - processOrderAfterPayment server action
+        - orders, orders_intent, refunds schemas and refund query boundary
+        - stock, order-state, notification, analytics, revenue, audit, and reward side-effect paths
+        - existing payment/refund tests and staging backend fixture
+    excluded_areas:
+        - production database reads or writes
+        - commission, payout, tax, and refund fault policy
+        - checkout UI redesign and Slice 2 stock reservation
+        - application implementation and migrations
+        - real-money provider testing
+    dependencies: [DEP-255-001, DEP-255-002, DEP-255-003, DEP-255-004, DEP-255-005]
+    integrations: [INT-255-001, INT-255-002, INT-255-003]
+    security_boundaries: [SEC-255-001, SEC-255-002, SEC-255-003, SEC-255-004]
+    state_transitions: [payment_unverified, payment_bound, payment_applied, payment_replayed, payment_rejected, refund_applied, reconciliation_failed]
+    related_tests: [TEXP-255-001, TEXP-255-002, TEXP-255-003, TEXP-255-004, TEXP-255-005, TEXP-255-006, TEXP-255-007, TEXP-255-008]
+    uncertainties:
+        - "The direct Razorpay order_id decision conflicts with the earlier checkout/order-intent bridge decision and needs explicit R4 resolution."
+        - "No provider-path refund webhook test has been completed; current evidence is DB-layer only."
+        - "The exact authoritative transaction amount field, units, currency, and provenance are not yet specified."
+requirements:
+    - { id: REQ-255-001, description: "Bind a provider payment to the intended checkout/order server-side before a paid transition.", type: safety }
+    - { id: REQ-255-002, description: "Verify provider payment identity, order/reference identity, amount, and currency against authoritative server records.", type: safety }
+    - { id: REQ-255-003, description: "Apply payment effects exactly once across duplicate and concurrent provider deliveries.", type: safety }
+    - { id: REQ-255-004, description: "Keep refund persistence and derived status within the REN-226 canonical refund boundary while closing residual identity/idempotency gaps.", type: compatibility }
+    - { id: REQ-255-005, description: "Provide a migration-compatible canonical webhook lookup and rollback plan for old and new provider events.", type: migration }
+    - { id: REQ-255-006, description: "Expose a stable authoritative transaction amount contract for RD-2 without defining commission or payout policy.", type: explicit }
+    - { id: REQ-255-007, description: "Keep invalid, missing, mismatched, malformed, and partial-failure paths fail-closed, retryable, observable, and auditable.", type: security }
+    - { id: REQ-255-008, description: "Validate the design and implementation on staging PostgreSQL and Razorpay Test Mode without production mutation.", type: explicit }
+scenarios:
+    - { id: SCN-255-001, description: "Valid captured payment resolves the intended server-side checkout/order binding and applies one paid transition.", requirement_ids: [REQ-255-001, REQ-255-002, REQ-255-003] }
+    - { id: SCN-255-002, description: "Missing, unknown, mismatched, or amount-inconsistent payment is rejected without a paid order or side effects.", requirement_ids: [REQ-255-001, REQ-255-002, REQ-255-007] }
+    - { id: SCN-255-003, description: "Duplicate payment delivery converges on the existing outcome without double stock, notification, analytics, or revenue effects.", requirement_ids: [REQ-255-003, REQ-255-007] }
+    - { id: SCN-255-004, description: "Concurrent payment deliveries converge safely under database uniqueness/transition protection.", requirement_ids: [REQ-255-003, REQ-255-007] }
+    - { id: SCN-255-005, description: "Valid refund delivery uses REN-226 state-of-truth and duplicate refund delivery produces one outcome.", requirement_ids: [REQ-255-004, REQ-255-003] }
+    - { id: SCN-255-006, description: "Old and new provider events remain resolvable during lookup migration without duplicate application.", requirement_ids: [REQ-255-005, REQ-255-003] }
+    - { id: SCN-255-007, description: "Payment provider, database, or side-effect partial failure leaves an observable retryable state without a false paid result.", requirement_ids: [REQ-255-007, REQ-255-003] }
+    - { id: SCN-255-008, description: "Authoritative amount is exposed with explicit unit/currency/provenance for RD-2 and excludes commission policy.", requirement_ids: [REQ-255-006] }
+    - { id: SCN-255-009, description: "processOrderAfterPayment cannot bypass provider reconciliation or mark an order paid from browser-supplied values.", requirement_ids: [REQ-255-001, REQ-255-002, REQ-255-007] }
+invariants:
+    - { id: INV-255-001, description: "Paid means a server-verified provider payment is bound to the intended order/intent." }
+    - { id: INV-255-002, description: "A provider payment business event is applied at most once for its canonical identity." }
+    - { id: INV-255-003, description: "A payment amount and currency mismatch cannot produce a paid order." }
+    - { id: INV-255-004, description: "A duplicate or concurrent event cannot double-decrement stock or replay irreversible side effects." }
+    - { id: INV-255-005, description: "Refund source-of-truth remains the REN-226 canonical refund boundary." }
+    - { id: INV-255-006, description: "Old events remain resolvable during lookup cutover, and migration rollback does not duplicate effects." }
+    - { id: INV-255-007, description: "Invalid signatures, identities, payloads, and authorization states fail closed without secrets in evidence." }
+    - { id: INV-255-008, description: "The amount contract identifies units, currency, and provenance and does not encode commission policy." }
+flows:
+    - { id: FLOW-255-001, description: "Signed payment event is parsed, server-bound, amount-verified, durably applied once, and then emits guarded effects.", state_transitions: [payment_unverified, payment_bound, payment_applied, payment_rejected] }
+    - { id: FLOW-255-002, description: "Duplicate/concurrent payment event resolves to the existing transition without replaying effects.", state_transitions: [payment_applied, payment_replayed] }
+    - { id: FLOW-255-003, description: "Signed refund event enters the REN-226 canonical boundary and emits guarded residual effects.", state_transitions: [refund_applied, payment_replayed] }
+    - { id: FLOW-255-004, description: "Lookup migration dual-resolves old/new events, records ambiguity, and supports rollback.", state_transitions: [payment_unverified, payment_bound, reconciliation_failed] }
+dependencies:
+    - { id: DEP-255-001, name: staging PostgreSQL, purpose: "Non-production validation database", description: "Confirmed staging DATABASE_URL; no production data or real-money test.", status: resolved }
+    - { id: DEP-255-002, name: Razorpay Test Mode, purpose: "Provider test path", description: "Test keys and webhook secret are configured by variable name only; staging webhook path is confirmed.", status: resolved }
+    - { id: DEP-255-003, name: REN-226, purpose: "Refund source of truth", description: "REN-226 owns refund persistence/reconciliation; staging backend evidence confirmed the existing duplicate guard and the approved residual scope is identity/idempotency only. Provider-path evidence remains an implementation/release obligation.", status: resolved }
+    - { id: DEP-255-004, name: lookup migration decision, purpose: "Canonical provider-to-order identity", description: "New events use checkout/order-intent binding; legacy order_id is retained only for unique bounded compatibility resolution.", status: resolved }
+    - { id: DEP-255-005, name: R4 Critic gate, purpose: "Fail-closed design approval", description: "Independent Critic findings were incorporated into the durable receipt boundary, amount contract, action-path routing, and migration design.", status: resolved }
+integrations:
+    - { id: INT-255-001, system: Razorpay, purpose: "Payment/refund provider events", name: Razorpay webhooks/API, contract: "Signed provider events include payment/refund identity, order/reference, amount, currency, and status.", failure_mode: "Invalid, unknown, mismatched, duplicate, concurrent, and partial-failure events fail closed or converge idempotently." }
+    - { id: INT-255-002, system: Renivet database, purpose: "Durable state and idempotency", name: PostgreSQL/Drizzle, contract: "Canonical event identity and order transition are durable and concurrency-safe.", failure_mode: "Unique conflict/retry leaves no false paid state and remains observable." }
+    - { id: INT-255-003, system: side effects, purpose: "Stock/order/notification/analytics/revenue effects", name: downstream effects, contract: "Effects run only for a newly applied business transition.", failure_mode: "Duplicate or failed effect is suppressed/retryable and visible." }
+personas:
+    - { id: PER-255-001, name: customer, role: customer, applicability: "Receives correct paid/refund outcome and no duplicate fulfilment." }
+    - { id: PER-255-002, name: finance/admin, role: finance administrator, applicability: "Relies on authoritative payment/refund amount and state." }
+    - { id: PER-255-003, name: operations, role: operations operator, applicability: "Responds to payment-without-order and reconciliation alerts." }
+security_boundaries:
+    - { id: SEC-255-001, description: "Razorpay webhook signature verification occurs before any state mutation." }
+    - { id: SEC-255-002, description: "Browser-supplied payment status, ID, and amount are untrusted and cannot authorize a paid transition." }
+    - { id: SEC-255-003, description: "Provider identity and amount are bound to the server-side checkout/order record and tenant/user context." }
+    - { id: SEC-255-004, description: "Secrets and unnecessary payment-sensitive payloads are excluded from logs, evidence, and Linear artifacts." }
+business_rules:
+    - { id: BR-255-001, description: "Paid means server-verified payment bound to the intended order/intent." }
+    - { id: BR-255-002, description: "Payment and refund business effects happen once per canonical event identity." }
+    - { id: BR-255-003, description: "Refund state remains governed by REN-226 and is not reimplemented here." }
+    - { id: BR-255-004, description: "RD-2 amount contract records transaction amount and currency without deciding commission base." }
+decisions:
+    - { id: DEC-255-001, question: "Which validation environment is authorized?", class: AUTO_DECIDE, status: resolved, recommendation: "Confirmed staging PostgreSQL through DATABASE_URL and Razorpay Test Mode.", basis: "User confirmation and recorded Linear decision; no production mutation.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-255-002, question: "What is the canonical provider-to-checkout lookup and migration cutover?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Use server-side checkout/order-intent binding for new events, preserve legacy order_id resolution during a bounded migration window, and reject ambiguity.", basis: "User approved the recommended internal checkout/order-intent bridge on 2026-10-02; earlier Linear decision and Critic findings CRIT-255-001/006 support the recommendation.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-255-003, question: "What is the residual refund scope after REN-226 validation?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Limit REN-255 to refund identity/idempotency gaps only; keep REN-226 as the refund source of truth and do not reimplement it.", basis: "User approved the recommended bounded scope on 2026-10-02; REN-226 remains the canonical refund owner.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-255-004, question: "How should duplicate payment events be handled?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Persist the unique payment event before business effects; process the first delivery and ignore identical repeats.", basis: "User approved the recommended process-once/ignore-repeats approach on 2026-10-02.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-255-005, question: "What amount contract should payment reconciliation use?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Compare and expose exact integer minor units (paise) with explicit INR currency; do not calculate commission or payout amounts in REN-255.", basis: "User approved the recommended paise/INR amount approach on 2026-10-02.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-255-006, question: "What technical boundary enforces payment idempotency?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use a durable payment_event_receipts table and one reconciliation service for webhook and server-action transitions; apply effects only after a newly claimed event.", basis: "Concrete implementation of the user-approved process-once rule and Critic findings CRIT-255-002/005.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-255-001, category: unit, classification: REQUIRED, reason: "Identity binding, amount/currency comparison, state transitions, and canonical amount contract must be deterministic.", scenarios: [SCN-255-001, SCN-255-002, SCN-255-008, SCN-255-009] }
+    - { id: TEXP-255-002, category: integration, classification: REQUIRED, reason: "Database durability, uniqueness, transition ordering, and concurrent replay require PostgreSQL evidence.", scenarios: [SCN-255-001, SCN-255-003, SCN-255-004, SCN-255-007] }
+    - { id: TEXP-255-003, category: api, classification: REQUIRED, reason: "Signed payment/refund endpoints must reject invalid inputs and use the canonical reconciliation boundary.", scenarios: [SCN-255-001, SCN-255-002, SCN-255-005, SCN-255-009] }
+    - { id: TEXP-255-004, category: external_integration, classification: REQUIRED, reason: "Razorpay Test Mode staging events must prove real provider-path lookup, signature, retry, and acknowledgement behavior.", scenarios: [SCN-255-001, SCN-255-003, SCN-255-005, SCN-255-006] }
+    - { id: TEXP-255-005, category: security, classification: REQUIRED, reason: "Signature, trust-boundary, secret-handling, and fail-closed behavior are payment security controls.", scenarios: [SCN-255-002, SCN-255-007, SCN-255-009] }
+    - { id: TEXP-255-006, category: regression, classification: REQUIRED, reason: "Existing order, refund, stock, email, analytics, revenue, reward, and REN-226 behavior must not regress.", scenarios: [SCN-255-003, SCN-255-005, SCN-255-009] }
+    - { id: TEXP-255-007, category: business_uat, classification: REQUIRED, reason: "Finance/operations must approve the amount contract, migration evidence, rollback, and monitoring outputs.", scenarios: [SCN-255-006, SCN-255-007, SCN-255-008] }
+    - { id: TEXP-255-008, category: performance, classification: OPTIONAL, reason: "Measure webhook retry/concurrency behavior and ensure the idempotency boundary does not create unsafe queueing or timeouts.", scenarios: [SCN-255-003, SCN-255-004] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-255-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Resolved by specifying checkout/order-intent binding for new events and bounded unique legacy order_id compatibility." }
+        - { id: CRIT-255-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Resolved by specifying payment_event_receipts, transactional claim, and effects only after a newly applied transition." }
+        - { id: CRIT-255-003, severity: DESIGN_BLOCKER, status: resolved, summary: "Resolved by specifying integer paise, INR, legacy total_amount normalization, and mismatch rejection." }
+        - { id: CRIT-255-004, severity: MAJOR, status: accepted, summary: "Implementation must add provider-path, concurrency, and retry evidence before release; design now includes those required tests." }
+        - { id: CRIT-255-005, severity: MAJOR, status: accepted, summary: "Implementation must route processOrderAfterPayment through the reconciliation service; this is an explicit requirement and scenario." }
+        - { id: CRIT-255-006, severity: MAJOR, status: resolved, summary: "Resolved by defining legacy compatibility, ambiguity rejection, bounded cutover, and rollback requirements." }
+        - { id: CRIT-255-007, severity: MINOR, status: resolved, summary: "Resolved by naming transactionAmountPaise and INR explicitly." }
+        - { id: CRIT-255-008, severity: MINOR, status: recorded, summary: "UI/accessibility review is not applicable to this backend slice." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: user-approved-design-2026-10-02
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-255-001, scenario_ids: [SCN-255-001, SCN-255-002, SCN-255-009] }
+        - { requirement_id: REQ-255-002, scenario_ids: [SCN-255-001, SCN-255-002, SCN-255-009] }
+        - { requirement_id: REQ-255-003, scenario_ids: [SCN-255-001, SCN-255-003, SCN-255-004, SCN-255-005, SCN-255-006, SCN-255-007] }
+        - { requirement_id: REQ-255-004, scenario_ids: [SCN-255-005] }
+        - { requirement_id: REQ-255-005, scenario_ids: [SCN-255-006] }
+        - { requirement_id: REQ-255-006, scenario_ids: [SCN-255-008] }
+        - { requirement_id: REQ-255-007, scenario_ids: [SCN-255-002, SCN-255-003, SCN-255-004, SCN-255-007, SCN-255-009] }
+        - { requirement_id: REQ-255-008, scenario_ids: [SCN-255-001, SCN-255-003, SCN-255-005, SCN-255-006, SCN-255-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-255-001, invariant_ids: [INV-255-001, INV-255-003] }
+        - { scenario_id: SCN-255-002, invariant_ids: [INV-255-001, INV-255-003, INV-255-007] }
+        - { scenario_id: SCN-255-003, invariant_ids: [INV-255-002, INV-255-004] }
+        - { scenario_id: SCN-255-004, invariant_ids: [INV-255-002, INV-255-004] }
+        - { scenario_id: SCN-255-005, invariant_ids: [INV-255-002, INV-255-005] }
+        - { scenario_id: SCN-255-006, invariant_ids: [INV-255-002, INV-255-006] }
+        - { scenario_id: SCN-255-007, invariant_ids: [INV-255-003, INV-255-007] }
+        - { scenario_id: SCN-255-008, invariant_ids: [INV-255-008] }
+        - { scenario_id: SCN-255-009, invariant_ids: [INV-255-001, INV-255-003, INV-255-007] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-255-001, test_expectation_ids: [TEXP-255-001, TEXP-255-002, TEXP-255-003, TEXP-255-004] }
+        - { scenario_id: SCN-255-002, test_expectation_ids: [TEXP-255-001, TEXP-255-003, TEXP-255-005] }
+        - { scenario_id: SCN-255-003, test_expectation_ids: [TEXP-255-002, TEXP-255-004, TEXP-255-006] }
+        - { scenario_id: SCN-255-004, test_expectation_ids: [TEXP-255-002, TEXP-255-008] }
+        - { scenario_id: SCN-255-005, test_expectation_ids: [TEXP-255-003, TEXP-255-004, TEXP-255-006] }
+        - { scenario_id: SCN-255-006, test_expectation_ids: [TEXP-255-004, TEXP-255-007] }
+        - { scenario_id: SCN-255-007, test_expectation_ids: [TEXP-255-002, TEXP-255-005, TEXP-255-007] }
+        - { scenario_id: SCN-255-008, test_expectation_ids: [TEXP-255-001, TEXP-255-007] }
+        - { scenario_id: SCN-255-009, test_expectation_ids: [TEXP-255-001, TEXP-255-003, TEXP-255-005, TEXP-255-006] }
+
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/master
+    base_commit: "e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be"
+    head_commit: "e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be"
+    pr_url: null
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: FAIL
+        invariants: PARTIAL
+        architecture: FAIL
+        security: PARTIAL
+        test_coverage: FAIL
+        scope: PASS
+    blocking_findings:
+        - "REV-001: Approved checkout/order-intent lookup bridge and migration compatibility are not implemented."
+        - "REV-002: Server-action routing and atomic payment transition boundary are not implemented."
+        - "REV-003: Required provider-path, concurrency, retry, and staging evidence is absent; the existing REN-226 refund path still needs regression execution."
+        - "REV-004: Claimed receipt recovery state is incomplete after partial failure."
+    required_actions:
+        - "Implement the approved lookup bridge, bounded legacy fallback, ambiguity rejection, cutover, and rollback."
+        - "Route processOrderAfterPayment through reconciliation and complete the atomic/retryable state boundary."
+        - "Add and execute PostgreSQL and Razorpay Test Mode payment evidence, then run regression validation against the existing REN-226 refund path."
+    evidence:
+        - "Compared the approved REN-255 contract with the working-tree implementation diff; base and head commits are e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be and uncommitted changes are present."
+        - "Focused tests cover the pure reconciliation helper and source-level webhook claim ordering only."
+    governance_reentry_required: true

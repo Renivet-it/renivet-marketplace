@@ -445,7 +445,13 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { db } from "@/lib/db";
-import { orderQueries, productQueries, refundQueries } from "@/lib/db/queries";
+import {
+    orderQueries,
+    paymentEventQueries,
+    productQueries,
+    refundQueries,
+} from "@/lib/db/queries";
+import { reconcilePaymentBinding } from "@/lib/payments/payment-reconciliation";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import {
@@ -465,6 +471,9 @@ import { NextRequest } from "next/server";
 import { razorpay } from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
+    let claimedReceiptId: string | null = null;
+    let receiptApplied = false;
+
     try {
         const body = await req.text();
         const signature = req.headers.get("x-razorpay-signature");
@@ -476,10 +485,58 @@ export async function POST(req: NextRequest) {
 
         const payload = razorpayPaymentWebhookSchema.parse(JSON.parse(body));
 
-        const orderId = payload.payload.payment.entity.order_id;
+        const paymentEntity = payload.payload.payment.entity;
+        const orderId = paymentEntity.order_id;
 
-        const existingOrder = await orderQueries.getOrderById(orderId);
+        let existingOrder = await orderQueries.getOrderById(orderId);
+        if (!existingOrder) {
+            const candidates = await orderQueries.getOrderIdsByPaymentId(
+                paymentEntity.id
+            );
+            if (candidates.length !== 1) {
+                throw new AppError(
+                    candidates.length === 0
+                        ? "Order not found"
+                        : "Payment maps to multiple orders",
+                    candidates.length === 0 ? "NOT_FOUND" : "BAD_REQUEST"
+                );
+            }
+            existingOrder = await orderQueries.getOrderById(candidates[0].id);
+        }
         if (!existingOrder) throw new AppError("Order not found", "NOT_FOUND");
+
+        const reconciledPayment = reconcilePaymentBinding({
+            providerOrderId: paymentEntity.order_id,
+            expectedProviderOrderId: existingOrder.id,
+            providerPaymentId: paymentEntity.id,
+            expectedPaymentId: existingOrder.paymentId,
+            providerAmountPaise: Math.round(paymentEntity.amount * 100),
+            expectedAmountPaise: Math.round(existingOrder.totalAmount * 100),
+            providerCurrency: paymentEntity.currency,
+            expectedCurrency: "INR",
+        });
+
+        const eventClaim = await paymentEventQueries.claim({
+            eventType: payload.event,
+            providerPaymentId: reconciledPayment.providerPaymentId,
+            providerOrderId: reconciledPayment.providerOrderId,
+            orderId: existingOrder.id,
+            amountPaise: reconciledPayment.amountPaise,
+            currency: reconciledPayment.currency,
+            metadata: {
+                createdAt: payload.created_at.toISOString(),
+                status: paymentEntity.status,
+            },
+        });
+
+        if (!eventClaim.claimed) {
+            return CResponse({
+                message: "Payment event already processed",
+                duplicate: true,
+            });
+        }
+        const receiptId = eventClaim.receipt.id;
+        claimedReceiptId = receiptId;
 
         switch (payload.event) {
             case "payment.captured":
@@ -532,6 +589,8 @@ export async function POST(req: NextRequest) {
                                 payload.payload.payment.entity.method,
                             orderStatus: "cancelled",
                         });
+                        await paymentEventQueries.markApplied(receiptId);
+                        receiptApplied = true;
 
                         const existingUser = await userCache.get(
                             existingOrder.userId
@@ -639,6 +698,8 @@ export async function POST(req: NextRequest) {
                         paymentStatus: "paid",
                         status: "processing",
                     });
+                    await paymentEventQueries.markApplied(receiptId);
+                    receiptApplied = true;
 
                     // Send order confirmation email
                     const existingUser = await userCache.get(
@@ -751,6 +812,8 @@ export async function POST(req: NextRequest) {
                     paymentStatus: "failed",
                     status: "pending",
                 });
+                await paymentEventQueries.markApplied(receiptId);
+                receiptApplied = true;
 
                 // Send failed order email
                 const user = await userCache.get(existingOrder.userId);
@@ -795,6 +858,9 @@ export async function POST(req: NextRequest) {
             message: "OK",
         });
     } catch (err) {
+        if (claimedReceiptId && !receiptApplied) {
+            await paymentEventQueries.markRejected(claimedReceiptId);
+        }
         return handleError(err);
     }
 }

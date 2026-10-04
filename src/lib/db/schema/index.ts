@@ -18,6 +18,7 @@ export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
 export * from "./notification";
 export * from "./order";
+export * from "./payment-event";
 export * from "./order-ops";
 export * from "./order-shipment";
 export * from "./plan";
