@@ -20,6 +20,13 @@ implementation diff is limited to `src/lib/db/queries/finance-compliance.ts`,
 `src/lib/finance/payouts.ts`, `src/lib/trpc/routes/general/finance.ts`, and the
 focused containment tests. REN-260 governance artifacts are also present.
 
+Linear evidence was retrieved from REN-260 on 2026-10-05. The issue remains
+`In Progress`, has no PR, and explicitly requires fresh read-only validation,
+non-production Postgres concurrency evidence, RazorpayX Test Mode evidence, and
+staging validation. Linear names the intended issue branch as
+`ayanganguly333/ren-260-ren-253-c0-r3-close-h-1-manual-payout-f-1n-1-race`; this
+review is against the user-requested implementation branch instead.
+
 ## Requirement Reconciliation
 
 - `REQ-260-001`: PASS. `executePayoutCycle` performs a post-claim fresh overlap
@@ -99,6 +106,15 @@ needed for Windows worktree execution and does not change application behavior.
 - Recommendation: Attach non-production Postgres concurrency, RazorpayX test-mode,
   and staging validation evidence before release approval.
 
+### REV-002
+
+- Severity: LOW
+- Category: scope
+- Description: The implementation branch name differs from the branch name recorded on Linear REN-260.
+- Evidence: Linear REN-260 `gitBranchName` versus local branch `ayanganguly333/ren-253-c0-payout-containment`.
+- Impact: PR and release traceability may be ambiguous even though the code diff is within scope.
+- Recommendation: Update the Linear branch context or open the eventual PR from the approved delivery branch.
+
 ## Decisions Requiring Attention
 
 None. The approved human-confirmation decisions are recorded in `work-item.yaml`.
@@ -107,4 +123,3 @@ None. The approved human-confirmation decisions are recorded in `work-item.yaml`
 
 Accept the implementation for the next verification stage. Do not release or move
 money until `REV-001` evidence is attached and the human release decision is made.
-
