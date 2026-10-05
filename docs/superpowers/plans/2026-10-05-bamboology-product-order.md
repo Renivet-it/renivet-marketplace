@@ -61,14 +61,14 @@
 - [ ] Run `bun test`.
 - [ ] Run `bun run governance:validate -- docs/.work-items/REN-261/work-item.yaml`.
 
-### Task 3: Restore the festive editorial section
+### Task 3: Restore the festive-home editorial cards
 
 **Files:**
 
-- Modify: `src/app/(home)/festive/page.tsx`
+- Modify: `src/app/(home)/festive-home/page.tsx`
 - Test: `tests/ren-261-festive-editorial-section.test.ts`
 
 - [ ] Write the failing route-wiring regression test.
-- [ ] Run `bun test tests/ren-261-festive-editorial-section.test.ts` and confirm it fails because the current route does not import/render the carousel.
-- [ ] Reuse `FestiveEditorialCarousel` after the existing hero inside the current route's catalog hero content.
+- [ ] Run `bun test tests/ren-261-festive-editorial-section.test.ts` and confirm it fails because the three cards are missing from festive-home.
+- [ ] Restore the three editorial cards after the festive-home hero and before the product carousel using their approved assets and links.
 - [ ] Run the focused test and confirm it passes.

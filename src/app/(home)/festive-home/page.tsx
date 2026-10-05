@@ -1,5 +1,5 @@
-import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";
 import { FestiveBrandShowcase } from "@/components/festive-home/festive-brand-showcase";
+import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";
 import { FestiveProductCarousel } from "@/components/festive-home/festive-product-carousel";
 import { buildFestiveCatalogOrdering } from "@/lib/catalog/merchandising";
 import { productQueries } from "@/lib/db/queries";
@@ -23,6 +23,45 @@ export const metadata: Metadata = {
 };
 
 const assetRoot = "/assets/festive-home";
+
+const editorialCards = [
+    {
+        title: "Festive dressing",
+        titleLines: ["Festive", "dressing"],
+        copy: "Thoughtfully chosen festive wear.",
+        action: "Shop apparel",
+        href: "/festive?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQwOnMhg0rgXZuWwadPABUqnljV5RbJMFsx1",
+        desktopImage:
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN91LVBGPkHuXil56hen8kSx4MtRwUbOEyZdap",
+        objectPosition: "center 30%",
+        overlay: "from-black/50 via-black/10 to-transparent",
+    },
+    {
+        title: "Gifts with a story",
+        titleLines: ["Gifts", "with a story"],
+        copy: "Made with care, meant to be remembered.",
+        action: "Explore gifts",
+        href: "/festive?subCategoryId=72d7d263-fde3-4e70-9544-afbd5b24294b",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoMBQif0WvnGEidmOVIP6xXt4S7befYUykMJq",
+        desktopImage:
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbYcggYvbyYEoZ78eJzNIKWdcxq1Of9wlHtA",
+        objectPosition: "center 45%",
+        overlay: "from-black/70 via-black/15 to-black/5",
+    },
+    {
+        title: "Home for the season",
+        titleLines: ["Home", "for the season"],
+        copy: "Create warmth around every ritual.",
+        action: "Shop home",
+        href: "/festive?subCategoryId=cd98e50e-02d6-4bc4-bc1e-7b0ba5b6dd0e",
+        image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2dYwWpMQOYTpvrXwqtZHon4P85jVxyMmDkf3",
+        desktopImage:
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtjOiPoRj63QywZkxrW40qSphaIEcmUdXDAVl",
+        objectPosition: "center 55%",
+        overlay: "from-black/50 via-black/10 to-transparent",
+    },
+] as const;
 
 const getFestiveEditProducts = unstable_cache(
     async () => {
@@ -150,120 +189,172 @@ export default async function FestiveHomePage() {
             <main className="mx-auto w-full max-w-[1600px] bg-[#fbf4e7]">
                 <FestiveEditorialCarousel />
                 {false && (
-                <section
-                    data-festive-section="hero"
-                    className="relative w-full overflow-hidden bg-[#542313]"
-                >
-                    <h1 className="sr-only">A more conscious festive season</h1>
-                    <Image
-                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxRLtEs1IezOinSmtdvjDw08UlbRkW2MQqNBX"
-                        alt="A more conscious festive season"
-                        width={2124}
-                        height={740}
-                        priority
-                        sizes="(min-width: 1600px) 1600px, 100vw"
-                        className="hidden h-auto w-full md:block"
-                    />
-                    <div
-                        data-festive-hero-copy="true"
-                        className="absolute bottom-0 left-[7.7%] hidden h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center px-[4%] text-center md:flex"
+                    <section
+                        data-festive-section="hero"
+                        className="relative w-full overflow-hidden bg-[#542313]"
                     >
+                        <h1 className="sr-only">
+                            A more conscious festive season
+                        </h1>
                         <Image
-                            src={`${assetRoot}/hero-shape-desktop.svg`}
-                            alt=""
-                            fill
-                            sizes="(min-width: 1600px) 530px, 35vw"
-                            data-festive-hero-shape="desktop"
-                            className="pointer-events-none object-fill"
-                            aria-hidden
-                        />
-                        <div className="relative font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
-                            A more
-                            <br />
-                            <em>conscious</em>
-                            <br />
-                            festive season
-                        </div>
-                        <p className="relative mt-[8%] max-w-[310px] text-[clamp(8px,0.76vw,12px)] leading-relaxed text-[#75675d]">
-                            Thoughtfully chosen fashion, home &amp; beauty for
-                            every celebration.
-                        </p>
-                        <Link
-                            href="/festive"
-                            data-festive-hero-cta="true"
-                            className="relative mt-[5%] bg-[#26321c] px-7 py-3 text-[clamp(7px,0.58vw,9px)] font-semibold uppercase tracking-[0.18em] text-white"
-                        >
-                            Shop the edit&nbsp; →
-                        </Link>
-                        <p className="relative mt-[7%] text-[clamp(6px,0.5vw,8px)] uppercase tracking-[0.42em] text-[#6f6258]">
-                            People&nbsp; | &nbsp;Planet&nbsp; |
-                            &nbsp;Sustainability
-                        </p>
-                        <Image
-                            src={`${assetRoot}/pond-peacock.png`}
-                            alt=""
-                            width={280}
-                            height={100}
-                            className="absolute bottom-0 right-[-8%] z-10 w-[38%]"
-                        />
-                    </div>
-
-                    <div
-                        data-festive-mobile-cover="true"
-                        className="relative md:hidden"
-                    >
-                        <Image
-                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNboUTcKuZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxRLtEs1IezOinSmtdvjDw08UlbRkW2MQqNBX"
                             alt="A more conscious festive season"
-                            width={1024}
-                            height={1536}
+                            width={2124}
+                            height={740}
                             priority
-                            sizes="100vw"
-                            className="block h-auto w-full"
+                            sizes="(min-width: 1600px) 1600px, 100vw"
+                            className="hidden h-auto w-full md:block"
                         />
-                        <div className="absolute bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center">
+                        <div
+                            data-festive-hero-copy="true"
+                            className="absolute bottom-0 left-[7.7%] hidden h-[94%] w-[35%] max-w-[530px] flex-col items-center justify-center px-[4%] text-center md:flex"
+                        >
                             <Image
-                                src={`${assetRoot}/hero-shape-mobile.svg`}
+                                src={`${assetRoot}/hero-shape-desktop.svg`}
                                 alt=""
                                 fill
-                                sizes="53vw"
-                                data-festive-hero-shape="mobile"
+                                sizes="(min-width: 1600px) 530px, 35vw"
+                                data-festive-hero-shape="desktop"
                                 className="pointer-events-none object-fill"
                                 aria-hidden
                             />
-                            <div className="relative font-serif text-[clamp(24px,7.4vw,31px)] leading-[1.05] tracking-[-0.025em] text-[#30221c]">
+                            <div className="relative font-serif text-[clamp(32px,4vw,66px)] font-normal leading-[0.95] tracking-[-0.03em] text-[#30221c]">
                                 A more
                                 <br />
                                 <em>conscious</em>
                                 <br />
                                 festive season
                             </div>
-                            <p className="relative mt-5 text-[9px] leading-[1.45] text-[#4f443c]">
+                            <p className="relative mt-[8%] max-w-[310px] text-[clamp(8px,0.76vw,12px)] leading-relaxed text-[#75675d]">
                                 Thoughtfully chosen fashion, home &amp; beauty
                                 for every celebration.
                             </p>
                             <Link
                                 href="/festive"
                                 data-festive-hero-cta="true"
-                                className="relative mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
+                                className="relative mt-[5%] bg-[#26321c] px-7 py-3 text-[clamp(7px,0.58vw,9px)] font-semibold uppercase tracking-[0.18em] text-white"
                             >
                                 Shop the edit&nbsp; →
                             </Link>
+                            <p className="relative mt-[7%] text-[clamp(6px,0.5vw,8px)] uppercase tracking-[0.42em] text-[#6f6258]">
+                                People&nbsp; | &nbsp;Planet&nbsp; |
+                                &nbsp;Sustainability
+                            </p>
                             <Image
                                 src={`${assetRoot}/pond-peacock.png`}
                                 alt=""
                                 width={280}
                                 height={100}
-                                className="absolute bottom-0 right-[-8%] z-10 w-[45%]"
+                                className="absolute bottom-0 right-[-8%] z-10 w-[38%]"
                             />
                         </div>
-                        <p className="absolute inset-x-[9%] bottom-[5.5%] border-t border-[#f5e5ca]/80 pt-3 text-center text-[7px] uppercase tracking-[0.34em] text-[#fff4df]">
-                            People&nbsp; | &nbsp;Planet&nbsp; | &nbsp;Better
-                            Choices
-                        </p>
-                    </div>
-                </section>
+
+                        <div
+                            data-festive-mobile-cover="true"
+                            className="relative md:hidden"
+                        >
+                            <Image
+                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNboUTcKuZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+                                alt="A more conscious festive season"
+                                width={1024}
+                                height={1536}
+                                priority
+                                sizes="100vw"
+                                className="block h-auto w-full"
+                            />
+                            <div className="absolute bottom-[12%] left-[8%] flex h-[55%] w-[53%] flex-col items-center justify-center px-4 text-center">
+                                <Image
+                                    src={`${assetRoot}/hero-shape-mobile.svg`}
+                                    alt=""
+                                    fill
+                                    sizes="53vw"
+                                    data-festive-hero-shape="mobile"
+                                    className="pointer-events-none object-fill"
+                                    aria-hidden
+                                />
+                                <div className="relative font-serif text-[clamp(24px,7.4vw,31px)] leading-[1.05] tracking-[-0.025em] text-[#30221c]">
+                                    A more
+                                    <br />
+                                    <em>conscious</em>
+                                    <br />
+                                    festive season
+                                </div>
+                                <p className="relative mt-5 text-[9px] leading-[1.45] text-[#4f443c]">
+                                    Thoughtfully chosen fashion, home &amp;
+                                    beauty for every celebration.
+                                </p>
+                                <Link
+                                    href="/festive"
+                                    data-festive-hero-cta="true"
+                                    className="relative mt-4 w-fit bg-[#26321c] px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.12em] text-white"
+                                >
+                                    Shop the edit&nbsp; →
+                                </Link>
+                                <Image
+                                    src={`${assetRoot}/pond-peacock.png`}
+                                    alt=""
+                                    width={280}
+                                    height={100}
+                                    className="absolute bottom-0 right-[-8%] z-10 w-[45%]"
+                                />
+                            </div>
+                            <p className="absolute inset-x-[9%] bottom-[5.5%] border-t border-[#f5e5ca]/80 pt-3 text-center text-[7px] uppercase tracking-[0.34em] text-[#fff4df]">
+                                People&nbsp; | &nbsp;Planet&nbsp; | &nbsp;Better
+                                Choices
+                            </p>
+                        </div>
+                    </section>
                 )}
+
+                <section
+                    data-festive-section="editorial-cards"
+                    className="grid gap-5 px-3 pb-10 pt-8 md:gap-6 md:px-8 md:pt-0 lg:grid-cols-3"
+                >
+                    {editorialCards.map((card) => (
+                        <Link
+                            href={card.href}
+                            key={card.title}
+                            className="group relative aspect-[0.94] overflow-hidden md:aspect-[1.75]"
+                        >
+                            <Image
+                                data-festive-editorial-image="true"
+                                src={card.image}
+                                alt=""
+                                fill
+                                sizes="(min-width: 1024px) 32vw, calc(100vw - 24px)"
+                                className="object-cover md:hidden"
+                                style={{ objectPosition: card.objectPosition }}
+                            />
+                            <Image
+                                data-festive-editorial-image="true"
+                                src={card.desktopImage}
+                                alt=""
+                                fill
+                                sizes="(min-width: 1024px) 32vw, 0px"
+                                className="hidden object-cover md:block"
+                                style={{ objectPosition: card.objectPosition }}
+                            />
+                            <div
+                                className={`absolute inset-0 bg-gradient-to-t ${card.overlay}`}
+                            />
+                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec]">
+                                <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
+                                    {card.titleLines.map((line) => (
+                                        <span key={line} className="block">
+                                            {line}
+                                        </span>
+                                    ))}
+                                </h2>
+                                <p className="mt-4 max-w-[82%] text-[11px] leading-4 text-white/80">
+                                    {card.copy}
+                                </p>
+                                <span className="w-fit border-b border-white/55 pb-2">
+                                    <MiniLink>{card.action}</MiniLink>
+                                </span>
+                            </div>
+                        </Link>
+                    ))}
+                </section>
 
                 <div
                     data-festive-section="editorial-transition"

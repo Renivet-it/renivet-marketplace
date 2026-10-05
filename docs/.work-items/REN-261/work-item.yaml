@@ -73,7 +73,7 @@ requirements:
       }
     - {
           id: REQ-261-004,
-          description: "Render the existing FestiveEditorialCarousel on the current /festive route immediately after the campaign hero and before the catalogue without changing /festive-home.",
+          description: "Restore the three editorial cards on /festive-home after the hero and before the festive product carousel; keep the /festive catalogue route unchanged.",
           type: behavior,
       }
 scenarios:
@@ -94,7 +94,7 @@ scenarios:
       }
     - {
           id: SCN-261-004,
-          description: "The current festive route shows the existing editorial three-card carousel after its hero and before catalogue content.",
+          description: "The festive home route shows Festive dressing, Gifts with a story, and Home for the season cards after its hero and before the festive product carousel.",
           requirement_ids: [REQ-261-004],
       }
 invariants:
@@ -172,7 +172,7 @@ test_expectations:
           id: TEXP-261-004,
           category: regression,
           classification: REQUIRED,
-          reason: "Prove the current festive route reuses the existing editorial carousel exactly once.",
+          reason: "Prove festive-home renders all three restored editorial cards before the product carousel and keeps the catalogue route free of the homepage section.",
           scenarios: [SCN-261-004],
       }
 critic:

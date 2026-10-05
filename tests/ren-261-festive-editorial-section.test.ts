@@ -1,11 +1,19 @@
 import { expect, test } from "bun:test";
 
-test("REN-261 restores the editorial carousel to the current festive route", async () => {
-    const page = await Bun.file("src/app/(home)/festive/page.tsx").text();
+test("REN-261 restores the editorial cards to festive-home", async () => {
+    const page = await Bun.file("src/app/(home)/festive-home/page.tsx").text();
 
-    expect(page).toContain(
-        'import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";'
-    );
     expect(page).toContain("<FestiveEditorialCarousel />");
-    expect(page.match(/<FestiveEditorialCarousel \/>/g) ?? []).toHaveLength(1);
+    expect(page).toContain('data-festive-section="editorial-cards"');
+    expect(page).toContain('title: "Festive dressing"');
+    expect(page).toContain('title: "Gifts with a story"');
+    expect(page).toContain('title: "Home for the season"');
+    expect(
+        page.match(/data-festive-editorial-image="true"/g) ?? []
+    ).toHaveLength(2);
+
+    const festiveCatalogPage = await Bun.file(
+        "src/app/(home)/festive/page.tsx"
+    ).text();
+    expect(festiveCatalogPage).not.toContain("FestiveEditorialCarousel");
 });

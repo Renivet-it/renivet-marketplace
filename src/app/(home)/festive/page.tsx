@@ -1,4 +1,3 @@
-import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";
 import {
     StorefrontCatalogPage,
     type StorefrontSearchParams,
@@ -100,7 +99,6 @@ export default async function FestivePage({
                                 className="h-auto w-full md:hidden"
                             />
                         </section>
-                        <FestiveEditorialCarousel />
                     </>
                 }
             />

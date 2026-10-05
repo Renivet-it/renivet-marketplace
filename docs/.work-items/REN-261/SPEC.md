@@ -44,7 +44,8 @@ payment, inventory, or external integration changes.
 
 ## Additional festive-page task
 
-The current `/festive` route must render the existing `FestiveEditorialCarousel`
-immediately after the campaign hero and before the product catalogue. Reuse the
-existing component and assets; do not duplicate or alter the legacy
-`/festive-home` implementation.
+The `/festive-home` route must render the existing hero carousel followed by the
+three editorial cards that were previously present: Festive dressing, Gifts with
+a story, and Home for the season. Reuse the approved card assets and curated
+catalogue links, and place the cards before the festive product carousel. The
+`/festive` catalogue route must not receive this homepage section.
