@@ -10,7 +10,7 @@ re-entry.
 
 Comparison base: `6252ff0d8a8347d7105c5431601f4e9b43829619` (aligned R2 baseline).  
 Head: `b4bf53e0f507c024d1d3fdd4dee3438ffb6044f6`.  
-PR URL: `null`.  
+PR URL: `https://github.com/Renivet-it/renivet-marketplace/pull/711`.
 Working tree: clean at review start.
 
 ## Review Scope and Git Evidence
