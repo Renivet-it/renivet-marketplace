@@ -144,3 +144,70 @@ export function rankProductIdsBySubcategory(
         )
         .map((product) => product.id);
 }
+
+const BAMBOOLOGY_CATEGORY_PRIORITY = new Map([
+    ["women", 0],
+    ["men", 1],
+    ["home & living", 2],
+    ["home and living", 2],
+    ["beauty", 3],
+    ["beauty products", 3],
+    ["beauty and personal care", 3],
+    ["beauty & personal care", 3],
+]);
+
+const BAMBOOLOGY_SUBCATEGORY_PRIORITY = new Map([
+    ["women|western wear", 0],
+    ["women|women sports and active wear", 1],
+    ["women|women sports & active wear", 1],
+    ["women|lingerie and sleepwear", 2],
+    ["men|topwear", 0],
+    ["men|men sports and active wear", 1],
+    ["men|men sports & active wear", 1],
+    ["men|innerwear and sleepwear", 2],
+]);
+
+function normalizedMerchandisingName(value?: string | null) {
+    return value?.trim().toLowerCase().replace(/\s+/g, " ") ?? "";
+}
+
+export function rankProductIdsByCategoryAndSubcategory(
+    subcategories: Array<{
+        id: string;
+        categoryId: string;
+        name: string;
+    }>,
+    categories: Array<{ id: string; name: string }>
+) {
+    const categoryNames = new Map(
+        categories.map((category) => [
+            category.id,
+            normalizedMerchandisingName(category.name),
+        ])
+    );
+
+    return [...subcategories]
+        .map((subcategory, index) => {
+            const categoryName =
+                categoryNames.get(subcategory.categoryId) ?? "";
+            const categoryRank =
+                BAMBOOLOGY_CATEGORY_PRIORITY.get(categoryName) ?? 4;
+            const subcategoryName = normalizedMerchandisingName(
+                subcategory.name
+            );
+            const subcategoryRank =
+                BAMBOOLOGY_SUBCATEGORY_PRIORITY.get(
+                    `${categoryName}|${subcategoryName}`
+                ) ?? 1;
+
+            return {
+                id: subcategory.id,
+                rank: categoryRank * 100 + subcategoryRank,
+                index,
+            };
+        })
+        .sort(
+            (left, right) => left.rank - right.rank || left.index - right.index
+        )
+        .map((subcategory) => subcategory.id);
+}

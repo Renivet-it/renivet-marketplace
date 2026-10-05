@@ -113,9 +113,9 @@ export default async function Page({ params, searchParams }: PageProps) {
             hideBrandFilter
             defaultSortBy="createdAt"
             defaultSortOrder="desc"
-            defaultSubcategoryOrder={
+            brandMerchandising={
                 brand.slug.toLowerCase() === "bamboology"
-                    ? ["Men", "Women", "Accessories", "Bathwear", "Innerwear"]
+                    ? "bamboology"
                     : undefined
             }
         />

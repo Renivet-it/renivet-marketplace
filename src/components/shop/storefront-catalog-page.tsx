@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
     buildFestiveCatalogOrdering,
     getFestiveCatalogLimit,
+    rankProductIdsByCategoryAndSubcategory,
     rankProductIdsBySubcategory,
 } from "@/lib/catalog/merchandising";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
@@ -82,6 +83,7 @@ interface StorefrontCatalogPageProps {
     pageHeading?: ReactNode;
     editorialIntro?: string;
     defaultSubcategoryOrder?: string[];
+    brandMerchandising?: "bamboology";
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -102,6 +104,7 @@ export async function StorefrontCatalogPage({
     pageHeading,
     editorialIntro,
     defaultSubcategoryOrder,
+    brandMerchandising,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const [productTypes, categories, subCategories] = await Promise.all([
@@ -118,15 +121,25 @@ export async function StorefrontCatalogPage({
         : undefined;
     const curatedProductIds = festiveOrdering?.curatedProductIds;
     const curatedDefaultOrder = festiveOrdering?.curatedDefaultOrder;
-    const prioritizedSubcategoryIds = defaultSubcategoryOrder
-        ? rankProductIdsBySubcategory(
-              subCategories.map((item) => ({
-                  id: item.id,
-                  subcategoryName: item.name,
-              })),
-              defaultSubcategoryOrder
-          )
-        : undefined;
+    const prioritizedSubcategoryIds =
+        brandMerchandising === "bamboology"
+            ? rankProductIdsByCategoryAndSubcategory(
+                  subCategories.map((item) => ({
+                      id: item.id,
+                      categoryId: item.categoryId,
+                      name: item.name,
+                  })),
+                  categories.map((item) => ({ id: item.id, name: item.name }))
+              )
+            : defaultSubcategoryOrder
+              ? rankProductIdsBySubcategory(
+                    subCategories.map((item) => ({
+                        id: item.id,
+                        subcategoryName: item.name,
+                    })),
+                    defaultSubcategoryOrder
+                )
+              : undefined;
 
     const selectedCategory = categories.find(
         (category) => category.id === params.categoryId
@@ -194,7 +207,11 @@ export async function StorefrontCatalogPage({
                         <div>
                             {pageHeading ? (
                                 <h1
-                                    className={editorialIntro ? "font-serif text-3xl" : "sr-only"}
+                                    className={
+                                        editorialIntro
+                                            ? "font-serif text-3xl"
+                                            : "sr-only"
+                                    }
                                 >
                                     {pageHeading}
                                 </h1>
@@ -721,7 +738,11 @@ async function StorefrontProductsFetch({
               ? undefined
               : defaultSortOrder;
     const effectivePrioritizedSubcategoryIds =
-        !sortByRaw || sortByRaw === "recommended"
+        (!sortByRaw || sortByRaw === "recommended") &&
+        !search &&
+        !categoryId &&
+        !subCategoryId &&
+        !productTypeId
             ? prioritizedSubcategoryIds
             : undefined;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
@@ -901,6 +922,7 @@ async function StorefrontProductsFetch({
                 minDiscount,
                 prioritizeBestSellers,
                 prioritizeNewProducts,
+                prioritizedSubcategoryIds: effectivePrioritizedSubcategoryIds,
                 requireMedia: true,
             });
         }
