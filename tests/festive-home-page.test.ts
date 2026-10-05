@@ -17,7 +17,7 @@ test("festive home defines the desktop editorial sections and keeps the shared s
     expect(source).toContain("Gift by intention");
     expect(source).toContain("heritage-rail.png");
     expect(carousel).toContain("festive-edit-panel.png");
-    expect(source).toContain("sandstone-arch.png");
+    expect(source).toContain('data-festive-section="editorial-transition"');
     expect(source).toContain("/festive-home");
     expect(source).not.toContain("<NavbarHome");
     expect(source).not.toContain("<Footer");
@@ -180,7 +180,10 @@ test("festive home leaves breathing room above the editorial corner artwork", as
 
     expect(source).toContain("<FestiveEditorialCarousel />");
     expect(source).toContain('data-festive-section="editorial-transition"');
-    expect(source).toContain('className="hidden"');
+    expect(source).toContain(
+        'className="relative hidden h-[130px] bg-[#fff9eb] md:block"'
+    );
+    expect(source).toContain("src={`${assetRoot}/heritage-rail.png`}");
 });
 
 test.skip("legacy festive home stacks portrait editorial cards with imagery on mobile", async () => {

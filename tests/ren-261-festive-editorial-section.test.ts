@@ -11,6 +11,8 @@ test("REN-261 restores the editorial cards to festive-home", async () => {
     expect(
         page.match(/data-festive-editorial-image="true"/g) ?? []
     ).toHaveLength(2);
+    expect(page).toContain("src={`${assetRoot}/heritage-rail.png`}");
+    expect(page).toContain("md:hidden");
 
     const festiveCatalogPage = await Bun.file(
         "src/app/(home)/festive/page.tsx"

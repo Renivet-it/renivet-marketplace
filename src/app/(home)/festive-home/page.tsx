@@ -306,6 +306,20 @@ export default async function FestiveHomePage() {
                     </section>
                 )}
 
+                <div
+                    data-festive-section="editorial-transition"
+                    className="relative hidden h-[130px] bg-[#fff9eb] md:block"
+                >
+                    <Image
+                        src={`${assetRoot}/heritage-rail.png`}
+                        alt=""
+                        width={1600}
+                        height={120}
+                        className="h-full w-full object-cover py-5"
+                        aria-hidden
+                    />
+                </div>
+
                 <section
                     data-festive-section="editorial-cards"
                     className="grid gap-5 px-3 pb-10 pt-8 md:gap-6 md:px-8 md:pt-0 lg:grid-cols-3"
@@ -335,9 +349,9 @@ export default async function FestiveHomePage() {
                                 style={{ objectPosition: card.objectPosition }}
                             />
                             <div
-                                className={`absolute inset-0 bg-gradient-to-t ${card.overlay}`}
+                                className={`absolute inset-0 bg-gradient-to-t ${card.overlay} md:hidden`}
                             />
-                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec]">
+                            <div className="absolute inset-0 flex flex-col justify-end px-6 py-7 text-[#fff8ec] md:hidden">
                                 <h2 className="max-w-[220px] font-serif text-[26px] leading-[1.08] md:text-[clamp(24px,2vw,32px)]">
                                     {card.titleLines.map((line) => (
                                         <span key={line} className="block">
@@ -355,26 +369,6 @@ export default async function FestiveHomePage() {
                         </Link>
                     ))}
                 </section>
-
-                <div
-                    data-festive-section="editorial-transition"
-                    className="hidden"
-                >
-                    <Image
-                        src={`${assetRoot}/sandstone-arch.png`}
-                        alt=""
-                        width={180}
-                        height={100}
-                        className="absolute bottom-0 left-0 w-[170px] -scale-x-100"
-                    />
-                    <Image
-                        src={`${assetRoot}/sandstone-arch.png`}
-                        alt=""
-                        width={180}
-                        height={100}
-                        className="absolute bottom-0 right-0 w-[170px]"
-                    />
-                </div>
 
                 <FestiveProductCarousel
                     products={festiveProducts}
