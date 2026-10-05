@@ -41,3 +41,10 @@ payment, inventory, or external integration changes.
 - The ranking helper places category groups and the requested high-priority/last subcategories correctly while retaining all IDs.
 - The Bamboology route opts into the ordering and other brand routes do not.
 - Existing explicit-sort/search behavior remains covered by the current catalog path and a focused regression assertion.
+
+## Additional festive-page task
+
+The current `/festive` route must render the existing `FestiveEditorialCarousel`
+immediately after the campaign hero and before the product catalogue. Reuse the
+existing component and assets; do not duplicate or alter the legacy
+`/festive-home` implementation.

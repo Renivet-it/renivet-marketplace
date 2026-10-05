@@ -71,6 +71,11 @@ requirements:
           description: "Preserve all existing products, deterministic ties, explicit shopper controls, and non-Bamboology behavior.",
           type: compatibility,
       }
+    - {
+          id: REQ-261-004,
+          description: "Render the existing FestiveEditorialCarousel on the current /festive route immediately after the campaign hero and before the catalogue without changing /festive-home.",
+          type: behavior,
+      }
 scenarios:
     - {
           id: SCN-261-001,
@@ -86,6 +91,11 @@ scenarios:
           id: SCN-261-003,
           description: "Search, explicit sorting, filters, pagination, and other brands do not receive the Bamboology default priority.",
           requirement_ids: [REQ-261-003],
+      }
+    - {
+          id: SCN-261-004,
+          description: "The current festive route shows the existing editorial three-card carousel after its hero and before catalogue content.",
+          requirement_ids: [REQ-261-004],
       }
 invariants:
     - {
@@ -158,6 +168,13 @@ test_expectations:
           reason: "Prove the existing catalog query still disables priority for search and explicit sorting.",
           scenarios: [SCN-261-003],
       }
+    - {
+          id: TEXP-261-004,
+          category: regression,
+          classification: REQUIRED,
+          reason: "Prove the current festive route reuses the existing editorial carousel exactly once.",
+          scenarios: [SCN-261-004],
+      }
 critic:
     required: false
     completed: false
@@ -180,10 +197,12 @@ traceability:
               requirement_id: REQ-261-003,
               scenario_ids: [SCN-261-002, SCN-261-003],
           }
+        - { requirement_id: REQ-261-004, scenario_ids: [SCN-261-004] }
     scenario_to_invariants:
         - { scenario_id: SCN-261-001, invariant_ids: [INV-261-001] }
         - { scenario_id: SCN-261-002, invariant_ids: [INV-261-001] }
         - { scenario_id: SCN-261-003, invariant_ids: [INV-261-002] }
+        - { scenario_id: SCN-261-004, invariant_ids: [INV-261-002] }
     scenario_to_test_expectations:
         - {
               scenario_id: SCN-261-001,
@@ -194,6 +213,7 @@ traceability:
               scenario_id: SCN-261-003,
               test_expectation_ids: [TEXP-261-002, TEXP-261-003],
           }
+        - { scenario_id: SCN-261-004, test_expectation_ids: [TEXP-261-004] }
 implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED

@@ -60,3 +60,15 @@
 - [ ] Run the regression tests and confirm they pass.
 - [ ] Run `bun test`.
 - [ ] Run `bun run governance:validate -- docs/.work-items/REN-261/work-item.yaml`.
+
+### Task 3: Restore the festive editorial section
+
+**Files:**
+
+- Modify: `src/app/(home)/festive/page.tsx`
+- Test: `tests/ren-261-festive-editorial-section.test.ts`
+
+- [ ] Write the failing route-wiring regression test.
+- [ ] Run `bun test tests/ren-261-festive-editorial-section.test.ts` and confirm it fails because the current route does not import/render the carousel.
+- [ ] Reuse `FestiveEditorialCarousel` after the existing hero inside the current route's catalog hero content.
+- [ ] Run the focused test and confirm it passes.

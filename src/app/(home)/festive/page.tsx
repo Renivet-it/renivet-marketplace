@@ -1,13 +1,17 @@
-import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
+import { FestiveEditorialCarousel } from "@/components/festive-home/festive-editorial-carousel";
+import {
+    StorefrontCatalogPage,
+    type StorefrontSearchParams,
+} from "@/components/shop/storefront-catalog-page";
 import { productQueries } from "@/lib/db/queries";
+import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign";
 import {
     buildProductItemListJsonLd,
     serializeJsonLd,
 } from "@/lib/seo/structured-data";
 import { getAbsoluteURL } from "@/lib/utils";
-import { FESTIVE_CAMPAIGN } from "@/lib/seo/festive-campaign";
-import Image from "next/image";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -76,25 +80,28 @@ export default async function FestivePage({
                 defaultSortBy="recommended"
                 defaultSortOrder="desc"
                 hero={
-                    <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
-                        <Image
-                            src={FESTIVE_CAMPAIGN.art.desktopHero.src}
-                            alt="Celebrate consciously — sustainable festive picks"
-                            width={2048}
-                            height={865}
-                            unoptimized
-                            className="hidden h-auto w-full md:block"
-                        />
-                        <Image
-                            src={FESTIVE_CAMPAIGN.art.mobileHero.src}
-                            alt="Celebrate consciously — sustainable festive picks"
-                            width={960}
-                            height={516}
-                            priority
-                            unoptimized
-                            className="h-auto w-full md:hidden"
-                        />
-                    </section>
+                    <>
+                        <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
+                            <Image
+                                src={FESTIVE_CAMPAIGN.art.desktopHero.src}
+                                alt="Celebrate consciously — sustainable festive picks"
+                                width={2048}
+                                height={865}
+                                unoptimized
+                                className="hidden h-auto w-full md:block"
+                            />
+                            <Image
+                                src={FESTIVE_CAMPAIGN.art.mobileHero.src}
+                                alt="Celebrate consciously — sustainable festive picks"
+                                width={960}
+                                height={516}
+                                priority
+                                unoptimized
+                                className="h-auto w-full md:hidden"
+                            />
+                        </section>
+                        <FestiveEditorialCarousel />
+                    </>
                 }
             />
         </div>
