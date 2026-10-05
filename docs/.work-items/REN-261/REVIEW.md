@@ -5,7 +5,7 @@
 REVIEW_PASSED. The implementation has NO_DRIFT against the approved REN-261
 contract. Comparison base is `origin/master` merge-base
 `63bafa82fbf26e814179e6b908f3fcf67cf96e89`; head is
-`0b3c90f8`. Governance re-entry is not required.
+`0b3c90f82ad8b00252b1997722306806fc98f7c2`. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
