@@ -94,7 +94,7 @@ implementation_review:
   result: REVIEW_PASSED_WITH_FINDINGS
   base_branch: aligned R2 baseline (6252ff0d)
   base_commit: "6252ff0d8a8347d7105c5431601f4e9b43829619"
-  head_commit: "0272d45981943dd2cb1a004996659d48844ec29b6"
+  head_commit: "0272d45981943dd2cb1a004996659d48844ec29b"
   pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/711
   material_drift: NO_DRIFT
   reconciliation:
