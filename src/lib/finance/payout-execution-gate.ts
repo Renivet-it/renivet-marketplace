@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type HumanClearance = {
     clearedBy: string | null;
     evidenceReference: string | null;
@@ -13,6 +15,10 @@ export type PayoutExecutionChecks = {
     holdbackSuspension: boolean;
     realTransactionValidation: boolean;
     humanClearance: HumanClearance | null;
+    // The payout basis fingerprint stored on the clearance when it was recorded, and the
+    // fingerprint of the cycle as it stands now (REN-253 G-1, G-2). They must be equal.
+    clearanceBasis: { clearance: string | null; current: string | null } | null;
+    executedBy: string | null;
 };
 
 export type PayoutExecutionGateResult = {
@@ -89,6 +95,31 @@ export function evaluatePayoutExecutionGate(
             code: "human_clearance_expired",
             message: "BIZ-3 human clearance is expired.",
         });
+    } else if (
+        !checks.executedBy?.trim() ||
+        checks.executedBy.trim() === clearance.clearedBy.trim()
+    ) {
+        reasons.push({
+            code: "clearer_is_executor",
+            message: "The admin who recorded the BIZ-3 clearance cannot execute the payout.",
+        });
+    }
+
+    if (clearance) {
+        const basis = checks.clearanceBasis;
+        if (!basis?.clearance || !basis.current) {
+            reasons.push({
+                code: "clearance_basis_missing",
+                message:
+                    "The BIZ-3 clearance is not bound to a payout basis; record a new clearance of the current basis.",
+            });
+        } else if (basis.clearance !== basis.current) {
+            reasons.push({
+                code: "clearance_basis_mismatch",
+                message:
+                    "The payout basis changed after the BIZ-3 clearance was recorded; a fresh clearance is required.",
+            });
+        }
     }
 
     return { allowed: reasons.length === 0, reasons };
@@ -103,4 +134,23 @@ export function isPayoutOverrideApproved(input: {
             input.createdBy?.trim() &&
             input.approvedBy !== input.createdBy
     );
+}
+
+// Razorpay maps every request carrying the same X-Payout-Idempotency key to one
+// payout, so a retry or replay for the same cycle and brand cannot pay twice.
+// The key is derived only from stable identifiers (AQ-60).
+export function buildPayoutIdempotencyKey(cycleId: string, brandId: string) {
+    if (!cycleId.trim() || !brandId.trim()) {
+        throw new Error("Payout idempotency key requires a cycle and brand.");
+    }
+    const hex = createHash("sha256")
+        .update(`renivet-payout:${cycleId.trim()}:${brandId.trim()}`)
+        .digest("hex");
+    return [
+        hex.slice(0, 8),
+        hex.slice(8, 12),
+        hex.slice(12, 16),
+        hex.slice(16, 20),
+        hex.slice(20, 32),
+    ].join("-");
 }

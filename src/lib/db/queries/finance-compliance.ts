@@ -519,10 +519,56 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
+    // Conditional cycle write (REN-253 AR-21): one statement that applies `values` only if
+    // the cycle is still in one of `statusIn` and, when given, its stored payout basis
+    // fingerprint is still `basisFingerprint`. Returns the updated row, or undefined when
+    // the cycle moved (another writer won), so a caller can refuse instead of overwriting.
+    // This is also the execution claim: `statusIn: ["approved"]` -> `status: "processing"`.
+    async updatePayoutCycleIf(
+        id: string,
+        condition: {
+            statusIn: string[];
+            basisFingerprint?: string;
+            calculationSummary?: Record<string, unknown> | null;
+        },
+        values: Partial<typeof brandPayoutCycles.$inferInsert>
+    ) {
+        return db
+            .update(brandPayoutCycles)
+            .set({ ...values, updatedAt: new Date() })
+            .where(
+                and(
+                    eq(brandPayoutCycles.id, id),
+                    inArray(
+                        brandPayoutCycles.status,
+                        condition.statusIn as Array<
+                            typeof brandPayoutCycles.$inferSelect.status
+                        >
+                    ),
+                    condition.basisFingerprint === undefined
+                        ? undefined
+                        : sql`${brandPayoutCycles.calculationSummary} ->> 'basisFingerprint' = ${condition.basisFingerprint}`,
+                    condition.calculationSummary === undefined
+                        ? undefined
+                        : sql`${brandPayoutCycles.calculationSummary} = ${JSON.stringify(condition.calculationSummary)}::jsonb`
+                )
+            )
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
     async listPayoutCycles() {
         return db.query.brandPayoutCycles.findMany({
             orderBy: [desc(brandPayoutCycles.payoutDate)],
             limit: 50,
+        });
+    }
+
+    // Every cycle, unbounded: paid-ness across cycles must not depend on a 50-row window
+    // or on payout dates (REN-253 N-2).
+    async listAllPayoutCycles() {
+        return db.query.brandPayoutCycles.findMany({
+            orderBy: [desc(brandPayoutCycles.payoutDate)],
         });
     }
 
@@ -579,6 +625,28 @@ class FinanceComplianceQuery {
             .where(eq(payoutExecutionClearances.id, id))
             .returning()
             .then((rows) => rows[0]);
+    }
+
+    async revokeActivePayoutExecutionClearances(
+        cycleId: string,
+        revokedBy: string,
+        revocationReason: string
+    ) {
+        return db
+            .update(payoutExecutionClearances)
+            .set({
+                revokedAt: new Date(),
+                revokedBy,
+                revocationReason,
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(payoutExecutionClearances.cycleId, cycleId),
+                    isNull(payoutExecutionClearances.revokedAt)
+                )
+            )
+            .returning();
     }
 
     async addPayoutLineItems(
@@ -682,6 +750,9 @@ class FinanceComplianceQuery {
                 gstin: brandConfidentials.gstin,
                 pan: brandConfidentials.pan,
                 rzpAccountId: brands.rzpAccountId,
+                // Payee verification state (idle | pending | approved | rejected): read at
+                // calculation for the basis and again at execution (REN-253 G-8).
+                confidentialVerificationStatus: brands.confidentialVerificationStatus,
             })
             .from(brands)
             .leftJoin(brandPayoutConfig, eq(brandPayoutConfig.id, brands.id))
