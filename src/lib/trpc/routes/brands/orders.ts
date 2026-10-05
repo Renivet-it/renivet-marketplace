@@ -3,6 +3,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { z } from "zod";
 import { orderSchema } from "../../../../lib/validations";
@@ -104,6 +105,9 @@ export const ordersRouter = createTRPCRouter({
             const data = await queries.orders.getShipmentDetailsByShipmentId(
                 input.shipmentId
             );
+            const targetBrandId = data[0]?.brandId;
+            if (!targetBrandId) return data;
+            await requireOwnBrand(ctx, targetBrandId, "orders.getOrderShipmentDetailsByShipmentId");
             return data;
         }),
 });

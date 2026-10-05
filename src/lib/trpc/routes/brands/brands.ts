@@ -8,6 +8,7 @@ import {
     isTRPCAuth,
     protectedProcedure,
     publicProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { UnicommerceClient } from "@/lib/unicommerce/client";
 import { decryptSecret, encryptSecret } from "@/lib/unicommerce/crypto";
@@ -93,6 +94,7 @@ const brandSubscriptionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Active subscription not found",
                 });
+            await requireOwnBrand(ctx, existingSubscription.brandId, "brands.changeBrandSubscription");
 
             if (!existingSubscription.isActive)
                 throw new TRPCError({
@@ -151,6 +153,7 @@ const brandSubscriptionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Subscription not found",
                 });
+            await requireOwnBrand(ctx, existingSubscription.brandId, "brands.cancelBrandSubscription");
 
             try {
                 await razorpay.subscriptions.cancel(existingSubscription.id);

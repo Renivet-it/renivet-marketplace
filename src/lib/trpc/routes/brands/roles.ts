@@ -4,6 +4,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { generateBrandRoleSlug } from "@/lib/utils";
 import {
@@ -27,7 +28,7 @@ export const rolesRouter = createTRPCRouter({
             })
         )
         .use(isTRPCAuth(BitFieldBrandPermission.MANAGE_ROLES, "all", "brand"))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             const { id } = input;
 
             const existingBrand = await brandCache.get(id);
@@ -36,6 +37,7 @@ export const rolesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+            await requireOwnBrand(ctx, existingBrand.id, "roles.getRoles");
 
             return existingBrand.roles;
         }),
@@ -56,6 +58,7 @@ export const rolesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+            await requireOwnBrand(ctx, existingBrand.id, "roles.createRole");
 
             const slug = generateBrandRoleSlug(name, brandId);
 
@@ -181,6 +184,8 @@ export const rolesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+
+            await requireOwnBrand(ctx, existingBrand.id, "roles.reorderRoles");
 
             if (existingBrand.roles.length !== roles.length)
                 throw new TRPCError({
