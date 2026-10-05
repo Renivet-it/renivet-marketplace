@@ -10,6 +10,11 @@ import {
     orderShipments,
     rtoDispositions,
 } from "@/lib/db/schema";
+import {
+    checkRtoAttributionWritable,
+    recordRtoAttributionAudit,
+    rtoFaultOwnerChanges,
+} from "@/lib/finance/rto-attribution";
 import { auditEntityChange } from "@/lib/monitoring-sla/audit";
 import { executeOrderCancellation } from "@/lib/support/cancel-order-helper";
 import { userCache } from "@/lib/redis/methods";
@@ -227,9 +232,28 @@ async function saveRtoDisposition(formData: FormData) {
     const actorId = await assertOrderOpsAccess(true);
     const orderId = asText(formData.get("orderId"));
     if (!orderId) finish("Missing order ID");
+    const faultOwner = asText(formData.get("faultOwner")) ?? "unknown";
+    const notes = asText(formData.get("notes"));
+    const existing = await db.query.rtoDispositions.findFirst({
+        where: eq(rtoDispositions.orderId, orderId),
+    });
+    const faultOwnerChanges = rtoFaultOwnerChanges({
+        existing,
+        nextFaultOwner: faultOwner,
+    });
+    if (faultOwnerChanges) {
+        const check = await checkRtoAttributionWritable({
+            orderId,
+            rtoId: existing?.id,
+            previousFaultOwner: existing?.faultOwner,
+            nextFaultOwner: faultOwner,
+            notes,
+        });
+        if (!check.ok) finish(check.message);
+    }
     const now = new Date();
 
-    await db
+    const [disposition] = await db
         .insert(rtoDispositions)
         .values({
             orderId,
@@ -260,7 +284,20 @@ async function saveRtoDisposition(formData: FormData) {
                 notes: asText(formData.get("notes")),
                 updatedAt: now,
             },
+        })
+        .returning({ id: rtoDispositions.id });
+
+    if (faultOwnerChanges) {
+        await recordRtoAttributionAudit({
+            actorId,
+            rtoId: disposition.id,
+            reason: notes,
+            before: existing
+                ? { faultOwner: existing.faultOwner, notes: existing.notes }
+                : null,
+            after: { faultOwner, notes: notes ?? null },
         });
+    }
 
     finish("RTO disposition saved");
 }
