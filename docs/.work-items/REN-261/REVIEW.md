@@ -5,7 +5,7 @@
 REVIEW_PASSED. The implementation has NO_DRIFT against the approved REN-261
 contract. Comparison base is `origin/master` merge-base
 `63bafa82fbf26e814179e6b908f3fcf67cf96e89`; head is
-`0ed45d07276531dfaeb0527179941672ae490bd2`. Governance re-entry is not required.
+`d506c8191fa52a62fb363c2da0a16668caf93121`. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
@@ -22,14 +22,14 @@ present.
 - `REQ-261-001`: PASS. `rankProductIdsByCategoryAndSubcategory` in `src/lib/catalog/merchandising.ts` ranks Women, Men, Home and Living, Beauty and Personal Care, then unknown categories; the brand route opts into it only for the Bamboology slug.
 - `REQ-261-002`: PASS. The helper gives Western Wear and Women Sports and Active Wear precedence in Women, Topwear and Men Sports and Active Wear precedence in Men, and ranks each gender's innerwear/sleepwear last within that category.
 - `REQ-261-003`: PASS. The helper returns every subcategory ID, preserves input order for ties, and `StorefrontCatalogPage` disables priority for search, explicit sort, category, subcategory, and product-type controls.
-- `REQ-261-004`: PASS. `src/app/(home)/festive-home/page.tsx` restores the desktop heritage rail and three approved editorial cards after the hero and before the festive product carousel; desktop text overlays are suppressed because the artwork contains the copy, while mobile retains its existing overlay treatment. `/festive` remains unchanged.
+- `REQ-261-004`: PASS. `src/app/(home)/festive-home/page.tsx` restores the desktop sandstone corner-artwork band and three approved editorial cards after the hero and before the festive product carousel; desktop text overlays are suppressed because the artwork contains the copy, while mobile retains its existing overlay treatment. `/festive` remains unchanged.
 
 ## Scenario Reconciliation
 
 - `SCN-261-001`: PASS. The route-to-catalog path derives and passes the ordered subcategory IDs to the existing product query.
 - `SCN-261-002`: PASS. Unknown metadata receives a fallback rank and stable input-index tie-breaker.
 - `SCN-261-003`: PASS. The effective priority guard excludes search and explicit filters/sorts; the route only supplies the opt-in for Bamboology.
-- `SCN-261-004`: PASS. Festive-home includes the desktop editorial rail and the three cards before the product carousel, with responsive text behavior preserved; the catalogue route has no homepage section.
+- `SCN-261-004`: PASS. Festive-home includes the desktop corner-artwork band and the three cards before the product carousel, with responsive text behavior preserved; the catalogue route has no homepage section.
 
 ## Invariant Reconciliation
 
