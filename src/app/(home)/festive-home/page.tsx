@@ -308,14 +308,22 @@ export default async function FestiveHomePage() {
 
                 <div
                     data-festive-section="editorial-transition"
-                    className="relative hidden h-[130px] bg-[#fff9eb] md:block"
+                    className="relative hidden h-[130px] overflow-hidden bg-[#fff9eb] md:block"
                 >
                     <Image
-                        src={`${assetRoot}/heritage-rail.png`}
+                        src={`${assetRoot}/sandstone-arch.png`}
                         alt=""
-                        width={1600}
-                        height={120}
-                        className="h-full w-full object-cover py-5"
+                        width={180}
+                        height={100}
+                        className="absolute bottom-0 left-0 w-[170px] -scale-x-100"
+                        aria-hidden
+                    />
+                    <Image
+                        src={`${assetRoot}/sandstone-arch.png`}
+                        alt=""
+                        width={180}
+                        height={100}
+                        className="absolute bottom-0 right-0 w-[170px]"
                         aria-hidden
                     />
                 </div>

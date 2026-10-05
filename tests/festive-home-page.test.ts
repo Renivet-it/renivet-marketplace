@@ -181,9 +181,9 @@ test("festive home leaves breathing room above the editorial corner artwork", as
     expect(source).toContain("<FestiveEditorialCarousel />");
     expect(source).toContain('data-festive-section="editorial-transition"');
     expect(source).toContain(
-        'className="relative hidden h-[130px] bg-[#fff9eb] md:block"'
+        'className="relative hidden h-[130px] overflow-hidden bg-[#fff9eb] md:block"'
     );
-    expect(source).toContain("src={`${assetRoot}/heritage-rail.png`}");
+    expect(source).toContain("src={`${assetRoot}/sandstone-arch.png`}");
 });
 
 test.skip("legacy festive home stacks portrait editorial cards with imagery on mobile", async () => {
