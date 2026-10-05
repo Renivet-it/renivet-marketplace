@@ -3,7 +3,7 @@ task:
   id: REN-260
   title: "REN-253-C0-R3 ? Close H-1, manual payout, and F-1/N-1 race gaps"
   source: linear
-  branch: ayanganguly333/ren-253-c0-payout-containment
+  branch: ayanganguly333/ren-260-ren-253-c0-r3-close-h-1-manual-payout-f-1n-1-race
   status: READY_FOR_DEV
   linear:
     parent: REN-253
