@@ -48,7 +48,7 @@ NO_DRIFT. Changes remain within the approved no-schema security checklist. The u
 - TEXP-254-003: PARTIAL — invite and return/replace guards are statically covered; database-backed concurrency and state-race tests remain open.
 - TEXP-254-004: PASS — direct email/WhatsApp action guards are covered.
 - TEXP-254-005: PARTIAL — REN-172 is not duplicated, but its 51-procedure evidence is unavailable.
-- TEXP-254-006: PARTIAL — implementation review cannot establish staging snapshot, rollback, cache flush, or monitoring evidence.
+- TEXP-254-006: PARTIAL — Ayan reports that Akshay approved the release evidence package: database snapshot, rollback target, Redis `user:*` flush, and monitoring window. The operational artifacts themselves are external to this repository review.
 
 ## Findings
 
@@ -74,10 +74,10 @@ NO_DRIFT. Changes remain within the approved no-schema security checklist. The u
 
 - Severity: MEDIUM
 - Category: operability
-- Description: Release safety evidence is not present in the implementation branch.
+- Description: Release safety evidence is reported by Ayan as approved by Akshay, but the operational artifacts are not present in the implementation branch.
 - Evidence: REQ-254-009, FLOW-254-003, and TEXP-254-006; no Neon snapshot, rollback target, Redis `user:*` flush record, or monitoring note is included.
-- Impact: Deployment and rollback readiness cannot be confirmed from Git alone.
-- Recommendation: Ayan records the release evidence and Akshay records the release decision before closure.
+- Impact: The reported approval is recorded, but deployment and rollback readiness cannot be independently confirmed from Git alone.
+- Recommendation: Preserve the external operational records with the release ticket.
 
 ## Decisions Requiring Attention
 
@@ -85,4 +85,4 @@ None; the unresolved items are approved dependencies/evidence gates, not new pol
 
 ## Final Recommendation
 
-Keep REN-254 open for REV-001 through REV-003. The code-level guard implementation can proceed to staging validation, but closure and release approval require REN-172 evidence plus the defined safety evidence package.
+Keep REN-254 open for REV-001 and REV-002. The code-level guard implementation can proceed to staging validation, but closure still requires REN-172 evidence and environment-backed race validation.
