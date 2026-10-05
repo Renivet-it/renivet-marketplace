@@ -3,6 +3,7 @@ import {
     buildFestiveCatalogOrdering,
     getFestiveCatalogLimit,
     rankFestiveProductIds,
+    rankProductIdsByCategoryAndSubcategory,
     rankProductIdsBySubcategory,
 } from "./merchandising";
 
@@ -224,5 +225,54 @@ describe("catalog merchandising", () => {
                 ["Men", "Women", "Accessories", "Bathwear", "Innerwear"]
             )
         ).toEqual(["men", "women", "accessories", "bath", "inner"]);
+    });
+
+    test("orders Bamboology subcategories by category and merchandising priority", () => {
+        expect(
+            rankProductIdsByCategoryAndSubcategory(
+                [
+                    { id: "beauty", categoryId: "beauty", name: "Skincare" },
+                    {
+                        id: "men-inner",
+                        categoryId: "men",
+                        name: "Innerwear and Sleepwear",
+                    },
+                    {
+                        id: "women-western",
+                        categoryId: "women",
+                        name: "Western Wear",
+                    },
+                    { id: "home", categoryId: "home", name: "Home Decor" },
+                    { id: "men-top", categoryId: "men", name: "Topwear" },
+                    {
+                        id: "women-inner",
+                        categoryId: "women",
+                        name: "Lingerie and Sleepwear",
+                    },
+                    {
+                        id: "women-active",
+                        categoryId: "women",
+                        name: "Women Sports and Active Wear",
+                    },
+                    { id: "other", categoryId: "other", name: "Other" },
+                ],
+                [
+                    { id: "women", name: "Women" },
+                    { id: "men", name: "Men" },
+                    { id: "home", name: "Home and Living" },
+                    { id: "beauty", name: "Beauty and Personal Care" },
+                    { id: "other", name: "Kids" },
+                ]
+            )
+        ).toEqual([
+            "women-western",
+            "women-active",
+            "women-inner",
+            "men-top",
+            "men-inner",
+            "home",
+            "beauty",
+            "other",
+        ]);
     });
 });

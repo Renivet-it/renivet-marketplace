@@ -1,0 +1,238 @@
+schema_version: "1.0"
+task:
+    id: REN-261
+    title: "Order Bamboology brand shop products by category and subcategory"
+    source: linear
+    branch: ayanganguly333/ren-261-order-bamboology-brand-shop-products-by-category-and
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-261/order-bamboology-brand-shop-products-by-category-and-subcategory
+        priority: High
+        status: Backlog
+        assignee: Ayan Ganguly
+        linear_branch: ayanganguly333/ren-261-order-bamboology-brand-shop-products-by-category-and
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - "Contained default storefront ordering change for one brand route."
+        - "Uses existing category metadata and query ordering; no schema or production data changes."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        [
+            REN-261 Linear issue,
+            Bamboology brand route,
+            StorefrontCatalogPage,
+            product query ordering,
+            category/subcategory cache shapes,
+            existing merchandising tests,
+        ]
+    excluded_areas:
+        [
+            database schema,
+            migrations,
+            product writes,
+            inventory,
+            checkout,
+            payments,
+            authorization,
+            analytics,
+            other brand routes,
+            deployment,
+            merge,
+        ]
+    dependencies: [DEP-261-001]
+    integrations: []
+    security_boundaries: []
+    state_transitions:
+        [unfiltered_default_catalogue, filtered_or_sorted_catalogue]
+    related_tests: [TEXP-261-001, TEXP-261-002, TEXP-261-003]
+    uncertainties:
+        [
+            "The business wording groups innerwear at the end of the women/men fashion sequence; this contract interprets that as last within Women and last within Men while preserving the top-level category order.",
+        ]
+requirements:
+    - {
+          id: REQ-261-001,
+          description: "Order Bamboology default products by Women, Men, Home and Living, Beauty and Personal Care, then remaining categories.",
+          type: behavior,
+      }
+    - {
+          id: REQ-261-002,
+          description: "Prioritize Western Wear and Women Sports and Active Wear for Women, and Topwear and Men Sports and Active Wear for Men, with requested innerwear subcategories last within their gender.",
+          type: behavior,
+      }
+    - {
+          id: REQ-261-003,
+          description: "Preserve all existing products, deterministic ties, explicit shopper controls, and non-Bamboology behavior.",
+          type: compatibility,
+      }
+    - {
+          id: REQ-261-004,
+          description: "Restore the three editorial cards on /festive-home after the hero and before the festive product carousel; keep the /festive catalogue route unchanged.",
+          type: behavior,
+      }
+scenarios:
+    - {
+          id: SCN-261-001,
+          description: "An unfiltered Bamboology shop request returns products in the configured category and subcategory precedence.",
+          requirement_ids: [REQ-261-001, REQ-261-002],
+      }
+    - {
+          id: SCN-261-002,
+          description: "Products with unknown or unprioritized metadata remain in the result after prioritized products with stable fallback ordering.",
+          requirement_ids: [REQ-261-003],
+      }
+    - {
+          id: SCN-261-003,
+          description: "Search, explicit sorting, filters, pagination, and other brands do not receive the Bamboology default priority.",
+          requirement_ids: [REQ-261-003],
+      }
+    - {
+          id: SCN-261-004,
+          description: "The festive home route shows Festive dressing, Gifts with a story, and Home for the season cards after its hero and before the festive product carousel.",
+          requirement_ids: [REQ-261-004],
+      }
+invariants:
+    - {
+          id: INV-261-001,
+          description: "Ranking is a permutation of the input product IDs; no product is dropped or duplicated.",
+      }
+    - {
+          id: INV-261-002,
+          description: "The Bamboology priority is inactive for explicit shopper controls and other brands.",
+      }
+flows:
+    - {
+          id: FLOW-261-001,
+          description: "Brand route loads metadata, derives prioritized subcategory IDs, and passes them to the existing catalogue query; query applies priority before its existing tie-breakers.",
+          state_transitions:
+              [unfiltered_default_catalogue, filtered_or_sorted_catalogue],
+      }
+dependencies:
+    - {
+          id: DEP-261-001,
+          name: existing catalogue merchandising hook,
+          purpose: "Reuse the current prioritizedSubcategoryIds query path",
+          description: "The query already supports a CASE-based priority list and disables it when search or an explicit sort is active.",
+          status: resolved,
+      }
+integrations: []
+security_boundaries: []
+personas:
+    - {
+          id: PER-261-001,
+          role: storefront_shopper,
+          applicability: "Sees the requested ordering while browsing Bamboology.",
+      }
+business_rules:
+    - {
+          id: BR-261-001,
+          description: "Merchandising priority must not hide products or override explicit shopper choices.",
+      }
+decisions:
+    - {
+          id: DEC-261-001,
+          question: "How should innerwear wording be interpreted?",
+          class: AUTO_DECIDE,
+          status: resolved,
+          recommendation: "Place each gender's innerwear/sleepwear subcategory last within that gender, preserving the explicit Women > Men top-level order.",
+          basis: "This is the least surprising interpretation consistent with the requested category hierarchy and existing query model.",
+          confidence: medium,
+          consequence: low,
+          human_confirmation_required: false,
+      }
+test_expectations:
+    - {
+          id: TEXP-261-001,
+          category: unit,
+          classification: REQUIRED,
+          reason: "Prove category and subcategory rank ordering plus permutation behavior.",
+          scenarios: [SCN-261-001, SCN-261-002],
+      }
+    - {
+          id: TEXP-261-002,
+          category: regression,
+          classification: REQUIRED,
+          reason: "Prove the Bamboology route opts in without affecting other brands.",
+          scenarios: [SCN-261-001, SCN-261-003],
+      }
+    - {
+          id: TEXP-261-003,
+          category: integration,
+          classification: REQUIRED,
+          reason: "Prove the existing catalog query still disables priority for search and explicit sorting.",
+          scenarios: [SCN-261-003],
+      }
+    - {
+          id: TEXP-261-004,
+          category: regression,
+          classification: REQUIRED,
+          reason: "Prove festive-home renders all three restored editorial cards before the product carousel and keeps the catalogue route free of the homepage section.",
+          scenarios: [SCN-261-004],
+      }
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    required_categories: []
+    categories_reviewed: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Renivet engineering governance — L1 auto-approval"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-261-001, scenario_ids: [SCN-261-001] }
+        - { requirement_id: REQ-261-002, scenario_ids: [SCN-261-001] }
+        - {
+              requirement_id: REQ-261-003,
+              scenario_ids: [SCN-261-002, SCN-261-003],
+          }
+        - { requirement_id: REQ-261-004, scenario_ids: [SCN-261-004] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-261-001, invariant_ids: [INV-261-001] }
+        - { scenario_id: SCN-261-002, invariant_ids: [INV-261-001] }
+        - { scenario_id: SCN-261-003, invariant_ids: [INV-261-002] }
+        - { scenario_id: SCN-261-004, invariant_ids: [INV-261-002] }
+    scenario_to_test_expectations:
+        - {
+              scenario_id: SCN-261-001,
+              test_expectation_ids: [TEXP-261-001, TEXP-261-002],
+          }
+        - { scenario_id: SCN-261-002, test_expectation_ids: [TEXP-261-001] }
+        - {
+              scenario_id: SCN-261-003,
+              test_expectation_ids: [TEXP-261-002, TEXP-261-003],
+          }
+        - { scenario_id: SCN-261-004, test_expectation_ids: [TEXP-261-004] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: origin/master
+    base_commit: "63bafa82fbf26e814179e6b908f3fcf67cf96e89"
+    head_commit: "d506c8191fa52a62fb363c2da0a16668caf93121"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: NOT_APPLICABLE
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - "Compared the approved REN-261 contract with the origin/master...HEAD diff from 63bafa82fbf26e814179e6b908f3fcf67cf96e89 to d506c8191fa52a62fb363c2da0a16668caf93121."
+        - "Reconciled all REQ, SCN, INV, FLOW, DEP, DEC, and TEXP identifiers, including the restored festive-home editorial cards, against changed symbols and static test coverage."
+    governance_reentry_required: false
