@@ -4,7 +4,7 @@ task:
     title: "[RD-1] Slice 1 — Order & Payment Truth (design preparation; R4 design gate first)"
     source: linear
     branch: ayanganguly333/ren-255-rd-1-slice-1-order-payment-truth-design-preparation-r4
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-255/rd-1-slice-1-order-and-payment-truth-design-preparation-r4-design-gate
         priority: Medium

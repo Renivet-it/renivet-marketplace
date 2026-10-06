@@ -66,6 +66,7 @@ export const orderSchema = z.object({
         })
         .min(1, "Payment ID is invalid")
         .nullable(),
+    providerOrderId: z.string().min(1).nullable().optional(),
     paymentStatus: z.enum([
         "pending",
         "paid",

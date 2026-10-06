@@ -1117,6 +1117,13 @@ class OrderQuery {
             .where(eq(orders.paymentId, paymentId));
     }
 
+    async getOrderIdsByProviderOrderId(providerOrderId: string) {
+        return db
+            .select({ id: orders.id })
+            .from(orders)
+            .where(eq(orders.providerOrderId, providerOrderId));
+    }
+
     async getOrderByAwb(awb: string) {
         const shipment = await db.query.orderShipments.findFirst({
             where: or(
