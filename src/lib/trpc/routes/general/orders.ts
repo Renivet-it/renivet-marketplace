@@ -1736,20 +1736,10 @@ export const ordersRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ input, ctx }) => {
-            try {
-                const { queries } = ctx;
-
-                const deletedOrder = await queries.orders.deleteOrder(
-                    input.orderId
-                );
-                return deletedOrder;
-            } catch (error) {
-                throw new Error(
-                    error instanceof Error
-                        ? error.message
-                        : `Failed to delete order ${input.orderId}`
-                );
-            }
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Order deletion is not available through this API.",
+            });
         }),
     deleteItemFromCart: protectedProcedure
         .input(
@@ -1763,7 +1753,7 @@ export const ordersRouter = createTRPCRouter({
 
                 const deleteItemFromCart =
                     await queries.userCarts.dropActiveItemsFromCart(
-                        input.userId
+                        ctx.user.id
                     );
                 return deleteItemFromCart;
             } catch (error) {

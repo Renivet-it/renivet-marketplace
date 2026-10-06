@@ -1,5 +1,5 @@
 import { env } from "@/../env";
-import { BitFieldBrandPermission } from "@/config/permissions";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
 import { createClientWarehouse } from "@/lib/delhivery/warehouse";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
@@ -18,6 +18,27 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+function assertBrandConfidentialAccess(ctx: any, brand: { ownerId: string }) {
+    const isSiteAdmin = ctx.user.sitePermissions & BitFieldSitePermission.ADMINISTRATOR;
+    if (!isSiteAdmin && brand.ownerId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Brand access denied." });
+    }
+}
+
+function changesVerifiedIdentity(
+    current: Record<string, unknown>,
+    next: Record<string, unknown>
+) {
+    return [
+        "bankName",
+        "bankAccountHolderName",
+        "bankAccountNumber",
+        "bankIfscCode",
+        "pan",
+        "gstin",
+    ].some((field) => current[field] !== next[field]);
+}
+
 export const confidentialsRouter = createTRPCRouter({
     createConfidential: protectedProcedure
         .input(createBrandConfidentialSchema)
@@ -32,6 +53,7 @@ export const confidentialsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+            assertBrandConfidentialAccess(ctx, existingBrand);
 
             const existingBrandConfidential =
                 await queries.brandConfidentials.getBrandConfidential(id);
@@ -173,8 +195,11 @@ export const confidentialsRouter = createTRPCRouter({
             const { queries } = ctx;
             const { id, values } = input;
 
-            const existingBrandConfidential =
-                await queries.brandConfidentials.getBrandConfidential(id);
+            const confidential = await queries.brandConfidentials.getBrandConfidential(id);
+            if (!confidential) throw new TRPCError({ code: "NOT_FOUND", message: "Confidential not found" });
+            assertBrandConfidentialAccess(ctx, confidential.brand);
+
+            const existingBrandConfidential = confidential;
             if (!existingBrandConfidential)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -220,15 +245,29 @@ export const confidentialsRouter = createTRPCRouter({
             const existingBrandConfidential =
                 await queries.brandConfidentials.getBrandConfidential(id);
             if (!existingBrandConfidential)
-                throw new TRPCError({
+                    throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Confidential not found",
-                });
+                    });
+            assertBrandConfidentialAccess(ctx, existingBrandConfidential.brand);
+
+            const resetVerification = changesVerifiedIdentity(existingBrandConfidential, values);
 
             // Update without changing verification status
             const [data] = await Promise.all([
                 queries.brandConfidentials.updateBrandConfidential(id, values),
-                brandCache.remove(id),
+                resetVerification
+                    ? Promise.all([
+                        queries.brandConfidentials.updateBrandConfidentialStatus(id, { status: "pending" }),
+                        queries.brands.updateBrandConfidentialStatus({
+                            id: existingBrandConfidential.brandId,
+                            confidentialVerificationStatus: "pending",
+                            confidentialVerificationRejectedAt: null,
+                            confidentialVerificationRejectedReason: null,
+                        }),
+                    ])
+                    : Promise.resolve(),
+                brandCache.remove(existingBrandConfidential.brandId),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);
 

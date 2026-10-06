@@ -1,5 +1,5 @@
 import { utApi } from "@/app/api/uploadthing/core";
-import { BitFieldBrandPermission } from "@/config/permissions";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
 import { brandUnicommerceIntegrations, brands } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { brandCache } from "@/lib/redis/methods";
@@ -8,6 +8,7 @@ import {
     isTRPCAuth,
     protectedProcedure,
     publicProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { UnicommerceClient } from "@/lib/unicommerce/client";
 import { decryptSecret, encryptSecret } from "@/lib/unicommerce/crypto";
@@ -93,6 +94,7 @@ const brandSubscriptionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Active subscription not found",
                 });
+            await requireOwnBrand(ctx, existingSubscription.brandId, "brands.changeBrandSubscription");
 
             if (!existingSubscription.isActive)
                 throw new TRPCError({
@@ -151,6 +153,7 @@ const brandSubscriptionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Subscription not found",
                 });
+            await requireOwnBrand(ctx, existingSubscription.brandId, "brands.cancelBrandSubscription");
 
             try {
                 await razorpay.subscriptions.cancel(existingSubscription.id);
@@ -596,6 +599,11 @@ export const brandsRouter = createTRPCRouter({
     getBrandWithConfidential: protectedProcedure
   .input(z.object({ brandId: z.string() }))
   .query(async ({ ctx, input }) => {
+    const brand = await brandCache.get(input.brandId);
+    const isSiteViewer = (ctx.user.sitePermissions & BitFieldSitePermission.VIEW_BRANDS) !== 0;
+    if (!brand || (!isSiteViewer && brand.ownerId !== ctx.user.id)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Brand access denied." });
+    }
     return await ctx.db.query.brands.findFirst({
       where: eq(brands.id, input.brandId),
       with: {

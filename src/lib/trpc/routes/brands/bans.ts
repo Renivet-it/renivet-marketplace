@@ -6,6 +6,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -21,6 +22,7 @@ export const bansRouter = createTRPCRouter({
             })
         )
         .query(async ({ input, ctx }) => {
+            await requireOwnBrand(ctx, input.brandId, "bans.getBannedMembers");
             const { queries } = ctx;
             const { brandId, limit, page, search } = input;
 

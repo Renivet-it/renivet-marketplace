@@ -6,6 +6,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { createBrandInviteSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -21,6 +22,7 @@ export const invitesRouter = createTRPCRouter({
         .query(async ({ input, ctx }) => {
             const { brandId } = input;
             const { queries } = ctx;
+            await requireOwnBrand(ctx, brandId, "invites.getInvites");
 
             const existingInvites =
                 await queries.brandInvites.getBrandInvites(brandId);
@@ -49,6 +51,7 @@ export const invitesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Invite not found",
                 });
+            await requireOwnBrand(ctx, existingInvite.brand.id, "invites.getInvite");
 
             return existingInvite;
         }),

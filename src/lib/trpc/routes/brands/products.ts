@@ -35,6 +35,7 @@ import {
     isTRPCAuth,
     protectedProcedure,
     publicProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { generateProductSlug, generateSKU } from "@/lib/utils";
 import {
@@ -544,7 +545,6 @@ export const productsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
-
             const isAdmin = hasPermission(user.sitePermissions, [
                 BitFieldSitePermission.ADMINISTRATOR,
             ]);
@@ -1414,6 +1414,8 @@ export const productsRouter = createTRPCRouter({
                     message: "Product not found",
                 });
 
+            await requireOwnBrand(ctx, existingProduct.brand.id, "products.updateProductPublishStatus");
+
             // if (existingProduct.brand.id !== user.brand?.id)
             //     throw new TRPCError({
             //         code: "FORBIDDEN",
@@ -1688,6 +1690,7 @@ export const productsRouter = createTRPCRouter({
                     message: "Product not found",
                 });
             }
+            await requireOwnBrand(ctx, existingProduct.brand.id, "products.updateCatalogQcReview");
 
             const updated = await db
                 .update(products)
@@ -1771,6 +1774,7 @@ export const productsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
+            await requireOwnBrand(ctx, existingProduct.brand.id, "products.createProductJourney");
 
             // if (existingProduct.brand.id !== user.brand?.id)
             //     throw new TRPCError({
@@ -1941,6 +1945,16 @@ export const productsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Product journey not found",
                 });
+            const journeyProduct = await queries.products.getProduct({
+                productId: existingProductJourney.productId,
+                isDeleted: false,
+            });
+            if (!journeyProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+            await requireOwnBrand(ctx, journeyProduct.brand.id, "products.updateProductJourney");
 
             const data = await queries.products.updateProductJourney(
                 id,
@@ -1965,6 +1979,7 @@ export const productsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
+            await requireOwnBrand(ctx, existingProduct.brand.id, "products.createProductValue");
 
             if (existingProduct.values)
                 throw new TRPCError({
@@ -1996,6 +2011,16 @@ export const productsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Product value not found",
                 });
+            const valueProduct = await queries.products.getProduct({
+                productId: existingProductValue.productId,
+                isDeleted: false,
+            });
+            if (!valueProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+            await requireOwnBrand(ctx, valueProduct.brand.id, "products.updateProductValue");
 
             const data = await queries.products.updateProductValue(id, values);
             return data;

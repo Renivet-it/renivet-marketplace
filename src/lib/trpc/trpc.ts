@@ -1,4 +1,5 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
@@ -134,7 +135,7 @@ export const isTRPCAuth = (
     permType?: "brand" | "site",
     siteOverridePermission?: number
 ) =>
-    isAuth.unstable_pipe(({ ctx, next }) => {
+    isAuth.unstable_pipe(async ({ ctx, input, next }) => {
         const { user } = ctx;
 
         const isAdmin = hasPermission(user.sitePermissions, [
@@ -162,8 +163,48 @@ export const isTRPCAuth = (
             });
         }
 
+        const targetBrandId =
+            typeof input === "object" &&
+            input !== null &&
+            "brandId" in input &&
+            typeof input.brandId === "string"
+                ? input.brandId
+                : null;
+
+        if (permType === "brand" && targetBrandId) {
+            await requireOwnBrand(ctx, targetBrandId, "brand-input");
+        }
+
         return next({ ctx });
     });
+
+export async function requireOwnBrand(
+    ctx: Context,
+    targetBrandId: string,
+    procedureName: string
+) {
+    const isSiteAdmin = hasPermission(ctx.user.sitePermissions, [
+        BitFieldSitePermission.ADMINISTRATOR,
+    ]);
+
+    if (isSiteAdmin || ctx.user.brand?.id === targetBrandId) return;
+
+    await createOperationalAlert({
+        actorId: ctx.user.id,
+        entityType: "brand",
+        entityId: targetBrandId,
+        title: "Cross-brand authorization rejection",
+        message: `Rejected ${procedureName} for a brand outside the caller's own brand.`,
+        severity: "critical",
+        type: "cross_brand_rejection",
+        dedupeKey: `cross_brand_rejection:${procedureName}:${ctx.user.id}:${targetBrandId}`,
+    }).catch(() => undefined);
+
+    throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Brand access denied.",
+    });
+}
 
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);

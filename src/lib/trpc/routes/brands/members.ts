@@ -6,6 +6,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import {
@@ -44,6 +45,7 @@ export const memberRolesRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+            await requireOwnBrand(ctx, existingBrand.id, "members.roles.updateRoles");
 
             const existingRoles = existingBrand.roles.filter((role) =>
                 roleIds.includes(role.id)

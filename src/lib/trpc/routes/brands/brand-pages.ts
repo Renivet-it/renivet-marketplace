@@ -4,6 +4,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import {
     createBrandPageSectionProductSchema,
@@ -33,6 +34,7 @@ const pageSectionProductsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand page section not found",
                 });
+            await requireOwnBrand(ctx, existingBrandPageSection.brandId, "brandPages.createBrandPageSectionProduct");
 
             const existingProduct = await queries.products.getProduct({
                 productId,
@@ -89,6 +91,7 @@ const pageSectionProductsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand page section not found",
                 });
+            await requireOwnBrand(ctx, existingBrandPageSection.brandId, "brandPages.updateBrandPageSectionProduct");
 
             const data = await Promise.all([
                 queries.brandPageSectionProducts.updateBrandPageSectionProduct(
@@ -131,6 +134,7 @@ const pageSectionProductsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand page section not found",
                 });
+            await requireOwnBrand(ctx, existingBrandPageSection.brandId, "brandPages.deleteBrandPageSectionProduct");
 
             const data = await Promise.all([
                 queries.brandPageSectionProducts.deleteBrandPageSectionProduct(
@@ -160,6 +164,7 @@ export const pageSectionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+            await requireOwnBrand(ctx, brandId, "brandPages.createBrandPageSection");
 
             const data = await Promise.all([
                 queries.brandPageSections.createBrandPageSection(input),
@@ -188,6 +193,7 @@ export const pageSectionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand page section not found",
                 });
+            await requireOwnBrand(ctx, existingBrandPageSection.brandId, "brandPages.updateBrandPageSection");
 
             const data = await Promise.all([
                 queries.brandPageSections.updateBrandPageSection(id, values),
@@ -215,6 +221,7 @@ export const pageSectionsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand page section not found",
                 });
+            await requireOwnBrand(ctx, existingBrandPageSection.brandId, "brandPages.deleteBrandPageSection");
 
             const data = await Promise.all([
                 queries.brandPageSections.deleteBrandPageSection(id),

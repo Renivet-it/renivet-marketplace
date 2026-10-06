@@ -14,6 +14,7 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    requireOwnBrand,
 } from "@/lib/trpc/trpc";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -31,7 +32,8 @@ export const analyticsRouter = createTRPCRouter({
             })
         )
         .use(isTRPCAuth(BitFieldBrandPermission.VIEW_ANALYTICS, "all", "brand"))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await requireOwnBrand(ctx, input.brandId, "analytics.getOverview");
             return analytics.retrieveByRange(input);
         }),
 
@@ -45,7 +47,8 @@ export const analyticsRouter = createTRPCRouter({
                 nDays: z.number().int().positive(),
             })
         )
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await requireOwnBrand(ctx, input.brandId, "analytics.getMonthlySales");
             const { brandId, nDays } = input;
 
             const since = new Date();
@@ -98,7 +101,8 @@ export const analyticsRouter = createTRPCRouter({
     // ------------------------------------------------------
     getMonthlySales: protectedProcedure
         .input(z.object({ brandId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await requireOwnBrand(ctx, input.brandId, "analytics.getStatusBreakdown");
             const rows = await db.execute(sql`
                 SELECT 
                     DATE_TRUNC('month', o.created_at) AS month,
@@ -128,7 +132,8 @@ export const analyticsRouter = createTRPCRouter({
     // ------------------------------------------------------
     getStatusBreakdown: protectedProcedure
         .input(z.object({ brandId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
+            await requireOwnBrand(ctx, input.brandId, "analytics.getTopProducts");
             const result = await db.execute(sql`
                 SELECT 
                     o.status AS status,

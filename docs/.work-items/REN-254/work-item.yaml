@@ -1,0 +1,164 @@
+schema_version: "1.0"
+task:
+    id: REN-254
+    title: "[C1] Security Guard Hardening — Stage 3A ten-item no-schema checklist"
+    source: linear
+    branch: ayanganguly333/ren-254-c1-security-guard-hardening
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-254/c1-security-guard-hardening-stage-3a-ten-item-no-schema-checklist
+        priority: High
+        status: Todo
+        assignee: Ayan Ganguly
+        project: "Security & Compliance Audit"
+        linear_branch: ayanganguly333/ren-254-c1-security-guard-hardening
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The task changes authorization, tenant isolation, PII access, and destructive operations."
+        - "User deletion and external side-effect ordering affect business history and integrations."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear REN-254 and REN-172, permissions and roles, confidential brand reads/writes, order deletion, invite acceptance, return/replace routes, bulk messaging, Clerk deletion webhook, schema cascade boundaries, existing security tests]
+    excluded_areas: [REN-172 implementation, permission-model redesign, new schema/audit tables, H-07/H-08 fast follow, legal retention-period decision, unrelated cleanup]
+    dependencies: [DEP-254-001, DEP-254-002, DEP-254-003]
+    integrations: [INT-254-001, INT-254-002]
+    security_boundaries: [SEC-254-001, SEC-254-002, SEC-254-003]
+    state_transitions: [authorized, forbidden, identity_anonymized, business_history_preserved, release_evidence_recorded]
+    related_tests: [TEXP-254-001, TEXP-254-002, TEXP-254-003, TEXP-254-004, TEXP-254-005, TEXP-254-006]
+    uncertainties: ["Exact return/replace current-status transition matrix must be confirmed from the schema and existing callers during implementation planning.", "Invite-use enforcement must be made concurrency-safe without introducing a schema change.", "REN-172 implementation evidence is not yet available because REN-172 remains Todo."]
+requirements:
+    - { id: REQ-254-001, description: "Prevent brand-role writes from granting site-level permissions.", type: security }
+    - { id: REQ-254-002, description: "Enforce ownership and verification-state reset for confidential identity changes.", type: security }
+    - { id: REQ-254-003, description: "Protect confidential brand reads with ownership or site-view authorization.", type: security }
+    - { id: REQ-254-004, description: "Deny unsafe order deletion and scope cart deletion to the authenticated user.", type: safety }
+    - { id: REQ-254-005, description: "Verify REN-172 evidence without duplicating its implementation.", type: boundary }
+    - { id: REQ-254-006, description: "Derive invite identity from the authenticated session and validate brand/code/expiry.", type: security }
+    - { id: REQ-254-007, description: "Enforce ownership, manage permission, and status preconditions on return/replace mutations.", type: security }
+    - { id: REQ-254-008, description: "Protect bulk-messaging actions with session and permission checks.", type: security }
+    - { id: REQ-254-009, description: "Record release safety evidence including snapshot, rollback target, and cache flush.", type: operability }
+    - { id: REQ-254-010, description: "Preserve business history when a Clerk user is deleted by anonymizing or soft-deleting identity data.", type: privacy }
+scenarios:
+    - { id: SCN-254-001, description: "Brand role cannot gain site permissions.", requirement_ids: [REQ-254-001] }
+    - { id: SCN-254-002, description: "Wrong-brand confidential access is denied before data or external side effects.", requirement_ids: [REQ-254-002, REQ-254-003] }
+    - { id: SCN-254-003, description: "Order deletion is denied and cart deletion uses session identity.", requirement_ids: [REQ-254-004] }
+    - { id: SCN-254-004, description: "REN-172 evidence covers its 51-procedure implementation.", requirement_ids: [REQ-254-005] }
+    - { id: SCN-254-005, description: "Invite acceptance rejects identity, brand, code, and expiry mismatches.", requirement_ids: [REQ-254-006] }
+    - { id: SCN-254-006, description: "Return/replace mutations reject wrong owner, missing manage access, and invalid status.", requirement_ids: [REQ-254-007] }
+    - { id: SCN-254-007, description: "Bulk messaging rejects unauthenticated and unauthorized callers.", requirement_ids: [REQ-254-008] }
+    - { id: SCN-254-008, description: "User deletion preserves business history while anonymizing identity.", requirement_ids: [REQ-254-010] }
+    - { id: SCN-254-009, description: "Release evidence is complete without production mutation.", requirement_ids: [REQ-254-009] }
+invariants:
+    - { id: INV-254-001, description: "Brand-scoped operations cannot cross tenant boundaries." }
+    - { id: INV-254-002, description: "Unauthorized requests are rejected before sensitive reads or external calls." }
+    - { id: INV-254-003, description: "Sale, tax, and payout history is not removed by user deletion." }
+    - { id: INV-254-004, description: "Existing site-admin and same-brand authorized behavior remains available." }
+    - { id: INV-254-005, description: "REN-254 does not duplicate REN-172 implementation." }
+flows:
+    - { id: FLOW-254-001, description: "Authenticate, authorize tenant/role, then read/write or call external services.", state_transitions: [authorized, forbidden] }
+    - { id: FLOW-254-002, description: "Clerk deletion webhook anonymizes identity while preserving business relations.", state_transitions: [identity_anonymized, business_history_preserved] }
+    - { id: FLOW-254-003, description: "Ayan records release evidence and Akshay approves the release.", state_transitions: [release_evidence_recorded] }
+dependencies:
+    - { id: DEP-254-001, name: REN-172, purpose: "Owner of 51-procedure cross-brand authorization implementation", description: "REN-254 links and verifies REN-172 evidence instead of duplicating it.", status: pending_evidence }
+    - { id: DEP-254-002, name: Legal/CA retention decision, purpose: "Final retention-period authority", description: "Not required for immediate anonymization/soft-delete behavior.", status: deferred }
+    - { id: DEP-254-003, name: C1 release evidence, purpose: "Snapshot, staging, rollback, cache flush, and release approval", description: "Ayan records evidence; Akshay approves release.", status: resolved }
+integrations:
+    - { id: INT-254-001, system: Clerk, purpose: "Receive user.deleted event", failure_mode: "Hard delete may cascade business history", retry_idempotency: "Anonymization must be safe on repeated webhook delivery" }
+    - { id: INT-254-002, system: Shiprocket/Delhivery/Unicommerce, purpose: "External calls from brand procedures", failure_mode: "Unauthorized caller can trigger external side effects", retry_idempotency: "Authorization must precede external calls" }
+security_boundaries:
+    - { id: SEC-254-001, description: "Brand ownership and site-admin bypass are enforced at authoritative mutations/reads." }
+    - { id: SEC-254-002, description: "Sensitive confidential data and PII are not returned to unauthorized callers." }
+    - { id: SEC-254-003, description: "Destructive and external side-effect paths require session, role, ownership, and status checks." }
+personas:
+    - { id: PER-254-001, role: brand_operator, applicability: "May act only within the caller's own brand and assigned permissions." }
+    - { id: PER-254-002, role: site_admin, applicability: "Retains legitimate platform-admin access where existing policy allows it." }
+    - { id: PER-254-003, role: programme_release_reviewer, applicability: "Reviews evidence and owns the C1 release decision." }
+business_rules:
+    - { id: BR-254-001, description: "Do not invent new permission or retention policy." }
+    - { id: BR-254-002, description: "Business history remains available after user identity anonymization." }
+decisions:
+    - { id: DEC-254-001, question: "Who owns the 51 cross-brand fixes?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "REN-172 implements; REN-254 verifies evidence.", basis: "Existing approved REN-172 contract and explicit REN-254 scope boundary.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-254-002, question: "What happens on Clerk user deletion?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Anonymize/soft-delete identity and preserve business history.", basis: "Prevents destructive cascade while leaving final retention period to Legal/CA.", confidence: high, consequence: high, human_confirmation_required: true }
+    - { id: DEC-254-003, question: "Who owns C1 evidence and release approval?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Ayan records evidence; Akshay approves release.", basis: "Existing programme operating standard.", confidence: high, consequence: high, human_confirmation_required: true }
+test_expectations:
+    - { id: TEXP-254-001, category: security, classification: REQUIRED, reason: "Verify role escalation and confidential access denial.", scenarios: [SCN-254-001, SCN-254-002] }
+    - { id: TEXP-254-002, category: regression, classification: REQUIRED, reason: "Verify destructive operations and business-history preservation.", scenarios: [SCN-254-003, SCN-254-008] }
+    - { id: TEXP-254-003, category: security, classification: REQUIRED, reason: "Verify invite and return/replace authorization and state guards.", scenarios: [SCN-254-005, SCN-254-006] }
+    - { id: TEXP-254-004, category: security, classification: REQUIRED, reason: "Verify bulk-message session and permission guards.", scenarios: [SCN-254-007] }
+    - { id: TEXP-254-005, category: regression, classification: REQUIRED, reason: "Verify REN-172 evidence and no duplicate implementation.", scenarios: [SCN-254-004] }
+    - { id: TEXP-254-006, category: exploratory, classification: REQUIRED, reason: "Verify release evidence, cache flush, rollback, and no production mutation.", scenarios: [SCN-254-009] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex independent read-only L3 Critic pass
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings: ["MAJOR: authorization ordering and confidential side effects", "MAJOR: field-specific confidential verification reset", "MAJOR: authenticated and concurrency-safe invite acceptance", "MAJOR: server-side bulk messaging authorization", "MAJOR: user deletion cascade preservation", "MAJOR: return/replace authorization and status preconditions", "DEPENDENCY: REN-172 evidence pending"]
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "User approval in conversation on 2026-10-01 after independent Critic review"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-254-001, scenario_ids: [SCN-254-001] }
+        - { requirement_id: REQ-254-002, scenario_ids: [SCN-254-002] }
+        - { requirement_id: REQ-254-003, scenario_ids: [SCN-254-002] }
+        - { requirement_id: REQ-254-004, scenario_ids: [SCN-254-003] }
+        - { requirement_id: REQ-254-005, scenario_ids: [SCN-254-004] }
+        - { requirement_id: REQ-254-006, scenario_ids: [SCN-254-005] }
+        - { requirement_id: REQ-254-007, scenario_ids: [SCN-254-006] }
+        - { requirement_id: REQ-254-008, scenario_ids: [SCN-254-007] }
+        - { requirement_id: REQ-254-009, scenario_ids: [SCN-254-009] }
+        - { requirement_id: REQ-254-010, scenario_ids: [SCN-254-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-254-001, invariant_ids: [INV-254-001, INV-254-004] }
+        - { scenario_id: SCN-254-002, invariant_ids: [INV-254-001, INV-254-002] }
+        - { scenario_id: SCN-254-003, invariant_ids: [INV-254-002] }
+        - { scenario_id: SCN-254-004, invariant_ids: [INV-254-005] }
+        - { scenario_id: SCN-254-005, invariant_ids: [INV-254-001, INV-254-002] }
+        - { scenario_id: SCN-254-006, invariant_ids: [INV-254-001, INV-254-002] }
+        - { scenario_id: SCN-254-007, invariant_ids: [INV-254-002] }
+        - { scenario_id: SCN-254-008, invariant_ids: [INV-254-003] }
+        - { scenario_id: SCN-254-009, invariant_ids: [INV-254-004] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-254-001, test_expectation_ids: [TEXP-254-001] }
+        - { scenario_id: SCN-254-002, test_expectation_ids: [TEXP-254-001] }
+        - { scenario_id: SCN-254-003, test_expectation_ids: [TEXP-254-002] }
+        - { scenario_id: SCN-254-004, test_expectation_ids: [TEXP-254-005] }
+        - { scenario_id: SCN-254-005, test_expectation_ids: [TEXP-254-003] }
+        - { scenario_id: SCN-254-006, test_expectation_ids: [TEXP-254-003] }
+        - { scenario_id: SCN-254-007, test_expectation_ids: [TEXP-254-004] }
+        - { scenario_id: SCN-254-008, test_expectation_ids: [TEXP-254-002] }
+        - { scenario_id: SCN-254-009, test_expectation_ids: [TEXP-254-006] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: master
+    base_commit: "e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be"
+    head_commit: "1cbc2bdf55646789a4d790abad52bbb18709bba4"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Link and reconcile REN-172 evidence for all 51 procedures before C1 closure."
+        - "REV-002: Run staging-safe invite concurrency and return/replace race tests."
+    evidence:
+        - "Compared approved REN-254 contract and repository diff from e6ebd297ecbc09ad283d3e5b2e850d1d9f7876be to 1cbc2bdf55646789a4d790abad52bbb18709bba4."
+        - "Focused REN-254 contract tests pass locally; full suite has three unrelated baseline/environment failures recorded in the handoff."
+        - "Ayan reports that Akshay approved the release evidence package: database snapshot, rollback target, Redis user-cache flush, and monitoring window."
+    governance_reentry_required: false
