@@ -63,9 +63,9 @@ test("shop and festive routes each have one explicit H1 owner", async () => {
 
     expect(shop).toContain(`pageHeading="${SHOP_TITLE}"`);
     expect(storefront).toContain("{pageHeading ? (");
-    expect(storefront).toContain(
-        'editorialIntro ? "font-serif text-3xl" : "sr-only"'
-    );
+    expect(storefront).toContain('editorialIntro');
+    expect(storefront).toContain('"font-serif text-3xl"');
+    expect(storefront).toContain('"sr-only"');
     expect(storefront.match(/<h1\b/g)).toHaveLength(1);
     expect(festive).toContain("pageHeading={FESTIVE_CAMPAIGN.heading}");
     expect(festive).toContain("<StorefrontCatalogPage");

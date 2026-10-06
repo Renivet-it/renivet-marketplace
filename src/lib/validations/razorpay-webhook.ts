@@ -16,6 +16,7 @@ export const razorpayPaymentWebhookSchema = z.object({
                 amount: z.number().transform((val) => val / 100),
                 status: z.union([z.literal("captured"), z.literal("failed")]),
                 order_id: z.string(),
+                currency: z.string(),
                 method: z.string(),
                 captured: z.boolean(),
                 email: z.string().email(),

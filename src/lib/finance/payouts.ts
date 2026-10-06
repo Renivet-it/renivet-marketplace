@@ -2115,7 +2115,7 @@ export async function createPayoutOverride(input: {
         afterValue: row as unknown as Record<string, unknown>,
         reason: input.reasonCode,
         title: "Payout override recorded",
-        message: `Override recorded for brand ${input.brandId}; a second admin must approve it before it applies.`,
+        message: `Every payout override requires a second admin approver. Override recorded for brand ${input.brandId}; a second admin must approve it before it applies.`,
         severity: "warning",
         ownerRole: "finance_admin",
         type: "payout_override_created",

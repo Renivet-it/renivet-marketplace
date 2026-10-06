@@ -609,6 +609,7 @@ export const ordersRouter = createTRPCRouter({
                         ...input,
                         id: orderId,
                         receiptId,
+                        providerOrderId: input.razorpayOrderId ?? null,
                         userId: user.id,
                         taxAmount: lineTaxAmount,
                         totalAmount: lineTotalAmount,

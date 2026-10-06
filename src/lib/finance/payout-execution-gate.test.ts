@@ -20,6 +20,11 @@ function checks(overrides: Record<string, boolean> = {}) {
             expiresAt: "2026-09-19T10:00:00.000Z",
             revokedAt: null,
         },
+        clearanceBasis: {
+            clearance: "basis-1",
+            current: "basis-1",
+        },
+        executedBy: "executor-1",
         ...overrides,
     };
 }

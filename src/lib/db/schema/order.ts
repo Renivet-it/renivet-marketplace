@@ -31,6 +31,7 @@ export const orders = pgTable(
         invoiceNumber: text("invoice_number").unique(),
         invoiceIssuedAt: timestamp("invoice_issued_at"),
         paymentId: text("payment_id"),
+        providerOrderId: text("provider_order_id"),
         paymentMethod: text("payment_method"),
         paymentStatus: text("payment_status", {
             enum: [
@@ -86,6 +87,9 @@ export const orders = pgTable(
             table.receiptId
         ),
         orderPaymentIdIdx: index("order_payment_id_idx").on(table.paymentId),
+        orderProviderOrderIdIdx: index("order_provider_order_id_idx").on(
+            table.providerOrderId
+        ),
         orderUserIdIdx: index("order_user_id_idx").on(table.userId),
         orderIdUserIdIdx: uniqueIndex("order_id_user_id_idx").on(
             table.id,
