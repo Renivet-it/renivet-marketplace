@@ -42,6 +42,7 @@ export * from "./monitoring-sla";
 export * from "./swap-reward";
 export * from "./corporate-order";
 export * from "./corporate-platform";
+export * from "./corporate-payment";
 
 export * from "./analytics";
 export * from "./unicommerce";
