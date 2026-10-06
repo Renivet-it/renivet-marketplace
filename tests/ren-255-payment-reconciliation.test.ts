@@ -78,7 +78,7 @@ describe("REN-255 payment reconciliation", () => {
     test("payment webhook claims the event before stock and side effects", async () => {
         const source = await read("src/app/api/webhooks/razorpay/payments/route.ts");
 
-        expect(source).toContain("applyAtomicPaymentTransition");
+        expect(source).toContain("applyAtomicPaymentBatch");
         expect(source).toContain("emitPaymentEffects");
     });
 
@@ -131,7 +131,7 @@ describe("REN-255 payment reconciliation", () => {
         const activeSource = source.slice(source.lastIndexOf("import crypto"));
 
         expect(activeSource).toContain("getOrderIdsByProviderOrderId");
-        expect(activeSource).toContain("applyAtomicPaymentTransition");
+        expect(activeSource).toContain("applyAtomicPaymentBatch");
         expect(activeSource).not.toContain("paymentEventQueries.claim");
         expect(activeSource).not.toContain("productQueries.updateProductStock");
     });

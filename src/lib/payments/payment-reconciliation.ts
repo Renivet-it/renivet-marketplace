@@ -360,6 +360,223 @@ export async function applyAtomicPaymentTransition(
     });
 }
 
+export async function applyAtomicPaymentBatch(
+    inputs: AtomicPaymentTransitionInput[]
+): Promise<AtomicPaymentTransitionResult[]> {
+    return db.transaction(async (tx) => {
+        const receipts: Array<{
+            input: AtomicPaymentTransitionInput;
+            receipt: typeof paymentEventReceipts.$inferSelect;
+            duplicate: boolean;
+        }> = [];
+
+        for (const input of inputs) {
+            const values = {
+                eventType: input.eventType,
+                providerPaymentId: input.providerPaymentId,
+                providerOrderId: input.providerOrderId,
+                orderId: input.orderId,
+                orderIntentId: input.orderIntentId ?? null,
+                amountPaise: input.amountPaise,
+                currency: input.currency,
+                metadata: {
+                    amountProvenance: input.amountProvenance,
+                    lookupSource: input.lookupSource,
+                },
+            };
+            const [inserted] = await tx
+                .insert(paymentEventReceipts)
+                .values(values)
+                .onConflictDoNothing({
+                    target: [
+                        paymentEventReceipts.provider,
+                        paymentEventReceipts.eventType,
+                        paymentEventReceipts.providerPaymentId,
+                        paymentEventReceipts.orderId,
+                    ],
+                })
+                .returning();
+
+            if (inserted) {
+                receipts.push({ input, receipt: inserted, duplicate: false });
+                continue;
+            }
+
+            const [existing] = await tx
+                .select()
+                .from(paymentEventReceipts)
+                .where(
+                    and(
+                        eq(paymentEventReceipts.provider, "razorpay"),
+                        eq(paymentEventReceipts.eventType, input.eventType),
+                        eq(
+                            paymentEventReceipts.providerPaymentId,
+                            input.providerPaymentId
+                        ),
+                        eq(paymentEventReceipts.orderId, input.orderId)
+                    )
+                )
+                .limit(1);
+            if (!existing) {
+                throw new PaymentReconciliationError(
+                    "IDENTITY_MISMATCH",
+                    "Payment receipt could not be claimed."
+                );
+            }
+            if (existing.status === "applied") {
+                receipts.push({ input, receipt: existing, duplicate: true });
+                continue;
+            }
+            const [reopened] = await tx
+                .update(paymentEventReceipts)
+                .set({
+                    status: "received",
+                    appliedAt: null,
+                    updatedAt: new Date(),
+                    metadata: values.metadata,
+                })
+                .where(eq(paymentEventReceipts.id, existing.id))
+                .returning();
+            receipts.push({ input, receipt: reopened, duplicate: false });
+        }
+
+        const results: AtomicPaymentTransitionResult[] = [];
+        for (const entry of receipts) {
+            if (entry.duplicate) {
+                results.push({
+                    duplicate: true,
+                    applied: true,
+                    receiptId: entry.receipt.id,
+                    transactionAmountPaise: entry.receipt.amountPaise,
+                    currency: entry.receipt.currency,
+                    amountProvenance:
+                        typeof entry.receipt.metadata?.amountProvenance ===
+                        "string"
+                            ? entry.receipt.metadata.amountProvenance
+                            : "receipt",
+                });
+                continue;
+            }
+
+            const [currentOrder] = await tx
+                .select({ paymentStatus: orders.paymentStatus })
+                .from(orders)
+                .where(eq(orders.id, entry.input.orderId))
+                .limit(1);
+            if (!currentOrder) {
+                throw new PaymentReconciliationError(
+                    "IDENTITY_MISMATCH",
+                    "Payment order no longer exists."
+                );
+            }
+
+            if (currentOrder.paymentStatus !== "paid") {
+                if (entry.input.eventType === "payment.captured") {
+                    for (const item of entry.input.items) {
+                        if (!item.stockTracked) continue;
+                        const updated = item.variantId
+                            ? await tx
+                                  .update(productVariants)
+                                  .set({
+                                      quantity: sql`${productVariants.quantity} - ${item.quantity}`,
+                                      updatedAt: new Date(),
+                                  })
+                                  .where(
+                                      and(
+                                          eq(productVariants.id, item.variantId),
+                                          sql`${productVariants.quantity} >= ${item.quantity}`
+                                      )
+                                  )
+                                  .returning({ id: productVariants.id })
+                            : await tx
+                                  .update(products)
+                                  .set({
+                                      quantity: sql`${products.quantity} - ${item.quantity}`,
+                                      updatedAt: new Date(),
+                                  })
+                                  .where(
+                                      and(
+                                          eq(products.id, item.productId),
+                                          sql`${products.quantity} IS NOT NULL`,
+                                          sql`${products.quantity} >= ${item.quantity}`
+                                      )
+                                  )
+                                  .returning({ id: products.id });
+                        if (updated.length !== 1) {
+                            throw new PaymentReconciliationError(
+                                "STOCK_UNAVAILABLE",
+                                "Stock is unavailable for the payment transition."
+                            );
+                        }
+                    }
+                }
+
+                const [updatedOrder] = await tx
+                    .update(orders)
+                    .set({
+                        paymentId: entry.input.providerPaymentId,
+                        paymentMethod: entry.input.paymentMethod ?? undefined,
+                        paymentStatus:
+                            entry.input.eventType === "payment.captured"
+                                ? "paid"
+                                : "failed",
+                        status:
+                            entry.input.eventType === "payment.captured"
+                                ? "processing"
+                                : "pending",
+                        updatedAt: new Date(),
+                    })
+                    .where(
+                        and(
+                            eq(orders.id, entry.input.orderId),
+                            ne(orders.paymentStatus, "paid")
+                        )
+                    )
+                    .returning({ id: orders.id });
+                if (!updatedOrder) {
+                    throw new PaymentReconciliationError(
+                        "IDENTITY_MISMATCH",
+                        "Payment order transition was not applied."
+                    );
+                }
+
+                if (entry.input.orderIntentId) {
+                    await tx
+                        .update(ordersIntent)
+                        .set({
+                            paymentId: entry.input.providerPaymentId,
+                            paymentStatus:
+                                entry.input.eventType === "payment.captured"
+                                    ? "paid"
+                                    : "failed",
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(ordersIntent.id, entry.input.orderIntentId));
+                }
+            }
+
+            const [applied] = await tx
+                .update(paymentEventReceipts)
+                .set({
+                    status: "applied",
+                    appliedAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                .where(eq(paymentEventReceipts.id, entry.receipt.id))
+                .returning();
+            results.push({
+                duplicate: currentOrder.paymentStatus === "paid",
+                applied: true,
+                receiptId: applied.id,
+                transactionAmountPaise: entry.input.amountPaise,
+                currency: entry.input.currency,
+                amountProvenance: entry.input.amountProvenance,
+            });
+        }
+        return results;
+    });
+}
+
 export function reconcilePaymentBinding(
     input: PaymentBindingInput
 ): ReconciledPaymentBinding {

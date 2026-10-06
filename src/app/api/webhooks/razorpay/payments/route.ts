@@ -4,7 +4,7 @@ import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, refundQueries } from "@/lib/db/queries";
 import {
-    applyAtomicPaymentTransition,
+    applyAtomicPaymentBatch,
     PaymentReconciliationError,
     reconcilePaymentBinding,
     resolveCanonicalPaymentOrderIds,
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
             legacyPaymentIdMatches: legacyPaymentMatches.map((row) => row.id),
         });
 
-        const outcomes = [];
+        const prepared = [];
         for (const orderId of resolved.orderIds) {
             const existingOrder = await orderQueries.getOrderById(orderId);
             if (!existingOrder) {
@@ -73,9 +73,10 @@ export async function POST(req: NextRequest) {
                 currency: reconciledPayment.currency,
             });
 
-            let transition;
-            try {
-                transition = await applyAtomicPaymentTransition({
+            prepared.push({
+                existingOrder,
+                amount,
+                transitionInput: {
                     eventType: payload.event as
                         | "payment.captured"
                         | "payment.failed",
@@ -96,26 +97,40 @@ export async function POST(req: NextRequest) {
                                 item.product.quantity != null
                         ),
                     })),
-                });
-            } catch (error) {
-                if (
-                    payload.event === "payment.captured" &&
-                    error instanceof PaymentReconciliationError &&
-                    error.code === "STOCK_UNAVAILABLE"
-                ) {
-                    await refundForUnavailableStock({
-                        existingOrder,
-                        paymentId: paymentEntity.id,
-                        amount: paymentEntity.amount,
-                        paymentMethod: paymentEntity.method,
-                    });
-                    continue;
-                }
-                throw error;
-            }
-
-            outcomes.push({ existingOrder, transition, amount });
+                },
+            });
         }
+
+        let transitions;
+        try {
+            transitions = await applyAtomicPaymentBatch(
+                prepared.map(({ transitionInput }) => transitionInput)
+            );
+        } catch (error) {
+            if (
+                payload.event === "payment.captured" &&
+                error instanceof PaymentReconciliationError &&
+                error.code === "STOCK_UNAVAILABLE" &&
+                prepared[0]
+            ) {
+                await refundForUnavailableStock({
+                    existingOrder: prepared[0].existingOrder,
+                    paymentId: paymentEntity.id,
+                    amount: paymentEntity.amount,
+                    paymentMethod: paymentEntity.method,
+                });
+                return CResponse({
+                    message: "Payment refunded because stock was unavailable",
+                    refunded: true,
+                });
+            }
+            throw error;
+        }
+
+        const outcomes = prepared.map((entry, index) => ({
+            ...entry,
+            transition: transitions[index],
+        }));
 
         for (const { existingOrder, transition, amount } of outcomes) {
             if (transition.duplicate) continue;
