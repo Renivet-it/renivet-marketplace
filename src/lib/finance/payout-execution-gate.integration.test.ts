@@ -39,7 +39,7 @@ describe("REN-206 execution-gate integration contract", () => {
             new URL("../db/schema/finance-compliance.ts", import.meta.url)
         ).text();
         const migration = await Bun.file(
-            new URL("../../../drizzle/0286_payout_execution_clearances.sql", import.meta.url)
+            new URL("../../../drizzle/0289_payout_execution_clearances.sql", import.meta.url)
         ).text();
 
         expect(schema).toContain("payoutExecutionClearances");

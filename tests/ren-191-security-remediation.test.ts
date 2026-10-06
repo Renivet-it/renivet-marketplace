@@ -12,15 +12,16 @@ const productSource = readFileSync(
 );
 
 test("REN-191 bounds brand media uploads and removes generic blobs", () => {
-    const brandMedia = uploadSource.slice(
-        uploadSource.indexOf("BRAND_MEDIA_UPLOAD_LIMITS"),
-        uploadSource.indexOf("reviewImageUploader")
-    );
-    expect(brandMedia).toContain("BRAND_MEDIA_UPLOAD_LIMITS");
-    expect(brandMedia).toContain('maxFileCount: 20');
-    expect(brandMedia).toContain('maxFileSize: "8MB"');
-    expect(brandMedia).toContain('maxFileCount: 5');
-    expect(brandMedia).toContain('maxFileSize: "64MB"');
+    const limitsStart = uploadSource.indexOf("BRAND_MEDIA_UPLOAD_LIMITS");
+    const brandMediaStart = uploadSource.indexOf("brandMediaUploader");
+    const brandMediaEnd = uploadSource.indexOf("reviewImageUploader", brandMediaStart);
+    const mediaLimits = uploadSource.slice(limitsStart, brandMediaStart);
+    const brandMedia = uploadSource.slice(brandMediaStart, brandMediaEnd);
+    expect(mediaLimits).toContain("BRAND_MEDIA_UPLOAD_LIMITS");
+    expect(mediaLimits).toContain('maxFileCount: 20');
+    expect(mediaLimits).toContain('maxFileSize: "8MB"');
+    expect(mediaLimits).toContain('maxFileCount: 5');
+    expect(mediaLimits).toContain('maxFileSize: "64MB"');
     expect(brandMedia).not.toContain("blob:");
     expect(brandMedia).not.toContain("9999");
     expect(brandMedia).not.toContain("1024GB");
