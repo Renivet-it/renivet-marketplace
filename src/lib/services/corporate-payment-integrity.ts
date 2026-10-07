@@ -1,3 +1,8 @@
+import crypto from "node:crypto";
+import { db } from "@/lib/db";
+import { corporatePaymentRefunds } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+
 export class CorporatePaymentIntegrityError extends Error {
     readonly code:
         | "provider_order_mismatch"
@@ -133,4 +138,45 @@ export async function verifyCorporateRazorpayPayment(params: {
 
     return { ...verified, providerPayment: payment };
 }
-import crypto from "node:crypto";
+
+export async function refundCorporatePaymentExcess(params: {
+    intentId: string;
+    providerPaymentId: string;
+    providerAmountPaise: number;
+    intentAmountPaise: number;
+    provider: {
+        payments: {
+            refund: (
+                paymentId: string,
+                options: { amount: number }
+            ) => Promise<{ id?: string }>;
+        };
+    };
+}) {
+    const excessPaise = calculateExcessPaise(
+        params.providerAmountPaise,
+        params.intentAmountPaise
+    );
+    if (excessPaise <= 0) return null;
+
+    const existing = await db.query.corporatePaymentRefunds.findFirst({
+        where: eq(corporatePaymentRefunds.intentId, params.intentId),
+    });
+    if (existing) return existing;
+
+    const refund = await params.provider.payments.refund(
+        params.providerPaymentId,
+        { amount: excessPaise }
+    );
+    const [created] = await db
+        .insert(corporatePaymentRefunds)
+        .values({
+            intentId: params.intentId,
+            providerPaymentId: params.providerPaymentId,
+            amountPaise: excessPaise,
+            status: "processed",
+            providerRefundId: refund.id ?? null,
+        })
+        .returning();
+    return created;
+}

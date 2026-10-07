@@ -7,7 +7,13 @@ import { razorpay } from "@/lib/razorpay";
 import {
     CorporatePaymentIntegrityError,
     assertCorporatePaymentBinding,
+    refundCorporatePaymentExcess,
 } from "@/lib/services/corporate-payment-integrity";
+import {
+    markCorporatePaymentIntentApplied,
+    reconcileCorporatePaymentIntent,
+} from "@/lib/services/corporate-payment-reconciliation";
+import { corporateDocumentService } from "@/lib/services/corporate-documents";
 import { eq } from "drizzle-orm";
 
 function hasValidWebhookSignature(
@@ -70,11 +76,26 @@ export async function POST(request: NextRequest) {
             providerStatus: String(providerPayment.status ?? payment.status ?? ""),
         });
     } catch (error) {
+        let refundedExcess = false;
+        if (Number(payment.amount ?? 0) > intent.amountPaise) {
+            try {
+                await refundCorporatePaymentExcess({
+                    intentId: intent.id,
+                    providerPaymentId,
+                    providerAmountPaise: Number(payment.amount),
+                    intentAmountPaise: intent.amountPaise,
+                    provider: razorpay,
+                });
+                refundedExcess = true;
+            } catch {
+                refundedExcess = false;
+            }
+        }
         await db
             .update(corporatePaymentIntents)
             .set({
                 providerPaymentId,
-                status: "recovery_required",
+                status: refundedExcess ? "refunded" : "recovery_required",
                 rejectionCode:
                     error instanceof CorporatePaymentIntegrityError
                         ? error.code
@@ -85,14 +106,52 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, recovery: "required" }, { status: 202 });
     }
 
-    await db
-        .update(corporatePaymentIntents)
-        .set({
-            providerPaymentId,
-            status: payload.event === "payment.captured" ? "payment_received" : "rejected",
-            updatedAt: new Date(),
-        })
-        .where(eq(corporatePaymentIntents.id, intent.id));
+    if (payload.event === "payment.captured") {
+        try {
+            const reconciliation = await reconcileCorporatePaymentIntent({
+                intentId: intent.id,
+                providerPaymentId,
+                amountPaise: Number(payment.amount ?? -1),
+            });
+            if (!reconciliation.order || !reconciliation.payment) {
+                return NextResponse.json(
+                    { received: true, recovery: "required" },
+                    { status: 202 }
+                );
+            }
+            await corporateDocumentService.ensureReceiptVoucher(
+                reconciliation.order.id,
+                reconciliation.payment.id
+            );
+            await corporateDocumentService.ensureProformaInvoiceForOrder(
+                reconciliation.order.id
+            );
+            await markCorporatePaymentIntentApplied(intent.id);
+        } catch {
+            await db
+                .update(corporatePaymentIntents)
+                .set({
+                    providerPaymentId,
+                    status: "recovery_required",
+                    rejectionCode: "finalization_failed",
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporatePaymentIntents.id, intent.id));
+            return NextResponse.json(
+                { received: true, recovery: "required" },
+                { status: 202 }
+            );
+        }
+    } else {
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerPaymentId,
+                status: "rejected",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
+    }
 
     return NextResponse.json({ received: true });
 }

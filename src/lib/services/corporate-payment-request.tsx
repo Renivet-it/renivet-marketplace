@@ -21,6 +21,10 @@ import {
     CorporatePaymentIntegrityError,
     verifyCorporateRazorpayPayment,
 } from "@/lib/services/corporate-payment-integrity";
+import {
+    markCorporatePaymentIntentApplied,
+    reconcileCorporatePaymentIntent,
+} from "@/lib/services/corporate-payment-reconciliation";
 import { formatINR, getAbsoluteURL } from "@/lib/utils";
 import {
     corporateAdminOfflinePaymentInputSchema,
@@ -97,6 +101,7 @@ async function applyVerifiedPayment(params: {
     paymentReference: string;
     paymentDate: string;
     paymentRequestId?: string | null;
+    intentId?: string | null;
     proofFileUrl?: string | null;
     notes?: string | null;
     recordedByUserId?: string | null;
@@ -109,6 +114,51 @@ async function applyVerifiedPayment(params: {
             code: "NOT_FOUND",
             message: "Corporate order not found",
         });
+
+    if (params.intentId) {
+        const reconciliation = await reconcileCorporatePaymentIntent({
+            intentId: params.intentId,
+            providerPaymentId: params.paymentReference,
+            amountPaise: params.amountPaise,
+            paymentDate: params.paymentDate,
+        });
+        if (!reconciliation.payment || !reconciliation.order) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Corporate payment reconciliation did not produce an outcome",
+            });
+        }
+        if (params.paymentRequestId) {
+            await db
+                .update(corporatePaymentRequests)
+                .set({
+                    razorpayPaymentId: params.paymentReference,
+                    status:
+                        reconciliation.order.balanceDuePaise === 0
+                            ? "paid"
+                            : "pending",
+                    paidAt:
+                        reconciliation.order.balanceDuePaise === 0
+                            ? new Date()
+                            : null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporatePaymentRequests.id, params.paymentRequestId));
+        }
+        await corporateDocumentService.ensureReceiptVoucher(
+            reconciliation.order.id,
+            reconciliation.payment.id
+        );
+        await corporateDocumentService.ensureProformaInvoiceForOrder(
+            reconciliation.order.id
+        );
+        await markCorporatePaymentIntentApplied(params.intentId);
+        return {
+            payment: reconciliation.payment,
+            order: reconciliation.order,
+            receiptVoucher: null,
+        };
+    }
 
     const duplicate = await db.query.corporatePayments.findFirst({
         where: and(
@@ -576,6 +626,7 @@ export const corporatePaymentRequestService = {
             paymentReference: input.razorpayPaymentId,
             paymentDate: new Date().toISOString().slice(0, 10),
             paymentRequestId: request.id,
+            intentId: intent.id,
         });
         await db
             .update(corporatePaymentIntents)
@@ -722,6 +773,7 @@ export const corporatePaymentRequestService = {
             paymentReference: input.razorpayPaymentId,
             paymentDate: new Date().toISOString().slice(0, 10),
             paymentRequestId: request.id,
+            intentId: intent.id,
         });
         await db
             .update(corporatePaymentIntents)

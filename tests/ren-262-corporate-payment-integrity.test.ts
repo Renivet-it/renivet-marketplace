@@ -84,4 +84,40 @@ describe("REN-262 Corporate payment integrity", () => {
         expect(source).toContain("corporatePaymentIntents");
         expect(source).toContain("recovery_required");
     });
+
+    test("shared reconciliation claims the intent and order in one transaction", async () => {
+        const source = await readFile(
+            "src/lib/services/corporate-payment-reconciliation.ts",
+            "utf8"
+        );
+        expect(source).toContain("db.transaction");
+        expect(source).toContain('for("update")');
+        expect(source).toContain("corporatePaymentIntents");
+    });
+
+    test("operator recovery is permission protected and reuses reconciliation", async () => {
+        const source = await readFile(
+            "src/app/api/admin/corporate-payment-recovery/route.ts",
+            "utf8"
+        );
+        expect(source).toContain("MANAGE_ORDERS");
+        expect(source).toContain("reconcileCorporatePaymentIntent");
+        expect(source).toContain("markCorporatePaymentIntentApplied");
+    });
+
+    test("Corporate payment migration registers provider and refund uniqueness", async () => {
+        const migration = await readFile(
+            "drizzle/0293_ren262_corporate_payment_intents.sql",
+            "utf8"
+        );
+        expect(migration).toContain(
+            "corporate_payment_intents_provider_payment_unique"
+        );
+        expect(migration).toContain(
+            "corporate_payment_refunds_intent_unique"
+        );
+        expect(migration).toContain(
+            "corporate_payments_payment_reference_unique"
+        );
+    });
 });
