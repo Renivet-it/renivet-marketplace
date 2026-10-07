@@ -2777,6 +2777,18 @@ class CorporatePlatformService {
                 message: "Quote not found",
             });
         }
+        assertApprovedCorporateQuote(quote);
+
+        const existingPurchaseOrder =
+            await db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.quoteId, quote.id),
+            });
+        if (existingPurchaseOrder) {
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "This approved quote already has a purchase order",
+            });
+        }
 
         const profile = await this.getMyProfile(actorUserId);
         if (!profile || profile.id !== quote.corporateProfileId) {
