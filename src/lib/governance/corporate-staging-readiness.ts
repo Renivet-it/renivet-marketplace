@@ -56,3 +56,23 @@ export function buildStagingReadinessEvidenceFromProcess(input: {
         migrationTag: input.migrationTag,
     });
 }
+
+export function assertCorporateSchemaReadiness(input: {
+    expectedMigrationTags: string[];
+    appliedMigrationTags: string[];
+    duplicateBusinessKeys?: string[];
+}) {
+    const applied = new Set(input.appliedMigrationTags);
+    const missingMigrations = input.expectedMigrationTags.filter(
+        (tag) => !applied.has(tag)
+    );
+    const duplicates = input.duplicateBusinessKeys ?? [];
+    if (missingMigrations.length || duplicates.length) {
+        throw new Error(
+            `Corporate schema readiness blocked: missing migrations [${missingMigrations.join(
+                ", "
+            )}], duplicate business keys [${duplicates.join(", ")}]`
+        );
+    }
+    return true;
+}
