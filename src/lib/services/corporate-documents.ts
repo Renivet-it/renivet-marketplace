@@ -25,6 +25,7 @@ import {
     validateBrandTaxInvoice,
 } from "@/lib/finance/corporate-brand-invoice-validation";
 import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
+import { assertCorporateFulfilmentPaymentGate } from "@/lib/services/corporate-fulfilment-integrity";
 import {
     corporateBrandTaxInvoiceInputSchema,
     corporateBrandTaxInvoiceReviewInputSchema,
@@ -415,6 +416,9 @@ export const corporateDocumentService = {
     async issueFulfillmentOrder(actorUserId: string, input: unknown) {
         const parsed = corporateVendorPurchaseOrderInputSchema.parse(input);
         const order = await getOrderOrThrow(parsed.orderId);
+        assertCorporateFulfilmentPaymentGate({
+            paymentStatus: order.paymentStatus,
+        });
         if (!order.brandId || !order.brand) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
