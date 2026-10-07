@@ -1,0 +1,53 @@
+schema_version: "1.0"
+task:
+    id: REN-269
+    title: "[PRE-RD-5][Corporate] Settlement and payout control: payable only after completion, with authoritative amount and execution boundary"
+    source: linear
+    branch: ayanganguly333/ren-269-pre-rd-5-corporate-settlement-and-payout-control
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-269/pre-rd-5corporate-settlement-and-payout-control-payable-only-after, priority: Urgent, labels: [qa-finding, security, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L3, path_rule_risk: L3, semantic_risk: L3, final_risk: L3, reasons: ["Payout state and amount directly affect money movement.", "Incorrect gating can pay before delivery or accepted invoice."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Settlement schemas/services, payout writers, Corporate order/FO/invoice/QC/GRN states, finance permissions]
+    excluded_areas: [new payout provider integration, unapproved tax policy, production payout execution]
+    dependencies: [DEP-269-001, DEP-269-002]
+    integrations: [INT-269-001, INT-269-002]
+    security_boundaries: [SEC-269-001, SEC-269-002]
+    state_transitions: [not_payable, payable, statement_issued, payout_approved, payout_executed, reconciled, correction]
+    related_tests: [TEXP-269-001, TEXP-269-002, TEXP-269-003]
+    uncertainties: ["Finance/CA confirmation of TCS/194-O treatment and actual execution boundary is required evidence."]
+requirements:
+    - { id: REQ-269-001, description: "Gate payable on full customer payment, delivered completion, accepted brand invoice, and warehouse GRN where applicable.", type: financial }
+    - { id: REQ-269-002, description: "Bind one idempotent payout obligation per order/brand to authoritative FO/commercial and accepted invoice amounts.", type: integrity }
+    - { id: REQ-269-003, description: "Separate statement issuance, approval, execution, reconciliation, and versioned corrections with audit evidence.", type: audit }
+scenarios:
+    - { id: SCN-269-001, description: "Unpaid, undelivered, invalid-invoice, or missing-GRN order remains not payable.", requirement_ids: [REQ-269-001], test_expectation_ids: [TEXP-269-001] }
+    - { id: SCN-269-002, description: "Eligible order creates one obligation and statement without automatically approving/executing payout.", requirement_ids: [REQ-269-002, REQ-269-003], test_expectation_ids: [TEXP-269-002] }
+    - { id: SCN-269-003, description: "Duplicate/concurrent issuance converges and corrections create versions rather than replacement.", requirement_ids: [REQ-269-002, REQ-269-003], test_expectation_ids: [TEXP-269-002, TEXP-269-003] }
+invariants:
+    - { id: INV-269-001, description: "No payable state exists without every applicable completion gate." }
+    - { id: INV-269-002, description: "Payout amount equals authoritative commercial/FO and accepted invoice basis." }
+    - { id: INV-269-003, description: "One current payout obligation exists per Corporate order/brand and history is retained." }
+flows:
+    - { id: FLOW-269-001, description: "Completion gates create payable obligation and statement without approval side effect.", state_transitions: [not_payable, payable, statement_issued] }
+    - { id: FLOW-269-002, description: "Authorized approval reaches explicit execution and reconciliation boundary.", state_transitions: [payout_approved, payout_executed, reconciled, correction] }
+dependencies:
+    - { id: DEP-269-001, name: REN-271, purpose: "Completion and FO truth", description: "Delivered, QC, FO, and GRN gates.", status: resolved }
+    - { id: DEP-269-002, name: REN-270, purpose: "Accepted invoice truth", description: "Brand invoice validation and tax/document identity.", status: resolved }
+integrations: [{ id: INT-269-001, system: PostgreSQL, purpose: "Obligation uniqueness/versioning", name: settlement database, contract: "Issuance and correction are idempotent and auditable.", failure_mode: "Conflict leaves prior obligation unchanged." }, { id: INT-269-002, system: Finance operation, purpose: "Payout execution", name: controlled execution boundary, contract: "No invented provider integration.", failure_mode: "Execution/reconciliation remains explicit and retryable." }]
+personas: [{ id: PER-269-001, name: finance administrator, role: finance administrator, applicability: "Reviews and executes authorized payout." }, { id: PER-269-002, name: brand, role: seller, applicability: "Receives accurate settlement statement." }]
+security_boundaries: [{ id: SEC-269-001, description: "Only authorized finance roles can approve or execute payout." }, { id: SEC-269-002, description: "Payout amounts are server-derived, never client-supplied." }]
+business_rules: [{ id: BR-269-001, description: "Statement issuance is not payout approval or execution." }]
+decisions:
+    - { id: DEC-269-001, question: "Should a new payout provider be introduced?", class: RECOMMEND_CONTINUE, status: resolved, decision: "No; document and harden the actual Finance/provider boundary.", recommendation: "Do not invent integration.", basis: "Issue requires truth and control, not an unapproved provider.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-269-001, category: api, classification: REQUIRED, reason: "Financial eligibility gates must fail closed.", scenarios: [SCN-269-001] }
+    - { id: TEXP-269-002, category: integration, classification: REQUIRED, reason: "Idempotent obligation, statement, and amount reconciliation require DB evidence.", scenarios: [SCN-269-002, SCN-269-003] }
+    - { id: TEXP-269-003, category: business_uat, classification: REQUIRED, reason: "Finance must validate execution boundary and tax treatment.", scenarios: [SCN-269-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-269-001, scenario_ids: [SCN-269-001] }, { requirement_id: REQ-269-002, scenario_ids: [SCN-269-002, SCN-269-003] }, { requirement_id: REQ-269-003, scenario_ids: [SCN-269-002, SCN-269-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-269-001, invariant_ids: [INV-269-001] }, { scenario_id: SCN-269-002, invariant_ids: [INV-269-001, INV-269-002] }, { scenario_id: SCN-269-003, invariant_ids: [INV-269-002, INV-269-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-269-001, test_expectation_ids: [TEXP-269-001] }, { scenario_id: SCN-269-002, test_expectation_ids: [TEXP-269-002] }, { scenario_id: SCN-269-003, test_expectation_ids: [TEXP-269-002, TEXP-269-003] }]
