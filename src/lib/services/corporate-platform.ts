@@ -86,6 +86,10 @@ import {
 import { corporateOrderService } from "@/lib/services/corporate-order";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
+    assertAllocationMatchesQuantity,
+    assertApprovedCorporateQuote,
+} from "@/lib/services/corporate-commercial-integrity";
+import {
     convertValueToLabel,
     generatePickupLocationCode,
     getAbsoluteURL,
@@ -2638,6 +2642,8 @@ class CorporatePlatformService {
                 message: "Quote not found",
             });
         }
+
+        assertApprovedCorporateQuote(quote);
         if (quote.status === "approved") return quote;
         if (["rejected", "expired"].includes(quote.status)) {
             throw new TRPCError({
@@ -2781,14 +2787,6 @@ class CorporatePlatformService {
             });
         }
 
-        if (quote.status !== "approved") {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message:
-                    "Purchase orders can only be uploaded after the quote is approved",
-            });
-        }
-
         if (parsed.corporateProfileId !== quote.corporateProfileId) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -2873,13 +2871,7 @@ class CorporatePlatformService {
                     "The selected quotation or buyer profile was not found",
             });
         }
-        if (quote.status !== "approved") {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message:
-                    "Only an approved quotation can be linked to a purchase order",
-            });
-        }
+        assertApprovedCorporateQuote(quote);
         const duplicate = await db.query.corporatePurchaseOrders.findFirst({
             where: eq(corporatePurchaseOrders.poNumber, parsed.poNumber),
         });
@@ -3019,15 +3011,21 @@ class CorporatePlatformService {
             }
 
             if (parsed.orderSetup) {
-                const allocatedQuantity = Object.values(
-                    parsed.orderSetup.sizeBreakdown
-                ).reduce((sum, value) => sum + value, 0);
-                if (!quote || allocatedQuantity !== quote.quantity) {
+                if (!quote) {
                     throw new TRPCError({
                         code: "BAD_REQUEST",
-                        message: quote
-                            ? `Employee size allocation must total exactly ${quote.quantity} units`
-                            : "A linked quote is required to validate employee sizes",
+                        message: "A linked quote is required to validate employee sizes",
+                    });
+                }
+                try {
+                    assertAllocationMatchesQuantity(
+                        parsed.orderSetup.sizeBreakdown,
+                        quote.quantity
+                    );
+                } catch (error) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: error instanceof Error ? error.message : "Invalid size allocation",
                     });
                 }
             }
@@ -3130,13 +3128,7 @@ class CorporatePlatformService {
             });
         }
 
-        if (quote.status !== "approved") {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message:
-                    "Only approved quotes can be moved into order processing",
-            });
-        }
+        assertApprovedCorporateQuote(quote);
 
         const purchaseOrder = await db.query.corporatePurchaseOrders.findFirst({
             where: eq(corporatePurchaseOrders.quoteId, quote.id),
