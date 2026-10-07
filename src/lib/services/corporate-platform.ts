@@ -125,6 +125,7 @@ import {
     corporateWarehouseGoodsReceiptInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
+import { resolveCorporateRecoveryState } from "@/lib/services/corporate-recovery-state";
 import {
     and,
     asc,
@@ -514,20 +515,12 @@ class CorporatePlatformService {
         }
     }
 
-    private maskEmployeeName(employeeName: string, index: number) {
-        const normalized = employeeName.trim().toLowerCase();
-        if (!normalized) {
-            return `EMP-${String(index + 1).padStart(3, "0")}`;
-        }
-
-        const digest = crypto
-            .createHash("sha256")
-            .update(normalized)
-            .digest("hex")
-            .slice(0, 8)
-            .toUpperCase();
-
-        return `EMP-${digest}`;
+    private maskEmployeeName(_employeeName: string, _index: number) {
+        return `EMP-${crypto
+            .randomUUID()
+            .replace(/-/g, "")
+            .slice(0, 12)
+            .toUpperCase()}`;
     }
 
     private async requireBrandMembership(userId: string, brandId: string) {
@@ -1247,6 +1240,10 @@ class CorporatePlatformService {
                         ...baseRawPayload,
                         response: rawData,
                         error: result.error ?? errorMessage,
+                        recoveryState: resolveCorporateRecoveryState({
+                            succeeded: false,
+                            retryable: true,
+                        }),
                     },
                     notes: errorMessage,
                     handledByUserId: params.actorUserId,
