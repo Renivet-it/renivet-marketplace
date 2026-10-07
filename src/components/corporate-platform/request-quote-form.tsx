@@ -59,7 +59,11 @@ type RequestFormState = {
     procurementMode: "self_service" | "rfq" | "enterprise_po";
 };
 
-export function CorporateRequestQuoteForm() {
+export function CorporateRequestQuoteForm({
+    initialProductId,
+}: {
+    initialProductId?: string;
+}) {
     const router = useRouter();
     const { data: profile } = trpc.general.corporatePlatform.getMyProfile.useQuery();
     const { startUpload } = useUploadThing("corporateRfqAttachmentUploader");
@@ -94,6 +98,16 @@ export function CorporateRequestQuoteForm() {
             phone: current.phone || profile.phone,
         }));
     }, [profile]);
+
+    useEffect(() => {
+        if (!initialProductId) return;
+        setForm((current) => ({
+            ...current,
+            requirementDescription:
+                current.requirementDescription ||
+                `Catalog product selection: ${initialProductId}`,
+        }));
+    }, [initialProductId]);
 
     const submit = async () => {
         try {

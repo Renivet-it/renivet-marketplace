@@ -8,11 +8,16 @@ export const metadata: Metadata = {
     description: "Submit a corporate request for quotation from your profile dashboard.",
 };
 
-export default async function Page() {
+export default async function Page({
+    searchParams,
+}: {
+    searchParams: Promise<{ productId?: string }>;
+}) {
     const { userId } = await auth();
     if (!userId) {
         redirect("/auth/signin?redirect_url=/profile/corporate/request-quote");
     }
 
-    return <CorporateRequestQuoteForm />;
+    const { productId } = await searchParams;
+    return <CorporateRequestQuoteForm initialProductId={productId} />;
 }

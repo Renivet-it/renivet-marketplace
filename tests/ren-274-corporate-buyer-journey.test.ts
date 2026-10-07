@@ -14,3 +14,17 @@ test("REN-274 catalog does not present a display-only card", async () => {
     expect(source).toContain("Start Direct Order");
     expect(source).toContain("Request Quote");
 });
+
+test("REN-274 request quote route preserves the selected catalog product", async () => {
+    const route = await readFile(
+        "src/app/(protected)/profile/corporate/request-quote/page.tsx",
+        "utf8"
+    );
+    const form = await readFile(
+        "src/components/corporate-platform/request-quote-form.tsx",
+        "utf8"
+    );
+    expect(route).toContain("productId");
+    expect(route).toContain("initialProductId");
+    expect(form).toContain("initialProductId");
+});
