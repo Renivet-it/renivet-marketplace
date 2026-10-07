@@ -483,24 +483,9 @@ export function CorporateOrderPage({
             }
 
             setIsQuoting(true);
+            const { artworkFile, sheetFile } = await uploadRequiredFiles();
             const quoteResult = await quoteMutation.mutateAsync(
-                getPayload(
-                    artworkUploaded ?? {
-                        name: artworkLocalFile.name,
-                        size: artworkLocalFile.size,
-                        type:
-                            artworkLocalFile.type || "application/octet-stream",
-                        url: "https://example.com/pending-artwork",
-                    },
-                    employeeSheetUploaded ?? {
-                        name: employeeLocalFile.name,
-                        size: employeeLocalFile.size,
-                        type:
-                            employeeLocalFile.type ||
-                            "application/octet-stream",
-                        url: "https://example.com/pending-sheet",
-                    }
-                )
+                getPayload(artworkFile, sheetFile)
             );
             setQuote(quoteResult);
             setStep(4);
