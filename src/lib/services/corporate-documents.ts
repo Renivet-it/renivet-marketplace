@@ -924,6 +924,22 @@ export const corporateDocumentService = {
             });
         }
 
+        const acceptedBrandInvoice =
+            await db.query.corporateBrandTaxInvoices.findFirst({
+                where: and(
+                    eq(corporateBrandTaxInvoices.orderId, order.id),
+                    eq(corporateBrandTaxInvoices.brandId, order.brandId),
+                    eq(corporateBrandTaxInvoices.validationStatus, "accepted"),
+                    eq(corporateBrandTaxInvoices.isCurrentAccepted, true)
+                ),
+            });
+        if (!acceptedBrandInvoice) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "An accepted current brand tax invoice is required before settlement issuance",
+            });
+        }
+
         const fulfillmentOrder =
             await db.query.corporateVendorPurchaseOrders.findFirst({
                 where: eq(corporateVendorPurchaseOrders.orderId, order.id),
