@@ -1,0 +1,53 @@
+schema_version: "1.0"
+task:
+    id: REN-275
+    title: "[PRE-RD-5][Corporate] Security/privacy boundaries and explicit recoverable failure states"
+    source: linear
+    branch: ayanganguly333/ren-275-pre-rd-5-corporate-security-recoverable-failures
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-275/pre-rd-5corporate-securityprivacy-boundaries-and-explicit-recoverable, priority: High, labels: [qa-finding, security, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L3, path_rule_risk: L3, semantic_risk: L3, final_risk: L3, reasons: ["Role/tenant privacy boundaries expose confidential Corporate data.", "Failure state changes span financial and operational workflows."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Corporate buyer/brand/admin routes, employee identifiers, payment/order/QC/document/shipping/settlement side effects, existing recovery boundaries]
+    excluded_areas: [new legal policy, unrelated general-order privacy, production incident response]
+    dependencies: [DEP-275-001, DEP-275-002]
+    integrations: [INT-275-001]
+    security_boundaries: [SEC-275-001, SEC-275-002, SEC-275-003]
+    state_transitions: [started, completed, held, recovery_required, retrying, recovered, failed_closed]
+    related_tests: [TEXP-275-001, TEXP-275-002, TEXP-275-003]
+    uncertainties: ["Role field matrix and exact operational recovery ownership require repository inventory and Finance/Operations confirmation."]
+requirements:
+    - { id: REQ-275-001, description: "Enforce field-level visibility for buyer, brand, and Renivet/admin roles and use opaque employee identifiers.", type: security }
+    - { id: REQ-275-002, description: "Make every Corporate side-effect boundary expose an explicit completed, failed-closed, or recovery-required state.", type: recovery }
+    - { id: REQ-275-003, description: "Provide retry/compensation/reconciliation paths with operator-visible audit evidence and no apparent success without persisted records.", type: operational }
+scenarios:
+    - { id: SCN-275-001, description: "Brand access returns only fulfilment-required fields and cannot infer employee identity from identifiers.", requirement_ids: [REQ-275-001], test_expectation_ids: [TEXP-275-001] }
+    - { id: SCN-275-002, description: "Payment/order/QC/document/shipping/settlement partial failure becomes explicit recovery-required or failed-closed.", requirement_ids: [REQ-275-002, REQ-275-003], test_expectation_ids: [TEXP-275-002] }
+    - { id: SCN-275-003, description: "Authorized retry/reconciliation completes once and records audit evidence without duplicate economic effects.", requirement_ids: [REQ-275-003], test_expectation_ids: [TEXP-275-002, TEXP-275-003] }
+invariants:
+    - { id: INV-275-001, description: "A role cannot read fields outside its approved Corporate visibility matrix." }
+    - { id: INV-275-002, description: "Required persisted business records exist before UI/API reports success." }
+    - { id: INV-275-003, description: "Recovery/retry is idempotent, authorized, observable, and does not duplicate economic effects." }
+flows:
+    - { id: FLOW-275-001, description: "Role-authorized Corporate projection returns minimized fields and opaque identifiers.", state_transitions: [started, completed, failed_closed] }
+    - { id: FLOW-275-002, description: "Side-effect failure records recovery-required state and authorized retry converges.", state_transitions: [started, recovery_required, retrying, recovered] }
+dependencies:
+    - { id: DEP-275-001, name: REN-262, purpose: "Payment recovery boundary", description: "Shared idempotent reconciliation and operator recovery.", status: resolved }
+    - { id: DEP-275-002, name: REN-269/270/271, purpose: "Downstream recovery boundaries", description: "Settlement, document, and fulfilment state machines.", status: resolved }
+integrations: [{ id: INT-275-001, system: Corporate services, purpose: "Cross-cutting recovery and projections", name: payment/order/QC/document/shipping/settlement, contract: "Every boundary has explicit persisted outcome.", failure_mode: "Failed closed or recovery_required with audit evidence." }]
+personas: [{ id: PER-275-001, name: brand user, role: seller, applicability: "Sees only required fulfilment information." }, { id: PER-275-002, name: Renivet operator, role: operator, applicability: "Performs authorized recovery." }]
+security_boundaries: [{ id: SEC-275-001, description: "Role and tenant authorization is enforced server-side for every field projection." }, { id: SEC-275-002, description: "Opaque identifiers prevent trivial employee identity reconstruction." }, { id: SEC-275-003, description: "Recovery actions require explicit operator permission and audit context." }]
+business_rules: [{ id: BR-275-001, description: "No apparent success without the required persisted business outcome." }]
+decisions:
+    - { id: DEC-275-001, question: "Should each domain implement a separate recovery protocol?", class: RECOMMEND_CONTINUE, status: resolved, decision: "No; reuse domain-specific durable boundaries with one shared recovery vocabulary and audit contract.", recommendation: "Compose existing boundaries.", basis: "Parallel recovery logic would diverge and duplicate effects.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-275-001, category: security, classification: REQUIRED, reason: "Field-level role privacy and identifier protection need access-attempt tests.", scenarios: [SCN-275-001] }
+    - { id: TEXP-275-002, category: integration, classification: REQUIRED, reason: "Failure/retry/recovery behavior spans all Corporate side-effect boundaries.", scenarios: [SCN-275-002, SCN-275-003] }
+    - { id: TEXP-275-003, category: business_uat, classification: REQUIRED, reason: "Operators must validate recovery ownership and audit evidence.", scenarios: [SCN-275-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-275-001, scenario_ids: [SCN-275-001] }, { requirement_id: REQ-275-002, scenario_ids: [SCN-275-002] }, { requirement_id: REQ-275-003, scenario_ids: [SCN-275-002, SCN-275-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-275-001, invariant_ids: [INV-275-001] }, { scenario_id: SCN-275-002, invariant_ids: [INV-275-002] }, { scenario_id: SCN-275-003, invariant_ids: [INV-275-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-275-001, test_expectation_ids: [TEXP-275-001] }, { scenario_id: SCN-275-002, test_expectation_ids: [TEXP-275-002] }, { scenario_id: SCN-275-003, test_expectation_ids: [TEXP-275-002, TEXP-275-003] }]
