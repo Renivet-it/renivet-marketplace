@@ -682,6 +682,9 @@ export const corporatePurchaseOrders = pgTable(
         poNumberIdx: index("corporate_purchase_orders_number_idx").on(
             table.poNumber
         ),
+        quoteUnique: uniqueIndex("corporate_purchase_orders_quote_unique")
+            .on(table.quoteId)
+            .where(sql`${table.quoteId} is not null`),
     })
 );
 
