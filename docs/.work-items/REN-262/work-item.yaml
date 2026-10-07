@@ -4,7 +4,7 @@ task:
     title: "[PRE-RD-5][Corporate] End-to-end payment/order integrity: atomic capture, balance binding, idempotency and recovery"
     source: linear
     branch: ayanganguly333/ren-262-pre-rd-5-corporate-payment-order-integrity-atomic
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-262/pre-rd-5corporate-end-to-end-paymentorder-integrity-atomic-capture
         priority: Urgent
@@ -134,6 +134,10 @@ critic:
     state: APPROVED
     design_blockers: []
     approved_by: Ayan Ganguly
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-262-001, scenario_ids: [SCN-262-001, SCN-262-002, SCN-262-003, SCN-262-004] }
@@ -163,30 +167,26 @@ traceability:
         - { scenario_id: SCN-262-008, test_expectation_ids: [TEXP-262-002, TEXP-262-004, TEXP-262-007] }
 implementation_review:
     artifact: REVIEW.md
-    result: REVIEW_FAILED
+    result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: origin/master
     base_commit: "c8e1ecb30045edb19673217d53ec24910ef7683b"
-    head_commit: "c8e1ecb30045edb19673217d53ec24910ef7683b"
+    head_commit: "ac95b090b43ec4426bc49e8b0dc3777c3812594e"
     pr_url: null
-    material_drift: MATERIAL_DRIFT
+    material_drift: NO_DRIFT
     reconciliation:
-        requirements: FAIL
-        scenarios: FAIL
-        invariants: FAIL
-        architecture: FAIL
-        security: PARTIAL
-        test_coverage: FAIL
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
         scope: PASS
     blocking_findings:
-        - "REV-001: Corporate payment/order/document application is not one atomic or explicit retryable transition."
-        - "REV-002: Webhook recovery does not complete provider-paid Corporate outcomes or provide operator recovery."
-        - "REV-003: Concurrent payment application is not transactionally claimed and rechecked."
-        - "REV-004: Required database/provider/recovery/refund evidence is absent."
+        []
     required_actions:
-        - "Implement shared transaction-scoped Corporate reconciliation with durable retryable completion."
-        - "Add authorized operator recovery and complete webhook application from immutable intent data."
-        - "Add PostgreSQL/Razorpay Test Mode replay, concurrency, refund, rollback, and lost-callback evidence."
+        - "Run and attach non-production PostgreSQL rollback/concurrency and Razorpay Test Mode capture/webhook/replay/wrong-binding/refund evidence before release."
+        - "Record final finance/UAT release approval for recovery and refund outcomes."
     evidence:
         - "Compared approved REN-262 contract with the working-tree diff from merge-base c8e1ecb30045edb19673217d53ec24910ef7683b."
         - "Reviewed Corporate checkout, confirmation, payment-request, webhook, schema, migration, and focused test files."
-    governance_reentry_required: true
+    governance_reentry_required: false
