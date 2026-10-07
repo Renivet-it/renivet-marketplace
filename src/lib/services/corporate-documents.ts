@@ -16,6 +16,7 @@ import {
     corporateSettlementStatements,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    corporateWarehouseGoodsReceipts,
     hsnMaster,
     products,
 } from "@/lib/db/schema";
@@ -909,6 +910,45 @@ export const corporateDocumentService = {
             });
         const adjustmentReason = input.adjustmentReason?.trim() || null;
         if (existingStatement && !adjustmentReason) return existingStatement;
+
+        if (order.paymentStatus !== "paid") {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "Customer payment must be completed before settlement issuance",
+            });
+        }
+        if (order.status !== "delivered" && order.status !== "completed") {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "Settlement issuance requires a delivered corporate order",
+            });
+        }
+
+        const fulfillmentOrder =
+            await db.query.corporateVendorPurchaseOrders.findFirst({
+                where: eq(corporateVendorPurchaseOrders.orderId, order.id),
+                orderBy: [desc(corporateVendorPurchaseOrders.updatedAt)],
+            });
+        if (fulfillmentOrder?.deliveryMode === "renivet_warehouse") {
+            const acceptedReceipt =
+                await db.query.corporateWarehouseGoodsReceipts.findFirst({
+                    where: and(
+                        eq(corporateWarehouseGoodsReceipts.orderId, order.id),
+                        eq(
+                            corporateWarehouseGoodsReceipts.vendorPurchaseOrderId,
+                            fulfillmentOrder.id
+                        ),
+                        eq(corporateWarehouseGoodsReceipts.isCurrentAccepted, true),
+                        eq(corporateWarehouseGoodsReceipts.status, "accepted")
+                    ),
+                });
+            if (!acceptedReceipt) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "An accepted warehouse goods receipt is required before settlement issuance",
+                });
+            }
+        }
 
         const invoice = await db.query.corporateTaxInvoices.findFirst({
             where: eq(corporateTaxInvoices.orderId, order.id),

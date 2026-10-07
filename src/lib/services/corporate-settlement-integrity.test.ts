@@ -60,6 +60,9 @@ test("statement issuance does not approve payout before completion gates", async
 
     expect(settlementMethod).not.toContain('payoutStatus: "approved"');
     expect(settlementMethod).toContain('payoutStatus: "queued"');
+    expect(settlementMethod).toContain("order.paymentStatus !== \"paid\"");
+    expect(settlementMethod).toContain("order.status !== \"delivered\"");
+    expect(settlementMethod).toContain("isCurrentAccepted");
 });
 
 test("the settlement schema records immutable version and audit fields", async () => {
