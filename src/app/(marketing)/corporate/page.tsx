@@ -112,7 +112,7 @@ export default async function Page() {
                                     </div>
                                     <div className="mt-5 flex flex-wrap gap-2">
                                         <a
-                                            href={`/profile/corporate?corporateProductConfigId=${encodeURIComponent(item.id)}&path=direct`}
+                                            href={`/corporate-orders?corporateProductConfigId=${encodeURIComponent(item.id)}`}
                                             className="rounded-full bg-[#5B9BD5] px-4 py-2 text-xs font-semibold text-white"
                                         >
                                             Start Direct Order
