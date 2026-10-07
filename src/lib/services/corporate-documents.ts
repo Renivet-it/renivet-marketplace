@@ -1057,7 +1057,7 @@ export const corporateDocumentService = {
                         grossOrderValuePaise: grossPaidPaise,
                         commissionAmountPaise,
                         netPayablePaise: netRemittancePaise,
-                        payoutStatus: "approved",
+                        payoutStatus: "queued",
                     })
                     .where(eq(corporateBrandPayouts.id, currentPayout.id));
             } else {
@@ -1067,7 +1067,7 @@ export const corporateDocumentService = {
                     grossOrderValuePaise: grossPaidPaise,
                     commissionAmountPaise,
                     netPayablePaise: netRemittancePaise,
-                    payoutStatus: "approved",
+                    payoutStatus: "queued",
                 });
             }
 

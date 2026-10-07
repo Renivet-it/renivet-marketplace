@@ -51,6 +51,17 @@ test("settlement values are persisted, with no fabricated defaults or reseller d
     expect(settlementMethod).toContain("commissionAmountPaise = order.commissionAmountPaise");
 });
 
+test("statement issuance does not approve payout before completion gates", async () => {
+    const source = await serviceSource;
+    const settlementMethod = source.slice(
+        source.indexOf("async issueSettlementStatement"),
+        source.indexOf("async getOrderDocumentChain")
+    );
+
+    expect(settlementMethod).not.toContain('payoutStatus: "approved"');
+    expect(settlementMethod).toContain('payoutStatus: "queued"');
+});
+
 test("the settlement schema records immutable version and audit fields", async () => {
     const source = await schemaSource;
     const settlementSchema = source.slice(
