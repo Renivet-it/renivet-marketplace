@@ -19,6 +19,7 @@ import {
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
+    corporateProductConfigs,
     corporatePurchaseOrders,
     corporateQuotes,
     corporateReceiptVouchers,
@@ -331,6 +332,22 @@ class CorporateOrderService {
               })
             : null;
 
+        const corporateProductConfig = parsed.corporateProductConfigId
+            ? await db.query.corporateProductConfigs.findFirst({
+                  where: eq(
+                      corporateProductConfigs.id,
+                      parsed.corporateProductConfigId
+                  ),
+                  with: { product: true, brand: true },
+              })
+            : null;
+        if (parsed.corporateProductConfigId && !corporateProductConfig) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "The selected Corporate catalog item is not active",
+            });
+        }
+
         if (parsed.approvedQuoteId && !approvedQuote) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -402,6 +419,10 @@ class CorporateOrderService {
                 numberOfEmployees: parsed.numberOfEmployees,
             },
             productConfigSnapshot: {
+                corporateProductConfigId: corporateProductConfig?.id ?? null,
+                catalogProductId: corporateProductConfig?.productId ?? null,
+                catalogTitle: corporateProductConfig?.corporateTitle ?? null,
+                catalogBrandId: corporateProductConfig?.brandId ?? null,
                 productType,
                 hsnMasterId: productType?.hsnMasterId ?? null,
                 hsnCode: quote.hsnCode,

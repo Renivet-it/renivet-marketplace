@@ -110,6 +110,20 @@ export default async function Page() {
                                             </span>
                                         ))}
                                     </div>
+                                    <div className="mt-5 flex flex-wrap gap-2">
+                                        <a
+                                            href={`/corporate-orders?corporateProductConfigId=${encodeURIComponent(item.id)}`}
+                                            className="rounded-full bg-[#5B9BD5] px-4 py-2 text-xs font-semibold text-white"
+                                        >
+                                            Start Direct Order
+                                        </a>
+                                        <a
+                                            href={`/profile/corporate/request-quote?corporateProductConfigId=${encodeURIComponent(item.id)}&productId=${encodeURIComponent(item.productId)}`}
+                                            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-900"
+                                        >
+                                            Request Quote
+                                        </a>
+                                    </div>
                                 </article>
                             ))
                         ) : (

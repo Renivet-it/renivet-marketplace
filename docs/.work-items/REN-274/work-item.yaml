@@ -1,0 +1,55 @@
+schema_version: "1.0"
+task:
+    id: REN-274
+    title: "[PRE-RD-5][Corporate] One buyer journey: connect catalog products to direct/RFQ ordering and retire fragmented entry paths"
+    source: linear
+    branch: ayanganguly333/ren-274-pre-rd-5-corporate-one-buyer-journey
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-274/pre-rd-5corporate-one-buyer-journey-connect-catalog-products-to, priority: Medium, labels: [qa-finding, Feature], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L2, path_rule_risk: L3, semantic_risk: L2, final_risk: L3, reasons: ["Corporate checkout identity and order routing are affected.", "Legacy route retirement can break buyers."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue and relations, Corporate catalog, direct checkout, RFQ/quote/PO routes, order identity]
+    excluded_areas: [tax policy, payout policy, production release]
+    dependencies: [DEP-274-001, DEP-274-002]
+    integrations: [INT-274-001]
+    security_boundaries: [SEC-274-001, SEC-274-002]
+    state_transitions: [catalog_visible, configuration_started, rfq_created, quote_approved, order_created, legacy_redirected]
+    related_tests: [TEXP-274-001, TEXP-274-002, TEXP-274-003]
+    uncertainties: ["Exact legacy route inventory must be confirmed during implementation."]
+requirements:
+    - { id: REQ-274-001, description: "Published Corporate catalog selections carry canonical product and SKU identity into direct and RFQ flows.", type: functional }
+    - { id: REQ-274-002, description: "Direct and RFQ paths converge on the controlled Corporate order model without silent replacement.", type: integrity }
+    - { id: REQ-274-003, description: "Legacy Corporate entry paths redirect or reach parity and expose persisted state/next action.", type: compatibility }
+scenarios:
+    - { id: SCN-274-001, description: "Admin-published product appears with canonical identity and enters direct configuration.", requirement_ids: [REQ-274-001], test_expectation_ids: [TEXP-274-001] }
+    - { id: SCN-274-002, description: "Catalog selection enters RFQ and approved quote/PO/payment creates the same order model.", requirement_ids: [REQ-274-001, REQ-274-002], test_expectation_ids: [TEXP-274-001, TEXP-274-002] }
+    - { id: SCN-274-003, description: "Legacy route redirects without losing buyer context or exposing another product.", requirement_ids: [REQ-274-003], test_expectation_ids: [TEXP-274-003] }
+invariants:
+    - { id: INV-274-001, description: "Server-persisted product/SKU identity is authoritative over client display state." }
+    - { id: INV-274-002, description: "Direct and RFQ orders reference one controlled Corporate commercial/order identity." }
+    - { id: INV-274-003, description: "Legacy redirects cannot silently change product, buyer, or order identity." }
+flows:
+    - { id: FLOW-274-001, description: "Catalog selection to direct or RFQ flow preserves canonical identity.", state_transitions: [catalog_visible, configuration_started, rfq_created] }
+    - { id: FLOW-274-002, description: "Approved RFQ becomes PO/payment/order through the existing controlled model.", state_transitions: [quote_approved, order_created] }
+dependencies:
+    - { id: DEP-274-001, name: Corporate product identity, purpose: "Canonical catalog selection", description: "Product/SKU/configuration source.", status: resolved }
+    - { id: DEP-274-002, name: REN-265, purpose: "Approved commercial version", description: "Commercial truth may provide the approved snapshot consumed downstream.", status: resolved }
+integrations: [{ id: INT-274-001, system: Corporate routes, purpose: "Buyer journey convergence", name: direct and RFQ ordering, contract: "Both paths preserve canonical identity.", failure_mode: "Unknown/missing identity blocks order creation." }]
+personas: [{ id: PER-274-001, name: corporate buyer, role: customer, applicability: "Selects a product and follows direct or RFQ path." }]
+security_boundaries:
+    - { id: SEC-274-001, description: "Buyer ownership and Corporate authorization remain server enforced." }
+    - { id: SEC-274-002, description: "Client route parameters cannot replace persisted product/SKU identity." }
+business_rules: [{ id: BR-274-001, description: "One buyer journey must show authoritative state and next action." }]
+decisions:
+    - { id: DEC-274-001, question: "Should legacy routes be deleted immediately?", class: RECOMMEND_CONTINUE, status: resolved, decision: "Redirect after parity and preserve safe buyer context.", recommendation: "Redirect first, retire after evidence.", basis: "Avoid breaking existing Corporate links.", confidence: high, consequence: medium, human_confirmation_required: false, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-274-001, category: ui_ux, classification: REQUIRED, reason: "Catalog/direct/RFQ selection must preserve product identity.", scenarios: [SCN-274-001, SCN-274-002] }
+    - { id: TEXP-274-002, category: api, classification: REQUIRED, reason: "Both paths must converge server-side.", scenarios: [SCN-274-002] }
+    - { id: TEXP-274-003, category: regression, classification: REQUIRED, reason: "Legacy paths must redirect safely.", scenarios: [SCN-274-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-274-001, scenario_ids: [SCN-274-001, SCN-274-002] }, { requirement_id: REQ-274-002, scenario_ids: [SCN-274-002] }, { requirement_id: REQ-274-003, scenario_ids: [SCN-274-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-274-001, invariant_ids: [INV-274-001] }, { scenario_id: SCN-274-002, invariant_ids: [INV-274-001, INV-274-002] }, { scenario_id: SCN-274-003, invariant_ids: [INV-274-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-274-001, test_expectation_ids: [TEXP-274-001] }, { scenario_id: SCN-274-002, test_expectation_ids: [TEXP-274-001, TEXP-274-002] }, { scenario_id: SCN-274-003, test_expectation_ids: [TEXP-274-003] }]

@@ -53,6 +53,7 @@ type UploadedFile = {
 };
 
 type CorporateOrderPagePrefill = {
+    corporateProductConfigId?: string;
     companyName?: string;
     contactPersonName?: string;
     emailAddress?: string;
@@ -154,6 +155,8 @@ export function CorporateOrderPage({
         null
     );
     const [form, setForm] = useState({
+        corporateProductConfigId:
+            initialPrefill?.corporateProductConfigId ?? null,
         companyName: initialPrefill?.companyName ?? "",
         contactPersonName:
             initialPrefill?.contactPersonName ??

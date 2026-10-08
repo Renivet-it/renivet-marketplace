@@ -150,6 +150,7 @@ export const corporateGstinValidation = z
     .optional();
 
 export const corporateOrderFormInputSchema = z.object({
+    corporateProductConfigId: z.string().uuid().nullable().optional(),
     companyName: z.string().min(2),
     contactPersonName: z.string().min(2),
     emailAddress: z.string().email(),
