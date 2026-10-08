@@ -1,0 +1,53 @@
+schema_version: "1.0"
+task:
+    id: REN-265
+    title: "[PRE-RD-5][Corporate] Commercial truth: quote, revision, PO, ownership, scope, quantity and one-order integrity"
+    source: linear
+    branch: ayanganguly333/ren-265-pre-rd-5-corporate-commercial-truth-quote-revision-po
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-265/pre-rd-5corporate-commercial-truth-quote-revision-po-ownership-scope, priority: High, labels: [qa-finding, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L3, path_rule_risk: L3, semantic_risk: L3, final_risk: L3, reasons: ["Commercial amounts and buyer ownership affect orders and payment.", "Quote/PO races can create duplicate economic orders."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue and relations, quote/revision schemas and services, PO acceptance, Corporate order creation, payment and downstream snapshots]
+    excluded_areas: [tax/legal policy, payout execution, production data cleanup]
+    dependencies: [DEP-265-001, DEP-265-002]
+    integrations: [INT-265-001]
+    security_boundaries: [SEC-265-001, SEC-265-002]
+    state_transitions: [draft, approved, expired, revised, po_accepted, order_created, rejected]
+    related_tests: [TEXP-265-001, TEXP-265-002, TEXP-265-003]
+    uncertainties: ["Existing quote/PO model names and legacy data require implementation inventory."]
+requirements:
+    - { id: REQ-265-001, description: "Enforce quote lifecycle, expiry, immutable approved revision, and buyer/company ownership.", type: safety }
+    - { id: REQ-265-002, description: "Validate normalized PO product/SKU/configuration and quantity/employee/size allocation against the approved quote.", type: financial }
+    - { id: REQ-265-003, description: "Enforce race-safe numbering and at most one economic Corporate order per approved quote transaction.", type: integrity }
+scenarios:
+    - { id: SCN-265-001, description: "Only an approved, unexpired, same-company quote creates an order.", requirement_ids: [REQ-265-001], test_expectation_ids: [TEXP-265-001] }
+    - { id: SCN-265-002, description: "Material revision requires re-approval and stale revision/PO is rejected.", requirement_ids: [REQ-265-001, REQ-265-002], test_expectation_ids: [TEXP-265-001, TEXP-265-002] }
+    - { id: SCN-265-003, description: "Wrong scope/allocation and concurrent duplicate PO/order attempts fail or converge to one order.", requirement_ids: [REQ-265-002, REQ-265-003], test_expectation_ids: [TEXP-265-002, TEXP-265-003] }
+invariants:
+    - { id: INV-265-001, description: "Approved commercial versions are immutable and ownership-bound." }
+    - { id: INV-265-002, description: "PO scope and allocation cannot exceed or diverge from approved quote economics." }
+    - { id: INV-265-003, description: "One approved quote transaction creates at most one economic order." }
+flows:
+    - { id: FLOW-265-001, description: "Draft quote becomes approved immutable revision and is accepted only by its owner/company before expiry.", state_transitions: [draft, approved, po_accepted] }
+    - { id: FLOW-265-002, description: "Validated PO creates one order with an approved commercial snapshot.", state_transitions: [po_accepted, order_created] }
+dependencies:
+    - { id: DEP-265-001, name: Corporate quote model, purpose: "Commercial version source", description: "Existing quote/revision/PO records and lifecycle.", status: resolved }
+    - { id: DEP-265-002, name: REN-272, purpose: "Database invariants", description: "Schema audit and uniqueness migration.", status: resolved }
+integrations: [{ id: INT-265-001, system: PostgreSQL, purpose: "Atomic ownership and uniqueness", name: Corporate database, contract: "Checks and order creation share a transaction.", failure_mode: "Conflict fails closed without duplicate order." }]
+personas: [{ id: PER-265-001, name: corporate buyer, role: customer, applicability: "Owns company quote and submits PO." }, { id: PER-265-002, name: finance administrator, role: finance administrator, applicability: "Approves commercial version." }]
+security_boundaries: [{ id: SEC-265-001, description: "Company ownership is checked server-side." }, { id: SEC-265-002, description: "Client price/product/allocation fields cannot override approved snapshots." }]
+business_rules: [{ id: BR-265-001, description: "Approved quote economics are the sole basis for order creation." }]
+decisions:
+    - { id: DEC-265-001, question: "Should material commercial changes reuse an approved revision?", class: HUMAN_CONFIRMATION, status: resolved, decision: "No; create a new revision and require re-approval.", recommendation: "Immutable approved revisions.", basis: "Prevents silent commercial identity changes.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-265-001, category: api, classification: REQUIRED, reason: "Lifecycle, expiry, ownership, and revision gates are financial controls.", scenarios: [SCN-265-001, SCN-265-002] }
+    - { id: TEXP-265-002, category: integration, classification: REQUIRED, reason: "Scope/allocation and DB uniqueness require persistence evidence.", scenarios: [SCN-265-002, SCN-265-003] }
+    - { id: TEXP-265-003, category: regression, classification: REQUIRED, reason: "Direct and PO order creation must preserve one-order behavior.", scenarios: [SCN-265-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-265-001, scenario_ids: [SCN-265-001, SCN-265-002] }, { requirement_id: REQ-265-002, scenario_ids: [SCN-265-002, SCN-265-003] }, { requirement_id: REQ-265-003, scenario_ids: [SCN-265-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-265-001, invariant_ids: [INV-265-001] }, { scenario_id: SCN-265-002, invariant_ids: [INV-265-001, INV-265-002] }, { scenario_id: SCN-265-003, invariant_ids: [INV-265-002, INV-265-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-265-001, test_expectation_ids: [TEXP-265-001] }, { scenario_id: SCN-265-002, test_expectation_ids: [TEXP-265-001, TEXP-265-002] }, { scenario_id: SCN-265-003, test_expectation_ids: [TEXP-265-002, TEXP-265-003] }]
