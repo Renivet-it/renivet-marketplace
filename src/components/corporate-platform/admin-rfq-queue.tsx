@@ -164,6 +164,15 @@ export function AdminRfqQueue({
                 selectedExistingQuote?.gstAmountPaise !== undefined
                     ? String(selectedExistingQuote.gstAmountPaise / 100)
                     : "",
+            commissionAmount:
+                selectedExistingQuote?.commissionAmountPaise !== undefined
+                    ? String(selectedExistingQuote.commissionAmountPaise / 100)
+                    : "0",
+            commissionHsnId:
+                orderConfig?.hsnOptions?.find(
+                    (option) =>
+                        option.hsnCode === selectedExistingQuote?.commissionHsnCode
+                )?.id ?? "",
             advancePercent:
                 selectedExistingQuote &&
                 selectedExistingQuote.totalAmountPaise > 0
@@ -765,7 +774,45 @@ export function AdminRfqQueue({
                                                 value
                                             )
                                         }
+                                        />
+                                    <LabelledInput
+                                        label="Commission amount in INR"
+                                        placeholder="Commission amount in INR"
+                                        type="number"
+                                        value={selectedDraft.commissionAmount ?? "0"}
+                                        onChange={(value) =>
+                                            setDraft(
+                                                selectedRfq.id,
+                                                "commissionAmount",
+                                                value
+                                            )
+                                        }
                                     />
+                                    <label className="block space-y-1.5">
+                                        <span className="text-[11px] font-medium text-slate-700">
+                                            Commission HSN/SAC
+                                        </span>
+                                        <select
+                                            className="!h-9 w-full rounded-md border border-input bg-background !px-3 !py-0 !text-xs !leading-normal"
+                                            value={selectedDraft.commissionHsnId ?? ""}
+                                            onChange={(event) =>
+                                                setDraft(
+                                                    selectedRfq.id,
+                                                    "commissionHsnId",
+                                                    event.target.value
+                                                )
+                                            }
+                                        >
+                                            <option value="">
+                                                Select commission HSN/SAC
+                                            </option>
+                                            {orderConfig?.hsnOptions?.map((option) => (
+                                                <option key={option.id} value={option.id}>
+                                                    {option.hsnCode} ({option.gstRateBps / 100}%)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
                                     <LabelledInput
                                         label="Commercial notes"
                                         placeholder="Commercial notes"
@@ -825,6 +872,14 @@ export function AdminRfqQueue({
                                             balanceAmountPaise:
                                                 totalAmountPaise -
                                                 advanceAmountPaise,
+                                            commissionAmountPaise: Math.round(
+                                                Number(selectedDraft.commissionAmount ?? 0) * 100
+                                            ),
+                                            commissionHsnCode:
+                                                orderConfig?.hsnOptions?.find(
+                                                    (option) =>
+                                                        option.id === selectedDraft.commissionHsnId
+                                                )?.hsnCode ?? "",
                                             comments:
                                                 selectedDraft.comments || null,
                                         });
@@ -839,7 +894,8 @@ export function AdminRfqQueue({
                                             selectedDraft.brandId &&
                                             selectedDraft.productTypeId &&
                                             selectedDraft.gsmOptionId &&
-                                            selectedDraft.fabricCompositionId
+                                            selectedDraft.fabricCompositionId &&
+                                            selectedDraft.commissionHsnId
                                         )
                                     }
                                 >

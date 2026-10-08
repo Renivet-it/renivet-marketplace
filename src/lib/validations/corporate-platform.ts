@@ -202,6 +202,8 @@ export const corporateQuoteInputSchema = z.object({
     totalAmountPaise: z.number().int().nonnegative(),
     advanceAmountPaise: z.number().int().nonnegative().default(0),
     balanceAmountPaise: z.number().int().nonnegative().default(0),
+    commissionAmountPaise: z.number().int().nonnegative().default(0),
+    commissionHsnCode: z.string().trim().min(1).max(16),
     validUntil: z.string().date().nullable().optional(),
     comments: z.string().trim().max(1000).nullable().optional(),
 });

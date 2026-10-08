@@ -1637,6 +1637,32 @@ class CorporatePlatformService {
             parsed.advanceAmountPaise,
             totalAmountPaise
         );
+        const commissionHsnCode = parsed.commissionHsnCode.trim();
+        const commissionClassification = await db.query.hsnMaster.findFirst({
+            where: and(
+                eq(hsnMaster.hsnCode, commissionHsnCode),
+                eq(hsnMaster.isActive, true)
+            ),
+        });
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: commissionClassification?.hsnCode,
+                gstRateBps: commissionClassification?.gstRateBps,
+                sourceId: commissionClassification?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN/SAC Master classification is required for the commission service",
+            });
+        }
+        const commissionGstRateBps = commissionClassification!.gstRateBps;
+        const commissionGstAmountPaise = Math.round(
+            (parsed.commissionAmountPaise * commissionGstRateBps) / 10000
+        );
+        const commissionTotalPaise =
+            parsed.commissionAmountPaise + commissionGstAmountPaise;
         const sequence = await db
             .select({ count: count() })
             .from(corporateQuotes)
@@ -1665,6 +1691,11 @@ class CorporatePlatformService {
                         advanceAmountPaise,
                         balanceAmountPaise:
                             totalAmountPaise - advanceAmountPaise,
+                        commissionAmountPaise: parsed.commissionAmountPaise,
+                        commissionHsnCode,
+                        commissionGstRateBps,
+                        commissionGstAmountPaise,
+                        commissionTotalPaise,
                         validUntil: parsed.validUntil ?? null,
                         status: "sent",
                     })
