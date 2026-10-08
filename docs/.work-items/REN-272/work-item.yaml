@@ -1,0 +1,64 @@
+schema_version: "1.0"
+task:
+    id: REN-272
+    title: "[PRE-RD-5][Corporate] Corporate schema + staging readiness: reconcile DB invariants and restore runnable validation environment"
+    source: linear
+    branch: ayanganguly333/ren-272-pre-rd-5-corporate-schema-staging-readiness
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-272/pre-rd-5corporate-corporate-schema-staging-readiness-reconcile-db, priority: High, labels: [staging-readiness, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons: ["Corporate schema constraints affect financial/order invariants.", "Staging configuration and migrations affect deployment safety."]
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Linear issue and relations, Corporate schemas and migrations, governance validator, staging deployment configuration]
+    excluded_areas: [production mutation, destructive deduplication, unrelated catalog schema]
+    dependencies: [DEP-272-001, DEP-272-002]
+    integrations: [INT-272-001, INT-272-002]
+    security_boundaries: [SEC-272-001, SEC-272-002]
+    state_transitions: [audit_started, duplicate_blocked, migration_applied, rollback_ready, staging_ready]
+    related_tests: [TEXP-272-001, TEXP-272-002, TEXP-272-003]
+    uncertainties: ["Actual staging metadata and deployment trigger are external evidence."]
+requirements:
+    - { id: REQ-272-001, description: "Compare Corporate schema invariants with repository migrations and audit duplicates before uniqueness changes.", type: safety }
+    - { id: REQ-272-002, description: "Apply only additive, idempotent, reversible constraints and record rollback evidence.", type: safety }
+    - { id: REQ-272-003, description: "Produce secret-safe staging readiness evidence for a named SHA, non-production database, provider test mode, and applied migrations.", type: operational }
+scenarios:
+    - { id: SCN-272-001, description: "Clean metadata passes the invariant audit and migration validation.", requirement_ids: [REQ-272-001, REQ-272-002], test_expectation_ids: [TEXP-272-001] }
+    - { id: SCN-272-002, description: "Duplicate data blocks a uniqueness migration without silent deletion.", requirement_ids: [REQ-272-001, REQ-272-002], test_expectation_ids: [TEXP-272-001] }
+    - { id: SCN-272-003, description: "Staging readiness records SHA and non-production dependencies without secrets.", requirement_ids: [REQ-272-003], test_expectation_ids: [TEXP-272-002, TEXP-272-003] }
+invariants:
+    - { id: INV-272-001, description: "Repository and applied Corporate uniqueness constraints cannot silently diverge." }
+    - { id: INV-272-002, description: "No migration or audit step silently deletes duplicate business data." }
+    - { id: INV-272-003, description: "Staging evidence contains no credentials or production endpoint values." }
+flows:
+    - { id: FLOW-272-001, description: "Audit metadata, block unsafe duplicates, apply migration, and record rollback evidence.", state_transitions: [audit_started, duplicate_blocked, migration_applied, rollback_ready] }
+    - { id: FLOW-272-002, description: "Deploy named SHA to staging and validate non-production readiness.", state_transitions: [staging_ready] }
+dependencies:
+    - { id: DEP-272-001, name: Corporate schemas, purpose: "Authoritative database invariants", description: "REN-262, REN-265, REN-269, REN-270, and REN-271 schema requirements.", status: resolved }
+    - { id: DEP-272-002, name: Staging environment, purpose: "Runnable validation", description: "Non-production database/provider and deployment trigger.", status: resolved }
+integrations:
+    - { id: INT-272-001, system: PostgreSQL, purpose: "Metadata and migration application", name: Corporate database, contract: "Constraints match repository declarations.", failure_mode: "Duplicate or failed migration blocks readiness." }
+    - { id: INT-272-002, system: Vercel/GitHub, purpose: "Named staging deployment", name: staging deployment, contract: "Deployment SHA and environment class are recorded.", failure_mode: "Missing or production-like configuration blocks readiness." }
+personas: [{ id: PER-272-001, name: platform operator, role: operator, applicability: "Runs audits and records staging evidence." }]
+security_boundaries:
+    - { id: SEC-272-001, description: "Never log database URLs, provider keys, or webhook secrets." }
+    - { id: SEC-272-002, description: "Production mutation is outside this task and requires separate approval." }
+business_rules:
+    - { id: BR-272-001, description: "Schema readiness is fail-closed when duplicates or environment identity are uncertain." }
+decisions:
+    - { id: DEC-272-001, question: "May duplicate rows be automatically deleted to enable a constraint?", class: HUMAN_CONFIRMATION, status: resolved, decision: "No; block and report duplicates for explicit remediation.", recommendation: "Fail closed without deletion.", basis: "Financial/order records must not be silently destroyed.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-272-001, category: integration, classification: REQUIRED, reason: "Migration and duplicate behavior must be proven." , scenarios: [SCN-272-001, SCN-272-002] }
+    - { id: TEXP-272-002, category: regression, classification: REQUIRED, reason: "Governance and deployment metadata must remain deterministic.", scenarios: [SCN-272-003] }
+    - { id: TEXP-272-003, category: security, classification: REQUIRED, reason: "Staging evidence must be secret-safe and non-production.", scenarios: [SCN-272-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-272-001, scenario_ids: [SCN-272-001, SCN-272-002] }, { requirement_id: REQ-272-002, scenario_ids: [SCN-272-001, SCN-272-002] }, { requirement_id: REQ-272-003, scenario_ids: [SCN-272-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-272-001, invariant_ids: [INV-272-001] }, { scenario_id: SCN-272-002, invariant_ids: [INV-272-002] }, { scenario_id: SCN-272-003, invariant_ids: [INV-272-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-272-001, test_expectation_ids: [TEXP-272-001] }, { scenario_id: SCN-272-002, test_expectation_ids: [TEXP-272-001] }, { scenario_id: SCN-272-003, test_expectation_ids: [TEXP-272-002, TEXP-272-003] }]
