@@ -1,0 +1,53 @@
+schema_version: "1.0"
+task:
+    id: REN-271
+    title: "[PRE-RD-5][Corporate] Fulfilment control: authoritative FO snapshot, payment-gated state machine, QC maker-checker and customization"
+    source: linear
+    branch: ayanganguly333/ren-271-pre-rd-5-corporate-fulfilment-control
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-271/pre-rd-5corporate-fulfilment-control-authoritative-fo-snapshot-payment, priority: High, labels: [qa-finding, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L3, path_rule_risk: L3, semantic_risk: L3, final_risk: L3, reasons: ["Fulfilment state controls production and dispatch.", "Incorrect snapshots cause financial, tax, and manufacturing loss."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [FO schemas/PDF, Corporate status writers, payment gates, QC services, delivery modes, customization and downstream documents]
+    excluded_areas: [general catalog fulfillment, new shipping provider, production deployment]
+    dependencies: [DEP-271-001, DEP-271-002]
+    integrations: [INT-271-001, INT-271-002]
+    security_boundaries: [SEC-271-001, SEC-271-002]
+    state_transitions: [draft, payment_pending, authorized, in_production, qc_pending, qc_approved, dispatched, delivered, held]
+    related_tests: [TEXP-271-001, TEXP-271-002, TEXP-271-003]
+    uncertainties: ["Legacy status writers and existing delivery-mode gates require implementation inventory."]
+requirements:
+    - { id: REQ-271-001, description: "Persist a complete immutable/versioned FO snapshot and render FO PDFs from it only.", type: integrity }
+    - { id: REQ-271-002, description: "Guard every Corporate status transition with payment/authorized-credit, allowed-transition, terminal, and delivery prerequisites.", type: safety }
+    - { id: REQ-271-003, description: "Bind QC to the current FO/version and quantity, enforce maker-checker, and preserve customization/extras.", type: operational }
+scenarios:
+    - { id: SCN-271-001, description: "FO and PDF contain identical product, allocation, customization, tax, delivery, and total facts.", requirement_ids: [REQ-271-001], test_expectation_ids: [TEXP-271-001] }
+    - { id: SCN-271-002, description: "Unpaid/invalid/concurrent status transition or delivery prerequisite fails closed.", requirement_ids: [REQ-271-002], test_expectation_ids: [TEXP-271-002] }
+    - { id: SCN-271-003, description: "Only current approved QC by a different user unlocks dispatch; FO revision invalidates old QC.", requirement_ids: [REQ-271-003], test_expectation_ids: [TEXP-271-003] }
+invariants:
+    - { id: INV-271-001, description: "FO PDF and downstream production consume the same persisted versioned snapshot." }
+    - { id: INV-271-002, description: "Corporate status changes occur only through the guarded transition service." }
+    - { id: INV-271-003, description: "Dispatch requires current approved QC and applicable delivery prerequisites." }
+flows:
+    - { id: FLOW-271-001, description: "Accepted commercial data creates/versiones FO snapshot used for production.", state_transitions: [draft, payment_pending, authorized, in_production] }
+    - { id: FLOW-271-002, description: "Current QC and delivery gates allow dispatch and terminal progression.", state_transitions: [qc_pending, qc_approved, dispatched, delivered] }
+dependencies:
+    - { id: DEP-271-001, name: REN-265/270, purpose: "Commercial/tax truth", description: "Approved commercial version and validated tax facts.", status: resolved }
+    - { id: DEP-271-002, name: REN-272, purpose: "Schema invariants", description: "Version and uniqueness constraints.", status: resolved }
+integrations: [{ id: INT-271-001, system: PostgreSQL, purpose: "FO/version/status consistency", name: Corporate database, contract: "Transition and current-version checks are transactional.", failure_mode: "Conflict leaves prior state and explicit hold." }, { id: INT-271-002, system: Document/PDF service, purpose: "Authoritative FO document", name: FO renderer, contract: "PDF reads persisted snapshot.", failure_mode: "Missing snapshot blocks document claim." }]
+personas: [{ id: PER-271-001, name: operations, role: operations operator, applicability: "Creates FO and progresses fulfilment." }, { id: PER-271-002, name: brand QC, role: seller, applicability: "Submits/reviews QC with maker-checker." }]
+security_boundaries: [{ id: SEC-271-001, description: "Only authorized roles can transition Corporate fulfilment state." }, { id: SEC-271-002, description: "Client fields cannot override persisted FO/version or payment gates." }]
+business_rules: [{ id: BR-271-001, description: "Factory-relevant facts must be available from the FO alone." }]
+decisions:
+    - { id: DEC-271-001, question: "May unpaid Corporate orders enter production?", class: HUMAN_CONFIRMATION, status: resolved, decision: "No, except an explicit authorized and auditable credit exception.", recommendation: "Fail closed by default.", basis: "Production without payment creates direct loss.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-271-001, category: integration, classification: REQUIRED, reason: "FO/PDF equality and snapshot completeness require persistence evidence.", scenarios: [SCN-271-001] }
+    - { id: TEXP-271-002, category: api, classification: REQUIRED, reason: "Status/payment/delivery gates are safety controls.", scenarios: [SCN-271-002] }
+    - { id: TEXP-271-003, category: regression, classification: REQUIRED, reason: "QC maker-checker and version invalidation protect dispatch.", scenarios: [SCN-271-003] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-271-001, scenario_ids: [SCN-271-001] }, { requirement_id: REQ-271-002, scenario_ids: [SCN-271-002] }, { requirement_id: REQ-271-003, scenario_ids: [SCN-271-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-271-001, invariant_ids: [INV-271-001] }, { scenario_id: SCN-271-002, invariant_ids: [INV-271-002] }, { scenario_id: SCN-271-003, invariant_ids: [INV-271-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-271-001, test_expectation_ids: [TEXP-271-001] }, { scenario_id: SCN-271-002, test_expectation_ids: [TEXP-271-002] }, { scenario_id: SCN-271-003, test_expectation_ids: [TEXP-271-003] }]
