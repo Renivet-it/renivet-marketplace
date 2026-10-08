@@ -1,0 +1,53 @@
+schema_version: "1.0"
+task:
+    id: REN-270
+    title: "[PRE-RD-5][Corporate] Document + tax truth: real documents, authoritative numbering, HSN/GST, PoS and identity"
+    source: linear
+    branch: ayanganguly333/ren-270-pre-rd-5-corporate-document-tax-truth
+    status: READY_FOR_DEV
+    linear: { url: https://linear.app/renivet/issue/REN-270/pre-rd-5corporate-document-tax-truth-real-documents-authoritative, priority: High, labels: [qa-finding, Bug], status: Todo, assignee: Ayan Ganguly, parent: REN-187 }
+risk: { initial_risk: L3, path_rule_risk: L3, semantic_risk: L3, final_risk: L3, reasons: ["Tax/document errors affect legal and financial records.", "Identity and download controls expose customer/brand data."], escalation_history: [] }
+investigation:
+    depth: dependency_tracing
+    investigated_areas: [Document services and schemas, HSN/GST validation, place-of-supply logic, invoice download routes, numbering, FO/commercial snapshots]
+    excluded_areas: [new tax/legal policy, production document deletion, unrelated catalog invoices]
+    dependencies: [DEP-270-001, DEP-270-002]
+    integrations: [INT-270-001]
+    security_boundaries: [SEC-270-001, SEC-270-002]
+    state_transitions: [not_issued, pending, issued, held, overridden, corrected, reissued]
+    related_tests: [TEXP-270-001, TEXP-270-002, TEXP-270-003]
+    uncertainties: ["Finance/CA decision on registration versus operational identity is an external policy dependency."]
+requirements:
+    - { id: REQ-270-001, description: "Block material invoice/tax discrepancies and require authoritative HSN, GST, PoS, identity, and commercial/FO facts.", type: safety }
+    - { id: REQ-270-002, description: "Persist real authorized documents with unique authoritative numbering and role-bound downloads; never fabricate placeholders.", type: integrity }
+    - { id: REQ-270-003, description: "Version corrections/reissues and retain audit history without silently overwriting issued documents.", type: audit }
+scenarios:
+    - { id: SCN-270-001, description: "Wrong GSTIN/HSN/total, missing classification, or address-state mismatch holds issuance/settlement.", requirement_ids: [REQ-270-001], test_expectation_ids: [TEXP-270-001] }
+    - { id: SCN-270-002, description: "Authorized customer/brand/admin receives only persisted applicable documents with unique numbers.", requirement_ids: [REQ-270-002], test_expectation_ids: [TEXP-270-002] }
+    - { id: SCN-270-003, description: "Concurrent numbering and correction/reissue retain one authoritative history.", requirement_ids: [REQ-270-002, REQ-270-003], test_expectation_ids: [TEXP-270-002, TEXP-270-003] }
+invariants:
+    - { id: INV-270-001, description: "Issued tax/document values equal authoritative validated commercial and FO snapshots." }
+    - { id: INV-270-002, description: "A missing or unauthorized document is never represented as issued or downloadable." }
+    - { id: INV-270-003, description: "Document numbers and corrections are unique, versioned, and auditable." }
+flows:
+    - { id: FLOW-270-001, description: "Validate tax/identity facts, hold discrepancies, and issue only persisted authorized documents.", state_transitions: [not_issued, pending, held, issued] }
+    - { id: FLOW-270-002, description: "Correct an issued document through versioned reissue with retained history.", state_transitions: [corrected, reissued] }
+dependencies:
+    - { id: DEP-270-001, name: REN-265/271, purpose: "Commercial and FO truth", description: "Approved commercial and fulfillment snapshots.", status: resolved }
+    - { id: DEP-270-002, name: Finance/CA policy, purpose: "Tax/legal identity", description: "Confirmed registration, operational identity, and tax treatment.", status: resolved }
+integrations: [{ id: INT-270-001, system: PostgreSQL/document service, purpose: "Persisted documents and numbering", name: document boundary, contract: "Only persisted authorized records are rendered/downloaded.", failure_mode: "Missing/invalid source holds issuance." }]
+personas: [{ id: PER-270-001, name: corporate buyer, role: customer, applicability: "Downloads applicable documents." }, { id: PER-270-002, name: brand, role: seller, applicability: "Submits/receives tax invoice." }]
+security_boundaries: [{ id: SEC-270-001, description: "Document downloads require role/order authorization." }, { id: SEC-270-002, description: "Tax identity and confidential fields are not exposed to unauthorized roles." }]
+business_rules: [{ id: BR-270-001, description: "A document API may claim issued/downloadable only when the persisted authorized document exists." }]
+decisions:
+    - { id: DEC-270-001, question: "How should GST registration and operational identity be represented?", class: HUMAN_CONFIRMATION, status: resolved, decision: "Keep legal registration and operational address as distinct explicit facts, using confirmed Finance/CA policy for legal issuer framing.", recommendation: "Separate identity fields.", basis: "Avoid fabricating legal identity from office data.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-270-001, category: api, classification: REQUIRED, reason: "Tax/document discrepancy gates are legal and financial controls.", scenarios: [SCN-270-001] }
+    - { id: TEXP-270-002, category: integration, classification: REQUIRED, reason: "Persistence, authorization, and numbering require DB/document evidence.", scenarios: [SCN-270-002, SCN-270-003] }
+    - { id: TEXP-270-003, category: security, classification: REQUIRED, reason: "Unauthorized document access must fail closed.", scenarios: [SCN-270-002] }
+critic: { required: true, completed: true, artifact: CRITIQUE.md, reviewer: independent fresh-context critic, fresh_context: true, read_only: true, required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies], findings: [] }
+approval: { state: APPROVED, design_blockers: [], approved_by: Ayan Ganguly }
+traceability:
+    requirement_to_scenarios: [{ requirement_id: REQ-270-001, scenario_ids: [SCN-270-001] }, { requirement_id: REQ-270-002, scenario_ids: [SCN-270-002, SCN-270-003] }, { requirement_id: REQ-270-003, scenario_ids: [SCN-270-003] }]
+    scenario_to_invariants: [{ scenario_id: SCN-270-001, invariant_ids: [INV-270-001] }, { scenario_id: SCN-270-002, invariant_ids: [INV-270-002] }, { scenario_id: SCN-270-003, invariant_ids: [INV-270-003] }]
+    scenario_to_test_expectations: [{ scenario_id: SCN-270-001, test_expectation_ids: [TEXP-270-001] }, { scenario_id: SCN-270-002, test_expectation_ids: [TEXP-270-002, TEXP-270-003] }, { scenario_id: SCN-270-003, test_expectation_ids: [TEXP-270-002] }]

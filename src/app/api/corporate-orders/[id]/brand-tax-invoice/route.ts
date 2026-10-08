@@ -44,7 +44,11 @@ export async function GET(
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
     const invoice = await db.query.corporateBrandTaxInvoices.findFirst({
-        where: eq(corporateBrandTaxInvoices.orderId, id),
+        where: and(
+            eq(corporateBrandTaxInvoices.orderId, id),
+            eq(corporateBrandTaxInvoices.validationStatus, "accepted"),
+            eq(corporateBrandTaxInvoices.isCurrentAccepted, true)
+        ),
         orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
     });
     if (!invoice)
