@@ -3,11 +3,6 @@
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
@@ -146,29 +141,18 @@ export function ProductCartCard({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <button
-                                    className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={isUpdating}
-                                    onClick={(e) => {
-                                        if (readOnly) e.preventDefault();
-                                    }}
-                                >
-                                    <span>Qty: {item.quantity}</span>
-                                    {!readOnly && (
-                                        <Icons.ChevronDown className="size-3" />
-                                    )}
-                                </button>
-                            </PopoverTrigger>
-
-                            <PopoverContent className="rounded-none">
+                        {!readOnly ? (
+                            <div className="flex items-center gap-2">
                                 <ProductCartQuantityChangeForm
                                     item={item}
                                     userId={userId}
                                 />
-                            </PopoverContent>
-                        </Popover>
+                            </div>
+                        ) : (
+                            <span className="text-xs font-semibold">
+                                Qty: {item.quantity}
+                            </span>
+                        )}
                     </div>
 
                     <div className="text-lg font-semibold md:text-xl">

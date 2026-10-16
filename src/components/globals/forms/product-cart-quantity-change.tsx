@@ -7,7 +7,6 @@ import {
     FormControl,
     FormField,
     FormItem,
-    FormLabel,
     FormMessage,
 } from "@/components/ui/form";
 import { trpc } from "@/lib/trpc/client";
@@ -121,10 +120,6 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                     name="quantity"
                     render={({ field }) => (
                         <FormItem className="space-y-4">
-                            <FormLabel className="font-semibold uppercase">
-                                Select Quantity
-                            </FormLabel>
-
                             <FormControl>
                                 <div>
                                     <div className="flex h-10 w-fit items-center overflow-hidden rounded-md border border-input shadow-sm">
