@@ -40,6 +40,19 @@ test("cart rate limiting is scoped to the authenticated user", () => {
     const source = read("src/lib/trpc/trpc.ts");
 
     expect(source).toContain("ctx.user?.id ??");
+    expect(source).toContain(
+        "export const protectedProcedure = t.procedure\n    .use(errorHandler)\n    .use(isAuth)\n    .use(ratelimiter);"
+    );
+});
+
+test("quantity update failures produce one client error", () => {
+    const source = read(
+        "src/components/globals/forms/product-cart-quantity-change.tsx"
+    );
+
+    expect(
+        source.match(/handleClientError\(/g)?.length ?? 0
+    ).toBe(1);
 });
 
 test("intent access logging gives PostgreSQL's jsonb builder a typed timestamp", () => {

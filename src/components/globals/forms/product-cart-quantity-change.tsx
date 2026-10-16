@@ -79,10 +79,9 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                 requestedQuantity.current = quantity;
                 await refetch();
             })
-            .catch((error) => {
+            .catch(() => {
                 requestedQuantity.current = persistedQuantity.current;
                 form.setValue("quantity", persistedQuantity.current);
-                handleClientError(error);
             });
     };
 
