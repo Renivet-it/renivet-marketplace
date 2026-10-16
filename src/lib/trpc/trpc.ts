@@ -209,6 +209,9 @@ export async function requireOwnBrand(
 
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);
-export const protectedProcedure = publicProcedure.use(isAuth);
+export const protectedProcedure = t.procedure
+    .use(errorHandler)
+    .use(isAuth)
+    .use(ratelimiter);
 export const brandProcedure = protectedProcedure.use(isBrand);
 export const adminProcedure = protectedProcedure.use(isAdmin);
