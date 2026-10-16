@@ -9,13 +9,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog-dash";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea-general";
 import { addToGuestWishlist } from "@/lib/hooks/wishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -27,7 +21,7 @@ import {
 } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import { addDays, format } from "date-fns";
-import { Leaf, Minus, Plus, Recycle, RotateCcw, Truck } from "lucide-react";
+import { Leaf, Recycle, RotateCcw, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -342,39 +336,16 @@ export function ProductCartCard({
                 {/* Bottom row: quantity controls */}
                 <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                     {/* Quantity */}
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className="flex size-7 items-center justify-center rounded border border-green-300 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={isUpdating || readOnly}
-                                    onClick={(e) => {
-                                        if (readOnly) e.preventDefault();
-                                    }}
-                                >
-                                    <Minus className="size-3" />
-                                </button>
-                                <span className="w-5 text-center text-sm font-medium">
-                                    {item.quantity}
-                                </span>
-                                <button
-                                    className="flex size-7 items-center justify-center rounded border border-green-300 bg-green-50 text-green-600 transition-colors hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={isUpdating || readOnly}
-                                    onClick={(e) => {
-                                        if (readOnly) e.preventDefault();
-                                    }}
-                                >
-                                    <Plus className="size-3" />
-                                </button>
-                            </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto rounded-lg p-3">
-                            <ProductCartQuantityChangeForm
-                                item={item}
-                                userId={userId}
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    {!readOnly ? (
+                        <ProductCartQuantityChangeForm
+                            item={item}
+                            userId={userId}
+                        />
+                    ) : (
+                        <span className="text-sm font-medium">
+                            Qty: {item.quantity}
+                        </span>
+                    )}
 
                     {/* Remove */}
                     {!readOnly && (
@@ -561,41 +532,16 @@ export function ProductCartCard({
                     <div className="flex flex-col items-end justify-between">
                         {/* Quantity controls */}
                         <div className="flex items-center gap-1">
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            className="flex size-7 items-center justify-center rounded-full border border-green-300 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                            disabled={isUpdating || readOnly}
-                                            onClick={(e) => {
-                                                if (readOnly)
-                                                    e.preventDefault();
-                                            }}
-                                        >
-                                            <Minus className="size-3" />
-                                        </button>
-                                        <span className="w-6 text-center text-sm font-medium">
-                                            {item.quantity}
-                                        </span>
-                                        <button
-                                            className="flex size-7 items-center justify-center rounded-full border border-green-300 bg-green-50 text-green-600 transition-colors hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                            disabled={isUpdating || readOnly}
-                                            onClick={(e) => {
-                                                if (readOnly)
-                                                    e.preventDefault();
-                                            }}
-                                        >
-                                            <Plus className="size-3" />
-                                        </button>
-                                    </div>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto rounded-lg p-3">
-                                    <ProductCartQuantityChangeForm
-                                        item={item}
-                                        userId={userId}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                            {!readOnly ? (
+                                <ProductCartQuantityChangeForm
+                                    item={item}
+                                    userId={userId}
+                                />
+                            ) : (
+                                <span className="text-sm font-medium">
+                                    Qty: {item.quantity}
+                                </span>
+                            )}
                         </div>
 
                         {/* Remove link */}

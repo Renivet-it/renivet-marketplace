@@ -17,6 +17,18 @@ test("cart quantity controls persist each click without a save step", () => {
     expect(source).not.toContain("Save Changes");
 });
 
+test("cart cards render quantity controls inline instead of opening a popover", () => {
+    const appCard = read(
+        "src/app/(protected)/mycart/Component/product-cart-card.tsx"
+    );
+    const sharedCard = read("src/components/globals/cards/product-cart.tsx");
+
+    expect(appCard).not.toContain("<PopoverTrigger asChild>");
+    expect(appCard).not.toContain("<PopoverContent className=\"w-auto rounded-lg p-3\">");
+    expect(sharedCard).not.toContain("<PopoverTrigger asChild>");
+    expect(sharedCard).not.toContain("<PopoverContent className=\"rounded-none\">");
+});
+
 test("cart quantity updates allow the exact available stock quantity", () => {
     const source = read("src/lib/trpc/routes/general/cart.ts");
 
