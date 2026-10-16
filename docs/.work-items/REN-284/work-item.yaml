@@ -1,0 +1,145 @@
+schema_version: "1.0"
+task:
+    id: REN-284
+    title: "Design complete responsive home page for desktop and mobile"
+    source: linear
+    branch: ayanganguly333/ren-284-design-complete-responsive-home-page-for-desktop-and-mobile
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-284/design-complete-responsive-home-page-for-desktop-and-mobile
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        parent: null
+        linear_branch: ayanganguly333/ren-284-design-complete-responsive-home-page-for-desktop-and-mobile
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - "The task spans the full storefront home journey and multiple responsive component surfaces."
+        - "Visual interaction states, navigation, accessibility, asset loading, and responsive behavior must remain coherent across devices."
+        - "No payment, identity, schema, production-data, or external runtime behavior is in scope."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - "REN-284 Linear issue, Figma attachment, comments, relations, and branch metadata"
+        - "src/app/(home)/page.tsx home-page composition, data loaders, and Suspense boundaries"
+        - "src/components/home/landing.tsx desktop/mobile hero, search, category, and carousel behavior"
+        - "src/components/home/new-home-page reusable product, category, brand, editorial, trust, and mobile sections"
+        - "global navigation/layout, site metadata, image usage, and existing repository validation scripts"
+    excluded_areas:
+        - "database schema, migrations, and production data"
+        - "checkout, payment, order, inventory, and fulfillment behavior"
+        - "authentication/authorization policy changes"
+        - "new runtime integrations and analytics taxonomy"
+        - "deployment, merge, and Linear workflow/status mutation"
+    dependencies: [DEP-284-001, DEP-284-002, DEP-284-003]
+    integrations: [INT-284-001]
+    security_boundaries: [SEC-284-001, SEC-284-002]
+    state_transitions: [loading, ready, empty, unavailable, focused, pressed, expanded, collapsed]
+    related_tests: [TEXP-284-001, TEXP-284-002, TEXP-284-003, TEXP-284-004, TEXP-284-005, TEXP-284-006]
+    uncertainties:
+        - "Exact breakpoint values, final asset URLs, focal points, and editorial copy must be confirmed against the linked Figma frames during implementation."
+        - "The final section enablement/order must reconcile the Figma journey with currently conditional home-page sections."
+requirements:
+    - { id: REQ-284-001, description: "Define a complete desktop and mobile home-page journey using the updated Figma design system.", type: explicit }
+    - { id: REQ-284-002, description: "Specify responsive breakpoints, layout transitions, navigation behavior, image treatment, stacking, overflow, CTA placement, and touch targets.", type: explicit }
+    - { id: REQ-284-003, description: "Cover hero, discovery/navigation, category and product sections, promotional/editorial areas, trust/content blocks, and footer without broken gaps when content is unavailable.", type: explicit }
+    - { id: REQ-284-004, description: "Document loading, empty, hover where applicable, focus, pressed, disabled, unavailable/error, reduced-motion, and long-content states for applicable interactions.", type: explicit }
+    - { id: REQ-284-005, description: "Provide clear accessible CTAs for shopping, brand discovery, and corporate journeys with valid destinations and names.", type: explicit }
+    - { id: REQ-284-006, description: "Document reusable components, design tokens, assets, responsive variants, fallback/alt-text ownership, and handoff notes with no unresolved major visual or interaction gaps.", type: explicit }
+    - { id: REQ-284-007, description: "Preserve existing home-page data/query boundaries and avoid unrelated schema, commerce, identity, production-data, and runtime-integration changes.", type: compatibility }
+scenarios:
+    - { id: SCN-284-001, description: "A desktop shopper can navigate the complete home journey from global navigation through discovery, shopping content, storytelling, trust messaging, and footer.", requirement_ids: [REQ-284-001, REQ-284-003, REQ-284-005] }
+    - { id: SCN-284-002, description: "A mobile shopper receives an intentional single-column/touch-first journey with responsive navigation, horizontal content where specified, readable copy, and correctly placed CTAs.", requirement_ids: [REQ-284-001, REQ-284-002, REQ-284-005] }
+    - { id: SCN-284-003, description: "The layout transitions between supported widths without clipping, overlap, inaccessible controls, broken image crops, or unintended horizontal page overflow.", requirement_ids: [REQ-284-002, REQ-284-006] }
+    - { id: SCN-284-004, description: "Slow, empty, unavailable, and long-content conditions preserve usable structure and do not leave orphaned controls or large broken gaps.", requirement_ids: [REQ-284-003, REQ-284-004, REQ-284-007] }
+    - { id: SCN-284-005, description: "Keyboard, focus, pressed, hover, reduced-motion, loading, and disabled states are perceivable and consistent for applicable controls and animated content.", requirement_ids: [REQ-284-004, REQ-284-005, REQ-284-006] }
+    - { id: SCN-284-006, description: "The implementation handoff identifies the Figma-to-code mapping, reusable components, tokens, assets, content assumptions, and any intentional deviations.", requirement_ids: [REQ-284-006] }
+    - { id: SCN-284-007, description: "The home-page redesign reuses existing content-loading boundaries and does not alter unrelated commerce, identity, schema, or production behavior.", requirement_ids: [REQ-284-007] }
+invariants:
+    - { id: INV-284-001, description: "Every supported viewport presents the same required journey and intent, even when its layout and interaction pattern differ." }
+    - { id: INV-284-002, description: "Unavailable content never creates an inaccessible control, broken navigation destination, or unrecoverable layout gap." }
+    - { id: INV-284-003, description: "Interactive controls remain keyboard reachable, visibly focused, touch-usable, and semantically named." }
+    - { id: INV-284-004, description: "Responsive media preserves the intended subject/focal point and has a documented fallback and alternative text." }
+    - { id: INV-284-005, description: "The presentation redesign does not change the existing data/query or commerce-domain ownership boundaries." }
+flows:
+    - { id: FLOW-284-001, description: "Home page loads navigation and hero, progressively reveals discovery and commerce sections, and finishes with trust/content and footer surfaces.", state_transitions: [loading, ready, empty, unavailable] }
+    - { id: FLOW-284-002, description: "Viewport changes map the shared semantic content to desktop, tablet, and mobile layout/interaction rules without changing journey intent.", state_transitions: [ready, collapsed, expanded] }
+    - { id: FLOW-284-003, description: "A shopper moves through focus, hover, pressed, disabled, and reduced-motion states while retaining clear feedback and accessible navigation.", state_transitions: [focused, pressed, collapsed, expanded] }
+dependencies:
+    - { id: DEP-284-001, name: updated Figma design system, purpose: "Visual and interaction source of truth", description: "Issue-linked Figma file supplies frames, tokens, components, and assets to reconcile during implementation.", status: resolved }
+    - { id: DEP-284-002, name: existing home-page component/query boundaries, purpose: "Reuse current content loading and section ownership", description: "Current route and home components already load banner, product, category, brand, editorial, and blog data.", status: resolved }
+    - { id: DEP-284-003, name: responsive preview and device matrix, purpose: "Visual and interaction validation", description: "Implementation requires representative desktop, tablet, and mobile preview widths plus keyboard and reduced-motion checks.", status: resolved }
+integrations:
+    - { id: INT-284-001, system: Figma, purpose: "Design handoff reference", name: "RENIVET Mobile Design System", contract: "Implementation maps approved frames/tokens/assets to reusable storefront components and records intentional deviations.", failure_mode: "Missing or ambiguous design details are recorded as handoff notes and do not silently become a runtime behavior change." }
+personas:
+    - { id: PER-284-001, name: shopper desktop, role: storefront shopper, applicability: "Browses products and categories on a desktop viewport." }
+    - { id: PER-284-002, name: shopper mobile, role: storefront shopper, applicability: "Browses and taps CTAs on a mobile viewport." }
+    - { id: PER-284-003, name: brand/corporate discoverer, role: prospective brand or corporate customer, applicability: "Uses explicit brand discovery and corporate journey CTAs." }
+security_boundaries:
+    - { id: SEC-284-001, description: "Navigation and CTA destinations must remain within approved Renivet routes or documented external destinations; no new trust boundary is introduced." }
+    - { id: SEC-284-002, description: "User-provided or long content is rendered through existing safe component boundaries and does not bypass established escaping or authorization behavior." }
+business_rules:
+    - { id: BR-284-001, description: "Visual hierarchy must make shopping, brand discovery, and corporate journeys discoverable without misleading labels or dead-end CTAs." }
+    - { id: BR-284-002, description: "Content availability may change section visibility, but it must not break the surrounding journey." }
+decisions:
+    - { id: DEC-284-001, question: "What visual system governs the implementation?", class: AUTO_DECIDE, status: resolved, recommendation: "Use the issue-linked updated Figma design system as the source of truth.", basis: "Explicit issue requirement and attached Figma artifact.", confidence: high, consequence: low, human_confirmation_required: false }
+    - { id: DEC-284-002, question: "Should existing data/query boundaries be preserved?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Preserve them and make only presentation-layer changes unless a separately approved mismatch is found.", basis: "Current home route already owns the required content loading and the issue is design-focused.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-284-003, question: "Are desktop and mobile independent compositions?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Treat both as first-class compositions with shared semantics and reusable components where practical.", basis: "Current code already separates desktop and mobile hero/navigation patterns.", confidence: medium, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-284-004, question: "What details remain for implementation handoff?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Confirm exact breakpoints, asset URLs/focal points, copy, and final section order against Figma and record them in handoff notes.", basis: "Issue text references Figma but does not enumerate these details.", confidence: high, consequence: medium, human_confirmation_required: false }
+test_expectations:
+    - { id: TEXP-284-001, category: ui_ux, classification: REQUIRED, reason: "Desktop and mobile visual evidence must cover the complete journey, hierarchy, responsive layout, imagery, and CTA placement.", scenarios: [SCN-284-001, SCN-284-002, SCN-284-003, SCN-284-006] }
+    - { id: TEXP-284-002, category: accessibility, classification: REQUIRED, reason: "Keyboard reachability, focus visibility, names, contrast, touch targets, reduced motion, and image alternatives are required for the stated interaction contract.", scenarios: [SCN-284-002, SCN-284-003, SCN-284-005] }
+    - { id: TEXP-284-003, category: component, classification: REQUIRED, reason: "Reusable section and state components must render required, empty, unavailable, long-content, and interactive states consistently.", scenarios: [SCN-284-004, SCN-284-005, SCN-284-006] }
+    - { id: TEXP-284-004, category: e2e, classification: REQUIRED, reason: "The shopper journey and all specified CTA destinations must be exercised on desktop and mobile viewport profiles.", scenarios: [SCN-284-001, SCN-284-002, SCN-284-007] }
+    - { id: TEXP-284-005, category: performance, classification: REQUIRED, reason: "Image-heavy and dynamically loaded sections require evidence for loading behavior, layout stability, and acceptable mobile performance.", scenarios: [SCN-284-003, SCN-284-004, SCN-284-005] }
+    - { id: TEXP-284-006, category: regression, classification: REQUIRED, reason: "Existing data/query boundaries, valid routes, and unrelated commerce/identity behavior must remain unchanged.", scenarios: [SCN-284-004, SCN-284-007] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-284-001, severity: MAJOR, status: resolved, summary: "Responsive behavior, interaction states, assets, and handoff evidence are now explicit requirements and tests." }
+        - { id: CRIT-284-002, severity: MAJOR, status: resolved, summary: "Conditional sections and unavailable content are covered by requirements, scenarios, invariants, and regression tests." }
+        - { id: CRIT-284-003, severity: MINOR, status: recorded, summary: "Exact breakpoints and asset details remain implementation handoff obligations against the linked Figma frames." }
+        - { id: CRIT-284-004, severity: MINOR, status: resolved, summary: "Loading, reduced-motion, image, and performance risks are included in scenarios and required checks." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Renivet engineering governance — L2 Critic gate"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-284-001, scenario_ids: [SCN-284-001, SCN-284-002] }
+        - { requirement_id: REQ-284-002, scenario_ids: [SCN-284-002, SCN-284-003] }
+        - { requirement_id: REQ-284-003, scenario_ids: [SCN-284-001, SCN-284-004] }
+        - { requirement_id: REQ-284-004, scenario_ids: [SCN-284-004, SCN-284-005] }
+        - { requirement_id: REQ-284-005, scenario_ids: [SCN-284-001, SCN-284-002, SCN-284-005] }
+        - { requirement_id: REQ-284-006, scenario_ids: [SCN-284-003, SCN-284-005, SCN-284-006] }
+        - { requirement_id: REQ-284-007, scenario_ids: [SCN-284-004, SCN-284-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-284-001, invariant_ids: [INV-284-001, INV-284-003] }
+        - { scenario_id: SCN-284-002, invariant_ids: [INV-284-001, INV-284-003, INV-284-004] }
+        - { scenario_id: SCN-284-003, invariant_ids: [INV-284-001, INV-284-004] }
+        - { scenario_id: SCN-284-004, invariant_ids: [INV-284-002, INV-284-005] }
+        - { scenario_id: SCN-284-005, invariant_ids: [INV-284-003, INV-284-004] }
+        - { scenario_id: SCN-284-006, invariant_ids: [INV-284-005] }
+        - { scenario_id: SCN-284-007, invariant_ids: [INV-284-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-284-001, test_expectation_ids: [TEXP-284-001, TEXP-284-004] }
+        - { scenario_id: SCN-284-002, test_expectation_ids: [TEXP-284-001, TEXP-284-002, TEXP-284-004] }
+        - { scenario_id: SCN-284-003, test_expectation_ids: [TEXP-284-001, TEXP-284-002, TEXP-284-005] }
+        - { scenario_id: SCN-284-004, test_expectation_ids: [TEXP-284-003, TEXP-284-005, TEXP-284-006] }
+        - { scenario_id: SCN-284-005, test_expectation_ids: [TEXP-284-002, TEXP-284-003, TEXP-284-005] }
+        - { scenario_id: SCN-284-006, test_expectation_ids: [TEXP-284-001, TEXP-284-003] }
+        - { scenario_id: SCN-284-007, test_expectation_ids: [TEXP-284-004, TEXP-284-006] }

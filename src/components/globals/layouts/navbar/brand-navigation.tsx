@@ -110,7 +110,7 @@ function EmptyBrands({ isLoading }: { isLoading: boolean }) {
     );
 }
 
-function AllBrandsDialog({
+export function AllBrandsDialog({
     brands,
     open,
     onOpenChange,

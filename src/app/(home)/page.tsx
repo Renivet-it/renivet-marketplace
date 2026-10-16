@@ -1,22 +1,25 @@
-import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { EmailCompletionCard } from "@/components/auth/email-completion-card";
-import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
+import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
+import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
 import { siteConfig } from "@/config/site";
 import {
     blogQueries,
-    homeShopByCategoryQueries,
     homeShopByCategoryTitleQueries,
     productQueries,
     WomenHomeSectionQueries,
 } from "@/lib/db/queries";
-import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
+import {
+    bannerCache,
+    brandCache,
+    marketingStripCache,
+} from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 
 export const metadata: Metadata = {
     title: "Renivet | Sustainable Marketplace for Quality Products",
@@ -44,11 +47,6 @@ export const metadata: Metadata = {
 const Blogs = dynamic(() =>
     import("@/components/home/blogs").then((m) => ({
         default: m.Blogs,
-    }))
-);
-const BrandPromotion = dynamic(() =>
-    import("@/components/home/new-home-page/brand-promotion").then((m) => ({
-        default: m.BrandPromotion,
     }))
 );
 const BrandTypes = dynamic(() =>
@@ -86,11 +84,6 @@ const MatchaBag = dynamic(() =>
         default: m.MatchaBag,
     }))
 );
-const MayAlsoLoveThese = dynamic(() =>
-    import("@/components/home/new-home-page/may-also-love").then((m) => ({
-        default: m.MayAlsoLoveThese,
-    }))
-);
 const MostPopularProducts = dynamic(() =>
     import("@/components/home/new-home-page/most-popular-products").then(
         (m) => ({
@@ -113,32 +106,36 @@ const ProductGridNewArrivals = dynamic(() =>
         default: m.ProductGridNewArrivals,
     }))
 );
-const ShopCategories = dynamic(() =>
-    import("@/components/home/new-home-page/shop-by-category").then((m) => ({
-        default: m.ShopCategories,
-    }))
-);
-const ShopByNewCategories = dynamic(() =>
-    import("@/components/home/new-home-page/shop-by-new-category").then(
-        (m) => ({ default: m.ShopByNewCategories })
-    )
-);
 const SwapSpace = dynamic(() =>
     import("@/components/home/new-home-page/swap-space").then((m) => ({
         default: m.SwapSpace,
     }))
 );
-const ProductsUnder999 = dynamic(() =>
-    import("@/components/home/new-home-page/products-under-999").then((m) => ({
-        default: m.ProductsUnder999,
+const RenivetEdit = dynamic(() =>
+    import("@/components/home/new-home-page/renivet-edit").then((m) => ({
+        default: m.RenivetEdit,
     }))
 );
-const WelcomeRenivet = dynamic(() =>
-    import("@/components/home/new-home-page/welcome-to-renivet").then((m) => ({
-        default: m.WelcomeRenivet,
+const HowRenivetCurates = dynamic(() =>
+    import("@/components/home/new-home-page/how-renivet-curates").then((m) => ({
+        default: m.HowRenivetCurates,
     }))
 );
-
+const ThoughtfulProducts = dynamic(() =>
+    import("@/components/home/new-home-page/thoughtful-products").then((m) => ({
+        default: m.ThoughtfulProducts,
+    }))
+);
+const FeaturedBrands = dynamic(() =>
+    import("@/components/home/new-home-page/featured-brands").then((m) => ({
+        default: m.FeaturedBrands,
+    }))
+);
+const BotanicalBanner = dynamic(() =>
+    import("@/components/home/new-home-page/botanical-banner").then((m) => ({
+        default: m.BotanicalBanner,
+    }))
+);
 const ScrollReveal = dynamic(() =>
     import("@/components/ui/scroll-reveal").then((m) => ({
         default: m.ScrollReveal,
@@ -185,10 +182,38 @@ export default async function Page() {
             </Suspense>
             <Suspense
                 fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                    <div className="h-[320px] w-full animate-pulse bg-[#f8f5ef] md:h-[360px]" />
                 }
             >
-                <ProductsUnder999Fetch />
+                <RenivetEdit />
+            </Suspense>
+            <Suspense
+                fallback={
+                    <div className="h-[370px] w-full animate-pulse bg-[#f8f5ef] md:h-[460px]" />
+                }
+            >
+                <HowRenivetCurates />
+            </Suspense>
+            <Suspense
+                fallback={
+                    <div className="h-[560px] w-full animate-pulse bg-[#f8f5ef] md:h-[390px]" />
+                }
+            >
+                <ThoughtfulProducts />
+            </Suspense>
+            <Suspense
+                fallback={
+                    <div className="h-[150px] w-full animate-pulse bg-[#f8f5ef] md:h-[190px]" />
+                }
+            >
+                <FeaturedBrandsFetch />
+            </Suspense>
+            <Suspense
+                fallback={
+                    <div className="h-[224px] w-full animate-pulse bg-[#f8f5ef] md:h-[400px]" />
+                }
+            >
+                <BotanicalBannerFetch />
             </Suspense>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
@@ -248,29 +273,12 @@ export default async function Page() {
                 </div>
             </div>
 
-            <div className="hidden md:block">
-                <Suspense
-                    fallback={
-                        <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                    }
-                >
-                    <ShopByNewCategoriesFetch />
-                </Suspense>
-            </div>
-
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
                 }
             >
                 <ProductNewArrivalsGridFetch />
-            </Suspense>
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <WelcomeToRenivetFetch />
             </Suspense>
             {userId ? <DiscoverPrompt /> : null}
             <Suspense
@@ -290,22 +298,6 @@ export default async function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense> */}
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <MayAlsoLoveTheseFetch />
-            </Suspense>
-
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <BrandPromotionFetch />
-            </Suspense>
-
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
@@ -407,15 +399,33 @@ async function LoveTheseFetch() {
     );
 }
 
-async function ProductsUnder999Fetch() {
-    const products = await productQueries.getHomeProductsUnder999();
-    if (!products.length) return null;
+const getActiveStorefrontBrands = cache(async () => {
+    return await brandCache
+        .getAll()
+        .then((items) =>
+            items
+                .filter((brand) => brand.isActive)
+                .map(({ id, name, slug, logoUrl }) => ({
+                    id,
+                    name,
+                    slug,
+                    logoUrl: logoUrl || null,
+                }))
+        )
+        .catch(() => []);
+});
 
-    return (
-        <ScrollReveal>
-            <ProductsUnder999 products={products} />
-        </ScrollReveal>
-    );
+async function FeaturedBrandsFetch() {
+    const brands = await getActiveStorefrontBrands();
+
+    if (!brands.length) return null;
+    return <FeaturedBrands brands={brands} />;
+}
+
+async function BotanicalBannerFetch() {
+    const brands = await getActiveStorefrontBrands();
+
+    return <BotanicalBanner brands={brands} />;
 }
 
 async function HomePageMainProductFetch() {
@@ -425,33 +435,6 @@ async function HomePageMainProductFetch() {
     return (
         <ScrollReveal>
             <MobileBottom banners={brandProducts} />
-        </ScrollReveal>
-    );
-}
-
-async function MayAlsoLoveTheseFetch() {
-    const brandProducts = await productQueries.getHomeYouMayAlsoLikeProducts();
-    if (!brandProducts.length) return null;
-
-    return (
-        <ScrollReveal>
-            <MayAlsoLoveThese banners={brandProducts} />
-        </ScrollReveal>
-    );
-}
-
-async function BrandPromotionFetch() {
-    const [sbc, sbcT] = await Promise.all([
-        //@ts-ignore
-        WomenHomeSectionQueries.getHomePageBrandIntroductionSections(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
-    ]);
-    if (!Array.isArray(sbc) || !sbc.length) {
-        return null;
-    }
-    return (
-        <ScrollReveal>
-            <BrandPromotion moodboardItems={sbc} titleData={sbcT} />
         </ScrollReveal>
     );
 }
@@ -488,14 +471,6 @@ async function EffortlessEleganceFetch() {
     );
 }
 
-async function ShopCategoryFetch() {
-    return (
-        <ScrollReveal>
-            <ShopCategories />
-        </ScrollReveal>
-    );
-}
-
 async function BrandTypesFetch() {
     return (
         <ScrollReveal>
@@ -508,33 +483,6 @@ async function MobileCategoriesFetch() {
     return (
         <ScrollReveal>
             <MobileCategories />
-        </ScrollReveal>
-    );
-}
-
-async function WelcomeToRenivetFetch() {
-    return (
-        <ScrollReveal>
-            <WelcomeRenivet />
-        </ScrollReveal>
-    );
-}
-
-async function ShopByNewCategoriesFetch() {
-    const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
-    ]);
-    if (!Array.isArray(sbc) || !sbc.length) {
-        console.warn(
-            "ShopByNewCategoriesFetch: No categories found or invalid data",
-            sbc
-        );
-        return null;
-    }
-    return (
-        <ScrollReveal>
-            <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />
         </ScrollReveal>
     );
 }

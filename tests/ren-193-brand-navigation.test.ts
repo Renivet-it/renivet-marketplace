@@ -78,8 +78,10 @@ test("REN-193 exposes only an active public brand projection and integrates both
     expect(navbar).toContain("BrandDesktopNavigationItem");
     expect(navbar).toContain("general.brands.getStorefrontBrands.useQuery");
     expect(navbar).not.toContain("<BrandMobileNavigation");
-    expect(landing).toContain("<BrandMobileNavigation");
-    expect(landing).toContain("general.brands.getStorefrontBrands.useQuery");
+    expect(landing).not.toContain("<BrandMobileNavigation");
+    expect(landing).not.toContain(
+        "general.brands.getStorefrontBrands.useQuery"
+    );
     expect(navigation).toContain("BRANDS");
     expect(navigation).toContain("View All Brands");
     expect(navigation).toContain("Browse brands");
@@ -115,18 +117,14 @@ test("REN-193 expands all mobile brands inside the same bottom sheet", async () 
     expect(mobileNavigation).not.toContain("window.setTimeout");
 });
 
-test("REN-193 places the mobile brand trigger after the home category circles", async () => {
+test("REN-193 removes the legacy mobile brand trigger from the home landing", async () => {
     const landing = await Bun.file("src/components/home/landing.tsx").text();
     const navigation = await Bun.file(
         "src/components/globals/layouts/navbar/brand-navigation.tsx"
     ).text();
 
-    expect(landing.indexOf("<BrandMobileNavigation")).toBeGreaterThan(
-        landing.indexOf("categories.map")
-    );
-    expect(landing).toContain(
-        'triggerClassName="size-12 min-[390px]:size-[52px] min-[420px]:size-14'
-    );
+    expect(landing).not.toContain("<BrandMobileNavigation");
+    expect(landing).not.toContain("categories.map");
     expect(navigation).toContain("triggerClassName?: string");
     expect(navigation).toContain("Brands");
 });
