@@ -15,6 +15,7 @@ import { handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -41,7 +42,14 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
         userId,
     });
 
-    const { mutate: updateProduct, isPending: isUpdating } =
+    const persistedQuantity = useRef(item.quantity);
+    const requestedQuantity = useRef(item.quantity);
+    const quantityUpdateQueue = useRef(Promise.resolve());
+    const quantityUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(
+        null
+    );
+
+    const { mutateAsync: updateProduct } =
         trpc.general.users.cart.updateProductQuantityInCart.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating cart...");
@@ -49,15 +57,56 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Cart updated", { id: toastId });
-                refetch();
-                form.reset({
-                    quantity: form.watch("quantity"),
-                });
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },
         });
+
+    const persistQuantity = (quantity: number) => {
+        quantityUpdateQueue.current = quantityUpdateQueue.current
+            .catch(() => undefined)
+            .then(async () => {
+                if (quantity === persistedQuantity.current) return;
+
+                await updateProduct({
+                    userId,
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    quantity,
+                });
+
+                persistedQuantity.current = quantity;
+                requestedQuantity.current = quantity;
+                await refetch();
+            })
+            .catch((error) => {
+                requestedQuantity.current = persistedQuantity.current;
+                form.setValue("quantity", persistedQuantity.current);
+                handleClientError(error);
+            });
+    };
+
+    const scheduleQuantityUpdate = (quantity: number) => {
+        requestedQuantity.current = quantity;
+        form.setValue("quantity", quantity, { shouldDirty: true });
+        if (quantityUpdateTimer.current) {
+            clearTimeout(quantityUpdateTimer.current);
+        }
+        quantityUpdateTimer.current = setTimeout(() => {
+            quantityUpdateTimer.current = null;
+            persistQuantity(quantity);
+        }, 200);
+    };
+
+    useEffect(
+        () => () => {
+            if (quantityUpdateTimer.current) {
+                clearTimeout(quantityUpdateTimer.current);
+            }
+        },
+        []
+    );
 
     const maxQuantity = item.variantId
         ? (item.product.variants.find((v) => v.id === item.variantId)
@@ -66,17 +115,7 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
 
     return (
         <Form {...form}>
-            <form
-                className="space-y-4"
-                onSubmit={form.handleSubmit((values) =>
-                    updateProduct({
-                        userId,
-                        productId: item.productId,
-                        variantId: item.variantId,
-                        quantity: values.quantity,
-                    })
-                )}
-            >
+            <form className="space-y-4">
                 <FormField
                     control={form.control}
                     name="quantity"
@@ -96,11 +135,15 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                             size="icon"
                                             aria-label="Decrement quantity"
                                             disabled={
-                                                isUpdating || field.value <= 1
+                                                field.value <= 1
                                             }
                                             onClick={() =>
-                                                field.onChange(
-                                                    Math.max(field.value - 1, 1)
+                                                scheduleQuantityUpdate(
+                                                    Math.max(
+                                                        requestedQuantity.current -
+                                                            1,
+                                                        1
+                                                    )
                                                 )
                                             }
                                         >
@@ -121,13 +164,13 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                             size="icon"
                                             aria-label="Increment quantity"
                                             disabled={
-                                                isUpdating ||
                                                 field.value >= maxQuantity
                                             }
                                             onClick={() =>
-                                                field.onChange(
+                                                scheduleQuantityUpdate(
                                                     Math.min(
-                                                        field.value + 1,
+                                                        requestedQuantity.current +
+                                                            1,
                                                         maxQuantity
                                                     )
                                                 )
@@ -147,13 +190,6 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                     )}
                 />
 
-                <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={!form.formState.isDirty || isUpdating}
-                >
-                    Save Changes
-                </Button>
             </form>
         </Form>
     );
