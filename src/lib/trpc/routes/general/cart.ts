@@ -330,12 +330,12 @@ export const cartRouter = createTRPCRouter({
                 });
 
             if (variantId && existingCart.variant) {
-                if (existingCart.variant.quantity <= quantity)
+                if (existingCart.variant.quantity < quantity)
                     throw new TRPCError({
                         code: "BAD_REQUEST",
                         message: "Not enough stock available",
                     });
-            } else if ((existingCart.product.quantity ?? 0) <= quantity)
+            } else if ((existingCart.product.quantity ?? 0) < quantity)
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Not enough stock available",

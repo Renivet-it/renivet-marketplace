@@ -29,7 +29,8 @@ export const t = initTRPC.context<Context>().create({
 const ratelimiter = t.middleware(({ ctx, next }) => {
     const { req } = ctx;
 
-    const identifier = req.headers.get("x-forwarded-for");
+    const identifier =
+        ctx.user?.id ?? req.headers.get("x-forwarded-for");
     if (!identifier) return next({ ctx });
 
     const now = Date.now();

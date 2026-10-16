@@ -1561,7 +1561,7 @@ class OrderQuery {
               '{accessLogs}',
               COALESCE(log_details->'accessLogs', '[]'::jsonb) || 
               jsonb_build_object(
-                'timestamp', ${new Date().toISOString()},
+                'timestamp', ${new Date().toISOString()}::text,
                 'action', 'fetched'
               )
             )
@@ -1714,9 +1714,9 @@ class OrderQuery {
               '{errors}',
               COALESCE(log_details->'errors', '[]'::jsonb) || 
               jsonb_build_object(
-                'timestamp', ${new Date().toISOString()},
-                'error', ${error.message},
-                'statusAttempt', ${status}
+                'timestamp', ${new Date().toISOString()}::text,
+                'error', ${error.message}::text,
+                'statusAttempt', ${status}::text
               )
             )
           `,
@@ -1749,8 +1749,8 @@ class OrderQuery {
               '{events}',
               COALESCE(log_details->'events', '[]'::jsonb) || 
               jsonb_build_object(
-                'timestamp', ${new Date().toISOString()},
-                'orderId', ${orderId},
+                'timestamp', ${new Date().toISOString()}::text,
+                'orderId', ${orderId}::text,
                 'message', 'Linked to order'
               )
             )
