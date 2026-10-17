@@ -828,6 +828,13 @@ export const corporatePayments = pgTable(
         statusIdx: index("corporate_payments_status_idx").on(
             table.paymentStatus
         ),
+        paymentReferenceUnique: uniqueIndex(
+            "corporate_payments_payment_reference_unique"
+        )
+            .on(table.paymentReference)
+            .where(
+                sql`${table.paymentMode} = 'razorpay' AND ${table.paymentReference} IS NOT NULL`
+            ),
     })
 );
 

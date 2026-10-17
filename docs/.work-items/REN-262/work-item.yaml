@@ -1,0 +1,192 @@
+schema_version: "1.0"
+task:
+    id: REN-262
+    title: "[PRE-RD-5][Corporate] End-to-end payment/order integrity: atomic capture, balance binding, idempotency and recovery"
+    source: linear
+    branch: ayanganguly333/ren-262-pre-rd-5-corporate-payment-order-integrity-atomic
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-262/pre-rd-5corporate-end-to-end-paymentorder-integrity-atomic-capture
+        priority: Urgent
+        labels: [qa-finding, Bug]
+        status: Todo
+        assignee: Ayan Ganguly
+        project: null
+        parent: REN-187
+        linear_branch: ayanganguly333/ren-262-pre-rd-5-corporate-payment-order-integrity-atomic
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - "The task controls customer payment capture, Corporate order creation, balance binding, and recovery after provider/database failure."
+        - "It spans Razorpay, PostgreSQL transactions, idempotency, documents, customer identity, and operator recovery."
+        - "A false paid state, missing Corporate order, overpayment, or duplicate receipt can create direct financial and operational loss."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, relations, and comments
+        - Corporate advance and balance payment services and TRPC routes
+        - Corporate payment-request public/account flows
+        - Corporate order, payment, request, receipt, proforma, and status-history schemas
+        - Razorpay client and existing payment webhook/receipt boundary
+        - Corporate document and notification side effects
+        - Existing tests, migrations, and REN-255 compatibility boundary
+    excluded_areas:
+        - REN-276 staging end-to-end execution
+        - payout/commission policy and tax policy
+        - UI redesign and general-catalog payment behavior
+        - production data, production deployment, and real-money provider calls
+    dependencies: [DEP-262-001, DEP-262-002, DEP-262-003, DEP-262-004]
+    integrations: [INT-262-001, INT-262-002, INT-262-003]
+    security_boundaries: [SEC-262-001, SEC-262-002, SEC-262-003, SEC-262-004]
+    state_transitions: [intent_created, provider_order_bound, payment_received, payment_applied, payment_replayed, payment_rejected, recovery_required, recovery_applied]
+    related_tests: [TEXP-262-001, TEXP-262-002, TEXP-262-003, TEXP-262-004, TEXP-262-005, TEXP-262-006, TEXP-262-007, TEXP-262-008]
+    uncertainties:
+        - "Corporate-specific intent and receipt/reconciliation storage must remain compatible with the existing general-order boundary."
+        - "Provider-paid excess requires a retryable, auditable refund outcome."
+        - "Operator recovery must be finance-authorized and derive only from an immutable validated intent."
+requirements:
+    - { id: REQ-262-001, description: "Create and persist a server-side Corporate payment intent with immutable order/customer/payment-kind/amount/currency/provider binding before capture.", type: safety }
+    - { id: REQ-262-002, description: "Verify provider signature, provider order/payment identity, exact amount, INR currency, and Corporate order/intent binding before paid state.", type: safety }
+    - { id: REQ-262-003, description: "Apply Corporate payment, order, request, receipt, and proforma outcomes atomically or through an explicit retryable durable state machine.", type: safety }
+    - { id: REQ-262-004, description: "Make advance, balance, and payment-request paths idempotent under duplicate and concurrent confirmation.", type: safety }
+    - { id: REQ-262-005, description: "Recover lost browser callbacks through signed provider webhook/reconciliation and an authorized operator path without duplicate payment or documents.", type: recovery }
+    - { id: REQ-262-006, description: "Reject invalid, partial, over-balance, expired, unknown, and mismatched payment paths without silently changing authoritative economics.", type: financial }
+    - { id: REQ-262-007, description: "Provide safe audit/monitoring evidence for orphaned intents, provider-paid/no-order, mismatches, retries, and applied outcomes.", type: observability }
+scenarios:
+    - { id: SCN-262-001, description: "Valid advance payment has a pre-capture intent and creates exactly one Corporate order/payment outcome.", requirement_ids: [REQ-262-001, REQ-262-002, REQ-262-003] }
+    - { id: SCN-262-002, description: "Valid balance payment is bound to the current order and immutable outstanding amount.", requirement_ids: [REQ-262-001, REQ-262-002] }
+    - { id: SCN-262-003, description: "Valid payment-request checkout cannot overwrite an active provider binding or apply to another order.", requirement_ids: [REQ-262-001, REQ-262-004] }
+    - { id: SCN-262-004, description: "Required order validation fails before provider capture and leaves no paid or orphaned economic outcome.", requirement_ids: [REQ-262-001, REQ-262-006] }
+    - { id: SCN-262-005, description: "Lost browser callback is recovered by a signed provider event or authorized reconciliation without re-payment.", requirement_ids: [REQ-262-005, REQ-262-007] }
+    - { id: SCN-262-006, description: "Wrong provider order/payment, amount, currency, partial, over-balance, expired, or unknown events fail closed.", requirement_ids: [REQ-262-002, REQ-262-006] }
+    - { id: SCN-262-007, description: "Duplicate and concurrent confirmations produce one payment, order transition, receipt, proforma, and notification outcome.", requirement_ids: [REQ-262-003, REQ-262-004] }
+    - { id: SCN-262-008, description: "Database/provider/document failure leaves a visible retryable state and never a false paid-without-order state.", requirement_ids: [REQ-262-003, REQ-262-005, REQ-262-007] }
+invariants:
+    - { id: INV-262-001, description: "No provider capture is economically accepted without a durable Corporate intent and server binding." }
+    - { id: INV-262-002, description: "A provider payment identity has at most one Corporate economic outcome." }
+    - { id: INV-262-003, description: "Paid amount equals the verified provider amount and approved intent amount in integer INR paise." }
+    - { id: INV-262-004, description: "A Corporate order cannot be paid without its durable payment/order record." }
+    - { id: INV-262-005, description: "Receipt and proforma effects are idempotent and tied to the applied payment outcome." }
+    - { id: INV-262-006, description: "Recovery never creates a second payment or silently overwrites a newer provider binding." }
+    - { id: INV-262-007, description: "Payment-sensitive logs exclude signatures, secrets, and unnecessary personal data." }
+flows:
+    - { id: FLOW-262-001, description: "Validated Corporate order data creates an intent, binds a provider order, verifies capture, and applies one durable outcome.", state_transitions: [intent_created, provider_order_bound, payment_received, payment_applied] }
+    - { id: FLOW-262-002, description: "Duplicate/concurrent browser or webhook events converge on the existing applied outcome.", state_transitions: [payment_received, payment_replayed] }
+    - { id: FLOW-262-003, description: "A lost callback enters recovery and is completed only after provider and intent reconciliation.", state_transitions: [payment_received, recovery_required, recovery_applied] }
+    - { id: FLOW-262-004, description: "Invalid or over-balance events are rejected without paid state and remain auditable.", state_transitions: [payment_received, payment_rejected] }
+dependencies:
+    - { id: DEP-262-001, name: Corporate schema, purpose: "Persist intent and unique provider identity", description: "Use a dedicated Corporate payment-intent boundary with unique provider identities and a compatible reconciliation/receipt record.", status: resolved }
+    - { id: DEP-262-002, name: Razorpay Test Mode, purpose: "Provider order/payment verification and webhook recovery", description: "Non-production keys and webhook secret are available by variable name; runtime evidence is a release obligation.", status: resolved }
+    - { id: DEP-262-003, name: REN-255, purpose: "Related general payment truth boundary", description: "Provides precedent but its receipt table currently references general orders only.", status: resolved }
+    - { id: DEP-262-004, name: REN-276, purpose: "Later staging end-to-end validation", description: "REN-262 blocks REN-276; implementation can be locally tested before staging evidence.", status: resolved }
+integrations:
+    - { id: INT-262-001, system: Razorpay, purpose: "Provider order/payment capture and signed events", name: Razorpay orders/payments/webhooks, contract: "Provider identity, amount, currency, signature, and status are verified against the intent.", failure_mode: "Unknown, mismatched, duplicate, concurrent, and retry events fail closed or converge idempotently." }
+    - { id: INT-262-002, system: PostgreSQL, purpose: "Durable intent, uniqueness, and transition state", name: Corporate payment/order database, contract: "Intent/payment/order/document state is transactionally consistent and concurrency-safe.", failure_mode: "Unique conflict or transaction failure leaves retryable, observable state." }
+    - { id: INT-262-003, system: Corporate documents/notifications, purpose: "Receipt, proforma, and customer/operator effects", name: document and email services, contract: "Effects occur only after a newly applied durable payment outcome.", failure_mode: "Duplicate effects are suppressed and failed effects are retryable." }
+personas:
+    - { id: PER-262-001, name: corporate buyer, role: customer, applicability: "Receives one accurate payment/order outcome and can recover a lost callback." }
+    - { id: PER-262-002, name: finance administrator, role: finance administrator, applicability: "Can reconcile provider-paid/no-order cases with evidence and auditability." }
+    - { id: PER-262-003, name: operations, role: operations operator, applicability: "Sees orphaned intents, mismatches, and retry states." }
+security_boundaries:
+    - { id: SEC-262-001, description: "Provider signature is verified before any Corporate mutation." }
+    - { id: SEC-262-002, description: "Browser-supplied payment ID, status, amount, and order identity are untrusted." }
+    - { id: SEC-262-003, description: "Corporate order/customer/quote binding is checked server-side and cannot cross tenants." }
+    - { id: SEC-262-004, description: "Recovery requires finance/admin authorization and does not expose secrets or sensitive provider payloads." }
+business_rules:
+    - { id: BR-262-001, description: "Paid Corporate means a server-verified provider payment bound to a durable Corporate intent/order." }
+    - { id: BR-262-002, description: "Advance and balance payment economics are exact integer paise and cannot be silently clamped." }
+    - { id: BR-262-003, description: "One provider payment cannot produce multiple Corporate payment rows or documents." }
+decisions:
+    - { id: DEC-262-001, question: "Which canonical intent/receipt boundary should Corporate use?", class: HUMAN_CONFIRMATION, status: resolved, decision: "Use a dedicated Corporate payment-intent boundary and Corporate-compatible reconciliation/receipt records; do not generalize REN-255's general-order receipt table in this task.", recommendation: "Dedicated Corporate boundary with shared service contract.", basis: "REN-255 receipt schema is general-order-specific; the dedicated boundary preserves foreign-key integrity while avoiding two browser-side authorities.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+    - { id: DEC-262-002, question: "What happens when provider amount exceeds outstanding balance?", class: HUMAN_CONFIRMATION, status: resolved, decision: "Fail closed before capture where possible; if provider-paid excess occurs, refund the excess through an auditable retryable refund record and never silently clamp.", recommendation: "Reject/refund excess.", basis: "Financial outcome and customer policy cannot be inferred safely.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+    - { id: DEC-262-003, question: "Can recovery create a missing Corporate order?", class: HUMAN_CONFIRMATION, status: resolved, decision: "Yes, only from an immutable validated pre-capture intent with exact customer/quote/order snapshot, provider binding, finance authorization, audit evidence, and idempotent completion.", recommendation: "Authorized recovery from immutable intent.", basis: "This is required to recover provider-paid/no-order cases without permitting arbitrary order reconstruction.", confidence: high, consequence: high, human_confirmation_required: true, approved_by: Ayan Ganguly }
+test_expectations:
+    - { id: TEXP-262-001, category: unit, classification: REQUIRED, reason: "Intent binding, exact amount/currency, state transitions, and over-balance policy must be deterministic.", scenarios: [SCN-262-001, SCN-262-002, SCN-262-006] }
+    - { id: TEXP-262-002, category: integration, classification: REQUIRED, reason: "PostgreSQL uniqueness, transaction rollback, and concurrent confirmation require database evidence.", scenarios: [SCN-262-003, SCN-262-007, SCN-262-008] }
+    - { id: TEXP-262-003, category: api, classification: REQUIRED, reason: "Advance, balance, payment-request, and webhook entry points must share server-side reconciliation.", scenarios: [SCN-262-001, SCN-262-002, SCN-262-003, SCN-262-005] }
+    - { id: TEXP-262-004, category: external_integration, classification: REQUIRED, reason: "Razorpay Test Mode must prove capture, signature, retry, duplicate, lost callback, and wrong-binding behavior.", scenarios: [SCN-262-001, SCN-262-005, SCN-262-006, SCN-262-007] }
+    - { id: TEXP-262-005, category: security, classification: REQUIRED, reason: "Customer binding, authorization, signature verification, and secret-safe recovery are payment controls.", scenarios: [SCN-262-004, SCN-262-005, SCN-262-006] }
+    - { id: TEXP-262-006, category: regression, classification: REQUIRED, reason: "Existing Corporate document, status, payment-request, manual-payment, and REN-255 behavior must remain compatible.", scenarios: [SCN-262-001, SCN-262-002, SCN-262-003, SCN-262-007] }
+    - { id: TEXP-262-007, category: business_uat, classification: REQUIRED, reason: "Finance must approve overpayment/refund policy and recovery authority/evidence.", scenarios: [SCN-262-005, SCN-262-006, SCN-262-008] }
+    - { id: TEXP-262-008, category: performance, classification: OPTIONAL, reason: "Measure webhook/reconciliation retry and concurrency behavior without unsafe queueing.", scenarios: [SCN-262-005, SCN-262-007] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-262-001, severity: DESIGN_BLOCKER, status: resolved, summary: "Corporate uses a dedicated intent/reconciliation boundary; REN-255 general-order receipts are not generalized in this task." }
+        - { id: CRIT-262-002, severity: DESIGN_BLOCKER, status: resolved, summary: "Advance recovery uses an immutable validated pre-capture order snapshot." }
+        - { id: CRIT-262-003, severity: MAJOR, status: accepted, summary: "Balance/payment-request provider binding must be compare-and-set and immutable." }
+        - { id: CRIT-262-004, severity: DESIGN_BLOCKER, status: resolved, summary: "Overpayment fails closed; provider-paid excess is handled through an auditable retryable refund." }
+        - { id: CRIT-262-005, severity: MAJOR, status: accepted, summary: "Webhook and operator recovery need durable intent mapping." }
+        - { id: CRIT-262-006, severity: MAJOR, status: accepted, summary: "Document and payment effects need atomic or retryable completion." }
+        - { id: CRIT-262-007, severity: MINOR, status: accepted, summary: "Observability fields and secret-safe logging should be made concrete in implementation." }
+    approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-262-001, scenario_ids: [SCN-262-001, SCN-262-002, SCN-262-003, SCN-262-004] }
+        - { requirement_id: REQ-262-002, scenario_ids: [SCN-262-001, SCN-262-002, SCN-262-006] }
+        - { requirement_id: REQ-262-003, scenario_ids: [SCN-262-001, SCN-262-007, SCN-262-008] }
+        - { requirement_id: REQ-262-004, scenario_ids: [SCN-262-003, SCN-262-007] }
+        - { requirement_id: REQ-262-005, scenario_ids: [SCN-262-005, SCN-262-008] }
+        - { requirement_id: REQ-262-006, scenario_ids: [SCN-262-004, SCN-262-006] }
+        - { requirement_id: REQ-262-007, scenario_ids: [SCN-262-005, SCN-262-008] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-262-001, invariant_ids: [INV-262-001, INV-262-002, INV-262-003, INV-262-004] }
+        - { scenario_id: SCN-262-002, invariant_ids: [INV-262-001, INV-262-003] }
+        - { scenario_id: SCN-262-003, invariant_ids: [INV-262-002, INV-262-006] }
+        - { scenario_id: SCN-262-004, invariant_ids: [INV-262-001, INV-262-003, INV-262-007] }
+        - { scenario_id: SCN-262-005, invariant_ids: [INV-262-002, INV-262-005, INV-262-006, INV-262-007] }
+        - { scenario_id: SCN-262-006, invariant_ids: [INV-262-003, INV-262-007] }
+        - { scenario_id: SCN-262-007, invariant_ids: [INV-262-002, INV-262-004, INV-262-005] }
+        - { scenario_id: SCN-262-008, invariant_ids: [INV-262-004, INV-262-005, INV-262-006] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-262-001, test_expectation_ids: [TEXP-262-001, TEXP-262-002, TEXP-262-003, TEXP-262-004] }
+        - { scenario_id: SCN-262-002, test_expectation_ids: [TEXP-262-001, TEXP-262-002, TEXP-262-003] }
+        - { scenario_id: SCN-262-003, test_expectation_ids: [TEXP-262-002, TEXP-262-003, TEXP-262-006] }
+        - { scenario_id: SCN-262-004, test_expectation_ids: [TEXP-262-001, TEXP-262-005] }
+        - { scenario_id: SCN-262-005, test_expectation_ids: [TEXP-262-003, TEXP-262-004, TEXP-262-005, TEXP-262-007] }
+        - { scenario_id: SCN-262-006, test_expectation_ids: [TEXP-262-001, TEXP-262-003, TEXP-262-005, TEXP-262-007] }
+        - { scenario_id: SCN-262-007, test_expectation_ids: [TEXP-262-002, TEXP-262-003, TEXP-262-006] }
+        - { scenario_id: SCN-262-008, test_expectation_ids: [TEXP-262-002, TEXP-262-004, TEXP-262-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "c8e1ecb30045edb19673217d53ec24910ef7683b"
+    head_commit: "ac95b090b43ec4426bc49e8b0dc3777c3812594e"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings:
+        []
+    required_actions:
+        - "Run and attach non-production PostgreSQL rollback/concurrency and Razorpay Test Mode capture/webhook/replay/wrong-binding/refund evidence before release."
+        - "Record final finance/UAT release approval for recovery and refund outcomes."
+    evidence:
+        - "Compared approved REN-262 contract with the working-tree diff from merge-base c8e1ecb30045edb19673217d53ec24910ef7683b."
+        - "Reviewed Corporate checkout, confirmation, payment-request, webhook, schema, migration, and focused test files."
+    governance_reentry_required: false

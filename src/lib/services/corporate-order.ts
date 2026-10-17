@@ -16,6 +16,7 @@ import {
     corporateGsmOptions,
     corporateLogoLocations,
     corporatePayments,
+    corporatePaymentIntents,
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
@@ -45,6 +46,14 @@ import {
     nextBrandInvoiceNumber,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
+import {
+    CorporatePaymentIntegrityError,
+    verifyCorporateRazorpayPayment,
+} from "@/lib/services/corporate-payment-integrity";
+import {
+    markCorporatePaymentIntentApplied,
+    reconcileCorporatePaymentIntent,
+} from "@/lib/services/corporate-payment-reconciliation";
 import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
 import {
     corporateBalancePaymentConfirmationInputSchema,
@@ -131,6 +140,7 @@ type CorporateOrderDraftTokenPayload = {
     userId: string;
     publicOrderId: string;
     razorpayOrderId: string;
+    intentId: string;
     form: CorporateOrderFormInput;
     quote: CorporateOrderQuote;
     issuedAt: string;
@@ -650,10 +660,43 @@ class CorporateOrderService {
     ) {
         const parsed = corporateOrderFormInputSchema.parse(input);
         const quote = await this.buildQuote(parsed);
-        const publicOrderId = `REN-CORP-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 6)
-            .toUpperCase()}`;
+        const draftOrder = await corporateOrderQueries.createCorporateOrder(
+            await this.buildOrderInsertValues(userId, parsed, quote)
+        );
+        const publicOrderId = `REN-CORP-${String(draftOrder.sequenceNo).padStart(
+            4,
+            "0"
+        )}`;
+        const preparedOrder = await corporateOrderQueries.updateCorporateOrder(
+            draftOrder.id,
+            {
+                publicOrderId,
+                status: "payment_pending",
+                paymentStatus: "pending",
+            }
+        );
+        if (!preparedOrder) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to prepare the Corporate order for payment",
+            });
+        }
+        const [intent] = await db
+            .insert(corporatePaymentIntents)
+            .values({
+                orderId: preparedOrder.id,
+                userId,
+                paymentKind: "advance",
+                amountPaise: quote.advancePaidPaise,
+                currency: "INR",
+                status: "created",
+                orderSnapshot: {
+                    form: parsed,
+                    quote,
+                    publicOrderId,
+                },
+            })
+            .returning({ id: corporatePaymentIntents.id });
         const rzpOrder = await razorpay.orders.create({
             amount: quote.advancePaidPaise,
             currency: "INR",
@@ -663,6 +706,19 @@ class CorporateOrderService {
                 userId,
             },
         });
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerOrderId: rzpOrder.id,
+                status: "provider_order_bound",
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(corporatePaymentIntents.id, intent.id),
+                    isNull(corporatePaymentIntents.providerOrderId)
+                )
+            );
 
         return {
             quote,
@@ -670,6 +726,7 @@ class CorporateOrderService {
                 userId,
                 publicOrderId,
                 razorpayOrderId: rzpOrder.id,
+                intentId: intent.id,
                 form: parsed,
                 quote,
                 issuedAt: new Date().toISOString(),
@@ -709,6 +766,21 @@ class CorporateOrderService {
             });
         }
 
+        const intent = await db.query.corporatePaymentIntents.findFirst({
+            where: eq(corporatePaymentIntents.id, draft.intentId),
+        });
+        if (
+            !intent ||
+            intent.providerOrderId !== parsed.razorpayOrderId ||
+            intent.paymentKind !== "advance" ||
+            intent.status !== "provider_order_bound"
+        ) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Corporate payment intent is missing or no longer active",
+            });
+        }
+
         const existingOrder =
             await corporateOrderQueries.getOrderByRazorpayPaymentId(
                 parsed.razorpayPaymentId
@@ -721,91 +793,41 @@ class CorporateOrderService {
             };
         }
 
-        const generatedSignature = crypto
-            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
-            .update(`${parsed.razorpayOrderId}|${parsed.razorpayPaymentId}`)
-            .digest("hex");
-
-        if (generatedSignature !== parsed.razorpaySignature) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Invalid payment signature",
+        try {
+            await verifyCorporateRazorpayPayment({
+                provider: razorpay,
+                secret: env.RAZOR_PAY_SECRET_KEY,
+                razorpayOrderId: parsed.razorpayOrderId,
+                razorpayPaymentId: parsed.razorpayPaymentId,
+                razorpaySignature: parsed.razorpaySignature,
+                amountPaise: intent.amountPaise,
             });
+        } catch (error) {
+            if (error instanceof CorporatePaymentIntegrityError) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+            }
+            throw error;
         }
 
-        const createdOrder = await corporateOrderQueries.createCorporateOrder({
-            ...(await this.buildOrderInsertValues(
-                userId,
-                draft.form,
-                draft.quote
-            )),
-            razorpayOrderId: parsed.razorpayOrderId,
-            razorpayPaymentId: parsed.razorpayPaymentId,
-            razorpaySignature: parsed.razorpaySignature,
-            paymentReference: parsed.razorpayPaymentId,
+        if (!intent.orderId) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Corporate payment intent is not bound to an order",
+            });
+        }
+        const reconciliation = await reconcileCorporatePaymentIntent({
+            intentId: intent.id,
+            providerPaymentId: parsed.razorpayPaymentId,
+            amountPaise: intent.amountPaise,
         });
-        const finalPublicOrderId = `REN-CORP-${String(
-            createdOrder.sequenceNo
-        ).padStart(4, "0")}`;
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            createdOrder.id,
-            {
-                publicOrderId: finalPublicOrderId,
-            }
-        );
+        const updated = reconciliation.order;
         if (!updated) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to finalize corporate order",
             });
         }
-
-        await corporateOrderQueries.createStatusHistory({
-            corporateOrderId: updated.id,
-            fromStatus: null,
-            toStatus: "inquiry_received",
-            changedByUserId: userId,
-            note: "Advance payment received",
-            metadata: {
-                razorpayOrderId: parsed.razorpayOrderId,
-                razorpayPaymentId: parsed.razorpayPaymentId,
-            },
-        });
-
-        const existingAdvancePayment =
-            await db.query.corporatePayments.findFirst({
-                where: and(
-                    eq(corporatePayments.orderId, updated.id),
-                    eq(
-                        corporatePayments.paymentReference,
-                        parsed.razorpayPaymentId
-                    )
-                ),
-            });
-        const advancePayment =
-            existingAdvancePayment ??
-            (await db
-                .insert(corporatePayments)
-                .values({
-                    orderId: updated.id,
-                    paymentType:
-                        updated.balanceDuePaise > 0 ? "advance" : "manual",
-                    paymentMode: "razorpay",
-                    amountPaise: updated.advancePaidPaise,
-                    paymentReference: parsed.razorpayPaymentId,
-                    paymentStatus:
-                        updated.balanceDuePaise > 0
-                            ? "payment_partial"
-                            : "payment_success",
-                    paymentDate: new Date().toISOString().slice(0, 10),
-                    metadata: {
-                        percentageBps: updated.advancePercentBps,
-                    },
-                })
-                .returning()
-                .then((rows) => rows[0]));
-
-        if (!advancePayment) {
+        if (!reconciliation.payment) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to record the corporate advance payment",
@@ -814,11 +836,12 @@ class CorporateOrderService {
 
         await corporateDocumentService.ensureReceiptVoucher(
             updated.id,
-            advancePayment.id
+            reconciliation.payment.id
         );
         await corporateDocumentService.ensureProformaInvoiceForOrder(
             updated.id
         );
+        await markCorporatePaymentIntentApplied(intent.id);
 
         const settings = await corporateOrderQueries.getOrderSettings();
         const customerHref = getAbsoluteURL(
@@ -886,6 +909,22 @@ class CorporateOrderService {
             });
         }
 
+        const [intent] = await db
+            .insert(corporatePaymentIntents)
+            .values({
+                orderId: order.id,
+                userId,
+                paymentKind: "balance",
+                amountPaise: order.balanceDuePaise,
+                currency: "INR",
+                status: "created",
+                orderSnapshot: {
+                    corporateOrderId: order.id,
+                    publicOrderId: order.publicOrderId,
+                    amountPaise: order.balanceDuePaise,
+                },
+            })
+            .returning({ id: corporatePaymentIntents.id });
         const rzpOrder = await razorpay.orders.create({
             amount: order.balanceDuePaise,
             currency: "INR",
@@ -897,9 +936,18 @@ class CorporateOrderService {
                 paymentKind: "balance",
             },
         });
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerOrderId: rzpOrder.id,
+                status: "provider_order_bound",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
 
         return {
             order,
+            intentId: intent.id,
             razorpay: {
                 orderId: rzpOrder.id,
                 amount: order.balanceDuePaise,
@@ -932,75 +980,55 @@ class CorporateOrderService {
             };
         }
 
-        const generatedSignature = crypto
-            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
-            .update(`${parsed.razorpayOrderId}|${parsed.razorpayPaymentId}`)
-            .digest("hex");
-
-        if (generatedSignature !== parsed.razorpaySignature) {
+        const intent = await db.query.corporatePaymentIntents.findFirst({
+            where: and(
+                eq(corporatePaymentIntents.orderId, order.id),
+                eq(corporatePaymentIntents.providerOrderId, parsed.razorpayOrderId),
+                eq(corporatePaymentIntents.paymentKind, "balance"),
+                eq(corporatePaymentIntents.status, "provider_order_bound")
+            ),
+        });
+        if (!intent) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Invalid payment signature",
+                message: "Corporate balance payment intent is missing or no longer active",
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            order.id,
-            {
-                paymentStatus: "paid",
-                balanceDuePaise: 0,
-                balancePaymentStatus: "paid",
-                balancePaymentLink: getAbsoluteURL(
-                    `/profile/corporate-orders?confirmed=${order.id}`
-                ),
-                paymentReference: parsed.razorpayPaymentId,
+        try {
+            await verifyCorporateRazorpayPayment({
+                provider: razorpay,
+                secret: env.RAZOR_PAY_SECRET_KEY,
+                razorpayOrderId: parsed.razorpayOrderId,
+                razorpayPaymentId: parsed.razorpayPaymentId,
+                razorpaySignature: parsed.razorpaySignature,
+                amountPaise: intent.amountPaise,
+            });
+        } catch (error) {
+            if (error instanceof CorporatePaymentIntegrityError) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
             }
-        );
+            throw error;
+        }
 
+        const reconciliation = await reconcileCorporatePaymentIntent({
+            intentId: intent.id,
+            providerPaymentId: parsed.razorpayPaymentId,
+            amountPaise: intent.amountPaise,
+        });
+        const updated = reconciliation.order;
         if (!updated) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to confirm remaining balance payment",
+                message: "Failed to reconcile remaining balance payment",
             });
         }
-
-        await corporateOrderQueries.createStatusHistory({
-            corporateOrderId: updated.id,
-            fromStatus: updated.status,
-            toStatus: updated.status,
-            changedByUserId: userId,
-            note: "Remaining balance payment received",
-            metadata: {
-                razorpayOrderId: parsed.razorpayOrderId,
-                razorpayPaymentId: parsed.razorpayPaymentId,
-                paymentKind: "balance",
-            },
-        });
-
-        const existingBalancePayment =
-            await db.query.corporatePayments.findFirst({
-                where: and(
-                    eq(corporatePayments.orderId, updated.id),
-                    eq(
-                        corporatePayments.paymentReference,
-                        parsed.razorpayPaymentId
-                    )
-                ),
-            });
-        if (!existingBalancePayment) {
-            await db.insert(corporatePayments).values({
-                orderId: updated.id,
-                paymentType: "balance",
-                paymentMode: "razorpay",
-                amountPaise: order.balanceDuePaise,
-                paymentReference: parsed.razorpayPaymentId,
-                paymentStatus: "payment_success",
-                paymentDate: new Date().toISOString().slice(0, 10),
-                metadata: {
-                    publicOrderId: updated.publicOrderId,
-                },
-            });
-        }
+        await corporateDocumentService.ensureReceiptVoucher(
+            updated.id,
+            reconciliation.payment.id
+        );
+        await corporateDocumentService.ensureProformaInvoiceForOrder(updated.id);
+        await markCorporatePaymentIntentApplied(intent.id);
 
         return {
             success: true,

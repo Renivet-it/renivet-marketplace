@@ -5,6 +5,7 @@ import {
     corporateOrders,
     corporateOrderStatusHistory,
     corporatePaymentRequests,
+    corporatePaymentIntents,
     corporatePayments,
 } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
@@ -16,6 +17,14 @@ import {
     EmailNote,
 } from "@/lib/resend/emails/corporate-order-email-shell";
 import { corporateDocumentService } from "@/lib/services/corporate-documents";
+import {
+    CorporatePaymentIntegrityError,
+    verifyCorporateRazorpayPayment,
+} from "@/lib/services/corporate-payment-integrity";
+import {
+    markCorporatePaymentIntentApplied,
+    reconcileCorporatePaymentIntent,
+} from "@/lib/services/corporate-payment-reconciliation";
 import { formatINR, getAbsoluteURL } from "@/lib/utils";
 import {
     corporateAdminOfflinePaymentInputSchema,
@@ -92,6 +101,7 @@ async function applyVerifiedPayment(params: {
     paymentReference: string;
     paymentDate: string;
     paymentRequestId?: string | null;
+    intentId?: string | null;
     proofFileUrl?: string | null;
     notes?: string | null;
     recordedByUserId?: string | null;
@@ -104,6 +114,51 @@ async function applyVerifiedPayment(params: {
             code: "NOT_FOUND",
             message: "Corporate order not found",
         });
+
+    if (params.intentId) {
+        const reconciliation = await reconcileCorporatePaymentIntent({
+            intentId: params.intentId,
+            providerPaymentId: params.paymentReference,
+            amountPaise: params.amountPaise,
+            paymentDate: params.paymentDate,
+        });
+        if (!reconciliation.payment || !reconciliation.order) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Corporate payment reconciliation did not produce an outcome",
+            });
+        }
+        if (params.paymentRequestId) {
+            await db
+                .update(corporatePaymentRequests)
+                .set({
+                    razorpayPaymentId: params.paymentReference,
+                    status:
+                        reconciliation.order.balanceDuePaise === 0
+                            ? "paid"
+                            : "pending",
+                    paidAt:
+                        reconciliation.order.balanceDuePaise === 0
+                            ? new Date()
+                            : null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporatePaymentRequests.id, params.paymentRequestId));
+        }
+        await corporateDocumentService.ensureReceiptVoucher(
+            reconciliation.order.id,
+            reconciliation.payment.id
+        );
+        await corporateDocumentService.ensureProformaInvoiceForOrder(
+            reconciliation.order.id
+        );
+        await markCorporatePaymentIntentApplied(params.intentId);
+        return {
+            payment: reconciliation.payment,
+            order: reconciliation.order,
+            receiptVoucher: null,
+        };
+    }
 
     const duplicate = await db.query.corporatePayments.findFirst({
         where: and(
@@ -118,7 +173,13 @@ async function applyVerifiedPayment(params: {
         0,
         order.totalPaise - collectedBeforePaise
     );
-    const amountPaise = Math.min(params.amountPaise, outstandingBeforePaise);
+    if (params.amountPaise > outstandingBeforePaise) {
+        throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Payment amount exceeds the outstanding Corporate balance",
+        });
+    }
+    const amountPaise = params.amountPaise;
     if (amountPaise <= 0) {
         throw new TRPCError({
             code: "BAD_REQUEST",
@@ -128,10 +189,7 @@ async function applyVerifiedPayment(params: {
 
     const paymentType =
         params.paymentType === "full" ? "manual" : params.paymentType;
-    const totalCollectedPaise = Math.min(
-        order.totalPaise,
-        collectedBeforePaise + amountPaise
-    );
+    const totalCollectedPaise = collectedBeforePaise + amountPaise;
     const remainingPaise = Math.max(0, order.totalPaise - totalCollectedPaise);
     const payment = await db.transaction(async (tx) => {
         const created = await tx
@@ -443,12 +501,34 @@ export const corporatePaymentRequestService = {
                 code: "BAD_REQUEST",
                 message: "This payment request has expired",
             });
-        const amount = Math.min(request.amountPaise, order.balanceDuePaise);
+        if (request.amountPaise > order.balanceDuePaise)
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Payment request exceeds the outstanding balance",
+            });
+        const amount = request.amountPaise;
         if (amount <= 0)
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "This order is already paid",
             });
+        const [intent] = await db
+            .insert(corporatePaymentIntents)
+            .values({
+                orderId: order.id,
+                paymentRequestId: request.id,
+                userId: order.userId ?? "payment-request",
+                paymentKind: "payment_request",
+                amountPaise: amount,
+                currency: "INR",
+                status: "created",
+                orderSnapshot: {
+                    corporateOrderId: order.id,
+                    paymentRequestId: request.id,
+                    amountPaise: amount,
+                },
+            })
+            .returning({ id: corporatePaymentIntents.id });
         const rzpOrder = await razorpay.orders.create({
             amount,
             currency: "INR",
@@ -470,6 +550,14 @@ export const corporatePaymentRequestService = {
                 updatedAt: new Date(),
             })
             .where(eq(corporatePaymentRequests.id, request.id));
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerOrderId: rzpOrder.id,
+                status: "provider_order_bound",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
         return {
             orderId: rzpOrder.id,
             amount,
@@ -497,14 +585,31 @@ export const corporatePaymentRequestService = {
                 code: "BAD_REQUEST",
                 message: "Payment order mismatch",
             });
-        const signature = crypto
-            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
-            .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
-            .digest("hex");
-        if (!hasValidRazorpaySignature(signature, input.razorpaySignature))
+        try {
+            await verifyCorporateRazorpayPayment({
+                provider: razorpay,
+                secret: env.RAZOR_PAY_SECRET_KEY,
+                razorpayOrderId: input.razorpayOrderId,
+                razorpayPaymentId: input.razorpayPaymentId,
+                razorpaySignature: input.razorpaySignature,
+                amountPaise: request.amountPaise,
+            });
+        } catch (error) {
+            if (error instanceof CorporatePaymentIntegrityError)
+                throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+            throw error;
+        }
+        const intent = await db.query.corporatePaymentIntents.findFirst({
+            where: and(
+                eq(corporatePaymentIntents.paymentRequestId, request.id),
+                eq(corporatePaymentIntents.providerOrderId, input.razorpayOrderId),
+                eq(corporatePaymentIntents.status, "provider_order_bound")
+            ),
+        });
+        if (!intent)
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Invalid payment signature",
+                message: "Corporate payment intent is missing or no longer active",
             });
         await db
             .update(corporatePaymentRequests)
@@ -521,7 +626,16 @@ export const corporatePaymentRequestService = {
             paymentReference: input.razorpayPaymentId,
             paymentDate: new Date().toISOString().slice(0, 10),
             paymentRequestId: request.id,
+            intentId: intent.id,
         });
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerPaymentId: input.razorpayPaymentId,
+                status: "applied",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
         return { success: true, orderId: request.orderId };
     },
 
@@ -540,12 +654,34 @@ export const corporatePaymentRequestService = {
                 code: "BAD_REQUEST",
                 message: "This payment request has expired",
             });
-        const amount = Math.min(request.amountPaise, order.balanceDuePaise);
+        if (request.amountPaise > order.balanceDuePaise)
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Payment request exceeds the outstanding balance",
+            });
+        const amount = request.amountPaise;
         if (amount <= 0)
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "This order is already paid",
             });
+        const [intent] = await db
+            .insert(corporatePaymentIntents)
+            .values({
+                orderId: order.id,
+                paymentRequestId: request.id,
+                userId: "payment-request",
+                paymentKind: "payment_request",
+                amountPaise: amount,
+                currency: "INR",
+                status: "created",
+                orderSnapshot: {
+                    corporateOrderId: order.id,
+                    paymentRequestId: request.id,
+                    amountPaise: amount,
+                },
+            })
+            .returning({ id: corporatePaymentIntents.id });
         const rzpOrder = await razorpay.orders.create({
             amount,
             currency: "INR",
@@ -563,6 +699,14 @@ export const corporatePaymentRequestService = {
                 updatedAt: new Date(),
             })
             .where(eq(corporatePaymentRequests.id, request.id));
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerOrderId: rzpOrder.id,
+                status: "provider_order_bound",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
         return {
             orderId: rzpOrder.id,
             amount,
@@ -588,14 +732,31 @@ export const corporatePaymentRequestService = {
                 code: "BAD_REQUEST",
                 message: "Payment order mismatch",
             });
-        const signature = crypto
-            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
-            .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
-            .digest("hex");
-        if (!hasValidRazorpaySignature(signature, input.razorpaySignature))
+        try {
+            await verifyCorporateRazorpayPayment({
+                provider: razorpay,
+                secret: env.RAZOR_PAY_SECRET_KEY,
+                razorpayOrderId: input.razorpayOrderId,
+                razorpayPaymentId: input.razorpayPaymentId,
+                razorpaySignature: input.razorpaySignature,
+                amountPaise: request.amountPaise,
+            });
+        } catch (error) {
+            if (error instanceof CorporatePaymentIntegrityError)
+                throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+            throw error;
+        }
+        const intent = await db.query.corporatePaymentIntents.findFirst({
+            where: and(
+                eq(corporatePaymentIntents.paymentRequestId, request.id),
+                eq(corporatePaymentIntents.providerOrderId, input.razorpayOrderId),
+                eq(corporatePaymentIntents.status, "provider_order_bound")
+            ),
+        });
+        if (!intent)
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Invalid payment signature",
+                message: "Corporate payment intent is missing or no longer active",
             });
         await db
             .update(corporatePaymentRequests)
@@ -612,7 +773,16 @@ export const corporatePaymentRequestService = {
             paymentReference: input.razorpayPaymentId,
             paymentDate: new Date().toISOString().slice(0, 10),
             paymentRequestId: request.id,
+            intentId: intent.id,
         });
+        await db
+            .update(corporatePaymentIntents)
+            .set({
+                providerPaymentId: input.razorpayPaymentId,
+                status: "applied",
+                updatedAt: new Date(),
+            })
+            .where(eq(corporatePaymentIntents.id, intent.id));
         return this.getPublic(token);
     },
 
