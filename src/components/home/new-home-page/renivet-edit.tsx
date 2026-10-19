@@ -30,7 +30,7 @@ export const RENIVET_EDIT_DESKTOP_LAYOUT = {
 
 export function RenivetEdit() {
     return (
-        <section className="w-full bg-[#f8f5ef] py-8 md:py-10 lg:py-14">
+        <section className="w-full bg-[#f8f5ef] pb-8 pt-2 md:py-10 lg:py-14">
             <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
                 <div className="mb-5 flex items-end justify-between gap-4 md:mb-6 lg:mb-10">
                     <div>
@@ -54,7 +54,7 @@ export function RenivetEdit() {
                         <Link
                             key={card.title}
                             href={card.href}
-                            className="group relative flex min-h-[126px] overflow-hidden rounded-[10px] border border-[#ebe3d4] bg-[#f6efe3] transition-transform hover:-translate-y-0.5 md:min-h-0 md:flex-col lg:rounded-[14px]"
+                            className="group relative flex min-h-[126px] overflow-hidden rounded-[10px] border border-[#ebe3d4] bg-[#e9d7d3] transition-transform hover:-translate-y-0.5 md:min-h-0 md:flex-col lg:rounded-[14px]"
                         >
                             <div className="flex min-w-0 flex-1 flex-col items-start p-4 pb-2 md:flex-none md:p-4 md:pb-3 lg:p-7 lg:pb-5">
                                 <h3 className="max-w-[125px] whitespace-pre-line font-serif text-[16px] leading-[1.15] text-[#302e2b] md:max-w-none md:text-[17px] lg:text-[25px]">
@@ -84,7 +84,7 @@ export function RenivetEdit() {
                                 ) : null}
                             </div>
 
-                            <span className="absolute bottom-3 left-4 flex size-6 items-center justify-center rounded-full bg-[#e92368] text-sm leading-none text-white transition-transform group-hover:translate-x-0.5 md:static md:mb-3 md:ml-4 md:mt-3 md:self-start lg:mb-6 lg:ml-7 lg:mt-5 lg:size-11 lg:text-xl">
+                            <span className="absolute bottom-3 left-4 flex size-6 items-center justify-center rounded-full bg-[#61333d] text-sm leading-none text-white transition-transform group-hover:translate-x-0.5 md:static md:mb-3 md:ml-4 md:mt-3 md:self-start lg:mb-6 lg:ml-7 lg:mt-5 lg:size-11 lg:text-xl">
                                 <span aria-hidden="true">→</span>
                             </span>
                         </Link>

@@ -43,10 +43,10 @@ export function HowRenivetCurates() {
                 <div className="min-w-0">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <h2 className="font-serif text-[23px] font-normal leading-tight text-[#302e2b] md:text-[30px]">
+                            <h2 className="font-serif text-[23px] font-normal leading-tight text-[#3E2127] md:text-[30px]">
                                 How Renivet curates
                             </h2>
-                            <p className="mt-2 font-serif text-[17px] italic leading-snug text-[#e92368] md:text-[20px]">
+                            <p className="mt-2 font-serif text-[17px] italic leading-snug text-[#61333d] md:text-[20px]">
                                 More than a marketplace. A movement!
                             </p>
                         </div>
@@ -72,7 +72,7 @@ export function HowRenivetCurates() {
                                         />
                                     </span>
                                     <div className="min-w-0 pt-0.5">
-                                        <h3 className="font-serif text-[14px] font-medium leading-tight text-[#302e2b] md:text-[15px]">
+                                        <h3 className="font-serif text-[14px] font-medium leading-tight text-[#3E2127] md:text-[15px]">
                                             {step.title}
                                         </h3>
                                         <p className="mt-1 max-w-[430px] text-[10px] leading-[1.45] text-[#77716a] md:text-[11px]">
@@ -86,7 +86,7 @@ export function HowRenivetCurates() {
 
                     <Link
                         href="/about"
-                        className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#e92368] px-6 text-[10px] font-semibold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#cf1859] md:mt-8 md:w-fit md:min-w-[270px]"
+                        className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#61333d] px-6 text-[10px] font-semibold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#4d2931] md:mt-8 md:w-fit md:min-w-[270px]"
                     >
                         Explore our curation process
                         <span aria-hidden="true">&rarr;</span>
@@ -104,7 +104,7 @@ export function HowRenivetCurates() {
                         />
                     </div>
                     <div className="absolute bottom-5 left-5 w-[250px] rounded-[10px] bg-white px-5 py-4 shadow-sm">
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.04em] text-[#e92368]">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.04em] text-[#61333d]">
                             <span aria-hidden="true" className="mr-1.5">
                                 &#10024;
                             </span>

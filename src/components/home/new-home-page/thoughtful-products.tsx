@@ -34,7 +34,7 @@ export const THOUGHTFUL_PRODUCT_BENEFITS = [
 
 export function ThoughtfulProducts() {
     return (
-        <section className="w-full bg-[#f8f5ef] pb-10 md:px-8 md:py-12">
+        <section className="w-full bg-[#f8f5ef] pb-4 md:px-8 md:py-12">
             <div className="relative aspect-[5/4] w-full overflow-hidden md:hidden">
                 <Image
                     src={THOUGHTFUL_PRODUCTS_MOBILE_IMAGE}
@@ -82,10 +82,10 @@ export function ThoughtfulProducts() {
                     })}
                 </div>
 
-                <div className="mt-7 md:mt-8 md:flex md:justify-center">
+                <div className="mt-5 flex justify-center md:mt-8">
                     <Link
                         href="/about"
-                        className="inline-flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-full bg-[#e92368] px-6 text-[9px] font-semibold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#cf1859] md:min-w-[130px]"
+                        className="inline-flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-full bg-[#61333d] px-6 text-[9px] font-semibold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#4d2931] md:min-w-[130px]"
                     >
                         Learn more
                         <span aria-hidden="true">&rarr;</span>

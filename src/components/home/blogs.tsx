@@ -16,7 +16,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
     return (
         <section
             className={cn(
-                "w-full bg-[#faf7f0] py-8 md:bg-white md:py-16",
+                "w-full bg-[#faf7f0] pb-8 pt-2 md:bg-white md:py-16",
                 className
             )}
             {...props}
@@ -24,7 +24,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
             <div className="max-w-screen-3xl mx-auto w-full px-[18px] sm:px-6 md:px-4 lg:px-8">
                 {/* Header */}
                 <div className="mb-5 flex items-start justify-between gap-4 md:mb-6 md:items-baseline md:justify-start">
-                    <h2 className="font-serif text-[28px] font-normal leading-[1.08] tracking-[-0.02em] text-[#25252a] md:font-sans md:text-2xl md:font-bold md:leading-normal md:tracking-tight">
+                    <h2 className="font-serif text-[21px] font-normal leading-[1.08] tracking-[-0.02em] text-[#3E2127] md:font-sans md:text-2xl md:font-bold md:leading-normal md:tracking-tight">
                         <span className="block md:hidden">
                             Stories from our
                         </span>
@@ -33,7 +33,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                     </h2>
                     <Link
                         href="/blogs"
-                        className="mt-1 shrink-0 text-[12px] font-normal tracking-wide text-[#25252a] hover:underline md:mt-0 md:text-[11px] md:font-semibold md:text-gray-600"
+                        className="mt-1 shrink-0 text-[11px] font-normal tracking-wide text-[#61333d] hover:underline md:mt-0 md:text-[11px] md:font-semibold md:text-gray-600"
                     >
                         <span className="md:hidden">See all&nbsp; →</span>
                         <span className="hidden md:inline">View All</span>

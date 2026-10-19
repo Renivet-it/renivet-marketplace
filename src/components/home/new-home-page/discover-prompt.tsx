@@ -19,7 +19,7 @@ export function DiscoverPrompt() {
                 <div className="flex shrink-0">
                     <Link
                         href="/discover"
-                        className="inline-flex items-center gap-2 rounded-full border border-[#1f2b24] bg-[#1f2b24] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white transition hover:bg-transparent hover:text-[#1f2b24]"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#61333d] bg-[#61333d] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white transition hover:bg-transparent hover:text-[#61333d]"
                     >
                         Open Discover
                     </Link>

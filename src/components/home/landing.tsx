@@ -196,8 +196,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                         See how we curate
                                                     </Link>
                                                 </div>
-                                                <p className="mt-5 text-[11px] text-[#7e8389]">
-                                                    Free returns · Ships in 2
+                                                <p className="mt-5 text-center text-[11px] text-[#7e8389]">
+                                                    Free returns · Ships in 4–7
                                                     days
                                                 </p>
                                             </div>
@@ -254,8 +254,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             See how we curate
                         </Link>
                     </div>
-                    <p className="mt-5 text-[11px] text-[#7e8389]">
-                        Free returns Â· Ships in 2 days
+                    <p className="mt-5 text-center text-[11px] text-[#7e8389]">
+                        Free returns · Ships in 4–7 days
                     </p>
                 </div>
             </div>

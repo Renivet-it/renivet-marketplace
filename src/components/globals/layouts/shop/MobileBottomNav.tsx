@@ -111,7 +111,7 @@ export function MobileBottomNav() {
     return (
         <nav
             className={cn(
-                "fixed inset-x-0 bottom-0 z-40 border-t border-[#eadfce] bg-white/95 pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-8px_24px_rgba(57,48,33,0.08)] backdrop-blur-xl transition-transform duration-300 md:hidden",
+                "fixed inset-x-0 bottom-0 z-40 border-t border-[#e9d7d3] bg-[#FAF7F2]/95 pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-8px_24px_rgba(97,51,61,0.12)] backdrop-blur-xl transition-transform duration-300 md:hidden",
                 isVisible ? "translate-y-0" : "translate-y-full"
             )}
         >
@@ -132,8 +132,8 @@ export function MobileBottomNav() {
                                 className={cn(
                                     "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
                                     isActive
-                                        ? "bg-[linear-gradient(180deg,#31401f_0%,#263018_100%)] text-white shadow-[0_14px_26px_rgba(49,64,31,0.28)]"
-                                        : "text-[#726a58]"
+                                        ? "bg-[#61333d] text-white shadow-[0_14px_26px_rgba(97,51,61,0.28)]"
+                                        : "text-[#6f6470]"
                                 )}
                             >
                                 <div
@@ -141,7 +141,7 @@ export function MobileBottomNav() {
                                         "relative flex size-11 items-center justify-center rounded-full border transition-all",
                                         isActive
                                             ? "border-white/15 bg-white/10"
-                                            : "border-[#efe5d2] bg-white/60 text-[#5e584b]"
+                                            : "border-[#e9d7d3] bg-white/60 text-[#5e584b]"
                                     )}
                                 >
                                     <item.icon className="size-[20px]" />

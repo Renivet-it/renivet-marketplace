@@ -21,7 +21,7 @@ function FeaturedBrandLogo({ brand }: { brand: StorefrontBrand }) {
     const [failed, setFailed] = useState(false);
 
     return (
-        <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#dfd8ce] bg-white md:size-9">
+        <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#dfd8ce] bg-white md:size-10">
             {brand.logoUrl && !failed ? (
                 <Image
                     src={brand.logoUrl}
@@ -47,7 +47,7 @@ export function FeaturedBrands({ brands }: { brands: StorefrontBrand[] }) {
     if (!brands.length) return null;
 
     return (
-        <section className="w-full bg-[#f8f5ef] px-4 py-8 sm:px-6 md:px-8 md:py-10">
+        <section className="w-full bg-[#f8f5ef] px-4 pb-8 pt-4 sm:px-6 md:px-8 md:py-10">
             <div className="mx-auto w-full">
                 <div className="flex items-end justify-between gap-4">
                     <div>

@@ -959,7 +959,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
         <section className={cn("w-full bg-[#f8f5ef]", className)}>
             <div className="bg-[#f8f5ef] px-5 pb-6 pt-5 md:hidden">
                 <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-serif text-[17px] font-medium leading-none text-[#302e2b]">
+                    <h2 className="font-serif text-[28px] font-medium leading-none text-[#302e2b]">
                         Shop by category
                     </h2>
                     <Link
@@ -1023,7 +1023,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
                 </div>
             </div>
 
-            <div className="max-w-screen-3xl mx-auto px-4 py-8 sm:px-6 md:py-10 lg:px-8">
+            <div className="max-w-screen-3xl mx-auto px-4 pb-8 pt-2 sm:px-6 md:py-10 lg:px-8">
                 <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
                     <div>
                         <span className="text-[8px] font-medium uppercase tracking-[0.16em] text-[#827b70] md:text-[9px]">

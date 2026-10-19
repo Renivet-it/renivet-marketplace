@@ -1135,16 +1135,8 @@ export function NavbarHome({
                                     <Link href="/auth/signin">Login</Link>
                                 </Button>
 
-                                <Button
-                                    className="hidden h-10 rounded-full bg-[#2f3720] px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] md:inline-flex"
-                                    size="sm"
-                                    asChild
-                                >
-                                    <Link href="/auth/signup">Sign Up</Link>
-                                </Button>
-
                                 <div className="flex items-center md:hidden">
-                                    <div className="flex items-center gap-1 sm:gap-2">
+                                    <div className="flex items-center">
                                         <Button
                                             className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
                                             size="sm"
@@ -1152,15 +1144,6 @@ export function NavbarHome({
                                         >
                                             <Link href="/auth/signin">
                                                 Login
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            className="h-8 rounded-full bg-[#2f3720] px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-white transition-all duration-300 hover:bg-[#252c18] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link href="/auth/signup">
-                                                Sign Up
                                             </Link>
                                         </Button>
                                     </div>

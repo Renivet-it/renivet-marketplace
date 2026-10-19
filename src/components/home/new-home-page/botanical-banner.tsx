@@ -38,7 +38,7 @@ export function BotanicalBanner({ brands }: { brands: StorefrontBrand[] }) {
                     <button
                         type="button"
                         onClick={() => setDirectoryOpen(true)}
-                        className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#e92368] px-4 text-[8px] font-semibold text-white transition-colors hover:bg-[#cf1859] md:mt-6 md:h-10 md:min-w-[220px] md:px-6 md:text-[9px] md:uppercase md:tracking-[0.04em]"
+                        className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#61333d] px-4 text-[8px] font-semibold text-white transition-colors hover:bg-[#4d2931] md:mt-6 md:h-10 md:min-w-[220px] md:px-6 md:text-[9px] md:uppercase md:tracking-[0.04em]"
                     >
                         Explore all brands
                         <span aria-hidden="true">&rarr;</span>

@@ -16,7 +16,15 @@ import {
 } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
+import {
+    Leaf,
+    Lock,
+    Package,
+    RefreshCcw,
+    ShieldCheck,
+    Star,
+    Truck,
+} from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { cache, Suspense } from "react";
@@ -131,6 +139,16 @@ const FeaturedBrands = dynamic(() =>
         default: m.FeaturedBrands,
     }))
 );
+const FeaturedBrandsEditorial = dynamic(() =>
+    import("@/components/home/new-home-page/featured-brands-editorial").then(
+        (m) => ({ default: m.FeaturedBrandsEditorial })
+    )
+);
+const RenivetCircleSignup = dynamic(() =>
+    import("@/components/home/renivet-circle-signup").then((m) => ({
+        default: m.RenivetCircleSignup,
+    }))
+);
 const BotanicalBanner = dynamic(() =>
     import("@/components/home/new-home-page/botanical-banner").then((m) => ({
         default: m.BotanicalBanner,
@@ -146,7 +164,7 @@ export default async function Page() {
     const { userId } = await auth();
 
     return (
-        <>
+        <main className="min-h-screen bg-[#FAF7F2] [&_section]:bg-[#FAF7F2] [&_h1]:!text-[#3E2127] [&_h2]:!text-[#3E2127] [&_h3]:!text-[#3E2127] [&_h4]:!text-[#3E2127] [&_h5]:!text-[#3E2127] [&_h6]:!text-[#3E2127]">
             <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
             <Suspense
@@ -156,17 +174,11 @@ export default async function Page() {
             >
                 <BannersFetch />
             </Suspense>
-
+            <TrustBadgesMarquee />
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ShopCategoryFetch />
             </Suspense> */}
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <MobileCategoriesFetch />
-            </Suspense>
+            {/* Temporarily hidden from the home page per the current UI direction. */}
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandTypesFetch />
             </Suspense> */}
@@ -203,6 +215,13 @@ export default async function Page() {
             </Suspense>
             <Suspense
                 fallback={
+                    <div className="h-[380px] w-full animate-pulse bg-[#FAF7F2] md:hidden" />
+                }
+            >
+                <FeaturedBrandsEditorial />
+            </Suspense>
+            <Suspense
+                fallback={
                     <div className="h-[150px] w-full animate-pulse bg-[#f8f5ef] md:h-[190px]" />
                 }
             >
@@ -220,7 +239,7 @@ export default async function Page() {
             </Suspense> */}
 
             {/* Mobile-only Trust Badges Marquee */}
-            <div className="block w-full overflow-hidden bg-[#E4EDF7] md:hidden">
+            <div className="hidden w-full overflow-hidden bg-[#61333D] md:hidden">
                 <style>
                     {`
                         @keyframes trustBadgesMarquee {
@@ -237,7 +256,7 @@ export default async function Page() {
                         padding: "6px 0",
                         fontSize: "11px",
                         fontWeight: 500,
-                        color: "#000",
+                        color: "#fff",
                         animation: "trustBadgesMarquee 25s linear infinite",
                     }}
                 >
@@ -305,9 +324,32 @@ export default async function Page() {
             >
                 <BlogsFetch />
             </Suspense>
+            <RenivetCircleSignup />
 
             <FloatingLoginButton />
-        </>
+        </main>
+    );
+}
+
+function TrustBadgesMarquee() {
+    const badges = [
+        { label: "50+ Vetted Brands", icon: Star },
+        { label: "Every Seller Audited", icon: ShieldCheck },
+        { label: "Plastic-Conscious Packaging", icon: Package },
+        { label: "Easy Returns", icon: RefreshCcw },
+    ];
+
+    return (
+        <div className="block w-full border-y border-[#b98f8f] bg-[#ead8d5] md:hidden">
+            <div className="grid min-h-[102px] grid-cols-4 items-center px-2 py-4 text-center text-[10px] font-medium leading-[1.25] text-[#2d2927]">
+                {badges.map(({ label, icon: Icon }) => (
+                    <div key={label} className="flex min-w-0 flex-col items-center gap-2 px-1">
+                        <Icon aria-hidden="true" className="size-5 stroke-[1.5]" />
+                        <span className="max-w-[82px]">{label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 }
 
