@@ -125,11 +125,11 @@ export function MobileBottomNav() {
                                   ? pathname === "/"
                                   : pathname.startsWith(item.href);
 
-                        return (
-                            <Link
-                                key={item.label}
-                                href={item.href}
-                                className={cn(
+                            return (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className={cn(
                                     "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
                                     isActive
                                         ? "bg-[#61333d] text-white shadow-[0_14px_26px_rgba(97,51,61,0.28)]"

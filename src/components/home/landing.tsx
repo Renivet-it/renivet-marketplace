@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button-general";
 import {
     Carousel,
+    type CarouselApi,
     CarouselContent,
     CarouselItem,
 } from "@/components/ui/carousel";
@@ -11,6 +12,7 @@ import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Icons } from "../icons";
 
 interface PageProps extends GenericProps {
@@ -18,6 +20,9 @@ interface PageProps extends GenericProps {
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
+    const [mobileCarouselApi, setMobileCarouselApi] =
+        useState<CarouselApi | null>(null);
+    const [mobileImageIndex, setMobileImageIndex] = useState(0);
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
@@ -28,6 +33,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
             link: "https://renivet.com/brands/my-mithila/shop",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFBC2sVUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
+            link: "https://renivet.com/brands/terra-luna/shop",
         },
         // {
         //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
@@ -54,6 +63,21 @@ export function Landing({ className, banners, ...props }: PageProps) {
             link: "https://renivet.com/brands/greysome/shop",
         },
     ];
+
+    useEffect(() => {
+        if (!mobileCarouselApi) return;
+
+        const handleSelect = () =>
+            setMobileImageIndex(mobileCarouselApi.selectedScrollSnap());
+
+        handleSelect();
+        mobileCarouselApi.on("select", handleSelect);
+        return () => {
+            mobileCarouselApi.off("select", handleSelect);
+        };
+    }, [mobileCarouselApi]);
+
+    const activeMobileImage = mobileImages[mobileImageIndex] ?? mobileImages[0];
     return (
         <section className={cn("bg-white", className)} {...props}>
             {/* ✅ DESKTOP CAROUSEL */}
@@ -106,9 +130,22 @@ export function Landing({ className, banners, ...props }: PageProps) {
             <div className="relative block w-full bg-[#f5eee5] px-2 pb-6 pt-4 md:hidden">
                 {/* 🔵 BANNER IMAGE WITH CENTER CTA */}
                 <div className="relative w-full overflow-visible">
+                    <button
+                        type="button"
+                        onClick={() =>
+                            window.dispatchEvent(
+                                new Event("renivet:open-product-search")
+                            )
+                        }
+                        aria-label="Search products"
+                        className="absolute right-4 top-4 z-30 flex size-10 items-center justify-center rounded-full border border-white/70 bg-white/90 text-[#61333d] shadow-lg backdrop-blur-sm transition-colors hover:bg-white"
+                    >
+                        <Icons.Search className="size-5" />
+                    </button>
                     <Carousel
                         opts={{ align: "start", loop: true }}
                         plugins={[Autoplay({ delay: 5000 })]}
+                        setApi={setMobileCarouselApi}
                     >
                         <CarouselContent>
                             {mobileImages.map((item, idx) => (
@@ -242,7 +279,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     </p>
                     <div className="mt-5 flex gap-2">
                         <Link
-                            href="/shop"
+                            href={activeMobileImage.link}
                             className="flex flex-1 items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
                         >
                             Shop the Edit
