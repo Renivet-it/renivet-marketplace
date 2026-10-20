@@ -24,7 +24,7 @@ export function Footer({ className, legal, ...props }: FooterProps) {
         <footer
             data-site-footer="true"
             className={cn(
-                "flex justify-center bg-[#61333d] text-[#fffaf7]",
+                "flex justify-center bg-[#3e2127] text-[#fffaf7]",
                 className
             )}
             {...props}
