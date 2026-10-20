@@ -126,11 +126,11 @@ export function ProductGridNewArrivals({
 
     return (
         <section
-            className={cn("w-full bg-[#FAF7F2] pb-10 pt-0 md:py-10", className)}
+            className={cn("w-full bg-[#FAF7F2] pb-6 pt-0 md:py-5", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex flex-col items-start">
+                <div className="mb-5 flex flex-col items-start">
                     <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#6f8298] md:text-[11px]">
                         Curated For You
                     </span>
@@ -147,7 +147,7 @@ export function ProductGridNewArrivals({
                         </Link>
                     </div>
 
-                    <div className="scrollbar-hide mt-6 w-full max-w-full overflow-x-auto">
+                    <div className="scrollbar-hide mt-4 w-full max-w-full overflow-x-auto">
                         <div className="flex w-max items-center overflow-hidden rounded-md border border-[#d8c9c4]">
                             {availableTabs.map((tab) => {
                                 const isActive = activeTab === tab;

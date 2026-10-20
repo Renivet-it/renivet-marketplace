@@ -47,7 +47,7 @@ export function FeaturedBrands({ brands }: { brands: StorefrontBrand[] }) {
     if (!brands.length) return null;
 
     return (
-        <section className="w-full bg-[#f8f5ef] px-4 pb-8 pt-4 sm:px-6 md:bg-[#FAF7F2] md:px-8 md:py-9">
+        <section className="w-full bg-[#f8f5ef] px-4 pb-5 pt-3 sm:px-6 md:bg-[#FAF7F2] md:px-8 md:py-5">
             <div className="mx-auto w-full">
                 <div className="flex items-end justify-between gap-4">
                     <div>
