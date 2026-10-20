@@ -7,6 +7,7 @@ import {
     createRequestGuard,
     filterAvailableCheckoutItems,
     getAutoCouponAction,
+    shouldAttemptAutoCoupon,
     groupCheckoutItemsByBrand,
     isCheckoutItemAvailable,
     toCheckoutPriceItems,
@@ -111,6 +112,12 @@ describe("shared automatic coupon policy", () => {
         expect(getAutoCouponAction(200000, "MANUAL10")).toEqual({
             type: "none",
         });
+    });
+
+    test("does not retry an unavailable automatic coupon for the same total", () => {
+        expect(shouldAttemptAutoCoupon(300001, null)).toBe(true);
+        expect(shouldAttemptAutoCoupon(300001, 300001)).toBe(false);
+        expect(shouldAttemptAutoCoupon(300002, 300001)).toBe(true);
     });
 });
 

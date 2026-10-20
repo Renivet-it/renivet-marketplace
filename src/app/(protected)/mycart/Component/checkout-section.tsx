@@ -11,6 +11,7 @@ import {
     createRequestGuard,
     filterAvailableCheckoutItems,
     getAutoCouponAction,
+    shouldAttemptAutoCoupon,
     toCheckoutPriceItems,
 } from "@/lib/checkout/shared";
 import { useCustomerOrderGuard } from "@/lib/hooks/use-customer-order-guard";
@@ -186,6 +187,7 @@ export default function CheckoutSection({ userId }: PageProps) {
         trpc.general.coupons.validateCoupon.useMutation();
     const autoCouponGuard = useRef(createRequestGuard());
     const autoCouponActive = useRef(false);
+    const failedAutoCouponTotal = useRef<number | null>(null);
 
     useEffect(() => {
         const action = getAutoCouponAction(
@@ -197,7 +199,14 @@ export default function CheckoutSection({ userId }: PageProps) {
             setCouponCode("");
             return;
         }
-        if (action.type !== "apply" || autoCouponActive.current) {
+        if (
+            action.type !== "apply" ||
+            autoCouponActive.current ||
+            !shouldAttemptAutoCoupon(
+                totalPrice,
+                failedAutoCouponTotal.current
+            )
+        ) {
             return;
         }
 
@@ -213,6 +222,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 setCouponCode("");
             })
             .catch(() => {
+                failedAutoCouponTotal.current = totalPrice;
                 // Keep checkout smooth even if auto coupon is not available/valid.
             })
             .finally(() => {

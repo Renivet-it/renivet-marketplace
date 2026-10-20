@@ -16,7 +16,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
     return (
         <section
             className={cn(
-                "w-full bg-[#faf7f0] pb-5 pt-1 md:bg-[#FAF7F2] md:py-6",
+                "w-full bg-[#faf7f0] pb-3 pt-1 md:bg-[#FAF7F2] md:py-3",
                 className
             )}
             {...props}

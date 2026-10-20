@@ -31,6 +31,7 @@ export const coupons = pgTable("coupons", {
     maxUses: integer("max_uses").default(0).notNull(),
     uses: integer("uses").default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
+    isCreatorCoupon: boolean("is_creator_coupon").default(false).notNull(),
     ...timestamps,
 });
 

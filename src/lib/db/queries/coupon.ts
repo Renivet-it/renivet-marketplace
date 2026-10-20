@@ -61,6 +61,7 @@ class CouponQuery {
             },
             where: and(
                 eq(coupons.isActive, true),
+                eq(coupons.isCreatorCoupon, false),
                 or(isNull(coupons.expiresAt), gt(coupons.expiresAt, now)),
                 or(
                     eq(coupons.maxUses, 0),

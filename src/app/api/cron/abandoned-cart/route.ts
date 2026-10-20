@@ -1,12 +1,7 @@
-import { couponQueries } from "@/lib/db/queries";
 import { requireCronSecret } from "@/lib/auth/cron-access";
 import { db } from "@/lib/db";
-import {
-    carts,
-    marketingAutomationRuns,
-    orders,
-    users,
-} from "@/lib/db/schema";
+import { couponQueries } from "@/lib/db/queries";
+import { carts, marketingAutomationRuns, orders, users } from "@/lib/db/schema";
 import {
     buildUnsubscribeUrl,
     sendMarketingEmail,
@@ -27,7 +22,12 @@ const STEPS = [
 ] as const;
 
 function buildCartSignature(
-    items: Array<{ id: string; productId: string; variantId: string | null; updatedAt: Date }>
+    items: Array<{
+        id: string;
+        productId: string;
+        variantId: string | null;
+        updatedAt: Date;
+    }>
 ) {
     return items
         .map(
@@ -84,7 +84,9 @@ export async function GET(req: NextRequest) {
 
     for (const group of Object.values(grouped)) {
         const lastUpdatedAt = new Date(
-            Math.max(...group.items.map((item) => new Date(item.updatedAt).getTime()))
+            Math.max(
+                ...group.items.map((item) => new Date(item.updatedAt).getTime())
+            )
         );
         const cartSignature = buildCartSignature(
             group.items.map((item) => ({
@@ -115,19 +117,30 @@ export async function GET(req: NextRequest) {
             if (sendAt > new Date()) continue;
 
             const automationKey = `abandoned_cart:${cartSnapshotKey}:step${step.step}`;
-            const existingRun = await db.query.marketingAutomationRuns.findFirst({
-                where: eq(marketingAutomationRuns.automationKey, automationKey),
-            });
-            if (existingRun?.status === "sent" || existingRun?.status === "stopped") {
+            const existingRun =
+                await db.query.marketingAutomationRuns.findFirst({
+                    where: eq(
+                        marketingAutomationRuns.automationKey,
+                        automationKey
+                    ),
+                });
+            if (
+                existingRun?.status === "sent" ||
+                existingRun?.status === "stopped"
+            ) {
                 skipped += 1;
                 continue;
             }
 
             if (step.step > 1) {
                 const previousKey = `abandoned_cart:${cartSnapshotKey}:step${step.step - 1}`;
-                const previousRun = await db.query.marketingAutomationRuns.findFirst({
-                    where: eq(marketingAutomationRuns.automationKey, previousKey),
-                });
+                const previousRun =
+                    await db.query.marketingAutomationRuns.findFirst({
+                        where: eq(
+                            marketingAutomationRuns.automationKey,
+                            previousKey
+                        ),
+                    });
                 if (previousRun?.status !== "sent") {
                     skipped += 1;
                     continue;
@@ -139,7 +152,8 @@ export async function GET(req: NextRequest) {
             let couponCode: string | null = null;
             if (step.step === 3) {
                 couponCode =
-                    (existingRun?.metadata?.couponCode as string | undefined) ?? null;
+                    (existingRun?.metadata?.couponCode as string | undefined) ??
+                    null;
                 if (!couponCode) {
                     const coupon = await couponQueries.createCoupon({
                         code: generateId({ casing: "upper", length: 10 }),
@@ -148,11 +162,14 @@ export async function GET(req: NextRequest) {
                         discountValue: 100,
                         minOrderAmount: 0,
                         maxDiscountAmount: 100,
-                        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                        expiresAt: new Date(
+                            Date.now() + 7 * 24 * 60 * 60 * 1000
+                        ),
                         maxUses: 1,
                         categoryId: null,
                         subCategoryId: null,
                         productTypeId: null,
+                        isCreatorCoupon: false,
                     });
                     couponCode = coupon.code;
                 }

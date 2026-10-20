@@ -112,6 +112,7 @@ export const couponSchema = z.object({
         required_error: "Is active is required",
         invalid_type_error: "Is active must be a boolean",
     }),
+    isCreatorCoupon: z.boolean().default(false),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

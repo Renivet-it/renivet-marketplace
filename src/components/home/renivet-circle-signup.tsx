@@ -32,7 +32,7 @@ export function RenivetCircleSignup() {
     };
 
     return (
-        <section className="w-full bg-[#FAF7F2] px-4 py-2 md:px-8 md:pb-14 md:pt-4 lg:px-16">
+        <section className="w-full bg-[#FAF7F2] px-4 py-1 md:px-8 md:pb-8 md:pt-2 lg:px-16">
             <div className="relative mx-auto overflow-hidden rounded-[20px] bg-[#3E2127] px-6 py-7 text-[#FAF7F2] shadow-[0_18px_45px_rgba(62,33,39,0.16)] md:max-w-[1180px] md:px-12 md:py-11 lg:px-16 lg:py-12">
                 <div className="pointer-events-none absolute -right-3 -top-4 rotate-12 text-[#8f686d]/60 md:-right-2 md:-top-10">
                     <svg width="105" height="140" viewBox="0 0 105 140" fill="none" aria-hidden="true">
