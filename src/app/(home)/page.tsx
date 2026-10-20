@@ -365,10 +365,10 @@ function TrustBadgesMarquee() {
 
     return (
         <div className="block w-full border-y border-[#c9aaa8] bg-[#ead8d5]">
-            <div className="grid min-h-[102px] grid-cols-4 items-center px-2 py-4 text-center text-[10px] font-medium leading-[1.25] text-[#3E2127] md:min-h-[82px] md:px-16 md:py-3 md:text-[11px]">
+            <div className="grid min-h-[62px] grid-cols-4 items-center px-2 py-1.5 text-center text-[10px] font-medium leading-[1.15] text-[#3E2127] md:min-h-[50px] md:px-16 md:py-1.5 md:text-[11px]">
                 {badges.map(({ label, icon: Icon }) => (
-                    <div key={label} className="flex min-w-0 flex-col items-center gap-2 px-1 md:gap-1.5">
-                        <Icon aria-hidden="true" className="size-5 stroke-[1.5] md:size-4" />
+                    <div key={label} className="flex min-w-0 flex-col items-center gap-1 px-1 md:gap-1">
+                        <Icon aria-hidden="true" className="size-4 stroke-[1.5] md:size-4" />
                         <span className="max-w-[82px] md:max-w-none">{label}</span>
                     </div>
                 ))}

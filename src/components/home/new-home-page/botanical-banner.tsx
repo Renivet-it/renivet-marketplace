@@ -26,7 +26,7 @@ export function BotanicalBanner({ brands }: { brands: StorefrontBrand[] }) {
     const [directoryOpen, setDirectoryOpen] = useState(false);
 
     return (
-        <section className="w-full bg-[#f8f5ef] px-4 py-8 sm:px-6 md:px-8 md:py-10">
+        <section className="w-full bg-[#f8f5ef] px-4 py-3 sm:px-6 md:px-8 md:py-3">
             <div className="grid min-h-[160px] w-full grid-cols-[1.55fr_1fr] overflow-hidden rounded-[14px] border border-[#dfc6c2] bg-[#e9d7d3] md:h-[324px] md:min-h-0 md:grid-cols-2">
                 <div className="flex min-w-0 flex-col items-start justify-center px-4 py-5 md:px-14 md:py-10 lg:px-16">
                     <h2 className="max-w-[230px] font-serif text-[18px] font-normal leading-[1.18] text-[#302e2b] md:max-w-[520px] md:text-[34px]">

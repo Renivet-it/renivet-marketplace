@@ -36,7 +36,7 @@ export const THOUGHTFUL_PRODUCT_BENEFITS = [
 
 export function ThoughtfulProducts() {
     return (
-        <section className="w-full bg-[#f8f5ef] pb-4 md:bg-[#FAF7F2] md:px-8 md:py-10">
+        <section className="w-full bg-[#f8f5ef] pb-2 md:bg-[#FAF7F2] md:px-8 md:py-4">
             <div className="relative aspect-[5/4] w-full overflow-hidden md:hidden">
                 <Image
                     src={THOUGHTFUL_PRODUCTS_MOBILE_IMAGE}

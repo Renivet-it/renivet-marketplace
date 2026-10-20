@@ -114,6 +114,14 @@ export function getAutoCouponAction(
     return { type: "none" };
 }
 
+/** Avoid retrying an unavailable automatic coupon for the same cart total. */
+export function shouldAttemptAutoCoupon(
+    totalAmount: number,
+    failedTotalAmount: number | null
+) {
+    return failedTotalAmount !== totalAmount;
+}
+
 export function groupCheckoutItemsByBrand<
     T extends { product: { brandId: string } },
 >(items: T[]) {

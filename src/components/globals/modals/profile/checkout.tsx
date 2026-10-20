@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { useCartStore } from "@/lib/store/cart-store";
+import {
+    shouldAttemptAutoCoupon,
+} from "@/lib/checkout/shared";
 import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPriceWithCoupon,
@@ -25,7 +28,7 @@ import {
 } from "@/lib/utils";
 import { CouponWithCategory } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -154,6 +157,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
         mutateAsync: validateCouponSilently,
         isPending: isAutoCouponChecking,
     } = trpc.general.coupons.validateCoupon.useMutation();
+    const failedAutoCouponTotal = useRef<number | null>(null);
 
     useEffect(() => {
         const shouldAutoApply = totalPrice > AUTO_COUPON_MIN_CART_VALUE;
@@ -169,7 +173,15 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
             return;
         }
 
-        if (coupon || isAutoCouponChecking) return;
+        if (
+            coupon ||
+            isAutoCouponChecking ||
+            !shouldAttemptAutoCoupon(
+                totalPrice,
+                failedAutoCouponTotal.current
+            )
+        )
+            return;
 
         validateCouponSilently({
             code: AUTO_COUPON_CODE,
@@ -181,6 +193,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                 setCouponCode("");
             })
             .catch(() => {
+                failedAutoCouponTotal.current = totalPrice;
                 // Keep checkout smooth even if auto coupon is not available/valid.
             });
     }, [

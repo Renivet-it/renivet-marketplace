@@ -22,6 +22,7 @@ import {
     createRequestGuard,
     filterAvailableCheckoutItems,
     getAutoCouponAction,
+    shouldAttemptAutoCoupon,
     toCheckoutPriceItems,
 } from "@/lib/checkout/shared";
 import { fbEvent } from "@/lib/fbpixel";
@@ -111,6 +112,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     > | null>(null);
     const autoCouponGuard = useRef(createRequestGuard());
     const autoCouponActive = useRef(false);
+    const failedAutoCouponTotal = useRef<number | null>(null);
 
     const swapRewardStatusQuery =
         trpc.general.swapRewards.getSwapRewardStatus.useQuery(undefined, {
@@ -620,7 +622,15 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             setAppliedCoupon(null);
             return;
         }
-        if (action.type !== "apply" || autoCouponActive.current) return;
+        if (
+            action.type !== "apply" ||
+            autoCouponActive.current ||
+            !shouldAttemptAutoCoupon(
+                cartValue,
+                failedAutoCouponTotal.current
+            )
+        )
+            return;
 
         const requestId = autoCouponGuard.current.next();
         autoCouponActive.current = true;
@@ -635,6 +645,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 setCouponCode("");
             })
             .catch(() => {
+                failedAutoCouponTotal.current = cartValue;
                 // Keep checkout smooth even if auto coupon is not available/valid.
             })
             .finally(() => {

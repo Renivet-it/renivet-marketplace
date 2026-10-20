@@ -16,14 +16,14 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
     return (
         <section
             className={cn(
-                "w-full bg-[#faf7f0] pb-8 pt-2 md:bg-[#FAF7F2] md:py-10",
+                "w-full bg-[#faf7f0] pb-3 pt-1 md:bg-[#FAF7F2] md:py-3",
                 className
             )}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto w-full px-[18px] sm:px-6 md:px-4 lg:px-8">
                 {/* Header */}
-                <div className="mb-5 flex items-start justify-between gap-4 md:mb-8 md:items-baseline md:justify-start">
+                <div className="mb-4 flex items-start justify-between gap-4 md:mb-5 md:items-baseline md:justify-start">
                     <h2 className="font-serif text-[21px] font-normal leading-[1.08] tracking-[-0.02em] text-[#3E2127] md:text-[32px] md:font-normal md:leading-tight md:tracking-[-0.02em]">
                         <span className="block md:hidden">
                             Stories from our

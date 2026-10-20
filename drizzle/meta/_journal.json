@@ -1863,6 +1863,13 @@
       "when": 1791288000000,
       "tag": "0292_ren255_provider_order_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1792498777996,
+      "tag": "0293_creator_coupon_visibility",
+      "breakpoints": true
     }
   ]
 }

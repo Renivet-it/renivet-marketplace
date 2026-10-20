@@ -25,6 +25,10 @@ export function SwapProgressFloat() {
         pathname.startsWith("/sign-in") ||
         pathname.startsWith("/sign-up");
 
+    // Keep the campaign widget available on catalog and account surfaces, but
+    // do not let it compete with the homepage's editorial content.
+    const isHomePage = pathname === "/";
+
     const isCatalogPage =
         pathname === "/shop" ||
         pathname.startsWith("/shop/") ||
@@ -38,7 +42,12 @@ export function SwapProgressFloat() {
     const widgetPosition =
         "bottom-[calc(86px+max(env(safe-area-inset-bottom),0px))] h-[56px] w-[160px] rounded-[18px] md:bottom-7 md:h-[62px] md:w-[178px] md:rounded-[22px]";
 
-    if (!isLoaded || isAuthPage || (!isSignedIn && !isCatalogPage)) {
+    if (
+        !isLoaded ||
+        isHomePage ||
+        isAuthPage ||
+        (!isSignedIn && !isCatalogPage)
+    ) {
         return null;
     }
 

@@ -1023,7 +1023,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
                 </div>
             </div>
 
-            <div className="max-w-screen-3xl mx-auto px-4 pb-8 pt-2 sm:px-6 md:py-10 lg:px-8">
+            <div className="max-w-screen-3xl mx-auto px-4 pb-5 pt-1 sm:px-6 md:py-4 lg:px-8">
                 <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
                     <div>
                         <span className="text-[8px] font-medium uppercase tracking-[0.16em] text-[#827b70] md:text-[9px]">

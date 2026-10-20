@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function FeaturedBrandsEditorial() {
     return (
-        <section className="w-full bg-[#FAF7F2] px-5 pb-2 pt-0 md:px-8 md:pb-6 md:pt-0">
+        <section className="w-full bg-[#FAF7F2] px-5 pb-1 pt-0 md:px-8 md:pb-1 md:pt-0">
             <div className="overflow-hidden md:mx-auto md:max-w-[1184px]">
                 <div className="relative mx-5 h-[288px] overflow-hidden rounded-[12px] md:mx-0 md:h-[260px] md:rounded-[20px] md:shadow-[0_18px_36px_rgba(62,33,39,0.14)]">
                     <Image

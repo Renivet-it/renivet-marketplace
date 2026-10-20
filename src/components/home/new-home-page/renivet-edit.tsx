@@ -30,7 +30,7 @@ export const RENIVET_EDIT_DESKTOP_LAYOUT = {
 
 export function RenivetEdit() {
     return (
-        <section className="w-full bg-[#f8f5ef] pb-8 pt-2 md:bg-[#FAF7F2] md:py-9 lg:py-10">
+        <section className="w-full bg-[#f8f5ef] pb-5 pt-1 md:bg-[#FAF7F2] md:py-3 lg:py-4">
             <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
                 <div className="mb-5 flex items-end justify-between gap-4 md:mb-7 lg:mb-8">
                     <div>

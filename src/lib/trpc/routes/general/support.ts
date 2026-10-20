@@ -2203,6 +2203,7 @@ export const adminSupportRouter = createTRPCRouter({
                 categoryId: null,
                 subCategoryId: null,
                 productTypeId: null,
+                isCreatorCoupon: false,
                 expiresAt,
                 maxUses: input.maxUses,
             });

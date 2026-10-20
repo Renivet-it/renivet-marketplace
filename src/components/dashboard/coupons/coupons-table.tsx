@@ -162,6 +162,17 @@ const columns: ColumnDef<TableCoupon>[] = [
         },
     },
     {
+        accessorKey: "isCreatorCoupon",
+        header: "Visibility",
+        cell: ({ row }) => (
+            <Badge
+                variant={row.original.isCreatorCoupon ? "secondary" : "outline"}
+            >
+                {row.original.isCreatorCoupon ? "Creator" : "Public"}
+            </Badge>
+        ),
+    },
+    {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
@@ -203,9 +214,7 @@ export function CouponsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.coupons.getCoupons.useQuery(
+    const { data: queryData } = trpc.general.coupons.getCoupons.useQuery(
         { page, limit, search, isActive },
         { initialData }
     );

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function DiscoverPrompt() {
     return (
-        <section className="w-full bg-white py-8 md:bg-[#FAF7F2] md:py-12">
+        <section className="w-full bg-white py-5 md:bg-[#FAF7F2] md:py-6">
             <div className="mx-auto flex max-w-screen-3xl flex-col gap-5 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
                 <div className="max-w-2xl">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6f7b5a] md:text-[11px]">

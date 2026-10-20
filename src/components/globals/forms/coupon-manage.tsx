@@ -110,6 +110,7 @@ export function CouponManageForm({
                 ? parseInt(convertPaiseToRupees(coupon.minOrderAmount))
                 : 0,
             maxUses: coupon?.maxUses ?? 0,
+            isCreatorCoupon: coupon?.isCreatorCoupon ?? false,
             categoryId: coupon?.categoryId ?? "",
             subCategoryId: coupon?.subCategoryId ?? "",
             productTypeId: coupon?.productTypeId ?? "",
@@ -769,6 +770,30 @@ export function CouponManageForm({
                             </FormDescription>
 
                             <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="isCreatorCoupon"
+                    render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0 rounded-md border p-3">
+                            <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isPending}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>Creator coupon</FormLabel>
+                                <FormDescription>
+                                    Hide this coupon from public coupon
+                                    suggestions. Customers can still use it with
+                                    the code.
+                                </FormDescription>
+                            </div>
                         </FormItem>
                     )}
                 />
