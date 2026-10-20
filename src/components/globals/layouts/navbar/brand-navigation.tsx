@@ -71,10 +71,12 @@ function BrandMark({
 function BrandLink({
     brand,
     compact = false,
+    desktopStyle = false,
     onNavigate,
 }: {
     brand: StorefrontBrand;
     compact?: boolean;
+    desktopStyle?: boolean;
     onNavigate?: () => void;
 }) {
     return (
@@ -83,19 +85,21 @@ function BrandLink({
             onClick={onNavigate}
             className={cn(
                 "group flex min-w-0 items-center gap-3 rounded-2xl border border-[#e9e2d7] bg-white text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#b9aa91] hover:shadow-[0_12px_30px_-22px_rgba(36,65,54,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#244136] focus-visible:ring-offset-2",
+                desktopStyle &&
+                    "border-[#ead8d4] bg-[#f0e2df] hover:border-[#c79ca0] hover:bg-[#ead7d3] hover:shadow-[0_14px_28px_-20px_rgba(97,51,61,0.38)] focus-visible:ring-[#61333d]",
                 compact ? "p-2.5" : "p-3"
             )}
         >
             <BrandMark brand={brand} compact={compact} />
             <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold text-[#202720]">
+                <span className={cn("block truncate text-[13px] font-semibold", desktopStyle ? "text-[#3E2127]" : "text-[#202720]")}>
                     {brand.name}
                 </span>
-                <span className="mt-0.5 block text-[10px] uppercase tracking-[0.12em] text-[#8b8377]">
+                <span className={cn("mt-0.5 block text-[10px] uppercase tracking-[0.12em]", desktopStyle ? "text-[#826c68]" : "text-[#8b8377]")}>
                     Explore brand
                 </span>
             </span>
-            <Icons.ChevronRight className="size-4 shrink-0 text-[#8d978f] transition-transform group-hover:translate-x-0.5" />
+            <Icons.ChevronRight className={cn("size-4 shrink-0 transition-transform group-hover:translate-x-0.5", desktopStyle ? "text-[#80646a]" : "text-[#8d978f]")} />
         </Link>
     );
 }
@@ -110,7 +114,7 @@ function EmptyBrands({ isLoading }: { isLoading: boolean }) {
     );
 }
 
-function AllBrandsDialog({
+export function AllBrandsDialog({
     brands,
     open,
     onOpenChange,
@@ -196,20 +200,20 @@ export function BrandDesktopNavigationItem({
                     BRANDS
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="pt-3">
-                    <div className="w-[1180px] max-w-[95vw] overflow-hidden rounded-[24px] border border-[#e7e0d5] bg-[#fbf9f4] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.38)]">
-                        <div className="flex items-end justify-between border-b border-[#e9e2d7] px-6 py-5">
+                    <div className="w-[1180px] max-w-[95vw] overflow-hidden rounded-[24px] border border-[#e3d0cc] bg-[#FAF7F2] shadow-[0_30px_80px_-42px_rgba(62,33,39,0.34)]">
+                        <div className="flex items-end justify-between border-b border-[#ead8d4] px-6 py-5">
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#987b55]">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#8d6d57]">
                                     Brands
                                 </p>
-                                <h2 className="mt-1 font-serif text-[28px] text-[#241f1a]">
+                                <h2 className="mt-1 font-serif text-[28px] text-[#3E2127]">
                                     Shop by Brand
                                 </h2>
-                                <p className="mt-1 text-xs text-[#756d63]">
+                                <p className="mt-1 text-xs text-[#806f6b]">
                                     Discover homegrown brands, all in one place.
                                 </p>
                             </div>
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#777066]">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#80646a]">
                                 Priority · A–Z
                             </span>
                         </div>
@@ -220,6 +224,7 @@ export function BrandDesktopNavigationItem({
                                         key={brand.id}
                                         brand={brand}
                                         compact
+                                        desktopStyle
                                     />
                                 ))
                             ) : (
@@ -229,7 +234,7 @@ export function BrandDesktopNavigationItem({
                         <button
                             type="button"
                             onClick={() => setDirectoryOpen(true)}
-                            className="m-5 mt-0 flex h-11 w-[calc(100%-40px)] items-center justify-center gap-2 rounded-xl bg-[#244136] text-xs font-semibold uppercase tracking-[0.13em] text-white transition hover:bg-[#193128] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#244136] focus-visible:ring-offset-2"
+                            className="m-5 mt-0 flex h-11 w-[calc(100%-40px)] items-center justify-center gap-2 rounded-xl bg-[#61333d] text-xs font-semibold uppercase tracking-[0.13em] text-[#FAF7F2] transition hover:bg-[#4f2831] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#61333d] focus-visible:ring-offset-2"
                         >
                             View All Brands
                             <Icons.ArrowRight className="size-4" />

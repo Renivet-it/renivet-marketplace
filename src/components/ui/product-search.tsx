@@ -144,6 +144,19 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
         const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+        useEffect(() => {
+            const handleOpenProductSearch = () => setIsSheetOpen(true);
+            window.addEventListener(
+                "renivet:open-product-search",
+                handleOpenProductSearch
+            );
+            return () =>
+                window.removeEventListener(
+                    "renivet:open-product-search",
+                    handleOpenProductSearch
+                );
+        }, []);
+
         // Fetch suggestions when search term changes
         useEffect(() => {
             const query = localSearch.trim();

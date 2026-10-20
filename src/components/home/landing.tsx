@@ -1,14 +1,12 @@
 "use client";
 
-import { BrandMobileNavigation } from "@/components/globals/layouts/navbar/brand-navigation";
 import { Button } from "@/components/ui/button-general";
 import {
     Carousel,
+    type CarouselApi,
     CarouselContent,
     CarouselItem,
 } from "@/components/ui/carousel";
-import { ProductSearch } from "@/components/ui/product-search";
-import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
@@ -22,10 +20,9 @@ interface PageProps extends GenericProps {
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
-    const {
-        data: storefrontBrands = [],
-        isPending: isStorefrontBrandsLoading,
-    } = trpc.general.brands.getStorefrontBrands.useQuery();
+    const [mobileCarouselApi, setMobileCarouselApi] =
+        useState<CarouselApi | null>(null);
+    const [mobileImageIndex, setMobileImageIndex] = useState(0);
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
@@ -36,6 +33,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
             link: "https://renivet.com/brands/my-mithila/shop",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFBC2sVUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
+            link: "https://renivet.com/brands/terra-luna/shop",
         },
         // {
         //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
@@ -62,72 +63,19 @@ export function Landing({ className, banners, ...props }: PageProps) {
             link: "https://renivet.com/brands/greysome/shop",
         },
     ];
-    const placeholders = ["Search For Products and Brands"];
-
-    const [displayText, setDisplayText] = useState("");
-    const [runCount, setRunCount] = useState(0); // how many times finished typing
-    const maxRuns = 4; // number of times animation should repeat
 
     useEffect(() => {
-        if (runCount >= maxRuns) {
-            // After finishing animation 4 times → keep full text permanently
-            setDisplayText(placeholders[0]);
-            return;
-        }
+        if (!mobileCarouselApi) return;
 
-        const sentence = placeholders[0];
-        let charIndex = 0;
+        const handleSelect = () =>
+            setMobileImageIndex(mobileCarouselApi.selectedScrollSnap());
 
-        const typeInterval = setInterval(() => {
-            setDisplayText(sentence.slice(0, charIndex + 1));
-            charIndex++;
-
-            if (charIndex === sentence.length) {
-                clearInterval(typeInterval);
-
-                // Wait before restarting typing
-                setTimeout(() => {
-                    setRunCount((prev) => prev + 1); // count completed animation
-                    setDisplayText(""); // restart typing
-                }, 1000);
-            }
-        }, 70);
-
-        return () => clearInterval(typeInterval);
-    }, [runCount]);
-
-    const categories = [
-        {
-            name: "Men",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2BY4DgQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
-            href: "/men",
-        },
-        {
-            name: "Women",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXsTugR3We049OUSYNxCLnRIka3FhcqBZlbsP",
-            href: "/women",
-        },
-        {
-            name: "Kids",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-            href: "/kids",
-        },
-        {
-            name: "Living",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-            href: "/home-living",
-        },
-        {
-            name: "Beauty",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
-            href: "/beauty-personal",
-        },
-    ];
+        handleSelect();
+        mobileCarouselApi.on("select", handleSelect);
+        return () => {
+            mobileCarouselApi.off("select", handleSelect);
+        };
+    }, [mobileCarouselApi]);
 
     return (
         <section className={cn("bg-white", className)} {...props}>
@@ -178,70 +126,30 @@ export function Landing({ className, banners, ...props }: PageProps) {
             </div>
 
             {/* ✅ MOBILE STATIC BANNER (NO CAROUSEL) */}
-            {/* ✅ MOBILE STATIC BANNER (SQUARE SEARCH BAR + ROUNDED CATEGORY IMAGES WITH BG COLOR) */}
-            <div className="relative block w-full bg-[#fbfaf4] md:hidden">
-                {/* 🔵 SEARCH BAR — NOW SQUARE */}
-                <div className="w-full px-4 pt-4">
-                    <div className="relative border border-black">
-                        <ProductSearch
-                            placeholder={displayText}
-                            className="rounded-none"
-                            style={{
-                                transition: "opacity .3s ease",
-                                opacity: displayText ? 1 : 0.6,
-                            }}
-                        />
-                    </div>
-                </div>
-
-                <div className="relative mt-3 w-full overflow-hidden">
-                    <Image
-                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV"
-                        alt="Category background"
-                        fill
-                        sizes="100vw"
-                        className="object-cover"
-                    />
-                    <div className="scrollbar-none relative z-10 flex w-full justify-between gap-1.5 overflow-x-auto px-2 py-4 min-[390px]:gap-2 min-[390px]:px-3">
-                        {categories.map((category) => (
-                            <Link
-                                key={category.name}
-                                href={category.href}
-                                className="flex min-w-12 flex-col items-center min-[390px]:min-w-[52px] min-[420px]:min-w-14"
-                            >
-                                <div className="relative size-12 overflow-hidden rounded-full bg-white shadow-sm min-[390px]:size-[52px] min-[420px]:size-14">
-                                    <Image
-                                        src={category.imageUrl}
-                                        alt={category.name}
-                                        fill
-                                        className="object-cover"
-                                        sizes="(max-width: 389px) 48px, (max-width: 419px) 52px, 56px"
-                                    />
-                                </div>
-                                <span className="pt-1 text-[11px] font-medium text-black min-[390px]:text-xs">
-                                    {category.name}
-                                </span>
-                            </Link>
-                        ))}
-                        <BrandMobileNavigation
-                            brands={storefrontBrands}
-                            isLoading={isStorefrontBrandsLoading}
-                            className="flex min-w-12 shrink-0 flex-col items-center min-[390px]:min-w-[52px] min-[420px]:min-w-14"
-                            triggerClassName="size-12 min-[390px]:size-[52px] min-[420px]:size-14"
-                        />
-                    </div>
-                </div>
-
+            <div className="relative block w-full bg-[#f5eee5] px-2 pb-6 pt-4 md:hidden">
                 {/* 🔵 BANNER IMAGE WITH CENTER CTA */}
-                <div className="relative w-full overflow-hidden">
+                <div className="relative w-full overflow-visible">
+                    <button
+                        type="button"
+                        onClick={() =>
+                            window.dispatchEvent(
+                                new Event("renivet:open-product-search")
+                            )
+                        }
+                        aria-label="Search products"
+                        className="absolute right-4 top-4 z-30 flex size-10 items-center justify-center rounded-full border border-white/70 bg-white/90 text-[#61333d] shadow-lg backdrop-blur-sm transition-colors hover:bg-white"
+                    >
+                        <Icons.Search className="size-5" />
+                    </button>
                     <Carousel
                         opts={{ align: "start", loop: true }}
                         plugins={[Autoplay({ delay: 5000 })]}
+                        setApi={setMobileCarouselApi}
                     >
                         <CarouselContent>
                             {mobileImages.map((item, idx) => (
                                 <CarouselItem key={idx}>
-                                    <div className="relative w-full overflow-hidden">
+                                    <div className="relative w-full overflow-visible pb-2">
                                         <div
                                             style={{
                                                 paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
@@ -260,7 +168,22 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         />
 
                                         {/* 🔵 CENTER BUTTON - NOW INSIDE SLIDE TO HAVE UNIQUE LINKS */}
-                                        <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-16 md:hidden">
+                                        {false && (
+                                            <div className="absolute inset-x-5 bottom-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]">
+                                                <p className="font-serif text-[30px] leading-[1.08]">
+                                                    A more thoughtful
+                                                    <br />
+                                                    way to shop.
+                                                </p>
+                                                <p className="mt-2 text-[12px] tracking-wide text-white/90">
+                                                    Conscious fashion, beauty
+                                                    &amp; living — curated with
+                                                    intention
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="hidden">
                                             <div className="pointer-events-auto">
                                                 <Link
                                                     href={item.link}
@@ -273,6 +196,42 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                 </Link>
                                             </div>
                                         </div>
+
+                                        {false && (
+                                            <div className="relative z-20 mx-1 -mt-8 rounded-[18px] bg-white px-6 py-6 shadow-[0_3px_12px_rgba(65,48,37,0.1)]">
+                                                <p className="flex items-center gap-2 text-[12px] text-[#45404a]">
+                                                    <span className="tracking-[0.16em] text-[#713746]">
+                                                        ★★★★★
+                                                    </span>
+                                                    <span>
+                                                        2,400+ thoughtful
+                                                        households
+                                                    </span>
+                                                </p>
+                                                <h2 className="mt-5 font-serif text-[31px] leading-[1.08] text-[#27313a]">
+                                                    A more thoughtful
+                                                    <br />
+                                                    way to shop.
+                                                </h2>
+                                                <p className="mt-4 text-[15px] leading-6 text-[#5f6670]">
+                                                    Curated home goods, chosen
+                                                    for their beauty and
+                                                    purpose.
+                                                </p>
+                                                <div className="mt-5 flex">
+                                                    <Link
+                                                        href="/shop"
+                                                        className="flex w-full items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
+                                                    >
+                                                        Shop the Edit
+                                                    </Link>
+                                                </div>
+                                                <p className="mt-5 text-center text-[11px] text-[#7e8389]">
+                                                    Free returns · Ships in 4–7
+                                                    days
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </CarouselItem>
                             ))}
@@ -290,6 +249,39 @@ export function Landing({ className, banners, ...props }: PageProps) {
       <Link href="/shop">Shop With Purpose</Link>
     </Button>
   </div> */}
+                <div className="relative z-20 mx-1 -mt-8 rounded-[18px] bg-white px-6 py-6 shadow-[0_3px_12px_rgba(65,48,37,0.1)]">
+                    <p className="flex items-center gap-2 text-[12px] text-[#45404a]">
+                        <span
+                            aria-label="5 out of 5 stars"
+                            className="tracking-[0.16em] text-[#713746]"
+                        >
+                            &#9733;&#9733;&#9733;&#9733;&#9733;
+                        </span>
+                        <span className="hidden tracking-[0.16em] text-[#713746]">
+                            â˜…â˜…â˜…â˜…â˜…
+                        </span>
+                        <span>2,400+ thoughtful households</span>
+                    </p>
+                    <h2 className="mt-5 font-serif text-[31px] leading-[1.08] text-[#27313a]">
+                        A more thoughtful
+                        <br />
+                        way to shop.
+                    </h2>
+                    <p className="mt-4 text-[15px] leading-6 text-[#5f6670]">
+                        Curated home goods, chosen for their beauty and purpose.
+                    </p>
+                    <div className="mt-5 flex">
+                        <Link
+                            href="/shop"
+                            className="flex w-full items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
+                        >
+                            Shop the Edit
+                        </Link>
+                    </div>
+                    <p className="mt-5 text-center text-[11px] text-[#7e8389]">
+                        Free returns · Ships in 4–7 days
+                    </p>
+                </div>
             </div>
         </section>
     );

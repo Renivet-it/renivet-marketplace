@@ -24,7 +24,7 @@ export function Footer({ className, legal, ...props }: FooterProps) {
         <footer
             data-site-footer="true"
             className={cn(
-                "flex justify-center bg-primary text-primary-foreground",
+                "flex justify-center bg-[#3e2127] text-[#fffaf7]",
                 className
             )}
             {...props}
@@ -47,7 +47,7 @@ export function Footer({ className, legal, ...props }: FooterProps) {
                         <div>
                             <Button
                                 variant="outline"
-                                className="min-w-40 border-background bg-transparent font-semibold hover:bg-background hover:text-black"
+                                className="min-w-40 border-[#e9d7d3] bg-transparent font-semibold text-[#fffaf7] hover:bg-[#e9d7d3] hover:text-[#61333d]"
                                 size="lg"
                                 asChild
                             >
@@ -59,7 +59,7 @@ export function Footer({ className, legal, ...props }: FooterProps) {
                         </div>
                     </div>
 
-                    <div className="mx-5 h-px self-stretch bg-background lg:mx-0 lg:h-auto lg:w-px" />
+                    <div className="mx-5 h-px self-stretch bg-[#e9d7d3]/60 lg:mx-0 lg:h-auto lg:w-px" />
 
                     <div className="grid w-full basis-2/3 grid-cols-2 gap-5 p-10 px-5 md:grid-cols-3 md:p-10 lg:p-20">
                         {siteConfig.footer.menu.map((category, i) => (
@@ -132,7 +132,7 @@ export function Footer({ className, legal, ...props }: FooterProps) {
                 </div>
 
                 <div className="self-stretch px-5 md:mx-0">
-                    <div className="h-px w-full self-stretch bg-background" />
+                    <div className="h-px w-full self-stretch bg-[#e9d7d3]/60" />
                 </div>
 
                 <div className="w-full px-5 pb-2 md:px-10 lg:px-20">

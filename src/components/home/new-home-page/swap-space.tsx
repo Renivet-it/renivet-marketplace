@@ -20,15 +20,9 @@ import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { Banner } from "@/lib/validations";
-import {
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Package,
-    ShoppingCart,
-    X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -86,6 +80,50 @@ function useGuestCart() {
 
 const PLACEHOLDER_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+
+export function getBestSellerBadge(product: {
+    specifications?: { key: string; value: string }[];
+}) {
+    const sustainabilitySpec =
+        product.specifications?.find((spec) =>
+            /sustain|eco|pesticide|hand.?made|organic/i.test(spec.key)
+        ) || product.specifications?.find((spec) => /material/i.test(spec.key));
+
+    return sustainabilitySpec?.value?.trim() || "Conscious choice";
+}
+
+export const BEST_SELLER_CARD_DIMENSIONS = {
+    desktop: { width: 278, height: 506 },
+    mobile: { width: 163, height: 294 },
+} as const;
+
+export const MOBILE_HOME_CATEGORIES = [
+    {
+        name: "Women",
+        image: "/images/home-categories/women.png",
+        href: "/women",
+    },
+    {
+        name: "Men",
+        image: "/images/home-categories/men.png",
+        href: "/men",
+    },
+    {
+        name: "Kids",
+        image: "/images/home-categories/kids.png",
+        href: "/kids",
+    },
+    {
+        name: "Beauty",
+        image: "/images/home-categories/beauty.png",
+        href: "/beauty-personal",
+    },
+    {
+        name: "Home & Living",
+        image: "/images/home-categories/home-living.png",
+        href: "/home-living",
+    },
+] as const;
 
 /* =============================
    ⭐ PRODUCT CARD
@@ -300,6 +338,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
     const variantId = product.variants?.[0]?.id || null;
     const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
+    const badge = getBestSellerBadge(product);
 
     /* =============================
      🛒 CART HANDLER (UNCHANGED)
@@ -382,7 +421,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
     return (
         <div
-            className="product-card-container group flex h-full w-[146px] flex-shrink-0 cursor-pointer flex-col bg-white md:w-[300px]"
+            className="product-card-container group flex h-[294px] w-[163px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-[10px] border border-[#ebe7df] bg-white p-2.5 md:h-[506px] md:w-[278px] md:p-2.5"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -392,7 +431,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                     sendProductClickEvent(product.id, product.brandId)
                 }
             >
-                <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-[#F5F5F5] md:h-[400px] md:w-full">
+                <div className="product-image-container relative h-[166px] w-full overflow-hidden rounded-[7px] bg-[#f2f0eb] md:h-[350px]">
                     {mediaUrls.length === 0 && (
                         <Image
                             src={PLACEHOLDER_IMAGE_URL}
@@ -402,7 +441,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                 "object-cover transition-all duration-300 ease-in-out",
                                 isHovered ? "scale-105" : "scale-100"
                             )}
-                            sizes="(max-width: 768px) 146px, 350px"
+                            sizes="(max-width: 768px) 45vw, 22vw"
                         />
                     )}
                     {mediaUrls.map((url, index) => {
@@ -422,7 +461,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                         : "z-0 opacity-0",
                                     isHovered ? "scale-105" : "scale-100"
                                 )}
-                                sizes="(max-width: 768px) 146px, 350px"
+                                sizes="(max-width: 768px) 45vw, 22vw"
                             />
                         );
                     })}
@@ -841,12 +880,15 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             {/* TITLE */}
             <AnimatedProductLink
                 href={productUrl}
-                className="mt-4 block min-h-[36px] px-2 text-center"
+                className="mt-2 block min-h-0 px-1 text-left"
                 onClick={() =>
                     sendProductClickEvent(product.id, product.brandId)
                 }
             >
-                <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[13px]">
+                <span className="block truncate text-[8px] font-semibold uppercase tracking-[0.12em] text-[#827b70]">
+                    {product.brand?.name || "Renivet"}
+                </span>
+                <h3 className="mt-1 line-clamp-2 text-[11px] font-medium leading-tight text-[#302e2b] sm:text-xs">
                     {product.title}
                 </h3>
             </AnimatedProductLink>
@@ -854,18 +896,18 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             {/* PRICE ROW */}
             <AnimatedProductLink
                 href={productUrl}
-                className="mt-1 flex flex-wrap items-center justify-center px-2 pb-3"
+                className="mt-1 flex flex-wrap items-center px-1 pb-2"
                 onClick={() =>
                     sendProductClickEvent(product.id, product.brandId)
                 }
             >
-                <span className="text-[13px] font-semibold text-gray-900 sm:text-[14px]">
+                <span className="text-[12px] font-semibold text-[#302e2b] sm:text-[13px]">
                     {formatINR(price, { input: "rupees" })}
                 </span>
 
                 {displayPrice && (
                     <span
-                        className="text-[11px] text-gray-400 line-through sm:text-[12px]"
+                        className="text-[10px] text-[#aaa49a] line-through sm:text-[11px]"
                         style={{ marginLeft: "5px" }}
                     >
                         {formatINR(displayPrice, { input: "rupees" })}
@@ -873,13 +915,20 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                 )}
                 {discount && discount > 0 ? (
                     <span
-                        className="whitespace-nowrap text-[11px] font-medium text-[#ff6f61] sm:text-[12px]"
+                        className="whitespace-nowrap text-[10px] font-medium text-[#ef735d] sm:text-[11px]"
                         style={{ marginLeft: "5px" }}
                     >
                         ({discount}% OFF)
                     </span>
                 ) : null}
             </AnimatedProductLink>
+
+            <div className="mx-1 mb-1 inline-flex max-w-max items-center rounded-[3px] bg-[#eaf8f0] px-1.5 py-1 text-[8px] font-medium leading-none text-[#4e9b73] sm:text-[9px]">
+                <span aria-hidden="true" className="mr-1">
+                    ✦
+                </span>
+                {badge}
+            </div>
         </div>
     );
 };
@@ -895,45 +944,120 @@ interface SwapSpaceProps {
 }
 
 export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
-    const desktopRef = useRef<HTMLDivElement>(null);
-    const mobileRef = useRef<HTMLDivElement>(null);
+    const carouselRef = useRef<HTMLDivElement>(null);
 
     if (!banners.length) return null;
 
-    const scroll = (ref: any, direction: "left" | "right") => {
-        if (ref.current) {
-            ref.current.scrollBy({
-                left: direction === "left" ? -400 : 400,
-                behavior: "smooth",
-            });
-        }
+    const scroll = (direction: "left" | "right") => {
+        carouselRef.current?.scrollBy({
+            left: direction === "left" ? -310 : 310,
+            behavior: "smooth",
+        });
     };
 
     return (
-        <section className={cn("w-full bg-white py-12", className)}>
-            <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
-                    Loved by Many
-                </span>
-                <h2 className="mt-2 font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
-                    Best Sellers
-                </h2>
+        <section className={cn("w-full bg-[#f8f5ef]", className)}>
+            <div className="bg-[#f8f5ef] px-5 pb-6 pt-5 md:hidden">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-serif text-[28px] font-medium leading-none text-[#302e2b]">
+                        Shop by category
+                    </h2>
+                    <Link
+                        href="/shop"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-[#494641]"
+                    >
+                        See all{" "}
+                        <span
+                            aria-hidden="true"
+                            className="text-[15px] leading-none"
+                        >
+                            →
+                        </span>
+                    </Link>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                    {MOBILE_HOME_CATEGORIES.slice(0, 3).map((category) => (
+                        <Link
+                            key={category.name}
+                            href={category.href}
+                            className="min-w-0"
+                        >
+                            <div className="relative aspect-[0.8] overflow-hidden rounded-[13px] bg-white">
+                                <Image
+                                    src={category.image}
+                                    alt={category.name}
+                                    fill
+                                    sizes="(max-width: 767px) 30vw"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <span className="mt-1 block text-[12px] leading-tight text-[#302e2b]">
+                                {category.name}
+                            </span>
+                        </Link>
+                    ))}
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                    {MOBILE_HOME_CATEGORIES.slice(3).map((category) => (
+                        <Link
+                            key={category.name}
+                            href={category.href}
+                            className="min-w-0"
+                        >
+                            <div className="relative aspect-square overflow-hidden rounded-[13px] bg-white">
+                                <Image
+                                    src={category.image}
+                                    alt={category.name}
+                                    fill
+                                    sizes="(max-width: 767px) 45vw"
+                                    className="object-cover"
+                                />
+                            </div>
+                            <span className="mt-1 block text-[12px] leading-tight text-[#302e2b]">
+                                {category.name}
+                            </span>
+                        </Link>
+                    ))}
+                </div>
             </div>
 
-            {/* DESKTOP */}
-            <div className="max-w-screen-3xl relative mx-auto hidden px-4 sm:px-6 md:block lg:px-8">
-                <button
-                    onClick={() => scroll(desktopRef, "left")}
-                    className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-100 bg-white shadow-md hover:bg-gray-50"
-                >
-                    <Icons.ChevronLeft className="h-5 w-5 text-gray-700" />
-                </button>
+            <div className="max-w-screen-3xl mx-auto px-4 pb-8 pt-2 sm:px-6 md:py-10 lg:px-8">
+                <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
+                    <div>
+                        <span className="text-[8px] font-medium uppercase tracking-[0.16em] text-[#827b70] md:text-[9px]">
+                            Community favourites
+                        </span>
+                        <h2 className="mt-1 font-serif text-[22px] font-normal leading-tight text-[#302e2b] md:text-[27px]">
+                            Best Sellers
+                        </h2>
+                    </div>
+                    <div className="mb-1 flex items-center gap-2">
+                        <button
+                            type="button"
+                            aria-label="Show previous best sellers"
+                            onClick={() => scroll("left")}
+                            className="flex size-7 items-center justify-center rounded-full border border-[#e1dcd2] bg-white text-[#302e2b] shadow-sm transition-colors hover:bg-[#f1ece3]"
+                        >
+                            <ChevronLeft className="size-3.5" />
+                        </button>
+                        <button
+                            type="button"
+                            aria-label="Show more best sellers"
+                            onClick={() => scroll("right")}
+                            className="flex size-7 items-center justify-center rounded-full border border-[#e1dcd2] bg-white text-[#302e2b] shadow-sm transition-colors hover:bg-[#f1ece3]"
+                        >
+                            <ChevronRight className="size-3.5" />
+                        </button>
+                    </div>
+                </div>
 
                 <div
-                    ref={desktopRef}
+                    ref={carouselRef}
                     className="scrollbar-hide overflow-x-auto scroll-smooth"
                 >
-                    <div className="flex w-max space-x-6">
+                    <div className="flex w-max gap-3 md:gap-4">
                         {banners.map((item) => (
                             <ProductCard
                                 key={item.id}
@@ -942,26 +1066,6 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
                             />
                         ))}
                     </div>
-                </div>
-
-                <button
-                    onClick={() => scroll(desktopRef, "right")}
-                    className="absolute right-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-gray-100 bg-white shadow-md hover:bg-gray-50"
-                >
-                    <Icons.ChevronRight className="h-5 w-5 text-gray-700" />
-                </button>
-            </div>
-
-            {/* MOBILE */}
-            <div className="scrollbar-hide overflow-x-auto px-4 md:hidden">
-                <div ref={mobileRef} className="flex space-x-4">
-                    {banners.map((item) => (
-                        <ProductCard
-                            key={item.id}
-                            banner={item}
-                            userId={userId}
-                        />
-                    ))}
                 </div>
             </div>
         </section>

@@ -53,7 +53,7 @@ export function MatchaBag({
 
                                 {item.showButton && (
                                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                                        <button className="rounded-sm bg-[#3a493f] px-6 py-2 text-sm text-white shadow">
+                                        <button className="rounded-sm bg-[#61333d] px-6 py-2 text-sm text-white shadow">
                                             Shop Now
                                         </button>
                                     </div>
@@ -84,7 +84,7 @@ export function MatchaBag({
 
                                 {item.showButton && (
                                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                                        <button className="rounded bg-[#3a493f] px-4 py-2 text-xs text-white shadow">
+                                        <button className="rounded bg-[#61333d] px-4 py-2 text-xs text-white shadow">
                                             Shop Now
                                         </button>
                                     </div>

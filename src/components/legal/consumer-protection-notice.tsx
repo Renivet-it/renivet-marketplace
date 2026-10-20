@@ -19,11 +19,11 @@ export function ConsumerProtectionNotice(props: LegalNoticeProps) {
     if (!hasAny) return null;
 
     return (
-        <section className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-slate-700">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+        <section className="mt-8 rounded-xl border border-[#f2dfdc] bg-[#e9d7d3] p-5 text-sm text-[#61333d]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#61333d]/75">
                 Consumer Protection
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-slate-900">
+            <h2 className="mt-2 text-lg font-semibold text-[#3e2127]">
                 Support And Grievance Redressal
             </h2>
             {props.supportEmail || props.supportPhone ? (

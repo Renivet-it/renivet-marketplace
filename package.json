@@ -6,7 +6,7 @@
         "node": "24.x"
     },
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
@@ -78,6 +78,7 @@
         "@uploadthing/react": "^7.1.5",
         "@upstash/redis": "^1.34.4",
         "axios": "^1.7.9",
+        "bun": "^1.4.3",
         "canvas-confetti": "^1.9.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

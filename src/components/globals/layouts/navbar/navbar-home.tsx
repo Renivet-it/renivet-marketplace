@@ -135,16 +135,19 @@ function NavbarActionButton({
 
 const ANNOUNCEMENT_MESSAGES = [
     {
-        icon: Icons.Truck,
-        text: "Free shipping on orders ₹999+",
+        icon: Icons.Shield,
+        text: "Verified sustainable brands | Easy returns",
+        className: "bg-[#C28B86]",
     },
     {
         icon: Icons.Tag,
         text: "Use RENIVET10 for 10% off your first order",
+        className: "bg-[#C28B86]",
     },
     {
-        icon: Icons.Shield,
-        text: "Verified sustainable brands | Easy returns",
+        icon: null,
+        text: "FREE SHIPPING OVER ₹1499 · FREE 7-DAY RETURNS",
+        className: "bg-[#C28B86]",
     },
 ];
 
@@ -386,18 +389,23 @@ export function NavbarHome({
                 className="sticky inset-x-0 top-0 z-50 flex h-auto w-full flex-col items-center justify-center border bg-[rgba(255,255,255,0.96)] shadow-[0_10px_30px_-28px_rgba(15,23,42,0.18)] backdrop-blur-xl"
                 data-menu-open={isMenuOpen}
             >
-                <div className="order-2 w-full overflow-hidden border-t border-[#244136] bg-[#244136] md:order-1 md:border-none">
-                    <div className="relative h-9 overflow-hidden text-11 font-semibold tracking-[0.08em] text-[#f8fafc] md:h-8 md:text-xs">
+                <div className="order-1 w-full overflow-hidden border-t border-[#C28B86] bg-[#C28B86] md:order-1 md:border-none">
+                    <div className="relative h-8 overflow-hidden text-[10px] font-medium tracking-[0.04em] text-white md:text-xs">
                         {ANNOUNCEMENT_MESSAGES.map(
-                            ({ icon: Icon, text }, index) => (
+                            ({ icon: Icon, text, className }, index) => (
                                 <div
                                     key={text}
-                                    className="announcement-rotator-item absolute inset-0 flex items-center justify-center gap-2 px-4 text-center"
+                                    className={cn(
+                                        "announcement-rotator-item absolute inset-0 flex items-center justify-center gap-2 px-4 text-center",
+                                        className
+                                    )}
                                     style={{
                                         animationDelay: `${index * 4}s`,
                                     }}
                                 >
-                                    <Icon className="size-4 shrink-0" />
+                                    {Icon ? (
+                                        <Icon className="size-4 shrink-0" />
+                                    ) : null}
                                     <span>{text}</span>
                                 </div>
                             )
@@ -406,7 +414,7 @@ export function NavbarHome({
                 </div>
                 <nav
                     className={cn(
-                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-1 px-1 py-2 sm:gap-4 sm:px-4 sm:py-3 md:order-2 md:px-8 xl:px-10",
+                        "relative z-10 order-2 flex w-full max-w-[100rem] items-center justify-between gap-1 px-1 py-2 sm:gap-4 sm:px-4 sm:py-3 md:order-2 md:px-8 xl:px-10",
                         isMenuOpen && "border"
                     )}
                 >
@@ -544,294 +552,301 @@ export function NavbarHome({
                                 )}
                             </NavigationMenuList> */}
                                 <NavigationMenuList>
-                                    {shouldShowCategoryFallback ? (
-                                        FALLBACK_CATEGORY_LINKS.map(
-                                            ({ label, href }) => (
-                                                <NavigationMenuItem key={href}>
-                                                    <Link
-                                                        href={href}
-                                                        className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
-                                                    >
-                                                        {label}
-                                                    </Link>
-                                                </NavigationMenuItem>
-                                            )
-                                        )
-                                    ) : (
-                                        categories &&
-                                        subcategories &&
-                                        productTypes &&
-                                        categories.data
-                                            .sort((a, b) =>
-                                                a.createdAt.getTime() >
-                                                b.createdAt.getTime()
-                                                    ? 1
-                                                    : -1
-                                            )
-                                            .slice(0, 5)
-                                            .map((category) => (
-                                                <NavigationMenuItem
-                                                    key={category.id}
-                                                >
-                                                    {/* Special handling for Men and Women categories */}
-                                                    {category.name === "Men" ||
-                                                    category.name === "Kids" ||
-                                                    category.name === "Women" ||
-                                                    category.name ===
-                                                        "Home and Living" ||
-                                                    category.name ===
-                                                        "Beauty and Personal Care" ? (
-                                                        <>
-                                                            <NavigationMenuTrigger
-                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.preventDefault();
-                                                                    let path;
-                                                                    switch (
-                                                                        category.name
-                                                                    ) {
-                                                                        case "Home and Living":
-                                                                            path =
-                                                                                "/home-living";
-                                                                            break;
-                                                                        case "Beauty and Personal Care":
-                                                                            path =
-                                                                                "/beauty-personal";
-                                                                            break;
-                                                                        default:
-                                                                            path = `/${category.name.toLowerCase()}`;
-                                                                    }
-                                                                    window.location.href =
-                                                                        path;
-                                                                }}
-                                                            >
-                                                                {category.name}
-                                                            </NavigationMenuTrigger>
-                                                            <NavigationMenuContent className="pt-3">
-                                                                <div className="overflow-hidden rounded-[24px] border bg-[#ffffff] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.18)]">
-                                                                    <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-8 py-4">
-                                                                        <div>
-                                                                            <p className="font-outfit text-11 font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">
-                                                                                Explore
-                                                                            </p>
-                                                                            <h3 className="mt-1 font-dmsans text-[24px] font-semibold tracking-[0.01em] text-[#111827]">
-                                                                                {
-                                                                                    category.name
-                                                                                }
-                                                                            </h3>
-                                                                        </div>
-                                                                        <Link
-                                                                            href={
-                                                                                category.name ===
-                                                                                "Home and Living"
-                                                                                    ? "/home-living"
-                                                                                    : category.name ===
-                                                                                        "Beauty and Personal Care"
-                                                                                      ? "/beauty-personal"
-                                                                                      : `/${category.name.toLowerCase()}`
-                                                                            }
-                                                                            className="font-outfit inline-flex items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-12 font-semibold uppercase tracking-[0.12em] text-[#374151] transition-colors hover:border-[#9ca3af] hover:text-[#111827]"
-                                                                        >
-                                                                            Shop
-                                                                            all
-                                                                            <Icons.ArrowRight className="size-3.5" />
-                                                                        </Link>
-                                                                    </div>
+                                    {shouldShowCategoryFallback
+                                        ? FALLBACK_CATEGORY_LINKS.map(
+                                              ({ label, href }) => (
+                                                  <NavigationMenuItem
+                                                      key={href}
+                                                  >
+                                                      <Link
+                                                          href={href}
+                                                          className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
+                                                      >
+                                                          {label}
+                                                      </Link>
+                                                  </NavigationMenuItem>
+                                              )
+                                          )
+                                        : categories &&
+                                          subcategories &&
+                                          productTypes &&
+                                          categories.data
+                                              .sort((a, b) =>
+                                                  a.createdAt.getTime() >
+                                                  b.createdAt.getTime()
+                                                      ? 1
+                                                      : -1
+                                              )
+                                              .slice(0, 5)
+                                              .map((category) => (
+                                                  <NavigationMenuItem
+                                                      key={category.id}
+                                                  >
+                                                      {/* Special handling for Men and Women categories */}
+                                                      {category.name ===
+                                                          "Men" ||
+                                                      category.name ===
+                                                          "Kids" ||
+                                                      category.name ===
+                                                          "Women" ||
+                                                      category.name ===
+                                                          "Home and Living" ||
+                                                      category.name ===
+                                                          "Beauty and Personal Care" ? (
+                                                          <>
+                                                              <NavigationMenuTrigger
+                                                                  className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
+                                                                  onClick={(
+                                                                      e
+                                                                  ) => {
+                                                                      e.preventDefault();
+                                                                      let path;
+                                                                      switch (
+                                                                          category.name
+                                                                      ) {
+                                                                          case "Home and Living":
+                                                                              path =
+                                                                                  "/home-living";
+                                                                              break;
+                                                                          case "Beauty and Personal Care":
+                                                                              path =
+                                                                                  "/beauty-personal";
+                                                                              break;
+                                                                          default:
+                                                                              path = `/${category.name.toLowerCase()}`;
+                                                                      }
+                                                                      window.location.href =
+                                                                          path;
+                                                                  }}
+                                                              >
+                                                                  {
+                                                                      category.name
+                                                                  }
+                                                              </NavigationMenuTrigger>
+                                                              <NavigationMenuContent className="pt-3">
+                                                                  <div className="overflow-hidden rounded-[24px] border bg-[#ffffff] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.18)]">
+                                                                      <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-8 py-4">
+                                                                          <div>
+                                                                              <p className="font-outfit text-11 font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">
+                                                                                  Explore
+                                                                              </p>
+                                                                              <h3 className="mt-1 font-dmsans text-[24px] font-semibold tracking-[0.01em] text-[#111827]">
+                                                                                  {
+                                                                                      category.name
+                                                                                  }
+                                                                              </h3>
+                                                                          </div>
+                                                                          <Link
+                                                                              href={
+                                                                                  category.name ===
+                                                                                  "Home and Living"
+                                                                                      ? "/home-living"
+                                                                                      : category.name ===
+                                                                                          "Beauty and Personal Care"
+                                                                                        ? "/beauty-personal"
+                                                                                        : `/${category.name.toLowerCase()}`
+                                                                              }
+                                                                              className="font-outfit inline-flex items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-12 font-semibold uppercase tracking-[0.12em] text-[#374151] transition-colors hover:border-[#9ca3af] hover:text-[#111827]"
+                                                                          >
+                                                                              Shop
+                                                                              all
+                                                                              <Icons.ArrowRight className="size-3.5" />
+                                                                          </Link>
+                                                                      </div>
 
-                                                                    <div className="grid w-[1180px] max-w-[95vw] grid-cols-4 font-dmsans">
-                                                                        {(() => {
-                                                                            const filteredSubCategories =
-                                                                                subcategories.data
-                                                                                    .filter(
-                                                                                        (
-                                                                                            sub
-                                                                                        ) =>
-                                                                                            sub.categoryId ===
-                                                                                                category.id &&
-                                                                                            productTypes.data.some(
-                                                                                                (
-                                                                                                    pt
-                                                                                                ) =>
-                                                                                                    pt.subCategoryId ===
-                                                                                                        sub.id &&
-                                                                                                    (pt.productCount ??
-                                                                                                        0) >
-                                                                                                        0
-                                                                                            )
-                                                                                    )
-                                                                                    .sort(
-                                                                                        (
-                                                                                            a,
-                                                                                            b
-                                                                                        ) => {
-                                                                                            const rankA =
-                                                                                                a.rank ||
-                                                                                                Infinity;
-                                                                                            const rankB =
-                                                                                                b.rank ||
-                                                                                                Infinity;
-                                                                                            if (
-                                                                                                rankA !==
-                                                                                                rankB
-                                                                                            ) {
-                                                                                                return (
-                                                                                                    rankA -
-                                                                                                    rankB
-                                                                                                );
-                                                                                            }
-                                                                                            return (
-                                                                                                new Date(
-                                                                                                    b.updatedAt
-                                                                                                ).getTime() -
-                                                                                                new Date(
-                                                                                                    a.updatedAt
-                                                                                                ).getTime()
-                                                                                            );
-                                                                                        }
-                                                                                    );
+                                                                      <div className="grid w-[1180px] max-w-[95vw] grid-cols-4 font-dmsans">
+                                                                          {(() => {
+                                                                              const filteredSubCategories =
+                                                                                  subcategories.data
+                                                                                      .filter(
+                                                                                          (
+                                                                                              sub
+                                                                                          ) =>
+                                                                                              sub.categoryId ===
+                                                                                                  category.id &&
+                                                                                              productTypes.data.some(
+                                                                                                  (
+                                                                                                      pt
+                                                                                                  ) =>
+                                                                                                      pt.subCategoryId ===
+                                                                                                          sub.id &&
+                                                                                                      (pt.productCount ??
+                                                                                                          0) >
+                                                                                                          0
+                                                                                              )
+                                                                                      )
+                                                                                      .sort(
+                                                                                          (
+                                                                                              a,
+                                                                                              b
+                                                                                          ) => {
+                                                                                              const rankA =
+                                                                                                  a.rank ||
+                                                                                                  Infinity;
+                                                                                              const rankB =
+                                                                                                  b.rank ||
+                                                                                                  Infinity;
+                                                                                              if (
+                                                                                                  rankA !==
+                                                                                                  rankB
+                                                                                              ) {
+                                                                                                  return (
+                                                                                                      rankA -
+                                                                                                      rankB
+                                                                                                  );
+                                                                                              }
+                                                                                              return (
+                                                                                                  new Date(
+                                                                                                      b.updatedAt
+                                                                                                  ).getTime() -
+                                                                                                  new Date(
+                                                                                                      a.updatedAt
+                                                                                                  ).getTime()
+                                                                                              );
+                                                                                          }
+                                                                                      );
 
-                                                                            // Split into 4 denser columns for a cleaner mega menu
-                                                                            const columns: (typeof filteredSubCategories)[] =
-                                                                                [
-                                                                                    [],
-                                                                                    [],
-                                                                                    [],
-                                                                                    [],
-                                                                                ];
-                                                                            filteredSubCategories.forEach(
-                                                                                (
-                                                                                    sub,
-                                                                                    i
-                                                                                ) => {
-                                                                                    columns[
-                                                                                        i %
-                                                                                            4
-                                                                                    ].push(
-                                                                                        sub
-                                                                                    );
-                                                                                }
-                                                                            );
+                                                                              // Split into 4 denser columns for a cleaner mega menu
+                                                                              const columns: (typeof filteredSubCategories)[] =
+                                                                                  [
+                                                                                      [],
+                                                                                      [],
+                                                                                      [],
+                                                                                      [],
+                                                                                  ];
+                                                                              filteredSubCategories.forEach(
+                                                                                  (
+                                                                                      sub,
+                                                                                      i
+                                                                                  ) => {
+                                                                                      columns[
+                                                                                          i %
+                                                                                              4
+                                                                                      ].push(
+                                                                                          sub
+                                                                                      );
+                                                                                  }
+                                                                              );
 
-                                                                            return columns.map(
-                                                                                (
-                                                                                    col,
-                                                                                    colIdx
-                                                                                ) => (
-                                                                                    <div
-                                                                                        key={
-                                                                                            colIdx
-                                                                                        }
-                                                                                        className={cn(
-                                                                                            "flex min-h-[250px] flex-col gap-7 px-8 pb-8 pt-7",
-                                                                                            colIdx %
-                                                                                                2 ===
-                                                                                                1
-                                                                                                ? "bg-[#f8fafc]"
-                                                                                                : "bg-[#ffffff]"
-                                                                                        )}
-                                                                                    >
-                                                                                        {col.map(
-                                                                                            (
-                                                                                                subcategory
-                                                                                            ) => (
-                                                                                                <div
-                                                                                                    key={
-                                                                                                        subcategory.id
-                                                                                                    }
-                                                                                                    className="space-y-3"
-                                                                                                >
-                                                                                                    <Link
-                                                                                                        href={buildCategoryUrl(
-                                                                                                            category.slug,
-                                                                                                            {
-                                                                                                                subCategoryId:
-                                                                                                                    subcategory.id,
-                                                                                                            }
-                                                                                                        )}
-                                                                                                        className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
-                                                                                                    >
-                                                                                                        <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
-                                                                                                            {
-                                                                                                                subcategory.name
-                                                                                                            }
-                                                                                                        </h3>
-                                                                                                    </Link>
-                                                                                                    <ul className="space-y-2">
-                                                                                                        {productTypes.data
-                                                                                                            .filter(
-                                                                                                                (
-                                                                                                                    pt
-                                                                                                                ) =>
-                                                                                                                    pt.subCategoryId ===
-                                                                                                                        subcategory.id &&
-                                                                                                                    (pt.productCount ??
-                                                                                                                        0) >
-                                                                                                                        0
-                                                                                                            )
-                                                                                                            .sort(
-                                                                                                                (
-                                                                                                                    a,
-                                                                                                                    b
-                                                                                                                ) =>
-                                                                                                                    a.name.localeCompare(
-                                                                                                                        b.name
-                                                                                                                    )
-                                                                                                            )
-                                                                                                            .map(
-                                                                                                                (
-                                                                                                                    productType
-                                                                                                                ) => (
-                                                                                                                    <li
-                                                                                                                        key={
-                                                                                                                            productType.id
-                                                                                                                        }
-                                                                                                                    >
-                                                                                                                        <NavigationMenuLink
-                                                                                                                            asChild
-                                                                                                                        >
-                                                                                                                            <Link
-                                                                                                                                href={handleNavigate(
-                                                                                                                                    category.slug,
-                                                                                                                                    subcategory.id,
-                                                                                                                                    productType.id
-                                                                                                                                )}
-                                                                                                                                className="block text-[15px] font-normal leading-6 text-[#6b7280] transition-colors [transition-duration:0ms] hover:text-[#111827]"
-                                                                                                                            >
-                                                                                                                                {
-                                                                                                                                    productType.name
-                                                                                                                                }
-                                                                                                                            </Link>
-                                                                                                                        </NavigationMenuLink>
-                                                                                                                    </li>
-                                                                                                                )
-                                                                                                            )}
-                                                                                                    </ul>
-                                                                                                </div>
-                                                                                            )
-                                                                                        )}
-                                                                                    </div>
-                                                                                )
-                                                                            );
-                                                                        })()}
-                                                                    </div>
-                                                                </div>
-                                                            </NavigationMenuContent>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]">
-                                                                {category.name}
-                                                            </NavigationMenuTrigger>
-                                                            <NavigationMenuContent>
-                                                                {/* ... existing content for other categories ... */}
-                                                            </NavigationMenuContent>
-                                                        </>
-                                                    )}
-                                                </NavigationMenuItem>
-                                            ))
-                                    )}
+                                                                              return columns.map(
+                                                                                  (
+                                                                                      col,
+                                                                                      colIdx
+                                                                                  ) => (
+                                                                                      <div
+                                                                                          key={
+                                                                                              colIdx
+                                                                                          }
+                                                                                          className={cn(
+                                                                                              "flex min-h-[250px] flex-col gap-7 px-8 pb-8 pt-7",
+                                                                                              colIdx %
+                                                                                                  2 ===
+                                                                                                  1
+                                                                                                  ? "bg-[#f8fafc]"
+                                                                                                  : "bg-[#ffffff]"
+                                                                                          )}
+                                                                                      >
+                                                                                          {col.map(
+                                                                                              (
+                                                                                                  subcategory
+                                                                                              ) => (
+                                                                                                  <div
+                                                                                                      key={
+                                                                                                          subcategory.id
+                                                                                                      }
+                                                                                                      className="space-y-3"
+                                                                                                  >
+                                                                                                      <Link
+                                                                                                          href={buildCategoryUrl(
+                                                                                                              category.slug,
+                                                                                                              {
+                                                                                                                  subCategoryId:
+                                                                                                                      subcategory.id,
+                                                                                                              }
+                                                                                                          )}
+                                                                                                          className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
+                                                                                                      >
+                                                                                                          <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
+                                                                                                              {
+                                                                                                                  subcategory.name
+                                                                                                              }
+                                                                                                          </h3>
+                                                                                                      </Link>
+                                                                                                      <ul className="space-y-2">
+                                                                                                          {productTypes.data
+                                                                                                              .filter(
+                                                                                                                  (
+                                                                                                                      pt
+                                                                                                                  ) =>
+                                                                                                                      pt.subCategoryId ===
+                                                                                                                          subcategory.id &&
+                                                                                                                      (pt.productCount ??
+                                                                                                                          0) >
+                                                                                                                          0
+                                                                                                              )
+                                                                                                              .sort(
+                                                                                                                  (
+                                                                                                                      a,
+                                                                                                                      b
+                                                                                                                  ) =>
+                                                                                                                      a.name.localeCompare(
+                                                                                                                          b.name
+                                                                                                                      )
+                                                                                                              )
+                                                                                                              .map(
+                                                                                                                  (
+                                                                                                                      productType
+                                                                                                                  ) => (
+                                                                                                                      <li
+                                                                                                                          key={
+                                                                                                                              productType.id
+                                                                                                                          }
+                                                                                                                      >
+                                                                                                                          <NavigationMenuLink
+                                                                                                                              asChild
+                                                                                                                          >
+                                                                                                                              <Link
+                                                                                                                                  href={handleNavigate(
+                                                                                                                                      category.slug,
+                                                                                                                                      subcategory.id,
+                                                                                                                                      productType.id
+                                                                                                                                  )}
+                                                                                                                                  className="block text-[15px] font-normal leading-6 text-[#6b7280] transition-colors [transition-duration:0ms] hover:text-[#111827]"
+                                                                                                                              >
+                                                                                                                                  {
+                                                                                                                                      productType.name
+                                                                                                                                  }
+                                                                                                                              </Link>
+                                                                                                                          </NavigationMenuLink>
+                                                                                                                      </li>
+                                                                                                                  )
+                                                                                                              )}
+                                                                                                      </ul>
+                                                                                                  </div>
+                                                                                              )
+                                                                                          )}
+                                                                                      </div>
+                                                                                  )
+                                                                              );
+                                                                          })()}
+                                                                      </div>
+                                                                  </div>
+                                                              </NavigationMenuContent>
+                                                          </>
+                                                      ) : (
+                                                          <>
+                                                              <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]">
+                                                                  {
+                                                                      category.name
+                                                                  }
+                                                              </NavigationMenuTrigger>
+                                                              <NavigationMenuContent>
+                                                                  {/* ... existing content for other categories ... */}
+                                                              </NavigationMenuContent>
+                                                          </>
+                                                      )}
+                                                  </NavigationMenuItem>
+                                              ))}
                                     <BrandDesktopNavigationItem
                                         brands={storefrontBrands}
                                         isLoading={isStorefrontBrandsLoading}
@@ -1120,16 +1135,8 @@ export function NavbarHome({
                                     <Link href="/auth/signin">Login</Link>
                                 </Button>
 
-                                <Button
-                                    className="hidden h-10 rounded-full bg-[#2f3720] px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] md:inline-flex"
-                                    size="sm"
-                                    asChild
-                                >
-                                    <Link href="/auth/signup">Sign Up</Link>
-                                </Button>
-
                                 <div className="flex items-center md:hidden">
-                                    <div className="flex items-center gap-1 sm:gap-2">
+                                    <div className="flex items-center">
                                         <Button
                                             className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
                                             size="sm"
@@ -1137,15 +1144,6 @@ export function NavbarHome({
                                         >
                                             <Link href="/auth/signin">
                                                 Login
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            className="h-8 rounded-full bg-[#2f3720] px-2 text-[10px] font-bold uppercase tracking-[0.06em] text-white transition-all duration-300 hover:bg-[#252c18] max-[380px]:px-2 sm:px-5 sm:text-[11px]"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link href="/auth/signup">
-                                                Sign Up
                                             </Link>
                                         </Button>
                                     </div>

@@ -133,7 +133,7 @@ export function WelcomeRenivet() {
                         >
                             <Link
                                 href="/about"
-                                className="group relative inline-flex w-full items-center justify-center gap-4 overflow-hidden rounded-full bg-gray-900 px-8 py-4 text-[11px] font-bold tracking-[0.2em] text-white shadow-lg transition-all active:scale-95 md:w-auto md:px-10 md:py-5 md:text-[12px] hover:bg-[#7A6338] hover:pr-14"
+                                className="group relative inline-flex w-full items-center justify-center gap-4 overflow-hidden rounded-full bg-[#61333d] px-8 py-4 text-[11px] font-bold tracking-[0.2em] text-white shadow-lg transition-all active:scale-95 md:w-auto md:px-10 md:py-5 md:text-[12px] hover:bg-[#4d2931] hover:pr-14"
                             >
                                 <span className="relative z-10">
                                     DISCOVER OUR STORY

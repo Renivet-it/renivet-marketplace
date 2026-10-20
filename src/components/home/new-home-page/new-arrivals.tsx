@@ -126,21 +126,21 @@ export function ProductGridNewArrivals({
 
     return (
         <section
-            className={cn("w-full bg-white py-10 md:py-14", className)}
+            className={cn("w-full bg-[#FAF7F2] pb-10 pt-0 md:py-10", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col items-start">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#6f8298] md:text-[11px]">
                         Curated For You
                     </span>
                     <div className="mt-2 flex w-full items-end justify-between gap-4">
-                        <h2 className="font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
+                        <h2 className="font-serif text-[21px] font-normal uppercase leading-[1.2] text-[#3E2127] md:text-[30px]">
                             New Arrivals
                         </h2>
                         <Link
                             href="/swap-passport"
-                            className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5b684c] transition-colors hover:text-[#28331f] md:text-xs"
+                            className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#61333d] transition-colors hover:text-[#4d2931] md:text-[10px]"
                         >
                             View all
                             <ChevronRight className="size-3.5" />
@@ -148,7 +148,7 @@ export function ProductGridNewArrivals({
                     </div>
 
                     <div className="scrollbar-hide mt-6 w-full max-w-full overflow-x-auto">
-                        <div className="flex w-max items-center overflow-hidden rounded-md border border-gray-200">
+                        <div className="flex w-max items-center overflow-hidden rounded-md border border-[#d8c9c4]">
                             {availableTabs.map((tab) => {
                                 const isActive = activeTab === tab;
                                 const IconComponent =
@@ -164,8 +164,8 @@ export function ProductGridNewArrivals({
                                         className={cn(
                                             "flex items-center gap-2 px-6 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200 md:px-8",
                                             isActive
-                                                ? "bg-[#222] text-white"
-                                                : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                                ? "bg-[#61333d] text-white"
+                                                : "bg-[#FAF7F2] text-[#746b72] hover:bg-[#e9d7d3] hover:text-[#3E2127]"
                                         )}
                                     >
                                         <IconComponent className="h-3.5 w-3.5 shrink-0" />
@@ -875,7 +875,7 @@ export function ProductCard({
                             type="button"
                             onClick={handleQuickAddCart}
                             disabled={isLoading}
-                            className="festival-add-to-cart flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#f36558] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#df5146] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="festival-add-to-cart flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#61333d] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#4d2931] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <Icons.ShoppingBag className="size-3" />
                             {isLoading ? "Adding..." : "Add to cart"}
