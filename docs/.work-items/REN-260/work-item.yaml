@@ -1,108 +1,116 @@
 schema_version: "1.0"
 task:
-    id: REN-260
-    title: "REN-253-C0-R3 — Close H-1, Manual Payout & F-1/N-1 Race"
-    source: linear
-    branch: ayanganguly333/ren-260-ren-253-c0-r3-close-h-1-manual-payout-f-1n-1-race
-    status: IN_REVIEW
-    linear:
-        url: https://linear.app/renivet/issue/REN-260/ren-253-c0-r3-close-h-1-manual-payout-and-f-1n-1-race
-        priority: Urgent
-        status: In Progress
-        assignee: Ayan Ganguly
-        project: "Renivet — Financial & Compliance Control Program"
-        parent: REN-253
-        linear_branch: ayanganguly333/ren-260-ren-253-c0-r3-close-h-1-manual-payout-f-1n-1-race
+  id: REN-260
+  title: "REN-253-C0-R3 ? Close H-1, manual payout, and F-1/N-1 race gaps"
+  source: linear
+  branch: ayanganguly333/ren-260-ren-253-c0-r3-close-h-1-manual-payout-f-1n-1-race
+  status: READY_FOR_DEV
+  linear:
+    parent: REN-253
+    status: In Progress
 risk:
-    initial_risk: L3
-    path_rule_risk: L3
-    semantic_risk: L3
-    final_risk: L3
-    reasons:
-        - "The task protects payout execution and company money."
-        - "The task spans concurrency, state transitions, auditability, and provider execution boundaries."
-        - "Manual completion and recalculation require financial consistency under retries and races."
-    escalation_history: []
-investigation:
-    depth: dependency_tracing
-    investigated_areas: [REN-260 Linear scope and comments, frozen R2 branch, payout execution claim, manual completion path, recalculation path, existing C0 controls, finance tests]
-    excluded_areas: [schema redesign, payout architecture redesign, provider webhook reconciliation, durable payment ledger, production data mutation, deployment, merge, money movement]
-    dependencies: [DEP-260-001, DEP-260-002, DEP-260-003]
-    integrations: [INT-260-001, INT-260-002]
-    security_boundaries: [SEC-260-001, SEC-260-002]
-    state_transitions: [calculated, approved, processing, awaiting_manual_confirmation, completed, failed]
-    related_tests: [TEXP-260-001, TEXP-260-002, TEXP-260-003]
-    uncertainties: ["The existing persistence columns must support claim and CAS behavior without a migration.", "The exact manual completion entry point and bookkeeping boundary require repository tracing before implementation."]
+  initial_risk: L3
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  reasons:
+    - "The task protects payout execution and company money."
+    - "The task spans concurrency, state transitions, auditability, and provider execution."
+    - "Manual completion and recalculation require financial consistency under races."
 requirements:
-    - { id: REQ-260-001, description: "Prevent two overlapping payout cycles from both reaching the provider using claim, fresh overlap check, audited CAS release, and refusal on overlap.", type: safety }
-    - { id: REQ-260-002, description: "Make manual payout completion state-, basis-, evidence-, identity-, reference-, and CAS-safe without overwriting provider outcomes.", type: safety }
-    - { id: REQ-260-003, description: "Make recalculation and approval consistent under concurrent changes using one snapshot, CAS, and approval invalidation.", type: state_transition }
-    - { id: REQ-260-004, description: "Preserve existing C0 controls and avoid schema changes, production mutation, deployment, merge, or money movement.", type: boundary }
+  - { id: REQ-260-001, description: "Prevent overlapping cycles from both reaching the provider.", type: safety }
+  - { id: REQ-260-002, description: "Make manual payout completion evidence-, identity-, reference-, basis-, and CAS-safe.", type: safety }
+  - { id: REQ-260-003, description: "Make recalculation and approval consistent under concurrent changes.", type: state_transition }
+  - { id: REQ-260-004, description: "Preserve existing C0 controls without schema changes or money movement.", type: boundary }
 scenarios:
-    - { id: SCN-260-001, description: "Overlapping cycle execution is refused after claim and cannot call the provider.", requirement_ids: [REQ-260-001] }
-    - { id: SCN-260-002, description: "Manual completion accepts only a legitimate current confirmation and rejects stale, duplicate, invalid, or provider-shaped input.", requirement_ids: [REQ-260-002] }
-    - { id: SCN-260-003, description: "Concurrent recalculation and approval cannot leave changed payout authority approved or replace line items from a stale snapshot.", requirement_ids: [REQ-260-003] }
-    - { id: SCN-260-004, description: "Existing C0 controls remain intact and validation performs no money movement.", requirement_ids: [REQ-260-004] }
+  - { id: SCN-260-001, description: "Overlap is refused after claim without a provider call.", requirement_ids: [REQ-260-001] }
+  - { id: SCN-260-002, description: "Manual completion accepts only current, evidenced, unique confirmation.", requirement_ids: [REQ-260-002] }
+  - { id: SCN-260-003, description: "Concurrent recalculation cannot preserve stale payout authority.", requirement_ids: [REQ-260-003] }
+  - { id: SCN-260-004, description: "Existing C0 controls remain intact.", requirement_ids: [REQ-260-004] }
 invariants:
-    - { id: INV-260-001, description: "At most zero or one overlapping cycle reaches the provider; mutual abort is acceptable." }
-    - { id: INV-260-002, description: "Manual completion cannot overwrite a newer provider acceptance or complete without required evidence." }
-    - { id: INV-260-003, description: "Changed payout authority cannot retain approval from an older calculation." }
-    - { id: INV-260-004, description: "No implementation or test performs payout, merge, deployment, or production mutation." }
-flows:
-    - { id: FLOW-260-001, description: "Execution claims, refreshes overlap state, audits refusal, CAS-releases when possible, and only then calls the provider.", state_transitions: [approved, processing, completed] }
-    - { id: FLOW-260-002, description: "Manual completion validates current summary and evidence, then CAS-writes completion while isolating bookkeeping.", state_transitions: [awaiting_manual_confirmation, completed] }
-    - { id: FLOW-260-003, description: "Recalculation conditionally commits the new summary before replacing line items and invalidates changed approval.", state_transitions: [draft, calculated, approved] }
-dependencies:
-    - { id: DEP-260-001, name: R2 baseline, purpose: "Starting implementation state", description: "Use commit 39fba3d1274d75802c7b38b44b16d08839e0f5ee and preserve its existing controls.", status: resolved }
-    - { id: DEP-260-002, name: existing persistence, purpose: "Claim and CAS representation", description: "Must be proven sufficient without schema or migration changes.", status: pending }
-    - { id: DEP-260-003, name: validation evidence, purpose: "Independent review and non-production proof", description: "Required after implementation and before release consideration.", status: pending }
-integrations:
-    - { id: INT-260-001, system: payout provider, purpose: "Provider execution after overlap safety", failure_mode: "Concurrent or repeated submission could duplicate money movement", retry_idempotency: "Existing provider behavior and execution claim; no provider redesign authorized" }
-    - { id: INT-260-002, system: finance database and audit, purpose: "CAS state transitions and evidence", failure_mode: "Stale writes or untraceable financial state", retry_idempotency: "Exact-summary compare-and-set and audit events" }
-security_boundaries:
-    - { id: SEC-260-001, description: "Only an authorized, current manual confirmer distinct from the executor may complete manual payout." }
-    - { id: SEC-260-002, description: "Execution refusal and state changes must remain auditable and fail closed." }
-personas:
-    - { id: PER-260-001, role: finance_operator, applicability: "May review, approve, confirm, or execute only through existing authorization boundaries." }
-    - { id: PER-260-002, role: programme_release_reviewer, applicability: "Reviews evidence and owns release decision; implementation does not authorize money movement." }
-business_rules:
-    - { id: BR-260-001, description: "Mutual abort or zero-or-one winner is acceptable for overlapping cycles." }
-    - { id: BR-260-002, description: "A human-entered banking reference is evidence, not provider authentication." }
-    - { id: BR-260-003, description: "Existing C0 controls F-2, F-5, N-2, F-4, G-1, G-2, G-4, and G-8 must not be weakened." }
-decisions:
-    - { id: DEC-260-001, question: "How should overlapping cycles resolve?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Mutual abort or zero-or-one winner; never allow both to reach provider.", basis: "Explicit REN-260 decision.", confidence: high, consequence: high, human_confirmation_required: false }
-    - { id: DEC-260-002, question: "What manual reference is accepted?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Conservative validation of a human-entered banking reference; reject provider-shaped pout_ references.", basis: "Explicit REN-260 decision; do not claim provider authentication.", confidence: high, consequence: high, human_confirmation_required: false }
+  - { id: INV-260-001, description: "At most zero or one overlapping cycle reaches the provider." }
+  - { id: INV-260-002, description: "Manual completion cannot overwrite newer provider state." }
+  - { id: INV-260-003, description: "Changed payout authority cannot retain older approval." }
+  - { id: INV-260-004, description: "Validation performs no production mutation, deployment, merge, or money movement." }
 test_expectations:
-    - { id: TEXP-260-001, category: integration, classification: REQUIRED, reason: "Prove overlap claim, fresh check, CAS release, provider refusal, and sequential regression.", scenarios: [SCN-260-001] }
-    - { id: TEXP-260-002, category: integration, classification: REQUIRED, reason: "Prove manual completion validation, stale-write safety, duplicate prevention, and bookkeeping isolation.", scenarios: [SCN-260-002] }
-    - { id: TEXP-260-003, category: integration, classification: REQUIRED, reason: "Prove concurrent recalculation/approval behavior and authority-change invalidation without schema changes.", scenarios: [SCN-260-003, SCN-260-004] }
-critic:
-    required: true
-    completed: false
-    artifact: CRITIQUE.md
-    reviewer: pending independent fresh-context critic
-    fresh_context: false
-    read_only: true
-    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    categories_reviewed: []
-    findings: []
-approval:
-    state: PENDING_REVIEW
-    design_blockers: [Independent L3 Critic review and validation of existing persistence sufficiency]
-    approved_by: ""
+  - { id: TEXP-260-001, category: integration, classification: REQUIRED, reason: "Prove overlap claim, refresh, release, refusal, and regression.", scenarios: [SCN-260-001] }
+  - { id: TEXP-260-002, category: integration, classification: REQUIRED, reason: "Prove manual validation, stale-write safety, duplicate prevention, and bookkeeping isolation.", scenarios: [SCN-260-002] }
+  - { id: TEXP-260-003, category: integration, classification: REQUIRED, reason: "Prove recalculation and approval races without schema changes.", scenarios: [SCN-260-003, SCN-260-004] }
+flows:
+  - { id: FLOW-260-001, description: "Claim, refresh overlap state, audit refusal, CAS-release when possible, and refuse before provider execution.", state_transitions: [approved, processing] }
+  - { id: FLOW-260-002, description: "Validate manual evidence and current basis, then CAS-write completion with isolated bookkeeping.", state_transitions: [processing, completed] }
+  - { id: FLOW-260-003, description: "Conditionally commit recalculation before replacing line items and invalidate changed approval.", state_transitions: [draft, calculated, approved] }
+dependencies:
+  - { id: DEP-260-001, name: "R2 baseline", purpose: "Starting implementation state", description: "Preserve existing C0 controls.", status: resolved }
+  - { id: DEP-260-002, name: "Existing persistence", purpose: "Claim and CAS representation", description: "Must support the controls without schema changes.", status: resolved }
+  - { id: DEP-260-003, name: "Validation evidence", purpose: "Release evidence", description: "Focused implementation evidence is recorded; non-production and staging evidence remain release gates.", status: resolved }
+integrations:
+  - { id: INT-260-001, system: "Payout provider", purpose: "Provider execution after overlap safety", failure_mode: "Concurrent or repeated submission could duplicate money movement", retry_idempotency: "Existing claim and provider idempotency only" }
+  - { id: INT-260-002, system: "Finance database and audit", purpose: "CAS state transitions and evidence", failure_mode: "Stale writes or untraceable financial state", retry_idempotency: "Exact-summary CAS and audit events" }
+personas:
+  - { id: PER-260-001, role: finance_operator, applicability: "May review, approve, confirm, or execute through existing authorization boundaries." }
+  - { id: PER-260-002, role: release_reviewer, applicability: "Reviews evidence and owns release approval." }
+security_boundaries:
+  - { id: SEC-260-001, description: "Only an authorized confirmer distinct from the executor may complete a manual payout." }
+  - { id: SEC-260-002, description: "Execution refusal and state changes remain auditable and fail closed." }
+business_rules:
+  - { id: BR-260-001, description: "Mutual abort or zero-or-one winner is acceptable; both cycles must never reach the provider." }
+  - { id: BR-260-002, description: "A human banking reference is evidence, not provider authentication." }
+  - { id: BR-260-003, description: "Existing F-2, F-5, N-2, F-4, G-1, G-2, G-4, and G-8 controls remain intact." }
+decisions:
+  - { id: DEC-260-001, question: "How should overlapping cycles resolve?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Mutual abort or zero-or-one winner; never allow both to reach provider.", basis: "Ayan approval", confidence: high, consequence: high, human_confirmation_required: true }
+  - { id: DEC-260-002, question: "What manual reference is accepted?", class: HUMAN_CONFIRMATION, status: resolved, recommendation: "Conservative human banking reference; reject provider-shaped pout_ references.", basis: "Ayan approval", confidence: high, consequence: high, human_confirmation_required: true }
 traceability:
-    requirement_to_scenarios:
-        - { requirement_id: REQ-260-001, scenario_ids: [SCN-260-001] }
-        - { requirement_id: REQ-260-002, scenario_ids: [SCN-260-002] }
-        - { requirement_id: REQ-260-003, scenario_ids: [SCN-260-003] }
-        - { requirement_id: REQ-260-004, scenario_ids: [SCN-260-004] }
-    scenario_to_invariants:
-        - { scenario_id: SCN-260-001, invariant_ids: [INV-260-001] }
-        - { scenario_id: SCN-260-002, invariant_ids: [INV-260-002] }
-        - { scenario_id: SCN-260-003, invariant_ids: [INV-260-003] }
-        - { scenario_id: SCN-260-004, invariant_ids: [INV-260-004] }
-    scenario_to_test_expectations:
-        - { scenario_id: SCN-260-001, test_expectation_ids: [TEXP-260-001] }
-        - { scenario_id: SCN-260-002, test_expectation_ids: [TEXP-260-002] }
-        - { scenario_id: SCN-260-003, test_expectation_ids: [TEXP-260-003] }
-        - { scenario_id: SCN-260-004, test_expectation_ids: [TEXP-260-003] }
+  requirement_to_scenarios:
+    - { requirement_id: REQ-260-001, scenario_ids: [SCN-260-001] }
+    - { requirement_id: REQ-260-002, scenario_ids: [SCN-260-002] }
+    - { requirement_id: REQ-260-003, scenario_ids: [SCN-260-003] }
+    - { requirement_id: REQ-260-004, scenario_ids: [SCN-260-004] }
+  scenario_to_invariants:
+    - { scenario_id: SCN-260-001, invariant_ids: [INV-260-001] }
+    - { scenario_id: SCN-260-002, invariant_ids: [INV-260-002] }
+    - { scenario_id: SCN-260-003, invariant_ids: [INV-260-003] }
+    - { scenario_id: SCN-260-004, invariant_ids: [INV-260-004] }
+  scenario_to_test_expectations:
+    - { scenario_id: SCN-260-001, test_expectation_ids: [TEXP-260-001] }
+    - { scenario_id: SCN-260-002, test_expectation_ids: [TEXP-260-002] }
+    - { scenario_id: SCN-260-003, test_expectation_ids: [TEXP-260-003] }
+    - { scenario_id: SCN-260-004, test_expectation_ids: [TEXP-260-003] }
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Ayan
+  fresh_context: true
+  read_only: true
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings: []
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Ayan
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: aligned R2 baseline (6252ff0d)
+  base_commit: "6252ff0d8a8347d7105c5431601f4e9b43829619"
+  head_commit: "0272d45981943dd2cb1a004996659d48844ec29b"
+  pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/711
+  material_drift: NO_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-001: Attach staging validation evidence before release; Postgres CAS and RazorpayX Test Mode evidence are now recorded in REVIEW.md."
+    - "REV-002: Resolve the mismatch between the Linear branch context and the implementation branch before PR/release traceability is finalized."
+  evidence:
+    - "Compared the approved REN-260 contract with the exact aligned-baseline-to-head Git diff."
+    - "Inspected the payout execution, manual completion, CAS query, router, and containment test symbols."
+    - "Focused runtime test evidence exists separately: 122/122 payout containment tests passed."
+  governance_reentry_required: false
