@@ -19,6 +19,11 @@ test("Renivet Edit keeps the three approved editorial cards and responsive asset
     expect(RENIVET_EDIT_CARDS[2].mobileImage).toBe(
         "/assets/renivet-edit/home-with-intention-mobile.png"
     );
+    expect(RENIVET_EDIT_CARDS.map((card) => card.href)).toEqual([
+        "/shop",
+        "/festive",
+        "/shop/home-and-living",
+    ]);
 });
 
 test("Renivet Edit fills the desktop viewport with fluid editorial imagery", () => {

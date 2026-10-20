@@ -5,7 +5,7 @@ import { expect, test } from "bun:test";
 const root = resolve(import.meta.dir, "..");
 
 const read = (relativePath: string) =>
-    readFileSync(resolve(root, relativePath), "utf8");
+    readFileSync(resolve(root, relativePath), "utf8").replace(/\r\n/g, "\n");
 
 test("cart quantity controls persist each click without a save step", () => {
     const source = read(

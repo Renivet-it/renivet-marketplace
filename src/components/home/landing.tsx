@@ -77,7 +77,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
         };
     }, [mobileCarouselApi]);
 
-    const activeMobileImage = mobileImages[mobileImageIndex] ?? mobileImages[0];
     return (
         <section className={cn("bg-white", className)} {...props}>
             {/* ✅ DESKTOP CAROUSEL */}
@@ -219,18 +218,12 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                     for their beauty and
                                                     purpose.
                                                 </p>
-                                                <div className="mt-5 flex gap-2">
+                                                <div className="mt-5 flex">
                                                     <Link
-                                                        href={item.link}
-                                                        className="flex flex-1 items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
+                                                        href="/shop"
+                                                        className="flex w-full items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
                                                     >
                                                         Shop the Edit
-                                                    </Link>
-                                                    <Link
-                                                        href="/about"
-                                                        className="flex-[1.15] rounded-full border border-[#27313a] px-3 py-3 text-center text-[13px] font-medium text-[#27313a]"
-                                                    >
-                                                        See how we curate
                                                     </Link>
                                                 </div>
                                                 <p className="mt-5 text-center text-[11px] text-[#7e8389]">
@@ -277,18 +270,12 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     <p className="mt-4 text-[15px] leading-6 text-[#5f6670]">
                         Curated home goods, chosen for their beauty and purpose.
                     </p>
-                    <div className="mt-5 flex gap-2">
+                    <div className="mt-5 flex">
                         <Link
-                            href={activeMobileImage.link}
-                            className="flex flex-1 items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
+                            href="/shop"
+                            className="flex w-full items-center justify-center rounded-full bg-[#713746] px-3 py-3 text-[13px] font-medium text-white"
                         >
                             Shop the Edit
-                        </Link>
-                        <Link
-                            href="/about"
-                            className="flex-[1.15] rounded-full border border-[#27313a] px-3 py-3 text-center text-[13px] font-medium text-[#27313a]"
-                        >
-                            See how we curate
                         </Link>
                     </div>
                     <p className="mt-5 text-center text-[11px] text-[#7e8389]">

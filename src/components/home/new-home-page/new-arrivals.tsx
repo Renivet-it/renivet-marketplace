@@ -126,7 +126,7 @@ export function ProductGridNewArrivals({
 
     return (
         <section
-            className={cn("w-full bg-[#FAF7F2] pb-10 pt-0 md:py-14", className)}
+            className={cn("w-full bg-[#FAF7F2] pb-10 pt-0 md:py-10", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -135,12 +135,12 @@ export function ProductGridNewArrivals({
                         Curated For You
                     </span>
                     <div className="mt-2 flex w-full items-end justify-between gap-4">
-                        <h2 className="font-serif text-[21px] font-normal uppercase leading-[1.2] text-[#3E2127] md:text-[36px]">
+                        <h2 className="font-serif text-[21px] font-normal uppercase leading-[1.2] text-[#3E2127] md:text-[30px]">
                             New Arrivals
                         </h2>
                         <Link
                             href="/swap-passport"
-                            className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#61333d] transition-colors hover:text-[#4d2931] md:text-xs"
+                            className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#61333d] transition-colors hover:text-[#4d2931] md:text-[10px]"
                         >
                             View all
                             <ChevronRight className="size-3.5" />
@@ -875,7 +875,7 @@ export function ProductCard({
                             type="button"
                             onClick={handleQuickAddCart}
                             disabled={isLoading}
-                            className="festival-add-to-cart flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#f36558] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#df5146] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="festival-add-to-cart flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#61333d] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#4d2931] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <Icons.ShoppingBag className="size-3" />
                             {isLoading ? "Adding..." : "Add to cart"}

@@ -4,6 +4,8 @@ import Link from "next/link";
 
 export const THOUGHTFUL_PRODUCTS_MOBILE_IMAGE =
     "/assets/thoughtful-products/mobile-incense.png";
+export const THOUGHTFUL_PRODUCTS_EDITORIAL_IMAGE =
+    "/assets/thoughtful-products/lemons-natural-cotton-bag.png";
 
 export const THOUGHTFUL_PRODUCT_BENEFITS = [
     {
@@ -34,7 +36,7 @@ export const THOUGHTFUL_PRODUCT_BENEFITS = [
 
 export function ThoughtfulProducts() {
     return (
-        <section className="w-full bg-[#f8f5ef] pb-4 md:px-8 md:py-12">
+        <section className="w-full bg-[#f8f5ef] pb-4 md:bg-[#FAF7F2] md:px-8 md:py-10">
             <div className="relative aspect-[5/4] w-full overflow-hidden md:hidden">
                 <Image
                     src={THOUGHTFUL_PRODUCTS_MOBILE_IMAGE}
@@ -55,6 +57,16 @@ export function ThoughtfulProducts() {
                     </p>
                 </div>
 
+                <div className="relative mx-auto mt-7 hidden aspect-[3.4/1] w-full max-w-[760px] overflow-hidden rounded-[16px] shadow-[0_14px_30px_rgba(62,33,39,0.12)] md:block">
+                    <Image
+                        src={THOUGHTFUL_PRODUCTS_EDITORIAL_IMAGE}
+                        alt="Thoughtfully made natural products arranged in a sunlit setting"
+                        fill
+                        className="object-cover"
+                        sizes="760px"
+                    />
+                </div>
+
                 <div className="mt-6 grid grid-cols-2 gap-x-5 gap-y-6 md:mt-9 md:grid-cols-4 md:gap-4">
                     {THOUGHTFUL_PRODUCT_BENEFITS.map((benefit) => {
                         const Icon = benefit.icon;
@@ -62,7 +74,7 @@ export function ThoughtfulProducts() {
                         return (
                             <div
                                 key={benefit.title}
-                                className="md:flex md:min-h-[150px] md:flex-col md:items-center md:justify-center md:rounded-[12px] md:border md:border-[#e8e0d5] md:bg-[#f5f1e9] md:px-5 md:py-5 md:text-center"
+                            className="md:flex md:min-h-[150px] md:flex-col md:items-center md:justify-center md:rounded-[12px] md:border md:border-[#dfc6c2] md:bg-[#e9d7d3] md:px-5 md:py-5 md:text-center"
                             >
                                 <span className="flex size-8 items-center justify-center rounded-full border border-[#dfd8ce] bg-white text-[#302e2b] md:size-10">
                                     <Icon
@@ -84,7 +96,7 @@ export function ThoughtfulProducts() {
 
                 <div className="mt-5 flex justify-center md:mt-8">
                     <Link
-                        href="/about"
+                        href="/shop"
                         className="inline-flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-full bg-[#61333d] px-6 text-[9px] font-semibold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#4d2931] md:min-w-[130px]"
                     >
                         Learn more

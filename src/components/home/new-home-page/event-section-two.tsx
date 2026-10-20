@@ -24,7 +24,7 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
   }, [banners.length]);
 
   return (
-    <section className={cn("w-full bg-white", className)} {...props}>
+    <section className={cn("w-full bg-white md:bg-[#FAF7F2]", className)} {...props}>
       <Carousel
         opts={{
           align: "start",
@@ -57,9 +57,9 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
                   {/* Shop Now Button */}
                   <Link
                     href={item.url || "/shop"}
-                    className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+                    className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2"
                   >
-                    <button className="bg-white text-black px-8 py-3 rounded-full font-medium text-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
+                    <button className="rounded-full bg-[#61333d] px-8 py-3 text-lg font-medium text-white shadow-lg transition-colors duration-300 hover:bg-[#4d2931]">
                       Shop Now
                     </button>
                   </Link>

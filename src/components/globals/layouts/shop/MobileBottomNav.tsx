@@ -129,6 +129,15 @@ export function MobileBottomNav() {
                                 <Link
                                     key={item.label}
                                     href={item.href}
+                                    onClick={(event) => {
+                                        if (item.label !== "Search") return;
+                                        event.preventDefault();
+                                        window.dispatchEvent(
+                                            new Event(
+                                                "renivet:open-product-search"
+                                            )
+                                        );
+                                    }}
                                     className={cn(
                                     "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
                                     isActive

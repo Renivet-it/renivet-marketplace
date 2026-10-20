@@ -167,14 +167,18 @@ export default async function Page() {
         <main className="min-h-screen bg-[#FAF7F2] [&_section]:bg-[#FAF7F2] [&_h1]:!text-[#3E2127] [&_h2]:!text-[#3E2127] [&_h3]:!text-[#3E2127] [&_h4]:!text-[#3E2127] [&_h5]:!text-[#3E2127] [&_h6]:!text-[#3E2127]">
             <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
-            <Suspense
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[calc(100vh-20vh)] w-full bg-white" />
                 }
-            >
-                <BannersFetch />
-            </Suspense>
-            <TrustBadgesMarquee />
+                >
+                    <BannersFetch />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <TrustBadgesMarquee />
+            </ScrollReveal>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ShopCategoryFetch />
             </Suspense> */}
@@ -192,48 +196,60 @@ export default async function Page() {
             >
                 <SwapSpaceBannerFetch />
             </Suspense>
-            <Suspense
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[320px] w-full animate-pulse bg-[#f8f5ef] md:h-[360px]" />
                 }
-            >
-                <RenivetEdit />
-            </Suspense>
-            <Suspense
+                >
+                    <RenivetEdit />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[370px] w-full animate-pulse bg-[#f8f5ef] md:h-[460px]" />
                 }
-            >
-                <HowRenivetCurates />
-            </Suspense>
-            <Suspense
+                >
+                    <HowRenivetCurates />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[560px] w-full animate-pulse bg-[#f8f5ef] md:h-[390px]" />
                 }
-            >
-                <ThoughtfulProducts />
-            </Suspense>
-            <Suspense
+                >
+                    <ThoughtfulProducts />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[380px] w-full animate-pulse bg-[#FAF7F2] md:hidden" />
                 }
-            >
-                <FeaturedBrandsEditorial />
-            </Suspense>
-            <Suspense
+                >
+                    <FeaturedBrandsEditorial />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[150px] w-full animate-pulse bg-[#f8f5ef] md:h-[190px]" />
                 }
-            >
-                <FeaturedBrandsFetch />
-            </Suspense>
-            <Suspense
+                >
+                    <FeaturedBrandsFetch />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
                 fallback={
                     <div className="h-[224px] w-full animate-pulse bg-[#f8f5ef] md:h-[400px]" />
                 }
-            >
-                <BotanicalBannerFetch />
-            </Suspense>
+                >
+                    <BotanicalBannerFetch />
+                </Suspense>
+            </ScrollReveal>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
             </Suspense> */}
@@ -299,7 +315,11 @@ export default async function Page() {
             >
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-            {userId ? <DiscoverPrompt /> : null}
+            {userId ? (
+                <ScrollReveal className="w-full">
+                    <DiscoverPrompt />
+                </ScrollReveal>
+            ) : null}
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
@@ -317,14 +337,18 @@ export default async function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense> */}
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <BlogsFetch />
-            </Suspense>
-            <RenivetCircleSignup />
+            <ScrollReveal className="w-full">
+                <Suspense
+                    fallback={
+                        <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                    }
+                >
+                    <BlogsFetch />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <RenivetCircleSignup />
+            </ScrollReveal>
 
             <FloatingLoginButton />
         </main>
@@ -340,12 +364,12 @@ function TrustBadgesMarquee() {
     ];
 
     return (
-        <div className="block w-full border-y border-[#b98f8f] bg-[#ead8d5] md:hidden">
-            <div className="grid min-h-[102px] grid-cols-4 items-center px-2 py-4 text-center text-[10px] font-medium leading-[1.25] text-[#2d2927]">
+        <div className="block w-full border-y border-[#c9aaa8] bg-[#ead8d5]">
+            <div className="grid min-h-[102px] grid-cols-4 items-center px-2 py-4 text-center text-[10px] font-medium leading-[1.25] text-[#3E2127] md:min-h-[82px] md:px-16 md:py-3 md:text-[11px]">
                 {badges.map(({ label, icon: Icon }) => (
-                    <div key={label} className="flex min-w-0 flex-col items-center gap-2 px-1">
-                        <Icon aria-hidden="true" className="size-5 stroke-[1.5]" />
-                        <span className="max-w-[82px]">{label}</span>
+                    <div key={label} className="flex min-w-0 flex-col items-center gap-2 px-1 md:gap-1.5">
+                        <Icon aria-hidden="true" className="size-5 stroke-[1.5] md:size-4" />
+                        <span className="max-w-[82px] md:max-w-none">{label}</span>
                     </div>
                 ))}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 export function ScrollReveal({
     children,
@@ -11,12 +11,18 @@ export function ScrollReveal({
     delay?: number;
     className?: string;
 }) {
+    const prefersReducedMotion = useReducedMotion();
+
     return (
         <motion.section
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1], delay }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 22, scale: 0.992 }}
+            whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-72px" }}
+            transition={
+                prefersReducedMotion
+                    ? undefined
+                    : { duration: 0.78, ease: [0.22, 1, 0.36, 1], delay }
+            }
             className={className}
         >
             {children}
