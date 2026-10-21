@@ -78,7 +78,9 @@ import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import {
     getSizeChartFilterQuery,
+    getVariantPriceFilterQuery,
     SizeChartFilter,
+    VariantPriceFilter,
 } from "./product-admin-filters";
 import {
     buildCatalogMediaPostFilterObservation,
@@ -718,6 +720,7 @@ class ProductQuery {
         categoryId,
         productTypeId,
         sizeChartFilter,
+        variantPriceFilter,
         productImage,
         productVisiblity,
     }: {
@@ -729,6 +732,7 @@ class ProductQuery {
         categoryId?: string;
         productTypeId?: string;
         sizeChartFilter?: SizeChartFilter;
+        variantPriceFilter?: VariantPriceFilter;
         productImage?: Product["productImageFilter"];
         productVisiblity?: Product["productVisiblityFilter"];
     } = {}) {
@@ -749,6 +753,7 @@ class ProductQuery {
                 ? eq(products.productTypeId, productTypeId)
                 : undefined,
             getSizeChartFilterQuery(sizeChartFilter),
+            getVariantPriceFilterQuery(variantPriceFilter),
             productImage
                 ? productImage === "with"
                     ? hasMedia(products, "media")
@@ -1125,6 +1130,7 @@ class ProductQuery {
         prioritizedSubcategoryIds,
         isFestiveProduct,
         sizeChartFilter,
+        variantPriceFilter,
     }: {
         limit: number;
         page: number;
@@ -1160,6 +1166,7 @@ class ProductQuery {
         prioritizedSubcategoryIds?: string[];
         isFestiveProduct?: boolean;
         sizeChartFilter?: SizeChartFilter;
+        variantPriceFilter?: VariantPriceFilter;
     }) {
         console.log(
             "[getProducts] search:",
@@ -1368,6 +1375,7 @@ class ProductQuery {
                 ? eq(products.productTypeId, productTypeId)
                 : undefined,
             getSizeChartFilterQuery(sizeChartFilter),
+            getVariantPriceFilterQuery(variantPriceFilter),
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,

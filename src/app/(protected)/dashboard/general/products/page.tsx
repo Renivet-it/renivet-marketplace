@@ -41,6 +41,7 @@ interface PageProps {
         categoryId?: string;
         productTypeId?: string;
         sizeChartFilter?: "all" | "with" | "without";
+        variantPriceFilter?: "all" | "different";
     }>;
 }
 
@@ -86,6 +87,7 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         categoryId: categoryIdRaw,
         productTypeId: productTypeIdRaw,
         sizeChartFilter: sizeChartFilterRaw,
+        variantPriceFilter: variantPriceFilterRaw,
     } = await searchParams;
 
     const limit =
@@ -110,6 +112,10 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         sizeChartFilterRaw && sizeChartFilterRaw !== "all"
             ? sizeChartFilterRaw
             : undefined;
+    const variantPriceFilter =
+        variantPriceFilterRaw === "different"
+            ? variantPriceFilterRaw
+            : undefined;
 
     const data = await productQueries.getProducts({
         limit,
@@ -122,6 +128,7 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         categoryId,
         productTypeId,
         sizeChartFilter,
+        variantPriceFilter,
     });
 
     return <ProductsReviewTable initialData={data} />;
