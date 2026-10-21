@@ -37,6 +37,7 @@ export function DataTable<T>({
     pages,
     showResults = true,
     tableContainerClassName,
+    isLoading = false,
 }: {
     table: TTable<T>;
     columns: ColumnDef<T>[];
@@ -44,6 +45,7 @@ export function DataTable<T>({
     pages: number;
     showResults?: boolean;
     tableContainerClassName?: string;
+    isLoading?: boolean;
 }) {
     const [page, setPage] = useQueryState(
         "page",
@@ -98,7 +100,13 @@ export function DataTable<T>({
 
     return (
         <>
-            <div className="rounded-md border">
+            <div className="relative rounded-md border">
+                {isLoading && (
+                    <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center bg-background/75 px-3 py-2 text-xs text-muted-foreground backdrop-blur-sm">
+                        <span className="mr-2 size-3 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+                        Updating products…
+                    </div>
+                )}
                 <Table containerClassName={tableContainerClassName}>
                     <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                         {table.getHeaderGroups().map((headerGroup) => (

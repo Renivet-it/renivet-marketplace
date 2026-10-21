@@ -53,12 +53,12 @@ import {
     formatPriceTag,
 } from "@/lib/utils";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
+import { keepPreviousData } from "@tanstack/react-query";
 import {
     ColumnDef,
     ColumnFiltersState,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     SortingState,
     useReactTable,
@@ -88,6 +88,7 @@ type ImageFilter = "with" | "without" | "all";
 type VisiblityFilter = "private" | "public" | "all";
 type QcFilter = "all" | "pass" | "warning" | "critical";
 type SizeChartFilter = "with" | "without" | "all";
+type VariantPriceFilter = "different" | "all";
 
 const STALE_INVENTORY_DAYS = 14;
 
@@ -609,6 +610,10 @@ export function ProductsReviewTable({
             "all"
         )
     );
+    const [variantPriceFilter, setVariantPriceFilter] = useQueryState(
+        "variantPriceFilter",
+        parseAsStringLiteral(["different", "all"] as const).withDefault("all")
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -644,29 +649,42 @@ export function ProductsReviewTable({
         [initialData]
     );
 
-    const { data: queryData } = trpc.brands.products.getProducts.useQuery(
-        {
-            limit,
-            page,
-            search,
-            verificationStatus:
-                verificationStatus === "all" ? undefined : verificationStatus,
-            qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
-            categoryId: categoryId === "all" ? undefined : categoryId,
-            productTypeId: productTypeId === "all" ? undefined : productTypeId,
-            sizeChartFilter:
-                sizeChartFilter === "all" ? undefined : sizeChartFilter,
-            productImage,
-            productVisiblity,
-            isFestiveProduct: festiveFilter === "festive" ? true : undefined,
-            brandIds: isBrandScoped
-                ? [brandId ?? ""]
-                : brandIds.length > 0
-                  ? brandIds
-                  : undefined,
-        },
-        { initialData: queryInitialData }
-    );
+    const { data: queryData, isFetching } =
+        trpc.brands.products.getProducts.useQuery(
+            {
+                limit,
+                page,
+                search,
+                verificationStatus:
+                    verificationStatus === "all"
+                        ? undefined
+                        : verificationStatus,
+                qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+                categoryId: categoryId === "all" ? undefined : categoryId,
+                productTypeId:
+                    productTypeId === "all" ? undefined : productTypeId,
+                sizeChartFilter:
+                    sizeChartFilter === "all" ? undefined : sizeChartFilter,
+                variantPriceFilter:
+                    variantPriceFilter === "all"
+                        ? undefined
+                        : variantPriceFilter,
+                productImage,
+                productVisiblity,
+                isFestiveProduct:
+                    festiveFilter === "festive" ? true : undefined,
+                brandIds: isBrandScoped
+                    ? [brandId ?? ""]
+                    : brandIds.length > 0
+                      ? brandIds
+                      : undefined,
+            },
+            {
+                initialData: queryInitialData,
+                placeholderData: keepPreviousData,
+                staleTime: 15_000,
+            }
+        );
     const { data: qcSummary } =
         trpc.brands.products.getCatalogQcSummary.useQuery(
             {
@@ -686,11 +704,16 @@ export function ProductsReviewTable({
                     productTypeId === "all" ? undefined : productTypeId,
                 sizeChartFilter:
                     sizeChartFilter === "all" ? undefined : sizeChartFilter,
+                variantPriceFilter:
+                    variantPriceFilter === "all"
+                        ? undefined
+                        : variantPriceFilter,
                 productImage,
                 productVisiblity,
             },
             {
                 staleTime: 30_000,
+                placeholderData: keepPreviousData,
             }
         );
     const count = queryData?.count ?? 0;
@@ -773,7 +796,6 @@ export function ProductsReviewTable({
         data,
         columns: tableColumns,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
@@ -803,6 +825,7 @@ export function ProductsReviewTable({
         void setCategoryId("all");
         void setProductTypeId("all");
         void setSizeChartFilter("all");
+        void setVariantPriceFilter("all");
         if (!isBrandScoped) void setBrandIds([]);
         void table.resetRowSelection();
     };
@@ -1050,6 +1073,24 @@ export function ProductsReviewTable({
                             <SelectItem value="all">All Products</SelectItem>
                         </SelectContent>
                     </Select>
+                    <Select
+                        value={variantPriceFilter}
+                        onValueChange={(value: VariantPriceFilter) =>
+                            setVariantPriceFilter(value)
+                        }
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by Variant Price" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="different">
+                                Different Variant Prices
+                            </SelectItem>
+                            <SelectItem value="all">
+                                All Variant Prices
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                     {!isBrandScoped && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1165,6 +1206,7 @@ export function ProductsReviewTable({
                 table={table}
                 pages={pages}
                 count={count}
+                isLoading={isFetching}
                 tableContainerClassName="max-h-[70vh] overscroll-contain"
             />
         </div>
