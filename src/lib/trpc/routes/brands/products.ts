@@ -143,6 +143,7 @@ export const productsRouter = createTRPCRouter({
                 sizes: z.array(z.string()).optional(),
                 sizeChartFilter: z.enum(["with", "without", "all"]).optional(),
                 variantPriceFilter: z.enum(["different", "all"]).optional(),
+                adminList: z.boolean().optional(),
                 minDiscount: z.number().min(0).max(100).optional(),
                 isFestiveProduct: z.boolean().optional(),
                 prioritizeBestSellers: z.boolean().optional(),
@@ -227,6 +228,7 @@ export const productsRouter = createTRPCRouter({
             const { catalogContext: _catalogContext, ...productInput } = input;
             const data = await queries.products.getProducts({
                 ...productInput,
+                adminList: input.adminList,
                 curatedProductIds,
                 curatedDefaultOrder,
             });

@@ -129,6 +129,7 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         productTypeId,
         sizeChartFilter,
         variantPriceFilter,
+        adminList: true,
     });
 
     return <ProductsReviewTable initialData={data} />;

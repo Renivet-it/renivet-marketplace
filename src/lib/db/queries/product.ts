@@ -1131,6 +1131,7 @@ class ProductQuery {
         isFestiveProduct,
         sizeChartFilter,
         variantPriceFilter,
+        adminList,
     }: {
         limit: number;
         page: number;
@@ -1167,6 +1168,7 @@ class ProductQuery {
         isFestiveProduct?: boolean;
         sizeChartFilter?: SizeChartFilter;
         variantPriceFilter?: VariantPriceFilter;
+        adminList?: boolean;
     }) {
         console.log(
             "[getProducts] search:",
@@ -1650,57 +1652,88 @@ class ProductQuery {
 
         // --- Query the DB ---
         const whereClause = and(...filters);
+        const productRows = adminList
+            ? db.query.products.findMany({
+                  with: {
+                      brand: {
+                          with: {
+                              confidential: true,
+                          },
+                      },
+                      variants: true,
+                      category: true,
+                      subcategory: true,
+                      productType: true,
+                      options: true,
+                      journey: true,
+                      values: true,
+                      festiveSeasonProducts: {
+                          columns: { position: true, isDeleted: true },
+                      },
+                  },
+                  where: whereClause,
+                  limit,
+                  offset: (page - 1) * limit,
+                  orderBy,
+              })
+            : db.query.products.findMany({
+                  with: {
+                      brand: {
+                          with: {
+                              confidential: true,
+                          },
+                      },
+                      variants: true,
+                      category: true,
+                      subcategory: true,
+                      productType: true,
+                      options: true,
+                      journey: true,
+                      values: true,
+                      returnExchangePolicy: true,
+                      specifications: {
+                          columns: { key: true, value: true },
+                      },
+                      festiveSeasonProducts: {
+                          columns: { position: true, isDeleted: true },
+                      },
+                  },
+                  where: whereClause,
+                  limit,
+                  offset: (page - 1) * limit,
+                  orderBy,
+              });
+
         const [data, totalRows] = await Promise.all([
-            db.query.products.findMany({
-                with: {
-                    brand: {
-                        with: {
-                            confidential: true,
-                        },
-                    },
-                    variants: true,
-                    category: true,
-                    subcategory: true,
-                    productType: true,
-                    options: true,
-                    journey: true,
-                    values: true,
-                    returnExchangePolicy: true,
-                    specifications: {
-                        columns: { key: true, value: true },
-                    },
-                    festiveSeasonProducts: {
-                        columns: { position: true, isDeleted: true },
-                    },
-                },
-                where: whereClause,
-                limit,
-                offset: (page - 1) * limit,
-                orderBy,
-            }),
+            productRows,
             db.select({ count: count() }).from(products).where(whereClause),
         ]);
 
         // --- Media mapping ---
         const mediaKeys = new Set<string>();
-        for (const product of data) {
-            product.media.forEach((m) =>
-                mediaKeys.add(`media:${m.id}:${product.brandId}`)
-            );
-            product.variants.forEach((v) => {
-                if (v.image)
-                    mediaKeys.add(`media:${v.image}:${product.brandId}`);
-            });
-            if (product.sustainabilityCertificate)
-                mediaKeys.add(
-                    `media:${product.sustainabilityCertificate}:${product.brandId}`
+        if (!adminList) {
+            for (const product of data) {
+                product.media.forEach((m) =>
+                    mediaKeys.add(`media:${m.id}:${product.brandId}`)
                 );
+                product.variants.forEach((v) => {
+                    if (v.image)
+                        mediaKeys.add(`media:${v.image}:${product.brandId}`);
+                });
+                if (product.sustainabilityCertificate)
+                    mediaKeys.add(
+                        `media:${product.sustainabilityCertificate}:${product.brandId}`
+                    );
+            }
         }
 
-        const mediaItems = await mediaCache.getByExactKeys(
-            Array.from(mediaKeys)
-        );
-        const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
+        const mediaMap = adminList
+            ? new Map()
+            : new Map(
+                  (
+                      await mediaCache.getByExactKeys(Array.from(mediaKeys))
+                  ).data.map((i) => [i.id, i])
+              );
 
         const enhancedData = data.map((product) => ({
             ...product,
@@ -1717,30 +1750,42 @@ class ProductQuery {
                 : null,
             variants: product.variants.map((v) => ({
                 ...v,
-                mediaItem: v.image ? mediaMap.get(v.image) : null,
+                mediaItem: v.image ? mediaMap.get(v.image) ?? null : null,
             })),
-            returnable: product.returnExchangePolicy?.returnable ?? false,
+            returnable:
+                ("returnExchangePolicy" in product
+                    ? product.returnExchangePolicy?.returnable
+                    : undefined) ?? false,
             returnDescription:
-                product.returnExchangePolicy?.returnDescription ?? null,
-            exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+                ("returnExchangePolicy" in product
+                    ? product.returnExchangePolicy?.returnDescription
+                    : undefined) ?? null,
+            exchangeable:
+                ("returnExchangePolicy" in product
+                    ? product.returnExchangePolicy?.exchangeable
+                    : undefined) ?? false,
             exchangeDescription:
-                product.returnExchangePolicy?.exchangeDescription ?? null,
-            specifications: product.specifications.map((s) => ({
-                key: s.key,
-                value: s.value,
-            })),
+                ("returnExchangePolicy" in product
+                    ? product.returnExchangePolicy?.exchangeDescription
+                    : undefined) ?? null,
+            specifications:
+                "specifications" in product
+                    ? product.specifications.map((s) => ({
+                          key: s.key,
+                          value: s.value,
+                      }))
+                    : [],
         }));
 
-        const parsed = withCatalogQcSnapshots(
-            parseProductArraySafely(enhancedData)
-        );
+        const parsed = adminList
+            ? parseProductArraySafely(enhancedData)
+            : withCatalogQcSnapshots(parseProductArraySafely(enhancedData));
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
-        const filteredData = filterProductsByResolvedMedia(
-            parsed,
-            shouldRequireMedia
-        );
+        const filteredData = adminList
+            ? parsed
+            : filterProductsByResolvedMedia(parsed, shouldRequireMedia);
 
         const mediaPostFilterObservation =
             buildCatalogMediaPostFilterObservation({
