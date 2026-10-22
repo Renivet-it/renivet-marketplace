@@ -654,7 +654,7 @@ export function ProductsReviewTable({
             {
                 limit,
                 page,
-                search,
+                search: search || undefined,
                 verificationStatus:
                     verificationStatus === "all"
                         ? undefined
@@ -669,8 +669,10 @@ export function ProductsReviewTable({
                     variantPriceFilter === "all"
                         ? undefined
                         : variantPriceFilter,
-                productImage,
-                productVisiblity,
+                productImage:
+                    productImage === "all" ? undefined : productImage,
+                productVisiblity:
+                    productVisiblity === "all" ? undefined : productVisiblity,
                 isFestiveProduct:
                     festiveFilter === "festive" ? true : undefined,
                 brandIds: isBrandScoped
