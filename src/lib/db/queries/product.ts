@@ -83,6 +83,10 @@ import {
     VariantPriceFilter,
 } from "./product-admin-filters";
 import {
+    getAdminProductSearchPredicate,
+    shouldUseSemanticProductSearch,
+} from "./product-admin-search";
+import {
     buildCatalogMediaPostFilterObservation,
     emitCatalogMediaPostFilterObservation,
     filterProductsByResolvedMedia,
@@ -1212,10 +1216,13 @@ class ProductQuery {
         let isRagSearchActive = false;
 
         // --- Search embedding (semantic) ---
-        if (search?.length) {
+        if (adminList && search?.trim()) {
+            processedSearch = search.trim();
+            searchQuery = getAdminProductSearchPredicate(processedSearch);
+        } else if (shouldUseSemanticProductSearch({ adminList, search })) {
             // Preprocess query for better matching
-            processedSearch = preprocessSearchQuery(search);
-            const normalizedSearch = search.trim().toLowerCase();
+            processedSearch = preprocessSearchQuery(search!);
+            const normalizedSearch = search!.trim().toLowerCase();
             const exactBrand = await db.query.brands.findFirst({
                 columns: {
                     id: true,
