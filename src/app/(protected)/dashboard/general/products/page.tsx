@@ -1,5 +1,9 @@
 import { ProductsReviewTable } from "@/components/dashboard/general/products";
 import {
+    buildAdminProductsQueryInput,
+    parseAdminBrandIds,
+} from "@/components/dashboard/general/products/admin-products-query-state";
+import {
     ProductExportAdminButton,
     ProductTemplateDownloadAdminButton,
 } from "@/components/globals/buttons";
@@ -42,6 +46,9 @@ interface PageProps {
         productTypeId?: string;
         sizeChartFilter?: "all" | "with" | "without";
         variantPriceFilter?: "all" | "different";
+        productImage?: "all" | "with" | "without";
+        productVisiblity?: "all" | "private" | "public";
+        brandIds?: string | string[];
     }>;
 }
 
@@ -88,6 +95,9 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         productTypeId: productTypeIdRaw,
         sizeChartFilter: sizeChartFilterRaw,
         variantPriceFilter: variantPriceFilterRaw,
+        productImage: productImageRaw,
+        productVisiblity: productVisiblityRaw,
+        brandIds: brandIdsRaw,
     } = await searchParams;
 
     const limit =
@@ -103,34 +113,25 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         catalogIssueRaw && catalogIssueRaw !== "all"
             ? catalogIssueRaw
             : undefined;
-    const search = searchRaw?.length ? searchRaw : undefined;
-    const isFestiveProduct =
-        isFestiveProductRaw === "festive" ? true : undefined;
-    const categoryId = categoryIdRaw || undefined;
-    const productTypeId = productTypeIdRaw || undefined;
-    const sizeChartFilter =
-        sizeChartFilterRaw && sizeChartFilterRaw !== "all"
-            ? sizeChartFilterRaw
-            : undefined;
-    const variantPriceFilter =
-        variantPriceFilterRaw === "different"
-            ? variantPriceFilterRaw
-            : undefined;
-
-    const data = await productQueries.getProducts({
-        limit,
-        page,
-        search,
-        verificationStatus,
-        qcStatus,
-        catalogIssue,
-        isFestiveProduct,
-        categoryId,
-        productTypeId,
-        sizeChartFilter,
-        variantPriceFilter,
-        adminList: true,
-    });
+    const data = await productQueries.getProducts(
+        buildAdminProductsQueryInput({
+            limit,
+            page,
+            search: searchRaw ?? "",
+            verificationStatus: verificationStatus ?? "all",
+            qcStatus: qcStatus ?? "all",
+            catalogIssue: catalogIssue ?? "all",
+            isFestiveProduct:
+                isFestiveProductRaw === "festive" ? "festive" : "all",
+            categoryId: categoryIdRaw || "all",
+            productTypeId: productTypeIdRaw || "all",
+            sizeChartFilter: sizeChartFilterRaw ?? "all",
+            variantPriceFilter: variantPriceFilterRaw ?? "all",
+            productImage: productImageRaw ?? "all",
+            productVisiblity: productVisiblityRaw ?? "all",
+            brandIds: parseAdminBrandIds(brandIdsRaw),
+        })
+    );
 
     return <ProductsReviewTable initialData={data} />;
 }

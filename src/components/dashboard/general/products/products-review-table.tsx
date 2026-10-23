@@ -73,8 +73,9 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { buildAdminProductsQueryInput } from "./admin-products-query-state";
 import { ProductAction } from "./product-admin-action";
 
 export type TableProduct = ProductWithBrand & {
@@ -89,6 +90,11 @@ type VisiblityFilter = "private" | "public" | "all";
 type QcFilter = "all" | "pass" | "warning" | "critical";
 type SizeChartFilter = "with" | "without" | "all";
 type VariantPriceFilter = "different" | "all";
+type CatalogIssueFilter =
+    | "all"
+    | "oos_but_live"
+    | "stale_inventory"
+    | "claim_mismatch";
 
 const STALE_INVENTORY_DAYS = 14;
 
@@ -548,15 +554,18 @@ interface PageProps {
 
 export function ProductsReviewTable({
     initialData,
-    brandData,
     brandId,
 }: PageProps) {
     const isBrandScoped = Boolean(brandId);
-    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [page, setPage] = useQueryState(
+        "page",
+        parseAsInteger.withDefault(1)
+    );
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(15));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
+    const [searchDraft, setSearchDraft] = useState(search);
     const [productImage, setImageFilter] = useQueryState(
         "productImage",
         parseAsStringLiteral(["with", "without", "all"] as const).withDefault(
@@ -592,6 +601,15 @@ export function ProductsReviewTable({
             "critical",
         ] as const).withDefault("all")
     );
+    const [catalogIssue, setCatalogIssue] = useQueryState(
+        "catalogIssue",
+        parseAsStringLiteral([
+            "all",
+            "oos_but_live",
+            "stale_inventory",
+            "claim_mismatch",
+        ] as const).withDefault("all")
+    );
     const [festiveFilter, setFestiveFilter] = useQueryState(
         "isFestiveProduct",
         parseAsStringLiteral(["all", "festive"] as const).withDefault("all")
@@ -621,15 +639,37 @@ export function ProductsReviewTable({
         {}
     );
     const [rowSelection, setRowSelection] = useState({});
+    const resetPage = useCallback(() => {
+        if (page !== 1) void setPage(1);
+    }, [page, setPage]);
+
+    const commitSearch = useCallback(
+        (value: string) => {
+            const normalized = value.trim();
+            if (normalized === search) return;
+            resetPage();
+            void setSearch(normalized);
+        },
+        [resetPage, search, setSearch]
+    );
+
+    useEffect(() => {
+        setSearchDraft(search);
+    }, [search]);
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => commitSearch(searchDraft), 300);
+        return () => window.clearTimeout(timeout);
+    }, [commitSearch, searchDraft]);
+
     const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
         {
-            page: 1, // Always fetch from first page
-            limit: 150, // Use total count to fetch all brands
-            search,
+            page: 1,
+            limit: 500,
         },
         {
             enabled: !isBrandScoped,
-            initialData: brandData, // Use brandData prop
+            staleTime: 5 * 60_000,
         }
     );
     const { data: categoriesData } =
@@ -648,42 +688,50 @@ export function ProductsReviewTable({
         }),
         [initialData]
     );
+    const productsQueryInput = useMemo(
+        () =>
+            buildAdminProductsQueryInput({
+                limit,
+                page,
+                search,
+                verificationStatus,
+                qcStatus: qcStatusFilter,
+                catalogIssue,
+                productImage,
+                productVisiblity,
+                isFestiveProduct: festiveFilter,
+                categoryId,
+                productTypeId,
+                sizeChartFilter,
+                variantPriceFilter,
+                brandIds,
+                scopedBrandId: brandId,
+            }),
+        [
+            brandId,
+            brandIds,
+            catalogIssue,
+            categoryId,
+            festiveFilter,
+            limit,
+            page,
+            productImage,
+            productTypeId,
+            productVisiblity,
+            qcStatusFilter,
+            search,
+            sizeChartFilter,
+            variantPriceFilter,
+            verificationStatus,
+        ]
+    );
 
     const { data: queryData, isFetching } =
         trpc.brands.products.getProducts.useQuery(
+            productsQueryInput,
             {
-                limit,
-                page,
-                search: search || undefined,
-                verificationStatus:
-                    verificationStatus === "all"
-                        ? undefined
-                        : verificationStatus,
-                qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
-                categoryId: categoryId === "all" ? undefined : categoryId,
-                productTypeId:
-                    productTypeId === "all" ? undefined : productTypeId,
-                sizeChartFilter:
-                    sizeChartFilter === "all" ? undefined : sizeChartFilter,
-                variantPriceFilter:
-                    variantPriceFilter === "all"
-                        ? undefined
-                        : variantPriceFilter,
-                productImage:
-                    productImage === "all" ? undefined : productImage,
-                productVisiblity:
-                    productVisiblity === "all" ? undefined : productVisiblity,
-                isFestiveProduct:
-                    festiveFilter === "festive" ? true : undefined,
-                brandIds: isBrandScoped
-                    ? [brandId ?? ""]
-                    : brandIds.length > 0
-                      ? brandIds
-                      : undefined,
-            },
-            {
-                initialData: queryInitialData,
-                placeholderData: keepPreviousData,
+                placeholderData: (previousData) =>
+                    previousData ?? queryInitialData,
                 staleTime: 15_000,
             }
         );
@@ -701,6 +749,8 @@ export function ProductsReviewTable({
                         ? undefined
                         : verificationStatus,
                 qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+                catalogIssue:
+                    catalogIssue === "all" ? undefined : catalogIssue,
                 categoryId: categoryId === "all" ? undefined : categoryId,
                 productTypeId:
                     productTypeId === "all" ? undefined : productTypeId,
@@ -710,8 +760,10 @@ export function ProductsReviewTable({
                     variantPriceFilter === "all"
                         ? undefined
                         : variantPriceFilter,
-                productImage,
-                productVisiblity,
+                productImage:
+                    productImage === "all" ? undefined : productImage,
+                productVisiblity:
+                    productVisiblity === "all" ? undefined : productVisiblity,
             },
             {
                 staleTime: 30_000,
@@ -787,6 +839,20 @@ export function ProductsReviewTable({
               claimMismatchCount: qcSummary.claimMismatchCount,
           }
         : visibleSummary;
+    const activeFilterCount = [
+        Boolean(search),
+        verificationStatus !== "all",
+        qcStatusFilter !== "all",
+        catalogIssue !== "all",
+        productImage !== "all",
+        productVisiblity !== "all",
+        festiveFilter !== "all",
+        categoryId !== "all",
+        productTypeId !== "all",
+        sizeChartFilter !== "all",
+        variantPriceFilter !== "all",
+        !isBrandScoped && brandIds.length > 0,
+    ].filter(Boolean).length;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
     const tableColumns = useMemo(
@@ -797,6 +863,8 @@ export function ProductsReviewTable({
     const table = useReactTable({
         data,
         columns: tableColumns,
+        pageCount: pages,
+        manualPagination: true,
         getCoreRowModel: getCoreRowModel(),
         onSortingChange: setSorting,
         getSortedRowModel: getSortedRowModel(),
@@ -809,6 +877,10 @@ export function ProductsReviewTable({
             columnFilters,
             columnVisibility,
             rowSelection,
+            pagination: {
+                pageIndex: Math.max(page - 1, 0),
+                pageSize: limit,
+            },
         },
     });
 
@@ -821,6 +893,7 @@ export function ProductsReviewTable({
         void setSearch("");
         void setVerificationStatus("all");
         void setQcStatusFilter("all");
+        void setCatalogIssue("all");
         void setImageFilter("all");
         void setVisiblityFilter("all");
         void setFestiveFilter("all");
@@ -829,6 +902,7 @@ export function ProductsReviewTable({
         void setSizeChartFilter("all");
         void setVariantPriceFilter("all");
         if (!isBrandScoped) void setBrandIds([]);
+        void setPage(1);
         void table.resetRowSelection();
     };
 
@@ -898,47 +972,50 @@ export function ProductsReviewTable({
                 </div>
             </div>
             <div className="border-b border-slate-200 bg-slate-50/70 p-4">
-                <div
-                    className={cn(
-                        "grid gap-3 md:grid-cols-2",
-                        isBrandScoped
-                            ? "xl:grid-cols-[minmax(18rem,1.5fr)_11rem_11rem_11rem_11rem_auto]"
-                            : "xl:grid-cols-[minmax(18rem,1.35fr)_11rem_11rem_11rem_11rem_14rem_auto]"
-                    )}
-                >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-slate-900">
+                            Find and filter products
+                        </h2>
+                        {activeFilterCount > 0 ? (
+                            <Badge variant="secondary">
+                                {activeFilterCount} active
+                            </Badge>
+                        ) : null}
+                    </div>
+                    <span
+                        className={cn(
+                            "text-xs text-muted-foreground transition-opacity",
+                            isFetching ? "opacity-100" : "opacity-0"
+                        )}
+                        role="status"
+                        aria-live="polite"
+                    >
+                        Updating results…
+                    </span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6">
                     <Input
                         placeholder="Search by title or SKU..."
-                        className="bg-white"
-                        value={
-                            (table
-                                .getColumn("title")
-                                ?.getFilterValue() as string) ?? search
-                        }
-                        onChange={(event) => {
-                            table
-                                .getColumn("title")
-                                ?.setFilterValue(event.target.value);
-                            setSearch(event.target.value);
+                        className="bg-white sm:col-span-2"
+                        value={searchDraft}
+                        onChange={(event) => setSearchDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                commitSearch(searchDraft);
+                            }
                         }}
+                        aria-label="Search products by title or SKU"
                     />
 
                     <Select
-                        value={
-                            (table
-                                .getColumn("verificationStatus")
-                                ?.getFilterValue() as string) ??
-                            verificationStatus
-                        }
+                        value={verificationStatus}
                         onValueChange={(value) => {
                             const nextValue = value as
                                 | "all"
                                 | TableProduct["verificationStatus"];
-                            table
-                                .getColumn("verificationStatus")
-                                ?.setFilterValue(
-                                    nextValue === "all" ? undefined : nextValue
-                                );
-                            setVerificationStatus(nextValue);
+                            resetPage();
+                            void setVerificationStatus(nextValue);
                         }}
                     >
                         <SelectTrigger className="bg-white capitalize">
@@ -957,9 +1034,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={productImage}
-                        onValueChange={(value: ImageFilter) =>
-                            setImageFilter(value)
-                        }
+                        onValueChange={(value: ImageFilter) => {
+                            resetPage();
+                            void setImageFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Image" />
@@ -974,9 +1052,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={qcStatusFilter}
-                        onValueChange={(value: QcFilter) =>
-                            setQcStatusFilter(value)
-                        }
+                        onValueChange={(value: QcFilter) => {
+                            resetPage();
+                            void setQcStatusFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white capitalize">
                             <SelectValue placeholder="Filter by QC" />
@@ -989,10 +1068,28 @@ export function ProductsReviewTable({
                         </SelectContent>
                     </Select>
                     <Select
+                        value={catalogIssue}
+                        onValueChange={(value: CatalogIssueFilter) => {
+                            resetPage();
+                            void setCatalogIssue(value);
+                        }}
+                    >
+                        <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Filter by catalogue issue" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All catalogue health</SelectItem>
+                            <SelectItem value="oos_but_live">Out of stock but live</SelectItem>
+                            <SelectItem value="stale_inventory">Stale inventory</SelectItem>
+                            <SelectItem value="claim_mismatch">Claim mismatch</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
                         value={productVisiblity}
-                        onValueChange={(value: VisiblityFilter) =>
-                            setVisiblityFilter(value)
-                        }
+                        onValueChange={(value: VisiblityFilter) => {
+                            resetPage();
+                            void setVisiblityFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Visibility" />
@@ -1005,9 +1102,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={festiveFilter}
-                        onValueChange={(value: "all" | "festive") =>
-                            setFestiveFilter(value)
-                        }
+                        onValueChange={(value: "all" | "festive") => {
+                            resetPage();
+                            void setFestiveFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Festive" />
@@ -1019,7 +1117,13 @@ export function ProductsReviewTable({
                             <SelectItem value="all">All Products</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select value={categoryId} onValueChange={setCategoryId}>
+                    <Select
+                        value={categoryId}
+                        onValueChange={(value) => {
+                            resetPage();
+                            void setCategoryId(value);
+                        }}
+                    >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Category" />
                         </SelectTrigger>
@@ -1037,7 +1141,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={productTypeId}
-                        onValueChange={setProductTypeId}
+                        onValueChange={(value) => {
+                            resetPage();
+                            void setProductTypeId(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Product Type" />
@@ -1058,9 +1165,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={sizeChartFilter}
-                        onValueChange={(value: SizeChartFilter) =>
-                            setSizeChartFilter(value)
-                        }
+                        onValueChange={(value: SizeChartFilter) => {
+                            resetPage();
+                            void setSizeChartFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Size Chart" />
@@ -1077,9 +1185,10 @@ export function ProductsReviewTable({
                     </Select>
                     <Select
                         value={variantPriceFilter}
-                        onValueChange={(value: VariantPriceFilter) =>
-                            setVariantPriceFilter(value)
-                        }
+                        onValueChange={(value: VariantPriceFilter) => {
+                            resetPage();
+                            void setVariantPriceFilter(value);
+                        }}
                     >
                         <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Variant Price" />
@@ -1111,7 +1220,8 @@ export function ProductsReviewTable({
                                         <DropdownMenuItem
                                             onSelect={(event) => {
                                                 event.preventDefault();
-                                                setBrandIds([]);
+                                                resetPage();
+                                                void setBrandIds([]);
                                             }}
                                         >
                                             <Icons.X className="size-4" />
@@ -1145,9 +1255,8 @@ export function ProductsReviewTable({
                                                                   id !==
                                                                   brand.id
                                                           );
-                                                    void setBrandIds(
-                                                        nextBrandIds
-                                                    );
+                                                    resetPage();
+                                                    void setBrandIds(nextBrandIds);
                                                 }}
                                             />
                                             <span>{brand.name}</span>
@@ -1161,7 +1270,7 @@ export function ProductsReviewTable({
                     <Button
                         variant="outline"
                         onClick={clearAllFilters}
-                        className="w-full bg-white xl:w-auto"
+                        className="w-full bg-white"
                     >
                         <Icons.ListRestart className="size-4" />
                         Clear all filters

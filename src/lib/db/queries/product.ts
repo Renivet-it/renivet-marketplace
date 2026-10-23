@@ -1221,7 +1221,8 @@ class ProductQuery {
             searchQuery = getAdminProductSearchPredicate(processedSearch);
         } else if (shouldUseSemanticProductSearch({ adminList, search })) {
             // Preprocess query for better matching
-            processedSearch = preprocessSearchQuery(search!);
+            const semanticSearch = preprocessSearchQuery(search!);
+            processedSearch = semanticSearch;
             const normalizedSearch = search!.trim().toLowerCase();
             const exactBrand = await db.query.brands.findFirst({
                 columns: {
@@ -1252,7 +1253,7 @@ class ProductQuery {
                         try {
                             // Generate 384-dim embedding for brand matching (brands still use 384-dim)
                             const searchEmbedding =
-                                await getEmbedding(processedSearch);
+                                await getEmbedding(semanticSearch);
 
                             // 🔍 Detect brand intent
                             const brandResult = await db.execute(sql`
@@ -1294,7 +1295,7 @@ class ProductQuery {
                                 "/search/advanced-rag"
                             );
                             if (!upstreamUrl) return;
-                            upstreamUrl.searchParams.set("query", processedSearch);
+                            upstreamUrl.searchParams.set("query", semanticSearch);
                             upstreamUrl.searchParams.set("limit", "150");
                             const response = await fetch(
                                 upstreamUrl,
@@ -1321,7 +1322,7 @@ class ProductQuery {
                 );
 
                 searchQuery = getCatalogSearchPredicate({
-                    processedSearch,
+                    processedSearch: semanticSearch,
                     ragProductIds,
                 });
             }
