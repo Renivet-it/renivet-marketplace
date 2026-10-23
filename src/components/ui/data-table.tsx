@@ -74,17 +74,12 @@ export function DataTable<T>({
         );
         const fallback = isValidPageSize(saved) ? saved : DEFAULT_PAGE_SIZE;
 
-        if (limitRaw === null) {
+        if (!isValidPageSize(limitRaw)) {
             void setLimit(fallback);
             return;
         }
 
-        if (isValidPageSize(limitRaw)) {
-            window.localStorage.setItem(
-                PAGE_SIZE_PREFERENCE_KEY,
-                String(limitRaw)
-            );
-        }
+        window.localStorage.setItem(PAGE_SIZE_PREFERENCE_KEY, String(limitRaw));
     }, [limitRaw, setLimit]);
 
     const handlePageSizeChange = (value: string) => {

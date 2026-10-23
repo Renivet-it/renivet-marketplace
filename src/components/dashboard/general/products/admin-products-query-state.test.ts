@@ -59,6 +59,28 @@ describe("buildAdminProductsQueryInput", () => {
         expect(input.brandIds).toEqual(["scoped-brand"]);
         expect(input.search).toBeUndefined();
     });
+
+    test("normalizes malformed URL pagination before it reaches the API", () => {
+        const input = buildAdminProductsQueryInput({
+            page: -4,
+            limit: 5000,
+            search: "",
+            verificationStatus: "all",
+            qcStatus: "all",
+            catalogIssue: "all",
+            productImage: "all",
+            productVisiblity: "all",
+            isFestiveProduct: "all",
+            categoryId: "all",
+            productTypeId: "all",
+            sizeChartFilter: "all",
+            variantPriceFilter: "all",
+            brandIds: [],
+        });
+
+        expect(input.page).toBe(1);
+        expect(input.limit).toBe(15);
+    });
 });
 
 describe("admin product page transitions", () => {

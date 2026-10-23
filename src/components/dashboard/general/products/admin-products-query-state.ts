@@ -16,6 +16,14 @@ export type AdminProductsQueryState = {
     scopedBrandId?: string;
 };
 
+const ADMIN_PRODUCT_PAGE_SIZES = new Set([10, 15, 25, 50]);
+
+const normalizePage = (page: number) =>
+    Number.isFinite(page) && page > 0 ? Math.trunc(page) : 1;
+
+const normalizeLimit = (limit: number) =>
+    ADMIN_PRODUCT_PAGE_SIZES.has(limit) ? limit : 15;
+
 export function buildAdminProductsQueryInput(state: AdminProductsQueryState) {
     const search = state.search.trim();
     const brandIds = state.scopedBrandId
@@ -25,8 +33,8 @@ export function buildAdminProductsQueryInput(state: AdminProductsQueryState) {
           : undefined;
 
     return {
-        page: state.page,
-        limit: state.limit,
+        page: normalizePage(state.page),
+        limit: normalizeLimit(state.limit),
         ...(search ? { search } : {}),
         ...(state.verificationStatus !== "all"
             ? { verificationStatus: state.verificationStatus }

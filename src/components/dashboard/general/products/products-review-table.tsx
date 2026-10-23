@@ -846,7 +846,10 @@ export function ProductsReviewTable({ initialData, brandId }: PageProps) {
         !isBrandScoped && brandIds.length > 0,
     ].filter(Boolean).length;
 
-    const pages = useMemo(() => getTotalPages(count, limit), [count, limit]);
+    const pages = useMemo(
+        () => getTotalPages(count, productsQueryInput.limit),
+        [count, productsQueryInput.limit]
+    );
     const tableColumns = useMemo(
         () => getColumns(isBrandScoped),
         [isBrandScoped]
@@ -870,8 +873,8 @@ export function ProductsReviewTable({ initialData, brandId }: PageProps) {
             columnVisibility,
             rowSelection,
             pagination: {
-                pageIndex: Math.max(page - 1, 0),
-                pageSize: limit,
+                pageIndex: productsQueryInput.page - 1,
+                pageSize: productsQueryInput.limit,
             },
         },
     });
@@ -881,8 +884,12 @@ export function ProductsReviewTable({ initialData, brandId }: PageProps) {
         .rows.map((row) => row.original);
 
     useEffect(() => {
+        if (page !== productsQueryInput.page) {
+            void setPage(productsQueryInput.page);
+            return;
+        }
         if (!isFetching && page > pages) void setPage(pages);
-    }, [isFetching, page, pages, setPage]);
+    }, [isFetching, page, pages, productsQueryInput.page, setPage]);
 
     const clearAllFilters = () => {
         table.resetColumnFilters();
