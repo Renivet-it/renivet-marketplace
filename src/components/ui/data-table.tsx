@@ -4,6 +4,7 @@ import { ColumnDef, flexRender, Table as TTable } from "@tanstack/react-table";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect } from "react";
 import { Pagination } from "./data-table-dash";
+import { getResultRange } from "./data-table-pagination-state";
 import {
     Select,
     SelectContent,
@@ -55,12 +56,15 @@ export function DataTable<T>({
 
     const activePageSize = isValidPageSize(limitRaw)
         ? limitRaw
-        : table.getRowModel().rows.length || DEFAULT_PAGE_SIZE;
+        : DEFAULT_PAGE_SIZE;
 
     const rowCount = table.getRowModel().rows.length ?? 0;
-    const rangeStart = count > 0 ? (page - 1) * activePageSize + 1 : 0;
-    const rangeEnd =
-        count > 0 ? Math.min(rangeStart + Math.max(rowCount - 1, 0), count) : 0;
+    const resultRange = getResultRange({
+        page,
+        pageSize: activePageSize,
+        rowCount,
+        totalCount: count,
+    });
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -100,7 +104,7 @@ export function DataTable<T>({
 
     return (
         <>
-            <div className="relative rounded-md border">
+            <div className="relative rounded-md border" aria-busy={isLoading}>
                 {isLoading && (
                     <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center bg-background/75 px-3 py-2 text-xs text-muted-foreground backdrop-blur-sm">
                         <span className="mr-2 size-3 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
@@ -170,8 +174,8 @@ export function DataTable<T>({
                 <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center">
                     {showResults && (
                         <p>
-                            Showing {rangeStart}-{rangeEnd} of {count ?? 0}{" "}
-                            results
+                            Showing {resultRange.start}-{resultRange.end} of{" "}
+                            {count ?? 0} results
                         </p>
                     )}
 

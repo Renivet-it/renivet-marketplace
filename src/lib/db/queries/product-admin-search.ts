@@ -1,7 +1,9 @@
 import { ilike, or, sql, type SQL } from "drizzle-orm";
 import { products } from "../schema";
 
-export function getAdminProductSearchPredicate(search: string): SQL | undefined {
+export function getAdminProductSearchPredicate(
+    search: string
+): SQL | undefined {
     const normalizedSearch = search.trim();
     if (!normalizedSearch) return undefined;
 

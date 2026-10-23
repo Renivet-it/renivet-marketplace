@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button-dash";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
+import { getTotalPages } from "@/components/ui/data-table-pagination-state";
 import {
     Dialog,
     DialogContent,
@@ -552,10 +553,7 @@ interface PageProps {
     brandId?: string;
 }
 
-export function ProductsReviewTable({
-    initialData,
-    brandId,
-}: PageProps) {
+export function ProductsReviewTable({ initialData, brandId }: PageProps) {
     const isBrandScoped = Boolean(brandId);
     const [page, setPage] = useQueryState(
         "page",
@@ -727,14 +725,10 @@ export function ProductsReviewTable({
     );
 
     const { data: queryData, isFetching } =
-        trpc.brands.products.getProducts.useQuery(
-            productsQueryInput,
-            {
-                placeholderData: (previousData) =>
-                    previousData ?? queryInitialData,
-                staleTime: 15_000,
-            }
-        );
+        trpc.brands.products.getProducts.useQuery(productsQueryInput, {
+            placeholderData: (previousData) => previousData ?? queryInitialData,
+            staleTime: 15_000,
+        });
     const { data: qcSummary } =
         trpc.brands.products.getCatalogQcSummary.useQuery(
             {
@@ -749,8 +743,7 @@ export function ProductsReviewTable({
                         ? undefined
                         : verificationStatus,
                 qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
-                catalogIssue:
-                    catalogIssue === "all" ? undefined : catalogIssue,
+                catalogIssue: catalogIssue === "all" ? undefined : catalogIssue,
                 categoryId: categoryId === "all" ? undefined : categoryId,
                 productTypeId:
                     productTypeId === "all" ? undefined : productTypeId,
@@ -760,8 +753,7 @@ export function ProductsReviewTable({
                     variantPriceFilter === "all"
                         ? undefined
                         : variantPriceFilter,
-                productImage:
-                    productImage === "all" ? undefined : productImage,
+                productImage: productImage === "all" ? undefined : productImage,
                 productVisiblity:
                     productVisiblity === "all" ? undefined : productVisiblity,
             },
@@ -854,7 +846,7 @@ export function ProductsReviewTable({
         !isBrandScoped && brandIds.length > 0,
     ].filter(Boolean).length;
 
-    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
+    const pages = useMemo(() => getTotalPages(count, limit), [count, limit]);
     const tableColumns = useMemo(
         () => getColumns(isBrandScoped),
         [isBrandScoped]
@@ -887,6 +879,10 @@ export function ProductsReviewTable({
     const selectedProducts = table
         .getSelectedRowModel()
         .rows.map((row) => row.original);
+
+    useEffect(() => {
+        if (!isFetching && page > pages) void setPage(pages);
+    }, [isFetching, page, pages, setPage]);
 
     const clearAllFilters = () => {
         table.resetColumnFilters();
@@ -1078,10 +1074,18 @@ export function ProductsReviewTable({
                             <SelectValue placeholder="Filter by catalogue issue" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All catalogue health</SelectItem>
-                            <SelectItem value="oos_but_live">Out of stock but live</SelectItem>
-                            <SelectItem value="stale_inventory">Stale inventory</SelectItem>
-                            <SelectItem value="claim_mismatch">Claim mismatch</SelectItem>
+                            <SelectItem value="all">
+                                All catalogue health
+                            </SelectItem>
+                            <SelectItem value="oos_but_live">
+                                Out of stock but live
+                            </SelectItem>
+                            <SelectItem value="stale_inventory">
+                                Stale inventory
+                            </SelectItem>
+                            <SelectItem value="claim_mismatch">
+                                Claim mismatch
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                     <Select
@@ -1256,7 +1260,9 @@ export function ProductsReviewTable({
                                                                   brand.id
                                                           );
                                                     resetPage();
-                                                    void setBrandIds(nextBrandIds);
+                                                    void setBrandIds(
+                                                        nextBrandIds
+                                                    );
                                                 }}
                                             />
                                             <span>{brand.name}</span>

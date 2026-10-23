@@ -44,9 +44,7 @@ export function buildAdminProductsQueryInput(state: AdminProductsQueryState) {
         ...(state.isFestiveProduct === "festive"
             ? { isFestiveProduct: true }
             : {}),
-        ...(state.categoryId !== "all"
-            ? { categoryId: state.categoryId }
-            : {}),
+        ...(state.categoryId !== "all" ? { categoryId: state.categoryId } : {}),
         ...(state.productTypeId !== "all"
             ? { productTypeId: state.productTypeId }
             : {}),
