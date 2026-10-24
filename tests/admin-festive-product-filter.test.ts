@@ -1,18 +1,31 @@
 import { expect, test } from "bun:test";
+import { buildAdminProductsQueryInput } from "../src/components/dashboard/general/products/admin-products-query-state";
 
-const pagePath = "src/app/(protected)/dashboard/general/products/page.tsx";
 const tablePath =
     "src/components/dashboard/general/products/products-review-table.tsx";
 const actionPath =
     "src/components/dashboard/general/products/product-admin-action.tsx";
 const queryPath = "src/lib/db/queries/product.ts";
 
-test("admin products page passes the festive filter to the product query", async () => {
-    const page = await Bun.file(pagePath).text();
+test("admin products page passes the festive filter to the product query", () => {
+    const input = buildAdminProductsQueryInput({
+        page: 1,
+        limit: 15,
+        search: "",
+        verificationStatus: "all",
+        qcStatus: "all",
+        catalogIssue: "all",
+        productImage: "all",
+        productVisiblity: "all",
+        isFestiveProduct: "festive",
+        categoryId: "all",
+        productTypeId: "all",
+        sizeChartFilter: "all",
+        variantPriceFilter: "all",
+        brandIds: [],
+    });
 
-    expect(page).toContain("isFestiveProduct");
-    expect(page).toContain("isFestiveProductRaw");
-    expect(page).toContain("isFestiveProduct,");
+    expect(input.isFestiveProduct).toBe(true);
 });
 
 test("product query filters festive products and exposes their sequence position", async () => {

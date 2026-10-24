@@ -1,21 +1,28 @@
 import { expect, test } from "bun:test";
+import { buildAdminProductsQueryInput } from "../src/components/dashboard/general/products/admin-products-query-state";
 
-const pagePath = "src/app/(protected)/dashboard/general/products/page.tsx";
-const tablePath =
-    "src/components/dashboard/general/products/products-review-table.tsx";
 const queryPath = "src/lib/db/queries/product.ts";
 const routePath = "src/lib/trpc/routes/brands/products.ts";
 
-test("admin product server and client queries use the same normalized inputs", async () => {
-    const page = await Bun.file(pagePath).text();
-    const table = await Bun.file(tablePath).text();
+test("admin product server and client queries share the lightweight contract", () => {
+    const input = buildAdminProductsQueryInput({
+        page: 2,
+        limit: 15,
+        search: "   ",
+        verificationStatus: "all",
+        qcStatus: "all",
+        catalogIssue: "all",
+        productImage: "all",
+        productVisiblity: "all",
+        isFestiveProduct: "all",
+        categoryId: "all",
+        productTypeId: "all",
+        sizeChartFilter: "all",
+        variantPriceFilter: "all",
+        brandIds: [],
+    });
 
-    expect(page).toContain("adminList: true");
-    expect(table).toContain("search: search || undefined");
-    expect(table).toContain('productImage === "all" ? undefined : productImage');
-    expect(table).toContain(
-        'productVisiblity === "all" ? undefined : productVisiblity'
-    );
+    expect(input).toEqual({ page: 2, limit: 15, adminList: true });
 });
 
 test("admin product query uses the lightweight list projection", async () => {

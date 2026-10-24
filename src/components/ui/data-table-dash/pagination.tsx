@@ -1,14 +1,14 @@
 "use client";
 
+import { Button } from "@/components/ui/button-dash";
+import { getPaginationState } from "@/components/ui/data-table-pagination-state";
 import {
     PaginationContent,
     PaginationEllipsis,
     PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious,
     Pagination as ShadPagination,
 } from "@/components/ui/pagination-dash";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Fragment, useMemo, useState } from "react";
 
@@ -25,27 +25,31 @@ export function Pagination({ total }: PageProps) {
     );
     const [jumpValue, setJumpValue] = useState("");
 
-    const safeTotal = Math.max(total, 1);
+    const pagination = getPaginationState({ page, totalPages: total });
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= safeTotal) {
+        if (newPage >= 1 && newPage <= pagination.totalPages) {
             void setPage(newPage);
         }
     };
 
     const pagesToRender = useMemo(() => {
-        const pages = new Set<number>([1, safeTotal]);
+        const pages = new Set<number>([1, pagination.totalPages]);
 
         for (
-            let i = Math.max(1, page - MAX_VISIBLE_NEIGHBORS);
-            i <= Math.min(safeTotal, page + MAX_VISIBLE_NEIGHBORS);
+            let i = Math.max(1, pagination.page - MAX_VISIBLE_NEIGHBORS);
+            i <=
+            Math.min(
+                pagination.totalPages,
+                pagination.page + MAX_VISIBLE_NEIGHBORS
+            );
             i++
         ) {
             pages.add(i);
         }
 
         return Array.from(pages).sort((a, b) => a - b);
-    }, [page, safeTotal]);
+    }, [pagination.page, pagination.totalPages]);
 
     const handleJump = () => {
         const target = Number(jumpValue);
@@ -59,15 +63,19 @@ export function Pagination({ total }: PageProps) {
             <ShadPagination className="mx-0 w-full sm:w-auto">
                 <PaginationContent>
                     <PaginationItem>
-                        <PaginationPrevious
+                        <Button
+                            type="button"
+                            variant="ghost"
                             size="sm"
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(page - 1);
-                            }}
-                            disabled={page === 1}
-                        />
+                            onClick={() =>
+                                handlePageChange(pagination.previousPage)
+                            }
+                            disabled={!pagination.canGoPrevious}
+                            aria-label="Go to previous page"
+                        >
+                            <ChevronLeft className="size-4" />
+                            Previous
+                        </Button>
                     </PaginationItem>
 
                     {pagesToRender.map((current, index) => {
@@ -83,46 +91,58 @@ export function Pagination({ total }: PageProps) {
                                 )}
 
                                 <PaginationItem className="hidden sm:inline-block">
-                                    <PaginationLink
+                                    <Button
+                                        type="button"
                                         size="sm"
-                                        href="#"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            handlePageChange(current);
-                                        }}
-                                        isActive={page === current}
-                                        disabled={safeTotal === 1}
+                                        variant={
+                                            pagination.page === current
+                                                ? "outline"
+                                                : "ghost"
+                                        }
+                                        onClick={() =>
+                                            handlePageChange(current)
+                                        }
+                                        aria-current={
+                                            pagination.page === current
+                                                ? "page"
+                                                : undefined
+                                        }
+                                        disabled={pagination.totalPages === 1}
                                     >
                                         {current}
-                                    </PaginationLink>
+                                    </Button>
                                 </PaginationItem>
                             </Fragment>
                         );
                     })}
 
                     <PaginationItem>
-                        <PaginationNext
+                        <Button
+                            type="button"
+                            variant="ghost"
                             size="sm"
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(page + 1);
-                            }}
-                            disabled={page === safeTotal}
-                        />
+                            onClick={() =>
+                                handlePageChange(pagination.nextPage)
+                            }
+                            disabled={!pagination.canGoNext}
+                            aria-label="Go to next page"
+                        >
+                            Next
+                            <ChevronRight className="size-4" />
+                        </Button>
                     </PaginationItem>
                 </PaginationContent>
             </ShadPagination>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>
-                    Page {Math.min(page, safeTotal)} of {safeTotal}
+                    Page {pagination.page} of {pagination.totalPages}
                 </span>
                 <input
                     type="number"
                     inputMode="numeric"
                     min={1}
-                    max={safeTotal}
+                    max={pagination.totalPages}
                     value={jumpValue}
                     onChange={(e) => setJumpValue(e.target.value)}
                     onKeyDown={(e) => {

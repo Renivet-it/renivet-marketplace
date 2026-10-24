@@ -12,9 +12,9 @@ import {
 import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
 import { mediaCache } from "@/lib/redis/methods";
 import {
-    PRODUCT_SLUG_MAX_SUFFIX,
     convertPriceToPaise,
     generateProductSlugCandidate,
+    PRODUCT_SLUG_MAX_SUFFIX,
 } from "@/lib/utils";
 import {
     CreateProduct,
@@ -82,6 +82,10 @@ import {
     SizeChartFilter,
     VariantPriceFilter,
 } from "./product-admin-filters";
+import {
+    getAdminProductSearchPredicate,
+    shouldUseSemanticProductSearch,
+} from "./product-admin-search";
 import {
     buildCatalogMediaPostFilterObservation,
     emitCatalogMediaPostFilterObservation,
@@ -239,9 +243,7 @@ const publicProductBrandIsActiveFilter = sql`EXISTS (
       AND b.is_active = true
 )`;
 
-const isPublicProductVisible = (
-    product: ProductWithBrand | null | undefined
-) =>
+const isPublicProductVisible = (product: ProductWithBrand | null | undefined) =>
     !!product &&
     product.isActive === true &&
     product.isAvailable === true &&
@@ -1212,10 +1214,14 @@ class ProductQuery {
         let isRagSearchActive = false;
 
         // --- Search embedding (semantic) ---
-        if (search?.length) {
+        if (adminList && search?.trim()) {
+            processedSearch = search.trim();
+            searchQuery = getAdminProductSearchPredicate(processedSearch);
+        } else if (shouldUseSemanticProductSearch({ adminList, search })) {
             // Preprocess query for better matching
-            processedSearch = preprocessSearchQuery(search);
-            const normalizedSearch = search.trim().toLowerCase();
+            const semanticSearch = preprocessSearchQuery(search!);
+            processedSearch = semanticSearch;
+            const normalizedSearch = search!.trim().toLowerCase();
             const exactBrand = await db.query.brands.findFirst({
                 columns: {
                     id: true,
@@ -1245,7 +1251,7 @@ class ProductQuery {
                         try {
                             // Generate 384-dim embedding for brand matching (brands still use 384-dim)
                             const searchEmbedding =
-                                await getEmbedding(processedSearch);
+                                await getEmbedding(semanticSearch);
 
                             // 🔍 Detect brand intent
                             const brandResult = await db.execute(sql`
@@ -1287,16 +1293,16 @@ class ProductQuery {
                                 "/search/advanced-rag"
                             );
                             if (!upstreamUrl) return;
-                            upstreamUrl.searchParams.set("query", processedSearch);
-                            upstreamUrl.searchParams.set("limit", "150");
-                            const response = await fetch(
-                                upstreamUrl,
-                                {
-                                    next: { revalidate: 60 },
-                                    redirect: "error",
-                                    signal: AbortSignal.timeout(5000),
-                                }
+                            upstreamUrl.searchParams.set(
+                                "query",
+                                semanticSearch
                             );
+                            upstreamUrl.searchParams.set("limit", "150");
+                            const response = await fetch(upstreamUrl, {
+                                next: { revalidate: 60 },
+                                redirect: "error",
+                                signal: AbortSignal.timeout(5000),
+                            });
 
                             if (response.ok) {
                                 const data = await response.json();
@@ -1314,7 +1320,7 @@ class ProductQuery {
                 );
 
                 searchQuery = getCatalogSearchPredicate({
-                    processedSearch,
+                    processedSearch: semanticSearch,
                     ragProductIds,
                 });
             }
@@ -1738,9 +1744,8 @@ class ProductQuery {
         const enhancedData = data.map((product) => ({
             ...product,
             festivePosition:
-                product.festiveSeasonProducts.find(
-                    (entry) => !entry.isDeleted
-                )?.position ?? null,
+                product.festiveSeasonProducts.find((entry) => !entry.isDeleted)
+                    ?.position ?? null,
             media: product.media.map((m) => ({
                 ...m,
                 mediaItem: mediaMap.get(m.id),
@@ -1750,7 +1755,7 @@ class ProductQuery {
                 : null,
             variants: product.variants.map((v) => ({
                 ...v,
-                mediaItem: v.image ? mediaMap.get(v.image) ?? null : null,
+                mediaItem: v.image ? (mediaMap.get(v.image) ?? null) : null,
             })),
             returnable:
                 ("returnExchangePolicy" in product
@@ -2607,11 +2612,7 @@ class ProductQuery {
             }
 
             let newProduct: typeof products.$inferSelect | undefined;
-            for (
-                let suffix = 1;
-                suffix <= PRODUCT_SLUG_MAX_SUFFIX;
-                suffix++
-            ) {
+            for (let suffix = 1; suffix <= PRODUCT_SLUG_MAX_SUFFIX; suffix++) {
                 const inserted = await tx
                     .insert(products)
                     .values({
@@ -5007,21 +5008,17 @@ class ProductQuery {
                     product.returnExchangePolicy?.exchangeable ?? false,
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
-                specifications: (product.specifications || []).map(
-                    (spec) => ({
-                        key: spec.key,
-                        value: spec.value,
-                    })
-                ),
+                specifications: (product.specifications || []).map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
             },
         }));
 
         // helper: compute min/max price for a product
         const getPriceRange = (product) => {
             const prices = (product.variants || [])
-                .map((v) =>
-                    Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
-                )
+                .map((v) => Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0))
                 .filter((p: number) => !isNaN(p) && p > 0);
             if (!prices.length) return { min: 0, max: 0 };
             return { min: Math.min(...prices), max: Math.max(...prices) };
@@ -5189,9 +5186,10 @@ class ProductQuery {
                     product.returnExchangePolicy?.exchangeable ?? false,
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
-                specifications: (product.specifications || []).map(
-                    (spec) => ({ key: spec.key, value: spec.value })
-                ),
+                specifications: (product.specifications || []).map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
             },
         }));
     }
