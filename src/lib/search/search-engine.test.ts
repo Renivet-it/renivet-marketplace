@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    detectBrandIntent,
     getSearchRedirectUrl,
     isSearchAnalyticsId,
     type SearchResult,
@@ -58,4 +59,32 @@ describe("REN-154 search redirect correlation", () => {
             );
         }
     );
+});
+
+test("a compact brand query redirects without an impossible product keyword", () => {
+    expect(
+        getSearchRedirectUrl(
+            searchResult({
+                intentType: "BRAND",
+                brandName: "Terra Luna",
+                brandSlug: "terra-luna",
+                originalQuery: "terraluna",
+                normalizedQuery: "terraluna",
+            })
+        )
+    ).toBe("/brands/terra-luna/shop");
+});
+
+test("detects a spaced brand name when the shopper omits spaces", async () => {
+    const terraLuna = {
+        id: "terra-luna-id",
+        name: "Terra Luna",
+        slug: "terra-luna",
+    };
+
+    expect(await detectBrandIntent("terraluna", [terraLuna])).toEqual({
+        matched: true,
+        brand: terraLuna,
+        matchType: "exact",
+    });
 });

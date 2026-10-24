@@ -7,7 +7,10 @@ import {
     searchAnalytics,
     searchIntents,
 } from "../db/schema";
-import { getBrandSearchTerms } from "./brand-search-query";
+import {
+    getBrandSearchTerms,
+    normalizeBrandSearchKey,
+} from "./brand-search-query";
 
 /**
  * Search Engine Flow - Phase 1
@@ -129,13 +132,15 @@ export async function detectBrandIntent(
     matchType?: "exact" | "alias" | "partial";
 }> {
     // 1. Exact match check (brand name or slug)
+    const compactQuery = normalizeBrandSearchKey(normalizedQuery);
     for (const brand of brandsData) {
         const brandNameLower = brand.name.toLowerCase();
         const brandSlugLower = brand.slug.toLowerCase();
 
         if (
             normalizedQuery === brandNameLower ||
-            normalizedQuery === brandSlugLower
+            normalizedQuery === brandSlugLower ||
+            compactQuery === normalizeBrandSearchKey(brand.name)
         ) {
             return { matched: true, brand, matchType: "exact" };
         }

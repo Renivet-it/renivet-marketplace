@@ -12,3 +12,9 @@ test("does not add an empty search constraint for a brand-only search", () => {
         getBrandSearchTerms("Bamboology", "Bamboology", "bamboology")
     ).toBeUndefined();
 });
+
+test("treats a brand-only search as equivalent when spaces are omitted", () => {
+    expect(
+        getBrandSearchTerms("terraluna", "Terra Luna", "terra-luna")
+    ).toBeUndefined();
+});
