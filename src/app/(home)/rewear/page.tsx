@@ -172,10 +172,10 @@ export default function RewearPage() {
                         <p className="rewear-hero-kicker text-[9px] font-bold uppercase tracking-[0.2em] text-[#d4aa1d]">
                             Introducing Renivet Rewear
                         </p>
-                        <h1 className="rewear-hero-title mt-4 max-w-[11ch] font-serif text-[2.85rem] leading-[0.9] tracking-[-0.035em] sm:mt-5 sm:text-7xl">
+                        <h1 className="rewear-hero-title mt-4 max-w-[11ch] font-sans text-[2.85rem] leading-[0.9] tracking-[-0.035em] sm:mt-5 sm:text-7xl">
                             Make space for new beginnings.
                         </h1>
-                        <p className="rewear-hero-subtitle mt-5 max-w-md font-serif text-sm italic leading-6 text-[#d9a0a0]">
+                        <p className="rewear-hero-subtitle mt-5 max-w-md font-sans text-sm italic leading-6 text-[#d9a0a0]">
                             This Diwali, start with your wardrobe.
                         </p>
                         <p className="rewear-hero-body mt-3 max-w-md text-xs leading-5 text-[#f4e9d3]/90">
