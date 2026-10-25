@@ -37,77 +37,149 @@
         height: 20px;
     }
 
-    .rewear-page > section:first-of-type {
+    .rewear-hero {
         min-height: 970px;
     }
 
-    .rewear-page > section:first-of-type > div.relative {
+    .rewear-hero-inner {
         min-height: 970px;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto auto auto auto auto;
         align-content: start;
-        justify-items: center;
-        padding: 64px 20px 64px;
+        gap: 0;
+        padding: 62px 20px 72px;
         text-align: center;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:first-child {
-        width: 100%;
-        max-width: 530px;
+    .rewear-hero > span:nth-child(1) {
+        top: 370px;
+        right: auto;
+        left: 20px;
+        background: #d4aa1d;
     }
 
-    .rewear-page > section:first-of-type h1 {
-        font-size: 3rem;
-        line-height: 0.92;
+    .rewear-hero > span:nth-child(2) {
+        top: 415px;
+        right: 10px;
+        left: auto;
+        background: #d9a0a0;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:first-child > p:nth-of-type(2) {
-        margin-top: 1.75rem;
-        font-size: 0;
-        line-height: 1.55;
+    .rewear-hero > span:nth-child(3) {
+        right: auto;
+        bottom: 72px;
+        left: 25px;
+        background: #fbf4dc;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:first-child > p:nth-of-type(2)::after {
-        content: "Give your unworn clothes a next chapter with Renivet. We'll arrange pickup for eligible garments in Bengaluru, track their journey through sorting and processing, and reward you with Karma Points to shop on Renivet.";
-        display: block;
+    .rewear-hero > span:nth-child(4) {
+        right: 16px;
+        bottom: 93px;
+        background: #d4aa1d;
+    }
+
+    .rewear-hero-copy {
+        display: contents;
+    }
+
+    .rewear-hero-kicker {
+        order: 1;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+    }
+
+    .rewear-hero-title {
+        order: 2;
+        max-width: 9.5em;
+        margin: 28px auto 0;
+        font-size: clamp(42px, 9.5vw, 56px);
+        font-weight: 400;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+    }
+
+    .rewear-hero-subtitle {
+        order: 3;
+        margin: 25px auto 0;
+        font-size: 16px;
+        line-height: 1.4;
+    }
+
+    .rewear-hero-body {
+        order: 4;
+        max-width: 540px;
+        margin: 27px auto 0;
         font-size: 18px;
         line-height: 1.55;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:first-child > a {
-        width: 360px;
-        max-width: 100%;
-        padding-block: 1rem;
+    .rewear-hero-cta {
+        order: 5;
+        box-sizing: border-box;
+        width: min(360px, calc(100vw - 80px));
+        margin: 28px auto 0;
+        padding: 22px 20px;
         text-align: center;
+        font-size: 12px;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:first-child > div {
-        justify-content: center;
+    .rewear-hero-gallery {
+        order: 6;
+        width: min(490px, calc(100vw - 64px));
+        margin: 34px auto 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(22px, 7.6vw, 45px);
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) {
-        width: 100%;
-        max-width: 500px;
-        margin-top: 2rem;
-        gap: 1.25rem;
-    }
-
-    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div:nth-child(2) {
+    .rewear-hero-gallery > div:nth-child(2) {
         background-image: url('/assets/rewear/karma.png');
         background-position: center;
         background-size: cover;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div:nth-child(2) img {
+    .rewear-hero-gallery > div:nth-child(2) img {
         opacity: 0;
     }
 
-    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div {
+    .rewear-hero-gallery > div {
         aspect-ratio: 0.91;
         border-width: 10px;
         border-bottom-width: 30px;
     }
 
+    .rewear-hero-gallery > div:nth-child(n+3) {
+        display: none;
+    }
+
+    .rewear-hero-badges {
+        order: 7;
+        display: grid;
+        width: min(500px, calc(100vw - 40px));
+        margin: 42px auto 0;
+        grid-template-columns: 1.05fr 1fr 1.3fr;
+        gap: 12px;
+    }
+
+    .rewear-hero-badges span {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 11px 8px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .rewear-hero-arrow {
+        bottom: 11px;
+        transform: translateX(-50%);
+        font-size: 38px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
