@@ -142,7 +142,7 @@
     }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 640px) {
     .rewear-hero-cta {
         min-width: 420px;
         min-height: 76px;
