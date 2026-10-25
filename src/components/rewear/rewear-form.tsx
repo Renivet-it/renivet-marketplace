@@ -56,7 +56,7 @@ export function RewearPickupForm() {
     }
 
     return (
-        <form id="pickup-form" onSubmit={submit} className="space-y-8 border-2 border-t-0 border-[#63303c] px-8 py-9 sm:px-9 lg:px-10 lg:py-10">
+        <form onSubmit={submit} className="space-y-8 border-2 border-t-0 border-[#63303c] px-8 py-9 sm:px-9 lg:px-10 lg:py-10">
             <div className="grid gap-7 md:grid-cols-2 md:gap-x-7">
                 <label className={labelClass}>
                     Full name *
