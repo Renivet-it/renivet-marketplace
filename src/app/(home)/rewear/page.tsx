@@ -118,7 +118,7 @@ function HeroScallop() {
     return (
         <div
             aria-hidden="true"
-            className="relative z-10 hidden h-4 overflow-visible bg-[#d79698] lg:block"
+            className="relative z-10 hidden h-4 overflow-visible bg-[#d79698] md:block"
         >
             <div className="absolute inset-x-0 top-0 flex h-7 min-w-max">
                 {Array.from({ length: 16 }).map((_, index) => (
