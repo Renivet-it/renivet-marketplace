@@ -158,8 +158,18 @@
 }
 
 @media (max-width: 639px) {
+    #how-it-works {
+        padding-top: 48px;
+        padding-bottom: 32px;
+    }
+
+    #pickup-form {
+        padding-top: 48px;
+        padding-bottom: 32px;
+    }
+
     .rewear-final-stripe {
-        margin-top: 50px;
+        margin-top: 0;
         height: 34px;
     }
 
