@@ -336,7 +336,7 @@ export default function RewearPage() {
                 </div>
             </section>
             <section id="how-it-works" className="px-6 py-20 sm:px-12 lg:px-20">
-                <div className="mx-auto max-w-5xl">
+                <div className="mx-auto max-w-[1240px]">
                     <p className="text-2xl italic text-[#b77b72]">
                         6 simple steps
                     </p>
@@ -346,7 +346,7 @@ export default function RewearPage() {
                     <p className="mt-4 max-w-sm text-xs leading-5 text-[#765c5e]">
                         6 simple steps to a clutter-free wardrobe this Diwali.
                     </p>
-                    <div className="relative mt-10 grid gap-3 md:mt-12 md:grid-cols-2 md:gap-x-16 md:gap-y-8">
+                    <div className="relative mt-10 grid gap-3 md:mt-12 md:grid-cols-2 md:gap-x-[76px] md:gap-y-8">
                         <div className="absolute bottom-0 left-4 top-0 w-px bg-[#a9988c] md:left-1/2 md:-translate-x-1/2" />
                         {steps.map(([title, copy], index) => {
                             const even = index % 2 === 0;
