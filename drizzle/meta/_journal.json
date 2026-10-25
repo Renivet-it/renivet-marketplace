@@ -1870,6 +1870,13 @@
       "when": 1792498777996,
       "tag": "0293_creator_coupon_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 267,
+      "version": "7",
+      "when": 1792935848800,
+      "tag": "0294_rewear_pickup_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,7 @@ import {
     productTypesRouter,
     ReasonRouter,
     returnReplaceRouter,
+    rewearRouter,
     rolesRouter,
     searchRouter,
     subCategoriesRouter,
@@ -105,6 +106,7 @@ export const appRouter = createTRPCRouter({
         capiLogs: capiLogsRouter,
         decodex: decodeXRouter,
         whatsappNotifications: whatsappNotificationsRouter,
+        rewear: rewearRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,

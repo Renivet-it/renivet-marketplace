@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes rewear-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rewear-ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.rewear-page > section { animation: rewear-rise 700ms ease both; }
+.rewear-page > section:nth-of-type(2) { animation-delay: 100ms; }
+.rewear-page > section:nth-of-type(3) { animation-delay: 180ms; }
+.rewear-page > section:nth-of-type(4) { animation-delay: 260ms; }
+.rewear-page a, .rewear-page button { transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.rewear-page a:hover, .rewear-page button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgb(99 48 60 / 16%); }
+.rewear-page .rewear-ticker-track { animation: rewear-ticker 22s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .rewear-page > section, .rewear-page .rewear-ticker-track { animation: none; }
+    .rewear-page a, .rewear-page button { transition: none; }
+}
+
 @keyframes pdp-gallery-fade {
     from {
         opacity: 0;

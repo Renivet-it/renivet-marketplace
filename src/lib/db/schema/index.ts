@@ -24,6 +24,7 @@ export * from "./order-shipment";
 export * from "./plan";
 export * from "./product";
 export * from "./refund";
+export * from "./rewear-pickup-request";
 export * from "./role";
 export * from "./tag";
 export * from "./ticket";
