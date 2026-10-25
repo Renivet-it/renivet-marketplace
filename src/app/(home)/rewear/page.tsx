@@ -360,12 +360,12 @@ export default function RewearPage() {
                                     >
                                         <span
                                             aria-hidden="true"
-                                            className={`absolute top-5 h-[3px] w-9 bg-[#d4aa1d] ${even ? "right-5" : "left-5"}`}
+                                            className={`absolute top-5 h-[3px] w-9 bg-[#d4aa1d] md:top-7 md:h-1 md:w-16 ${even ? "right-5 md:right-7" : "left-5 md:left-7"}`}
                                         />
-                                        <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-base">
+                                        <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-2xl">
                                             {title}
                                         </h3>
-                                        <p className="mt-2 max-w-[600px] text-[10px] leading-4 text-[#765c5e] md:text-xs md:leading-5">
+                                        <p className="mt-2 max-w-[600px] text-[10px] leading-4 text-[#765c5e] md:text-lg md:leading-7">
                                             {copy}
                                         </p>
                                     </div>
@@ -374,7 +374,7 @@ export default function RewearPage() {
                                         alt={`Rewear step ${index + 1}: ${title}`}
                                         className={`${even ? "md:col-start-2 md:order-2 md:justify-self-start" : "md:col-start-1 md:order-1 md:justify-self-end"} row-start-1 hidden h-[220px] w-[300px] sm:block`}
                                     />
-                                    <span className="absolute left-0 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-[8px] font-bold md:left-1/2 md:size-7 md:-translate-x-1/2 md:text-[10px]">
+                                    <span className="absolute left-0 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-[8px] font-bold md:left-1/2 md:size-20 md:-translate-x-1/2 md:text-2xl">
                                         {String(index + 1).padStart(2, "0")}
                                     </span>
                                 </article>
