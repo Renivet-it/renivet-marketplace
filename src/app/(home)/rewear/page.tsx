@@ -356,7 +356,7 @@ export default function RewearPage() {
                                     className="relative grid gap-3 pl-[42px] md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
                                 >
                                     <div
-                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex min-h-0 flex-col justify-start border-2 border-[#63303c] bg-[#fffaf0] px-4 pb-5 pt-8 md:justify-center md:px-5 md:py-5`}
+                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex h-[116px] w-[290px] min-h-0 flex-col justify-start border-2 border-[#63303c] bg-[#fffaf0] px-4 pb-5 pt-8 md:h-auto md:w-auto md:justify-center md:px-5 md:py-5`}
                                     >
                                         <span
                                             aria-hidden="true"
