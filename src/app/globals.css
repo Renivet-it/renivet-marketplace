@@ -13,6 +13,11 @@
 }
 
 .rewear-page > section { animation: rewear-rise 700ms ease both; }
+.rewear-page .rewear-display-font {
+    font-family: Impact, "Arial Narrow", sans-serif !important;
+    font-weight: 400 !important;
+    font-stretch: condensed;
+}
 .rewear-page > section:nth-of-type(2) { animation-delay: 100ms; }
 .rewear-page > section:nth-of-type(3) { animation-delay: 180ms; }
 .rewear-page > section:nth-of-type(4) { animation-delay: 260ms; }
