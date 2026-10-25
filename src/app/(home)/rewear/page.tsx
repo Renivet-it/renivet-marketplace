@@ -263,19 +263,33 @@ export default function RewearPage() {
                 </p>
             </section>
             <Ticker />
-            <section className="grid lg:grid-cols-2">
-                <AssetPlaceholder
-                    label="Rewear chair image"
-                    className="min-h-[360px] lg:min-h-[460px]"
-                />
-                <div className="flex flex-col justify-center bg-[#63303c] px-8 py-16 text-[#fbf4dc] sm:px-16">
-                    <p className="text-2xl italic text-[#d4aa1d]">
+            <section className="rewear-about-section">
+                <div className="rewear-about-media">
+                    <Image
+                        src="/assets/rewear/about-chair.png"
+                        alt="A chair with clothes ready for a new purpose"
+                        fill
+                        sizes="(min-width: 1024px) 43vw, 100vw"
+                        className="rewear-about-image rewear-about-chair"
+                    />
+                    <Image
+                        src="/assets/rewear/about-clothes.png"
+                        alt="Folded and worn clothes ready to be reused"
+                        fill
+                        sizes="(min-width: 1024px) 43vw, 100vw"
+                        className="rewear-about-image rewear-about-clothes"
+                    />
+                </div>
+                <div className="rewear-about-copy bg-[#63303c] text-[#fbf4dc]">
+                    <p className="rewear-about-eyebrow italic text-[#d4aa1d]">
                         a new purpose
                     </p>
-                    <h2 className="mt-2 max-w-sm text-4xl font-extrabold uppercase leading-[0.92] tracking-[-0.05em]">
-                        What Renivet Rewear is
+                    <h2 className="rewear-about-title font-extrabold uppercase">
+                        What Renivet
+                        <br />
+                        Rewear is
                     </h2>
-                    <p className="mt-5 max-w-md text-xs leading-6 text-[#f4e9d3]/80">
+                    <p className="rewear-about-body text-[#f4e9d3]/90">
                         Renivet Rewear is our initiative to help you declutter
                         your wardrobe and give eligible garments a new purpose.
                         We collect your clothes, coordinate their sorting and
@@ -284,7 +298,7 @@ export default function RewearPage() {
                     </p>
                     <a
                         href="#how-it-works"
-                        className="mt-6 w-fit border border-[#fbf4dc] px-6 py-3 text-[9px] font-bold uppercase tracking-[0.12em] text-[#fbf4dc]"
+                        className="rewear-about-button border border-[#fbf4dc] font-bold uppercase tracking-[0.12em] text-[#fbf4dc]"
                     >
                         See how it works <span className="ml-2">→</span>
                     </a>
