@@ -142,6 +142,21 @@
     }
 }
 
+@media (min-width: 1024px) {
+    .rewear-hero-cta {
+        min-width: 420px;
+        min-height: 76px;
+        padding: 22px 36px;
+        font-size: 14px;
+    }
+
+    .rewear-hero-badges span {
+        min-height: 56px;
+        padding-inline: 30px;
+        font-size: 11px;
+    }
+}
+
 @media (max-width: 639px) {
     .rewear-page > div:first-child {
         height: min(68px, 11.52vw);
