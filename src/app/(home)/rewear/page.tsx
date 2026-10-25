@@ -25,7 +25,7 @@ function Ticker() {
 }
 
 function HeroScallop() {
-    return <div aria-hidden="true" className="relative z-10 h-4 overflow-hidden bg-[#d79698]"><div className="absolute inset-x-0 top-0 flex h-7 min-w-max">{Array.from({ length: 16 }).map((_, index) => <Image key={index} src="/assets/rewear/ellipse.png" alt="" width={166} height={29} className="h-7 w-[166px] shrink-0" />)}</div></div>;
+    return <div aria-hidden="true" className="relative z-10 h-4 overflow-visible bg-[#d79698]"><div className="absolute inset-x-0 top-0 flex h-7 min-w-max">{Array.from({ length: 16 }).map((_, index) => <Image key={index} src="/assets/rewear/ellipse.png" alt="" width={166} height={29} className="h-7 w-[166px] shrink-0" />)}</div></div>;
 }
 
 const steps = [["SIGN UP FOR A PICKUP", "Fill out our quick form to get started."], ["TELL US HOW MANY CLOTHES YOU HAVE", "Share an approximate count of the clothes you want to give away."], ["WE'LL ARRANGE YOUR PICKUP", "Our team will contact you to confirm your location and pickup details."], ["LOG IN TO RENIVET", "Visit your account to see how Rewear updates."], ["SEE WHAT HAPPENS TO YOUR CLOTHES", "Find out how many clothes sent for upcycling or recycling are sorted and processed."], ["EARN KARMA POINTS", "Get Karma Points for eligible clothes and use them to shop on Renivet."]] as const;
