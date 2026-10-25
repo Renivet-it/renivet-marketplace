@@ -157,6 +157,23 @@
     }
 }
 
+@media (min-width: 640px) and (max-width: 1023px) {
+    .rewear-hero-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: auto;
+        margin-left: auto;
+    }
+
+    .rewear-hero-badges {
+        width: fit-content;
+        justify-content: center;
+        margin-right: auto;
+        margin-left: auto;
+    }
+}
+
 @media (max-width: 639px) {
     #how-it-works {
         padding-top: 48px;
