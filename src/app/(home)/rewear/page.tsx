@@ -413,13 +413,13 @@ export default function RewearPage() {
                     </div>
                 </div>
             </section>
-            <div className="h-9 bg-[repeating-linear-gradient(90deg,#d4aa1d_0_24px,transparent_24px_47px)]" />
-            <section className="px-6 pb-16 pt-16 sm:px-12 sm:pb-20 sm:pt-20 lg:px-[65px] lg:pb-[70px] lg:pt-[92px]">
-                <div className="mx-auto max-w-[1388px] border-b border-[#63303c] pb-8">
-                    <p className="text-5xl font-extrabold uppercase leading-[0.9] tracking-[-0.05em] sm:text-[68px]">
+            <div className="rewear-final-stripe h-9 bg-[repeating-linear-gradient(90deg,#d4aa1d_0_24px,transparent_24px_47px)]" />
+            <section className="rewear-final-section px-6 pb-16 pt-16 sm:px-12 sm:pb-20 sm:pt-20 lg:px-[65px] lg:pb-[70px] lg:pt-[92px]">
+                <div className="rewear-final-content mx-auto max-w-[1388px] border-b border-[#63303c] pb-8">
+                    <p className="rewear-display-font text-5xl uppercase leading-[0.9] tracking-[-0.035em] sm:text-[68px]">
                         You clear your closet.
                     </p>
-                    <h2 className="mt-4 max-w-none text-5xl font-extrabold uppercase leading-[0.9] tracking-[-0.05em] text-[#a96460] sm:text-[68px]">
+                    <h2 className="rewear-display-font mt-4 max-w-none text-5xl uppercase leading-[0.9] tracking-[-0.035em] text-[#a96460] sm:text-[68px]">
                         We help your clothes find their next chapter.
                     </h2>
                     <p className="mt-5 max-w-[980px] text-xl italic leading-[1.65] text-[#765c5e] sm:text-[22px]">
@@ -427,11 +427,11 @@ export default function RewearPage() {
                         space before Diwali. We&apos;ll help you take it from
                         there.
                     </p>
-                    <WhatsAppCta className="mt-5 w-full max-w-[306px] py-4 text-center">
+                    <WhatsAppCta className="rewear-final-cta mt-5 w-full max-w-[306px] py-4 text-center">
                         Start your closet detox
                     </WhatsAppCta>
                 </div>
-                <p className="mx-auto mt-5 max-w-[1388px] text-xs text-[#8c7770]">
+                <p className="rewear-final-availability mx-auto mt-5 max-w-[1388px] text-xs text-[#8c7770]">
                     Currently available in serviceable areas of Bengaluru.
                     Garment eligibility and rewards are subject to programme
                     terms.
