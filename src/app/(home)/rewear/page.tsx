@@ -353,7 +353,7 @@ export default function RewearPage() {
                             return (
                                 <article
                                     key={title}
-                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-16 md:gap-y-5 md:pl-0"
+                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-5 md:pl-0"
                                 >
                                     <div
                                         className={`${even ? "md:col-start-1 md:pr-10" : "md:col-start-2 md:pl-10"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4`}
