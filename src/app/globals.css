@@ -22,7 +22,7 @@
 
 @media (max-width: 639px) {
     .rewear-page > div:first-child {
-        height: 52px;
+        height: min(68px, 11.52vw);
         justify-content: center;
     }
 
@@ -33,49 +33,49 @@
     }
 
     .rewear-page > div:first-child > span:nth-child(2) svg {
-        width: 96px;
-        height: 20px;
+        width: min(96px, 16.27vw);
+        height: min(20px, 3.39vw);
     }
 
     .rewear-hero {
-        min-height: 970px;
+        min-height: min(970px, 164.41vw);
     }
 
     .rewear-hero-inner {
-        min-height: 970px;
+        min-height: min(970px, 164.41vw);
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto auto auto auto auto auto auto;
         align-content: start;
         gap: 0;
-        padding: 62px 20px 72px;
+        padding: min(62px, 10.51vw) 20px min(72px, 12.2vw);
         text-align: center;
     }
 
     .rewear-hero > span:nth-child(1) {
-        top: 370px;
+        top: min(370px, 62.71vw);
         right: auto;
-        left: 20px;
+        left: min(20px, 3.39vw);
         background: #d4aa1d;
     }
 
     .rewear-hero > span:nth-child(2) {
-        top: 415px;
-        right: 10px;
+        top: min(415px, 70.34vw);
+        right: min(10px, 1.69vw);
         left: auto;
         background: #d9a0a0;
     }
 
     .rewear-hero > span:nth-child(3) {
         right: auto;
-        bottom: 72px;
-        left: 25px;
+        bottom: min(72px, 12.2vw);
+        left: min(25px, 4.24vw);
         background: #fbf4dc;
     }
 
     .rewear-hero > span:nth-child(4) {
-        right: 16px;
-        bottom: 93px;
+        right: min(16px, 2.71vw);
+        bottom: min(93px, 15.76vw);
         background: #d4aa1d;
     }
 
@@ -85,15 +85,15 @@
 
     .rewear-hero-kicker {
         order: 1;
-        font-size: 10px;
+        font-size: clamp(7px, 1.7vw, 10px);
         letter-spacing: 0.2em;
     }
 
     .rewear-hero-title {
         order: 2;
         max-width: 9.5em;
-        margin: 28px auto 0;
-        font-size: clamp(42px, 9.5vw, 56px);
+        margin: min(28px, 4.75vw) auto 0;
+        font-size: clamp(31px, 9vw, 53px);
         font-weight: 400;
         line-height: 0.98;
         letter-spacing: -0.035em;
@@ -101,35 +101,36 @@
 
     .rewear-hero-subtitle {
         order: 3;
-        margin: 25px auto 0;
-        font-size: 16px;
+        margin: min(25px, 4.24vw) auto 0;
+        font-size: clamp(10px, 2.71vw, 16px);
         line-height: 1.4;
     }
 
     .rewear-hero-body {
         order: 4;
+        width: calc(100vw - 40px);
         max-width: 540px;
-        margin: 27px auto 0;
-        font-size: 18px;
+        margin: min(27px, 4.58vw) auto 0;
+        font-size: clamp(11px, 3.05vw, 18px);
         line-height: 1.55;
     }
 
     .rewear-hero-cta {
         order: 5;
         box-sizing: border-box;
-        width: min(360px, calc(100vw - 80px));
-        margin: 28px auto 0;
-        padding: 22px 20px;
+        width: min(360px, 61.02vw);
+        margin: min(28px, 4.75vw) auto 0;
+        padding: min(26px, 4.41vw) 12px;
         text-align: center;
-        font-size: 12px;
+        font-size: clamp(8px, 2.03vw, 12px);
     }
 
     .rewear-hero-gallery {
         order: 6;
-        width: min(490px, calc(100vw - 64px));
-        margin: 34px auto 0;
+        width: min(486px, 82.37vw);
+        margin: min(34px, 5.76vw) auto 0;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: clamp(22px, 7.6vw, 45px);
+        gap: min(45px, 7.46vw);
     }
 
     .rewear-hero-gallery > div:nth-child(2) {
@@ -145,7 +146,7 @@
     .rewear-hero-gallery > div {
         aspect-ratio: 0.91;
         border-width: 10px;
-        border-bottom-width: 30px;
+        border-bottom-width: min(30px, 6.78vw);
     }
 
     .rewear-hero-gallery > div:nth-child(n+3) {
@@ -155,10 +156,10 @@
     .rewear-hero-badges {
         order: 7;
         display: grid;
-        width: min(500px, calc(100vw - 40px));
-        margin: 42px auto 0;
+        width: min(500px, 85vw);
+        margin: min(42px, 7.12vw) auto 0;
         grid-template-columns: 1.05fr 1fr 1.3fr;
-        gap: 12px;
+        gap: min(12px, 2.03vw);
     }
 
     .rewear-hero-badges span {
@@ -167,8 +168,8 @@
         align-items: center;
         justify-content: center;
         border-radius: 999px;
-        padding: 11px 8px;
-        font-size: 8px;
+        padding: min(11px, 1.86vw) 5px;
+        font-size: clamp(7px, 1.36vw, 8px);
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -176,9 +177,9 @@
     }
 
     .rewear-hero-arrow {
-        bottom: 11px;
+        bottom: min(11px, 1.86vw);
         transform: translateX(-50%);
-        font-size: 38px;
+        font-size: min(38px, 6.44vw);
     }
 }
 
