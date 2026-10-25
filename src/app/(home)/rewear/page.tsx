@@ -353,19 +353,19 @@ export default function RewearPage() {
                             return (
                                 <article
                                     key={title}
-                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
+                                    className="relative grid gap-3 pl-[42px] md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
                                 >
                                     <div
-                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex min-h-0 flex-col justify-center border-2 border-[#63303c] bg-[#fffaf0] px-4 py-4 md:px-5 md:py-5`}
+                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex min-h-0 flex-col justify-start border-2 border-[#63303c] bg-[#fffaf0] px-4 pb-5 pt-8 md:justify-center md:px-5 md:py-5`}
                                     >
                                         <span
                                             aria-hidden="true"
-                                            className={`absolute top-5 h-[3px] w-9 bg-[#d4aa1d] md:top-7 md:h-1 md:w-16 ${even ? "right-5 md:right-7" : "left-5 md:left-7"}`}
+                                            className={`absolute left-5 top-3 h-[3px] w-9 bg-[#d4aa1d] md:top-7 md:h-1 md:w-16 ${even ? "md:left-auto md:right-7" : "md:left-7"}`}
                                         />
-                                        <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-2xl">
+                                        <h3 className="text-sm font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-2xl">
                                             {title}
                                         </h3>
-                                        <p className="mt-2 max-w-[600px] text-[10px] leading-4 text-[#765c5e] md:text-lg md:leading-7">
+                                        <p className="mt-2 max-w-[600px] text-xs leading-5 text-[#765c5e] md:text-lg md:leading-7">
                                             {copy}
                                         </p>
                                     </div>
@@ -374,7 +374,7 @@ export default function RewearPage() {
                                         alt={`Rewear step ${index + 1}: ${title}`}
                                         className={`${even ? "md:col-start-2 md:order-2 md:justify-self-start" : "md:col-start-1 md:order-1 md:justify-self-end"} row-start-1 hidden h-[220px] w-[300px] sm:block`}
                                     />
-                                    <span className="absolute left-0 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-[8px] font-bold md:left-1/2 md:size-20 md:-translate-x-1/2 md:text-2xl">
+                                    <span className="absolute left-0 top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-xs font-bold md:left-1/2 md:size-20 md:-translate-x-1/2 md:text-2xl">
                                         {String(index + 1).padStart(2, "0")}
                                     </span>
                                 </article>
