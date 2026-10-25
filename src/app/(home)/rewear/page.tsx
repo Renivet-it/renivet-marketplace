@@ -337,13 +337,13 @@ export default function RewearPage() {
             </section>
             <section id="how-it-works" className="px-6 py-20 sm:px-12 lg:px-20">
                 <div className="mx-auto max-w-[1240px]">
-                    <p className="text-2xl italic text-[#b77b72]">
+                    <p className="text-2xl italic text-[#b77b72] sm:text-3xl">
                         6 simple steps
                     </p>
-                    <h2 className="mt-1 text-4xl font-extrabold uppercase leading-[0.92] tracking-[-0.05em] sm:text-6xl">
+                    <h2 className="mt-1 text-4xl font-extrabold uppercase leading-[0.92] tracking-[-0.05em] sm:text-7xl">
                         How it works
                     </h2>
-                    <p className="mt-4 max-w-sm text-xs leading-5 text-[#765c5e]">
+                    <p className="mt-4 max-w-sm text-xs leading-5 text-[#765c5e] sm:text-sm sm:leading-6">
                         6 simple steps to a clutter-free wardrobe this Diwali.
                     </p>
                     <div className="relative mt-10 grid gap-3 md:mt-12 md:grid-cols-2 md:gap-x-[76px] md:gap-y-8">
@@ -356,12 +356,12 @@ export default function RewearPage() {
                                     className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-5 md:pl-0"
                                 >
                                     <div
-                                        className={`${even ? "md:col-start-1 md:pr-10" : "md:col-start-2 md:pl-10"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4`}
+                                        className={`${even ? "md:col-start-1 md:pr-10" : "md:col-start-2 md:pl-10"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4 md:px-5 md:py-5`}
                                     >
-                                        <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm">
+                                        <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-base">
                                             {title}
                                         </h3>
-                                        <p className="mt-2 text-[10px] leading-4 text-[#765c5e]">
+                                        <p className="mt-2 text-[10px] leading-4 text-[#765c5e] md:text-xs md:leading-5">
                                             {copy}
                                         </p>
                                     </div>
