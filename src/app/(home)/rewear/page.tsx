@@ -75,7 +75,7 @@ function WhatsAppCta({
 
 function Ticker() {
     return (
-        <div className="overflow-hidden border-y border-[#b28a17] bg-[#63303c] py-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#f8efc7]">
+        <div className="rewear-ticker overflow-hidden border-y border-[#b28a17] bg-[#63303c] py-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#f8efc7]">
             <div className="rewear-ticker-track flex min-w-max gap-8 whitespace-nowrap">
                 {Array.from({ length: 2 }).map((_, index) => (
                     <span key={index}>
@@ -240,24 +240,24 @@ export default function RewearPage() {
                     ↓
                 </a>
             </section>
-            <section className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
-                <p className="text-2xl italic text-[#b77b72]">
+            <section className="rewear-next-section px-6 text-center">
+                <p className="rewear-next-kicker italic text-[#b77b72]">
                     Simple to start.
                 </p>
-                <h2 className="mt-1 text-4xl font-extrabold uppercase leading-[0.92] tracking-[-0.05em] sm:text-6xl">
+                <h2 className="rewear-next-title font-extrabold uppercase tracking-[-0.05em]">
                     Clear about
                     <br />
                     what happens next.
                 </h2>
-                <p className="mx-auto mt-5 max-w-xl text-[11px] leading-5 text-[#765c5e]">
+                <p className="rewear-next-copy mx-auto text-[#765c5e]">
                     Give your unworn clothes a next chapter with Renivet.
                     We&apos;ll arrange pickup for eligible garments in
                     Bengaluru, track their journey through sorting and
                     processing, and reward you with Karma Points to shop on
                     Renivet.
                 </p>
-                <WhatsAppCta dark />
-                <p className="mt-6 text-[8px] font-bold uppercase tracking-[0.12em] text-[#8c7770]">
+                <WhatsAppCta dark className="rewear-next-cta" />
+                <p className="rewear-next-availability font-bold uppercase tracking-[0.12em] text-[#8c7770]">
                     <span className="mr-2 text-[#d4aa1d]">■</span> Currently
                     available in Bengaluru.
                 </p>
