@@ -52,6 +52,28 @@ function RewearPhoto({
     );
 }
 
+function RewearStepPhoto({
+    src,
+    alt,
+    className = "",
+}: {
+    src: string;
+    alt: string;
+    className?: string;
+}) {
+    return (
+        <div className={`relative overflow-hidden ${className}`}>
+            <Image
+                src={src}
+                alt={alt}
+                fill
+                sizes="(min-width: 1024px) 28vw, 100vw"
+                className="object-cover"
+            />
+        </div>
+    );
+}
+
 function WhatsAppCta({
     dark = false,
     children = "Request a pickup",
@@ -133,6 +155,15 @@ const steps = [
         "EARN KARMA POINTS",
         "Get Karma Points for eligible clothes and use them to shop on Renivet.",
     ],
+] as const;
+
+const stepImages = [
+    "/assets/rewear/step-1.png",
+    "/assets/rewear/step-2.png",
+    "/assets/rewear/step-3.png",
+    "/assets/rewear/step-4.png",
+    "/assets/rewear/step-5.png",
+    "/assets/rewear/step-6.png",
 ] as const;
 
 export default function RewearPage() {
@@ -322,14 +353,10 @@ export default function RewearPage() {
                             return (
                                 <article
                                     key={title}
-                                    className={`relative flex flex-col gap-3 pl-9 md:gap-5 md:pl-0 ${even ? "md:pr-10" : "md:col-start-2 md:pl-10"}`}
+                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-16 md:gap-y-5 md:pl-0"
                                 >
-                                    <AssetPlaceholder
-                                        label={`Step ${index + 1} image`}
-                                        className={`${even ? "md:order-2" : "md:order-1"} hidden aspect-[1.45] sm:flex`}
-                                    />
                                     <div
-                                        className={`${even ? "md:order-1" : "md:order-2"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4`}
+                                        className={`${even ? "md:col-start-1 md:pr-10" : "md:col-start-2 md:pl-10"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4`}
                                     >
                                         <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm">
                                             {title}
@@ -338,6 +365,11 @@ export default function RewearPage() {
                                             {copy}
                                         </p>
                                     </div>
+                                    <RewearStepPhoto
+                                        src={stepImages[index]}
+                                        alt={`Rewear step ${index + 1}: ${title}`}
+                                        className={`${even ? "md:col-start-2 md:order-2" : "md:col-start-1 md:order-1"} hidden aspect-[1.45] sm:block`}
+                                    />
                                     <span className="absolute left-0 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-[8px] font-bold md:left-1/2 md:size-7 md:-translate-x-1/2 md:text-[10px]">
                                         {String(index + 1).padStart(2, "0")}
                                     </span>
