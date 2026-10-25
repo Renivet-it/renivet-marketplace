@@ -353,7 +353,7 @@ export default function RewearPage() {
                             return (
                                 <article
                                     key={title}
-                                    className="relative grid gap-3 pl-[clamp(42px,13.33vw,78px)] md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
+                                    className="relative grid gap-3 pl-[clamp(42px,12.1vw,71px)] md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
                                 >
                                     <div
                                         className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex h-[clamp(116px,29.74vw,174px)] w-[clamp(290px,74.36vw,435px)] min-h-0 flex-col justify-start border-2 border-[#63303c] bg-[#fffaf0] px-[clamp(16px,5.13vw,30px)] pb-5 pt-[clamp(28px,4.8vw,28px)] md:h-auto md:w-auto md:justify-center md:px-5 md:py-5`}
