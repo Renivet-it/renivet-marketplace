@@ -20,6 +20,96 @@
 .rewear-page a:hover, .rewear-page button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgb(99 48 60 / 16%); }
 .rewear-page .rewear-ticker-track { animation: rewear-ticker 22s linear infinite; }
 
+@media (max-width: 639px) {
+    .rewear-page > div:first-child {
+        height: 52px;
+        justify-content: center;
+    }
+
+    .rewear-page > div:first-child > span:first-child,
+    .rewear-page > div:first-child > span:nth-child(3),
+    .rewear-page > div:first-child > span:last-child {
+        display: none;
+    }
+
+    .rewear-page > div:first-child > span:nth-child(2) svg {
+        width: 96px;
+        height: 20px;
+    }
+
+    .rewear-page > section:first-of-type {
+        min-height: 970px;
+    }
+
+    .rewear-page > section:first-of-type > div.relative {
+        min-height: 970px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-content: start;
+        justify-items: center;
+        padding: 64px 20px 64px;
+        text-align: center;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:first-child {
+        width: 100%;
+        max-width: 530px;
+    }
+
+    .rewear-page > section:first-of-type h1 {
+        font-size: 3rem;
+        line-height: 0.92;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:first-child > p:nth-of-type(2) {
+        margin-top: 1.75rem;
+        font-size: 0;
+        line-height: 1.55;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:first-child > p:nth-of-type(2)::after {
+        content: "Give your unworn clothes a next chapter with Renivet. We'll arrange pickup for eligible garments in Bengaluru, track their journey through sorting and processing, and reward you with Karma Points to shop on Renivet.";
+        display: block;
+        font-size: 18px;
+        line-height: 1.55;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:first-child > a {
+        width: 360px;
+        max-width: 100%;
+        padding-block: 1rem;
+        text-align: center;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:first-child > div {
+        justify-content: center;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) {
+        width: 100%;
+        max-width: 500px;
+        margin-top: 2rem;
+        gap: 1.25rem;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div:nth-child(2) {
+        background-image: url('/assets/rewear/karma.png');
+        background-position: center;
+        background-size: cover;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div:nth-child(2) img {
+        opacity: 0;
+    }
+
+    .rewear-page > section:first-of-type > div.relative > div:nth-child(2) > div {
+        aspect-ratio: 0.91;
+        border-width: 10px;
+        border-bottom-width: 30px;
+    }
+
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rewear-page > section, .rewear-page .rewear-ticker-track { animation: none; }
     .rewear-page a, .rewear-page button { transition: none; }
