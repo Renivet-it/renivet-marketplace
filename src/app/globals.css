@@ -96,7 +96,6 @@
     flex-direction: column;
     justify-content: center;
     padding: clamp(40px, 4.15vw, 85px);
-    transform: translateY(18px);
 }
 
 .rewear-about-eyebrow {
