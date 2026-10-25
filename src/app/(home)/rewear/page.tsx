@@ -336,7 +336,7 @@ export default function RewearPage() {
                 </div>
             </section>
             <section id="how-it-works" className="px-6 py-20 sm:px-12 lg:px-20">
-                <div className="mx-auto max-w-[1240px]">
+                <div className="mx-auto">
                     <p className="text-2xl italic text-[#b77b72] sm:text-3xl">
                         6 simple steps
                     </p>
@@ -346,29 +346,29 @@ export default function RewearPage() {
                     <p className="mt-4 max-w-sm text-xs leading-5 text-[#765c5e] sm:text-sm sm:leading-6">
                         6 simple steps to a clutter-free wardrobe this Diwali.
                     </p>
-                    <div className="relative mt-10 grid gap-3 md:mt-12 md:grid-cols-2 md:gap-x-[76px] md:gap-y-8">
+                    <div className="relative mx-auto mt-10 grid w-full max-w-[1648px] gap-3 md:mt-12 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-8">
                         <div className="absolute bottom-0 left-4 top-0 w-px bg-[#a9988c] md:left-1/2 md:-translate-x-1/2" />
                         {steps.map(([title, copy], index) => {
                             const even = index % 2 === 0;
                             return (
                                 <article
                                     key={title}
-                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-5 md:pl-0"
+                                    className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
                                 >
                                     <div
-                                        className={`${even ? "md:col-start-1 md:pr-10" : "md:col-start-2 md:pl-10"} border border-[#9b6870] bg-[#fbf4dc] px-4 py-4 md:px-5 md:py-5`}
+                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} row-start-1 flex min-h-0 flex-col justify-center border border-[#9b6870] bg-[#fbf4dc] px-4 py-4 md:px-5 md:py-5`}
                                     >
                                         <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-base">
                                             {title}
                                         </h3>
-                                        <p className="mt-2 text-[10px] leading-4 text-[#765c5e] md:text-xs md:leading-5">
+                                        <p className="mt-2 max-w-[600px] text-[10px] leading-4 text-[#765c5e] md:text-xs md:leading-5">
                                             {copy}
                                         </p>
                                     </div>
                                     <RewearStepPhoto
                                         src={stepImages[index]}
                                         alt={`Rewear step ${index + 1}: ${title}`}
-                                        className={`${even ? "md:col-start-2 md:order-2" : "md:col-start-1 md:order-1"} hidden aspect-[1.45] sm:block`}
+                                        className={`${even ? "md:col-start-2 md:order-2 md:justify-self-start" : "md:col-start-1 md:order-1 md:justify-self-end"} row-start-1 hidden h-[220px] w-[300px] sm:block`}
                                     />
                                     <span className="absolute left-0 top-1/2 z-10 flex size-6 -translate-y-1/2 items-center justify-center border border-[#8e7321] bg-[#d4aa1d] text-[8px] font-bold md:left-1/2 md:size-7 md:-translate-x-1/2 md:text-[10px]">
                                         {String(index + 1).padStart(2, "0")}
