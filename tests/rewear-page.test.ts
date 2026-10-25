@@ -10,7 +10,10 @@ test("Rewear page exists as a public route with the shared shell", async () => {
     expect(page).toContain("Clear about");
     expect(page).toContain("How it works");
     expect(page).toContain("Request your");
-    expect(page).toContain("next chapter");
-    expect(page).not.toContain("NavbarHome");
+  expect(page).toContain("next chapter");
+  expect(page).toContain('index % 2 === 0');
+  expect(page).toContain("md:order-2");
+  expect(page).toContain("md:order-1");
+  expect(page).not.toContain("NavbarHome");
     expect(page).not.toContain("FooterWithLegal");
 });
