@@ -162,7 +162,7 @@ const createRedisProxy = <T extends Record<string, unknown>>(
                                             }
                                         }
                                         if (!bestEffort) throw error;
-                                        console.error(
+                                        console.warn(
                                             "Redis cache pipeline failed",
                                             sanitizedError(error)
                                         );
@@ -183,7 +183,7 @@ const createRedisProxy = <T extends Record<string, unknown>>(
                 }
 
                 return result.catch((error: unknown) => {
-                    console.error(
+                    console.warn(
                         `Redis cache command failed: ${command}`,
                         sanitizedError(error)
                     );
