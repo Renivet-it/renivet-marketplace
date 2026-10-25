@@ -13,7 +13,7 @@ const garmentOptions = [
 const contactOptions = ["WhatsApp", "Phone call", "SMS"] as const;
 
 const fieldClass =
-    "mt-2 h-13 w-full border-2 border-[#63303c] bg-[#fffdf7] px-4 text-sm text-[#63303c] outline-none placeholder:text-[#756f64]";
+    "mt-2 h-14 w-full border-2 border-[#63303c] bg-[#fffdf7] px-5 text-base text-[#63303c] outline-none placeholder:text-[#756f64] md:h-[70px] md:px-6 md:text-lg";
 const labelClass =
     "text-[11px] font-bold tracking-[0.1em] text-[#63303c]";
 

@@ -387,11 +387,11 @@ export default function RewearPage() {
                 id="pickup-form"
                 className="border-t border-[#eadfb9] px-5 py-20 sm:px-10 lg:px-14 lg:py-24"
             >
-                <div className="mx-auto max-w-[1388px]">
+                <div className="mx-auto max-w-[1860px]">
                     <p className="text-2xl italic text-[#b77b72] sm:text-3xl">
                         right here on this page
                     </p>
-                    <h2 className="mt-3 max-w-[480px] text-5xl font-extrabold uppercase leading-[0.9] tracking-[-0.05em] sm:text-7xl">
+                    <h2 className="rewear-display-font mt-3 max-w-[620px] text-5xl uppercase leading-[0.9] tracking-[-0.035em] sm:text-7xl">
                         Request your
                         <br />
                         Rewear pickup
