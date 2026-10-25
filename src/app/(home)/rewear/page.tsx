@@ -356,8 +356,12 @@ export default function RewearPage() {
                                     className="relative grid gap-3 pl-9 md:col-span-2 md:grid-cols-2 md:items-center md:gap-x-[169px] md:gap-y-5 md:pl-0"
                                 >
                                     <div
-                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} row-start-1 flex min-h-0 flex-col justify-center border border-[#9b6870] bg-[#fbf4dc] px-4 py-4 md:px-5 md:py-5`}
+                                        className={`${even ? "md:col-start-1 md:min-h-[190px] md:pr-10 md:text-right" : "md:col-start-2 md:min-h-[225px] md:pl-10 md:text-left"} relative row-start-1 flex min-h-0 flex-col justify-center border-2 border-[#63303c] bg-[#fffaf0] px-4 py-4 md:px-5 md:py-5`}
                                     >
+                                        <span
+                                            aria-hidden="true"
+                                            className={`absolute top-5 h-[3px] w-9 bg-[#d4aa1d] ${even ? "right-5" : "left-5"}`}
+                                        />
                                         <h3 className="text-[11px] font-extrabold uppercase leading-tight tracking-[-0.02em] sm:text-sm md:text-base">
                                             {title}
                                         </h3>
