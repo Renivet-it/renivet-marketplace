@@ -91,8 +91,8 @@ export function RewearPickupForm() {
 
             <fieldset>
                 <legend className={labelClass}>How would you prefer us to contact you?</legend>
-                <div className="mt-3 flex flex-wrap gap-2">
-                    {contactOptions.map((option) => <button key={option.label} type="button" onClick={() => setForm({ ...form, contactMethod: option.label })} className={`inline-flex items-center gap-2 border-2 border-[#c8959c] px-4 py-2.5 text-xs font-bold text-[#63303c] ${form.contactMethod === option.label ? "bg-[#c8959c]" : "bg-transparent"}`}><option.icon className="size-4" aria-hidden="true" />{option.label}</button>)}
+                <div className="mt-3 flex flex-nowrap gap-2">
+                    {contactOptions.map((option) => <button key={option.label} type="button" onClick={() => setForm({ ...form, contactMethod: option.label })} className={`inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 border-2 border-[#c8959c] px-2 py-2 text-[10px] font-bold text-[#63303c] sm:flex-none sm:gap-2 sm:px-4 sm:py-2.5 sm:text-xs ${form.contactMethod === option.label ? "bg-[#c8959c]" : "bg-transparent"}`}><option.icon className="size-4 shrink-0" aria-hidden="true" />{option.label}</button>)}
                 </div>
             </fieldset>
 
