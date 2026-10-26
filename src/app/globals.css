@@ -162,6 +162,34 @@
     }
 }
 
+@media (min-width: 1024px) {
+    .rewear-hero-badges {
+        width: 100%;
+        gap: 46px;
+    }
+
+    .rewear-hero-badges span {
+        box-sizing: border-box;
+        height: 60px;
+        min-height: 60px;
+        padding: 0;
+        font-size: 16px;
+        letter-spacing: 0.12em;
+    }
+
+    .rewear-hero-badges span:nth-child(1) {
+        width: 204px;
+    }
+
+    .rewear-hero-badges span:nth-child(2) {
+        width: 198px;
+    }
+
+    .rewear-hero-badges span:nth-child(3) {
+        width: 264px;
+    }
+}
+
 @media (min-width: 640px) and (max-width: 1023px) {
     .rewear-hero-cta {
         display: flex;

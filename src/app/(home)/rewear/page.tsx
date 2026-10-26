@@ -230,7 +230,7 @@ export default function RewearPage() {
                         <div className="rewear-hero-badges mt-8 flex flex-wrap gap-3">
                             {[
                                 ["Upcycling", "#d4aa1d", maroon],
-                                ["Recycling", "#d9c9bd", maroon],
+                                ["Recycling", "#c28b86", maroon],
                                 ["Karma points", cream, maroon],
                             ].map(([label, background, color]) => (
                                 <span
