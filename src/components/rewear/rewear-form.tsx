@@ -25,7 +25,7 @@ export function RewearPickupForm() {
         garmentCount: "6-10 garments",
         contactMethod: "WhatsApp" as (typeof contactOptions)[number],
         categoryNote: "",
-        consent: false,
+        consent: true,
     });
     const [showCategoryNote, setShowCategoryNote] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export function RewearPickupForm() {
                 garmentCount: "6-10 garments",
                 contactMethod: "WhatsApp",
                 categoryNote: "",
-                consent: false,
+                consent: true,
             });
         },
         onError: (error) => setMessage(error.message),
