@@ -36,11 +36,11 @@
 .rewear-next-section {
     display: flex;
     width: 100%;
-    min-height: clamp(460px, 28vw, 560px);
+    min-height: clamp(400px, 24vw, 480px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-block: 32px;
+    padding-block: 20px;
 }
 
 .rewear-next-kicker {
@@ -433,8 +433,8 @@
     }
 
     .rewear-next-section {
-        min-height: min(470px, 78.33vw);
-        padding: min(40px, 6.67vw) 24px min(34px, 5.67vw);
+        min-height: min(400px, 66.67vw);
+        padding: min(24px, 4vw) 24px min(22px, 3.67vw);
     }
 
     .rewear-next-kicker {
