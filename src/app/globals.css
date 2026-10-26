@@ -143,6 +143,11 @@
 }
 
 @media (min-width: 640px) {
+    .rewear-hero-badges {
+        width: 100%;
+        justify-content: center;
+    }
+
     .rewear-hero-cta {
         min-width: 420px;
         min-height: 76px;
