@@ -219,11 +219,11 @@
 @media (max-width: 639px) {
     #how-it-works {
         padding-top: 24px;
-        padding-bottom: 32px;
+        padding-bottom: 16px;
     }
 
     #pickup-form {
-        padding-top: 48px;
+        padding-top: 24px;
         padding-bottom: 32px;
     }
 
