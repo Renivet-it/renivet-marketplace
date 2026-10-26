@@ -90,7 +90,9 @@ function WhatsAppCta({
             rel="noreferrer"
             className={`mt-6 inline-block px-8 py-3 text-[9px] font-bold uppercase tracking-[0.14em] ${dark ? "bg-[#63303c] text-[#fbf4dc]" : "bg-[#d4aa1d] text-[#63303c]"} ${className}`}
         >
-            {children} <span className="ml-2">→</span>
+<span className="inline-flex items-center justify-center">
+                {children}
+            </span> <span className="ml-2">→</span>
         </a>
     );
 }
