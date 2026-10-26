@@ -12,11 +12,19 @@
     to { transform: translateX(-50%); }
 }
 
+@keyframes rewear-stripe-slide {
+    from { background-position: 0 0; }
+    to { background-position: 47px 0; }
+}
+
 .rewear-page > section { animation: rewear-rise 700ms ease both; }
 .rewear-page .rewear-display-font {
     font-family: Impact, "Arial Narrow", sans-serif !important;
     font-weight: 400 !important;
     font-stretch: condensed;
+}
+.rewear-page .rewear-final-stripe {
+    animation: rewear-stripe-slide 1.6s linear infinite;
 }
 .rewear-page > section:nth-of-type(2) { animation-delay: 100ms; }
 .rewear-page > section:nth-of-type(3) { animation-delay: 180ms; }
@@ -511,7 +519,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .rewear-page > section, .rewear-page .rewear-ticker-track { animation: none; }
+    .rewear-page > section, .rewear-page .rewear-ticker-track, .rewear-page .rewear-final-stripe { animation: none; }
     .rewear-page a, .rewear-page button { transition: none; }
 }
 
