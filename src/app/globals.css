@@ -145,7 +145,7 @@
 @media (min-width: 640px) {
     .rewear-hero-badges {
         width: 100%;
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .rewear-hero-cta {
@@ -194,10 +194,10 @@
     }
 
     .rewear-hero-badges {
-        width: fit-content;
-        justify-content: center;
-        margin-right: auto;
-        margin-left: auto;
+        width: 100%;
+        justify-content: flex-start;
+        margin-right: 0;
+        margin-left: 0;
     }
 }
 
