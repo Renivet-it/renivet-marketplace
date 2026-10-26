@@ -156,7 +156,10 @@
     }
 
     .rewear-hero-badges span {
+        display: flex;
         min-height: 56px;
+        align-items: center;
+        justify-content: center;
         padding-inline: 30px;
         font-size: 11px;
     }
