@@ -29,9 +29,11 @@ export function RewearPickupForm() {
     });
     const [showCategoryNote, setShowCategoryNote] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
+    const [submitted, setSubmitted] = useState(false);
     const pickup = trpc.general.rewear.createPickupRequest.useMutation({
         onSuccess: () => {
-            setMessage("Thank you — your pickup request has been received.");
+            setMessage(null);
+            setSubmitted(true);
             setForm({
                 fullName: "",
                 mobileNumber: "",
@@ -48,6 +50,7 @@ export function RewearPickupForm() {
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setMessage(null);
+        setSubmitted(false);
         if (!form.consent) {
             setMessage("Please confirm that Renivet may contact you.");
             return;
@@ -95,9 +98,10 @@ export function RewearPickupForm() {
             </div>
 
             <label className="flex items-start gap-3 text-sm leading-6 text-[#3c3832]"><input required type="checkbox" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} className="mt-1 size-5 accent-[#63303c]" /> I agree that Renivet may contact me about this pickup request using my selected contact method. I have read the Privacy Notice.</label>
+            {submitted && <div role="status" className="border-2 border-[#d4aa1d] bg-[#fff7d9] px-6 py-6 text-[#63303c]"><p className="rewear-display-font text-2xl uppercase leading-none">Pickup request received</p><p className="mt-3 max-w-2xl text-sm leading-6 text-[#756f64]">Thank you for choosing Rewear. Our team will review your details and contact you shortly using your selected contact method.</p><button type="button" onClick={() => setSubmitted(false)} className="mt-5 border-2 border-[#63303c] px-6 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[#63303c]">Submit another request <span className="ml-2">-&gt;</span></button></div>}
             {message && <p role="status" className="text-sm font-bold text-[#63303c]">{message}</p>}
-            <button disabled={pickup.isPending} className="bg-[#63303c] px-8 py-4 text-xs font-bold uppercase tracking-[0.12em] text-[#fbf4dc] disabled:opacity-60" type="submit">{pickup.isPending ? "Submitting..." : "Submit pickup request"} <span className="ml-2">→</span></button>
-            <p className="border-l-4 border-[#d4aa1d] pl-3 text-xs leading-5 text-[#756f64]">Review sample form submission — this is an interactive form mock-up to demonstrate the intended fields and flow. It does not submit information to Renivet or create a real pickup request.</p>
+            <button disabled={pickup.isPending || submitted} className={`${submitted ? "hidden " : ""}bg-[#63303c] px-8 py-4 text-xs font-bold uppercase tracking-[0.12em] text-[#fbf4dc] disabled:opacity-60`} type="submit">{pickup.isPending ? "Submitting..." : "Submit pickup request"} <span className="ml-2">→</span></button>
+            <p className="border-l-4 border-[#d4aa1d] pl-3 text-xs leading-5 text-[#756f64]">Your details are securely shared with the Renivet team so we can follow up on your pickup request.</p>
         </form>
     );
 }
