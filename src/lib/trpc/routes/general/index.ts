@@ -39,3 +39,4 @@ export * from "./corporate-orders";
 export * from "./corporate-platform";
 export * from "./finance";
 export * from "./product-slug-migration";
+export * from "./rewear";

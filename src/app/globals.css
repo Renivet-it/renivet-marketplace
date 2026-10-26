@@ -2,6 +2,527 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes rewear-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rewear-ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@keyframes rewear-stripe-slide {
+    from { background-position: 0 0; }
+    to { background-position: 47px 0; }
+}
+
+.rewear-page > section { animation: rewear-rise 700ms ease both; }
+.rewear-page .rewear-display-font {
+    font-family: Impact, "Arial Narrow", sans-serif !important;
+    font-weight: 400 !important;
+    font-stretch: condensed;
+}
+.rewear-page .rewear-final-stripe {
+    animation: rewear-stripe-slide 1.6s linear infinite;
+}
+.rewear-page > section:nth-of-type(2) { animation-delay: 100ms; }
+.rewear-page > section:nth-of-type(3) { animation-delay: 180ms; }
+.rewear-page > section:nth-of-type(4) { animation-delay: 260ms; }
+.rewear-page a, .rewear-page button { transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.rewear-page a:hover, .rewear-page button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px rgb(99 48 60 / 16%); }
+.rewear-page .rewear-ticker-track { animation: rewear-ticker 22s linear infinite; }
+
+.rewear-next-section {
+    display: flex;
+    width: 100%;
+    min-height: clamp(400px, 24vw, 480px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-block: 20px;
+}
+
+.rewear-next-kicker {
+    font-size: clamp(30px, 2.44vw, 50px);
+    line-height: 1.15;
+}
+
+.rewear-next-title {
+    margin-top: clamp(14px, 1.17vw, 24px);
+    font-size: clamp(48px, 3.9vw, 80px);
+    line-height: 0.92;
+}
+
+.rewear-next-copy {
+    max-width: 1060px;
+    margin-top: clamp(16px, 1.1vw, 22px);
+    font-size: clamp(16px, 1.17vw, 24px);
+    line-height: 1.6;
+}
+
+.rewear-next-cta {
+    display: flex;
+    width: 314px;
+    height: 70px;
+    align-items: center;
+    justify-content: center;
+    margin-top: clamp(16px, 1.1vw, 22px);
+    padding: 0;
+    font-size: 16px;
+}
+
+.rewear-next-availability {
+    margin-top: clamp(16px, 1.1vw, 22px);
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.rewear-about-section {
+    display: grid;
+    min-height: min(730px, 35.65vw);
+    grid-template-columns: minmax(0, 0.43fr) minmax(0, 0.57fr);
+    border-top: 1px solid #d4aa1d;
+}
+
+.rewear-about-media {
+    position: relative;
+    min-height: inherit;
+    overflow: hidden;
+    background: #d6d1c5;
+}
+
+.rewear-about-image {
+    position: absolute !important;
+    inset: 0;
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: cover;
+}
+
+.rewear-about-clothes {
+    display: none;
+}
+
+.rewear-about-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(40px, 4.15vw, 85px);
+}
+
+.rewear-about-eyebrow {
+    font-size: clamp(28px, 1.95vw, 40px);
+    line-height: 1.1;
+}
+
+.rewear-about-title {
+    max-width: none;
+    white-space: nowrap;
+    margin-top: clamp(16px, 1.17vw, 24px);
+    font-size: clamp(46px, 3.52vw, 72px);
+    line-height: 0.86;
+    letter-spacing: -0.05em;
+}
+
+.rewear-about-body {
+    max-width: 900px;
+    margin-top: clamp(24px, 1.56vw, 32px);
+    font-size: clamp(16px, 1.17vw, 24px);
+    line-height: 1.35;
+}
+
+.rewear-about-button {
+    display: flex;
+    width: 310px;
+    height: 68px;
+    align-items: center;
+    justify-content: center;
+    margin-top: clamp(24px, 1.56vw, 32px);
+    font-size: 16px;
+}
+
+@media (min-width: 640px) {
+    .rewear-ticker {
+        padding-block: 20px;
+        font-size: 16px;
+        line-height: 28px;
+    }
+}
+
+@media (min-width: 640px) {
+    .rewear-hero-badges {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .rewear-hero-cta {
+        display: flex;
+        width: 390px;
+        min-width: 0;
+        height: 70px;
+        min-height: 0;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0;
+        margin-left: 0;
+        padding: 0;
+        font-size: 13px;
+    }
+
+    .rewear-hero-badges span {
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        justify-content: center;
+        padding-inline: 30px;
+        font-size: 11px;
+    }
+}
+
+@media (min-width: 1024px) {
+    #how-it-works {
+        padding-top: 24px;
+        padding-bottom: 56px;
+    }
+
+    #pickup-form {
+        padding-top: 24px;
+        padding-bottom: 64px;
+    }
+
+    .rewear-final-section {
+        padding-top: 36px !important;
+        padding-bottom: 52px;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .rewear-hero-cta {
+        display: flex;
+        width: 390px;
+        max-width: 100%;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .rewear-hero-badges {
+        width: 100%;
+        justify-content: flex-start;
+        margin-right: 0;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 639px) {
+    #how-it-works {
+        padding-top: 24px;
+        padding-bottom: 16px;
+    }
+
+    #pickup-form {
+        padding-top: 24px;
+        padding-bottom: 32px;
+    }
+
+    .rewear-final-stripe {
+        margin-top: 0;
+        height: 34px;
+    }
+
+    .rewear-final-section {
+        padding: 36px 34px 64px;
+    }
+
+    .rewear-final-content {
+        padding-bottom: 20px;
+    }
+
+    .rewear-final-content > p:first-child,
+    .rewear-final-content > h2 {
+        font-size: clamp(34px, 7.4vw, 43px);
+    }
+
+    .rewear-final-content > h2 {
+        margin-top: 18px;
+    }
+
+    .rewear-final-content > p:nth-of-type(2) {
+        font-size: clamp(18px, 3.2vw, 20px);
+        line-height: 1.6;
+    }
+
+    .rewear-final-cta {
+        display: flex;
+        height: 66px;
+        max-width: none;
+        align-items: center;
+        justify-content: center;
+        margin-top: 22px;
+        padding: 0;
+        font-size: 16px;
+    }
+
+    .rewear-final-availability {
+        margin-top: 23px;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+
+    .rewear-page > div:first-child {
+        height: min(68px, 11.52vw);
+        justify-content: center;
+    }
+
+    .rewear-page > div:first-child > span:first-child,
+    .rewear-page > div:first-child > span:nth-child(3),
+    .rewear-page > div:first-child > span:last-child {
+        display: none;
+    }
+
+    .rewear-page > div:first-child > span:nth-child(2) svg {
+        width: min(96px, 16.27vw);
+        height: min(20px, 3.39vw);
+    }
+
+    .rewear-hero {
+        min-height: min(970px, 164.41vw);
+    }
+
+    .rewear-hero-inner {
+        min-height: min(970px, 164.41vw);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto auto auto auto auto;
+        align-content: start;
+        gap: 0;
+        padding: min(62px, 10.51vw) 20px min(72px, 12.2vw);
+        text-align: center;
+    }
+
+    .rewear-hero > span:nth-child(1) {
+        top: min(370px, 62.71vw);
+        right: auto;
+        left: min(20px, 3.39vw);
+        background: #d4aa1d;
+    }
+
+    .rewear-hero > span:nth-child(2) {
+        top: min(415px, 70.34vw);
+        right: min(10px, 1.69vw);
+        left: auto;
+        background: #d9a0a0;
+    }
+
+    .rewear-hero > span:nth-child(3) {
+        right: auto;
+        bottom: min(72px, 12.2vw);
+        left: min(25px, 4.24vw);
+        background: #fbf4dc;
+    }
+
+    .rewear-hero > span:nth-child(4) {
+        right: min(16px, 2.71vw);
+        bottom: min(93px, 15.76vw);
+        background: #d4aa1d;
+    }
+
+    .rewear-hero-copy {
+        display: contents;
+    }
+
+    .rewear-hero-kicker {
+        order: 1;
+        font-size: clamp(7px, 1.7vw, 10px);
+        letter-spacing: 0.2em;
+    }
+
+    .rewear-hero-title {
+        order: 2;
+        max-width: 9.5em;
+        margin: min(28px, 4.75vw) auto 0;
+        font-size: clamp(31px, 9vw, 53px);
+        font-weight: 400;
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+    }
+
+    .rewear-hero-subtitle {
+        order: 3;
+        margin: min(25px, 4.24vw) auto 0;
+        font-size: clamp(10px, 2.71vw, 16px);
+        line-height: 1.4;
+    }
+
+    .rewear-hero-body {
+        order: 4;
+        width: calc(100vw - 40px);
+        max-width: 540px;
+        margin: min(27px, 4.58vw) auto 0;
+        font-size: clamp(11px, 3.05vw, 18px);
+        line-height: 1.55;
+    }
+
+    .rewear-hero-cta {
+        order: 5;
+        box-sizing: border-box;
+        width: min(360px, 61.02vw);
+        margin: min(28px, 4.75vw) auto 0;
+        padding: min(26px, 4.41vw) 12px;
+        text-align: center;
+        font-size: clamp(8px, 2.03vw, 12px);
+    }
+
+    .rewear-hero-gallery {
+        order: 6;
+        width: min(486px, 82.37vw);
+        margin: min(34px, 5.76vw) auto 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: min(45px, 7.46vw);
+    }
+
+    .rewear-hero-gallery > div:nth-child(2) {
+        background-image: url('/assets/rewear/karma.png');
+        background-position: center;
+        background-size: cover;
+    }
+
+    .rewear-hero-gallery > div:nth-child(2) img {
+        opacity: 0;
+    }
+
+    .rewear-hero-gallery > div {
+        aspect-ratio: 0.91;
+        border-width: 10px;
+        border-bottom-width: min(30px, 6.78vw);
+    }
+
+    .rewear-hero-gallery > div:nth-child(n+3) {
+        display: none;
+    }
+
+    .rewear-hero-badges {
+        order: 7;
+        display: grid;
+        width: min(500px, 85vw);
+        margin: min(42px, 7.12vw) auto 0;
+        grid-template-columns: 1.05fr 1fr 1.3fr;
+        gap: min(12px, 2.03vw);
+    }
+
+    .rewear-hero-badges span {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: min(11px, 1.86vw) 5px;
+        font-size: clamp(7px, 1.36vw, 8px);
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .rewear-hero-arrow {
+        bottom: min(11px, 1.86vw);
+        transform: translateX(-50%);
+        font-size: min(38px, 6.44vw);
+    }
+
+    .rewear-next-section {
+        min-height: min(400px, 66.67vw);
+        padding: min(24px, 4vw) 24px min(22px, 3.67vw);
+    }
+
+    .rewear-next-kicker {
+        font-size: clamp(18px, 5.33vw, 32px);
+    }
+
+    .rewear-next-title {
+        margin-top: min(12px, 2vw);
+        font-size: clamp(28px, 8vw, 48px);
+        line-height: 0.92;
+    }
+
+    .rewear-next-copy {
+        max-width: 500px;
+        margin-top: min(16px, 2.67vw);
+        font-size: clamp(11px, 3vw, 18px);
+        line-height: 1.45;
+    }
+
+    .rewear-next-cta {
+        width: min(377px, 62.83vw);
+        height: min(66px, 11vw);
+        margin-top: min(18px, 3vw);
+        font-size: clamp(10px, 3vw, 18px);
+    }
+
+    .rewear-next-availability {
+        margin-top: min(16px, 2.67vw);
+        font-size: clamp(8px, 2.17vw, 13px);
+    }
+
+    .rewear-about-section {
+        display: block;
+        min-height: 0;
+    }
+
+    .rewear-about-media {
+        width: calc(100% - 68px);
+        height: min(312px, 52vw);
+        margin-inline: 34px;
+        min-height: 0;
+    }
+
+    .rewear-about-chair {
+        display: none;
+    }
+
+    .rewear-about-clothes {
+        display: block;
+    }
+
+    .rewear-about-copy {
+        min-height: min(470px, 78.33vw);
+        padding: min(48px, 8vw) min(34px, 5.67vw) min(64px, 10.67vw);
+        transform: none;
+    }
+
+    .rewear-about-eyebrow {
+        font-size: clamp(22px, 4.83vw, 29px);
+    }
+
+    .rewear-about-title {
+        max-width: 430px;
+        margin-top: min(16px, 2.67vw);
+        font-size: clamp(38px, 7.1vw, 43px);
+        line-height: 0.88;
+    }
+
+    .rewear-about-body {
+        max-width: 520px;
+        margin-top: min(28px, 4.67vw);
+        font-size: clamp(16px, 3.05vw, 18px);
+        line-height: 1.55;
+    }
+
+    .rewear-about-button {
+        width: min(204px, 34vw);
+        height: min(44px, 7.33vw);
+        margin-top: min(28px, 4.67vw);
+        font-size: clamp(9px, 1.67vw, 10px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rewear-page > section, .rewear-page .rewear-ticker-track, .rewear-page .rewear-final-stripe { animation: none; }
+    .rewear-page a, .rewear-page button { transition: none; }
+}
+
 @keyframes pdp-gallery-fade {
     from {
         opacity: 0;

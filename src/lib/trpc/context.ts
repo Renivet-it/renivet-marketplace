@@ -42,6 +42,7 @@ import {
     userQueries,
     userWishlistQueries,
     waitlistQueries,
+    rewearPickupQueries,
     WomenHomeSectionQueries,
 } from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
@@ -110,6 +111,7 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
             users: userQueries,
             userWishlists: userWishlistQueries,
             waitlists: waitlistQueries,
+            rewearPickupRequests: rewearPickupQueries,
             addresses: addressQueries,
             recommendations: recommendationQueries,
         },

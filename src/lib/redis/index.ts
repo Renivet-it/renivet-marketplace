@@ -9,7 +9,9 @@ import {
 const rawRedis = new Redis(env.REDIS_URL, getRedisOptions());
 
 rawRedis.on("error", (error) => {
-    console.error("Redis connection error", error);
+    console.warn("Redis connection unavailable; continuing without cache", {
+        type: error instanceof Error ? error.name : typeof error,
+    });
 });
 
 export const criticalRedis = createObservabilityRedis(rawRedis);

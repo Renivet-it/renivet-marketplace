@@ -851,6 +851,14 @@ export function NavbarHome({
                                         brands={storefrontBrands}
                                         isLoading={isStorefrontBrandsLoading}
                                     />
+                                    <NavigationMenuItem>
+                                        <Link
+                                            href="/rewear"
+                                            className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
+                                        >
+                                            REWEAR
+                                        </Link>
+                                    </NavigationMenuItem>
                                 </NavigationMenuList>
                             </NavigationMenu>
                         </div>

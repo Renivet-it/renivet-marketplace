@@ -409,6 +409,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_SETTINGS,
             },
             {
+                title: "Rewear Pickup Requests",
+                url: "/dashboard/general/rewear-requests",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
                 title: "Partnerships",
                 url: "/dashboard/general/marketing-partnerships",
                 permissions:

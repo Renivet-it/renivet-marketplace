@@ -30,6 +30,7 @@ export * from "./plan";
 export * from "./product";
 export * from "./razorpay-webhook";
 export * from "./refund";
+export * from "./rewear";
 export * from "./response";
 export * from "./role";
 export * from "./swap-reward";
