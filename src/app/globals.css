@@ -192,7 +192,7 @@
     }
 
     .rewear-final-section {
-        padding-top: 0;
+        padding-top: 0 !important;
         padding-bottom: 52px;
     }
 }
@@ -233,7 +233,7 @@
     }
 
     .rewear-final-section {
-        padding: 44px 34px 64px;
+        padding: 24px 34px 64px;
     }
 
     .rewear-final-content {
