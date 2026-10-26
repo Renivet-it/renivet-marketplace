@@ -1,6 +1,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
+import { MessageCircle, MessageSquare, Phone } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 const garmentOptions = [
@@ -10,10 +11,15 @@ const garmentOptions = [
     "21-30 garments",
     "More than 30 garments",
 ];
-const contactOptions = ["WhatsApp", "Phone call", "SMS"] as const;
+const contactOptions = [
+    { label: "WhatsApp", icon: MessageCircle },
+    { label: "Phone call", icon: Phone },
+    { label: "SMS", icon: MessageSquare },
+] as const;
+type ContactMethod = (typeof contactOptions)[number]["label"];
 
 const fieldClass =
-    "mt-2 h-14 w-full border-2 border-[#63303c] bg-[#fffdf7] px-5 text-base text-[#63303c] outline-none placeholder:text-[#756f64] md:h-[70px] md:px-6 md:text-lg";
+    "mt-2 h-12 w-full border-2 border-[#63303c] bg-[#fffdf7] px-4 text-sm text-[#63303c] outline-none placeholder:text-[#756f64] md:h-14 md:px-5 md:text-base";
 const labelClass =
     "text-[11px] font-bold tracking-[0.1em] text-[#63303c]";
 
@@ -23,7 +29,7 @@ export function RewearPickupForm() {
         mobileNumber: "",
         locality: "",
         garmentCount: "6-10 garments",
-        contactMethod: "WhatsApp" as (typeof contactOptions)[number],
+        contactMethod: "WhatsApp" as ContactMethod,
         categoryNote: "",
         consent: true,
     });
@@ -59,8 +65,8 @@ export function RewearPickupForm() {
     }
 
     return (
-        <form onSubmit={submit} className="space-y-8 border-2 border-t-0 border-[#63303c] px-8 py-9 sm:px-9 lg:px-10 lg:py-10">
-            <div className="grid gap-7 md:grid-cols-2 md:gap-x-7">
+        <form onSubmit={submit} className="space-y-6 border-2 border-t-0 border-[#63303c] px-6 py-6 sm:px-7 lg:px-8 lg:py-8">
+                <div className="grid gap-5 md:grid-cols-2 md:gap-x-6">
                 <label className={labelClass}>
                     Full name *
                     <input required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={fieldClass} placeholder="Your full name" />
@@ -78,19 +84,19 @@ export function RewearPickupForm() {
 
             <fieldset>
                 <legend className={labelClass}>Approximately how many garments would you like to give away? *</legend>
-                <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-3 flex flex-wrap gap-2">
                     {garmentOptions.map((option) => <button key={option} type="button" onClick={() => setForm({ ...form, garmentCount: option })} className={`border-2 border-[#63303c] px-5 py-3 text-xs font-bold text-[#63303c] ${form.garmentCount === option ? "bg-[#63303c] text-[#fbf4dc]" : "bg-transparent"}`}>{option}</button>)}
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend className={labelClass}>How would you prefer us to contact you?</legend>
-                <div className="mt-4 flex flex-wrap gap-3">
-                    {contactOptions.map((option) => <button key={option} type="button" onClick={() => setForm({ ...form, contactMethod: option })} className={`border-2 border-[#c8959c] px-5 py-3 text-xs font-bold text-[#63303c] ${form.contactMethod === option ? "bg-[#c8959c]" : "bg-transparent"}`}>{option}</button>)}
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {contactOptions.map((option) => <button key={option.label} type="button" onClick={() => setForm({ ...form, contactMethod: option.label })} className={`inline-flex items-center gap-2 border-2 border-[#c8959c] px-4 py-2.5 text-xs font-bold text-[#63303c] ${form.contactMethod === option.label ? "bg-[#c8959c]" : "bg-transparent"}`}><option.icon className="size-4" aria-hidden="true" />{option.label}</button>)}
                 </div>
             </fieldset>
 
-            <div className="border-2 border-[#c8959c] bg-[#f1dfe0] px-6 py-6 text-[#63303c]">
+            <div className="border-2 border-[#c8959c] bg-[#f1dfe0] px-5 py-5 text-[#63303c]">
                 <p className="text-[11px] font-bold tracking-[0.1em]">Help us understand your clothes</p>
                 <p className="mt-2 text-sm text-[#756f64]">Optional for the initial request. Our team can confirm the category-wise count later.</p>
                 <button type="button" onClick={() => setShowCategoryNote(!showCategoryNote)} className="mt-5 flex items-center gap-3 text-[11px] font-bold tracking-[0.1em] text-[#a45f5d]"><span className="flex size-6 items-center justify-center border-2 border-[#a45f5d] text-base">+</span> ADD AN OPTIONAL CATEGORY-WISE GARMENT COUNT</button>
