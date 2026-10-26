@@ -124,7 +124,7 @@ export function RewearPickupForm() {
                 </label>
 
                 <label className={labelClass}>
-                    Locality or PIN code *
+                    Address *
                     <span className="relative mt-2 block">
                         <MapPin className={fieldIconClass} aria-hidden="true" />
                         <input
