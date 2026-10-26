@@ -28,11 +28,11 @@
 .rewear-next-section {
     display: flex;
     width: 100%;
-    min-height: clamp(460px, 32vw, 650px);
+    min-height: clamp(460px, 28vw, 560px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-block: 48px;
+    padding-block: 32px;
 }
 
 .rewear-next-kicker {
