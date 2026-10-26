@@ -162,6 +162,23 @@
     }
 }
 
+@media (min-width: 1024px) {
+    #how-it-works {
+        padding-top: 56px;
+        padding-bottom: 56px;
+    }
+
+    #pickup-form {
+        padding-top: 64px;
+        padding-bottom: 64px;
+    }
+
+    .rewear-final-section {
+        padding-top: 64px;
+        padding-bottom: 52px;
+    }
+}
+
 @media (min-width: 640px) and (max-width: 1023px) {
     .rewear-hero-cta {
         display: flex;
