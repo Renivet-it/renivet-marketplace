@@ -206,7 +206,7 @@ export default function RewearPage() {
                             Introducing Renivet Rewear
                         </p>
                         <h1 className="rewear-hero-title mt-4 max-w-[11ch] font-sans text-[2.85rem] leading-[0.9] tracking-[-0.035em] sm:mt-5 sm:text-7xl">
-                            Make space for new beginnings.
+                            Make space for new beginnings
                         </h1>
                         <p className="rewear-hero-subtitle mt-5 max-w-md font-sans text-sm italic leading-6 text-[#d9a0a0]">
                             This Diwali, start with your wardrobe.
