@@ -209,7 +209,7 @@ export default function RewearPage() {
                             Make space for new beginnings
                         </h1>
                         <p className="rewear-hero-subtitle mt-5 max-w-md font-sans text-sm italic leading-6 text-[#d9a0a0]">
-                            This Diwali, start with your wardrobe.
+                            This Diwali, start with your wardrobe
                         </p>
                         <p className="rewear-hero-body mt-3 max-w-md text-xs leading-5 text-[#f4e9d3]/90">
                             <span className="sm:hidden">
