@@ -18,11 +18,6 @@
 }
 
 .rewear-page > section { animation: rewear-rise 700ms ease both; }
-.rewear-page .rewear-display-font {
-    font-family: Impact, "Arial Narrow", sans-serif !important;
-    font-weight: 400 !important;
-    font-stretch: condensed;
-}
 .rewear-page .rewear-final-stripe {
     animation: rewear-stripe-slide 1.6s linear infinite;
 }

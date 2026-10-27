@@ -197,7 +197,6 @@ export default function RewearPage() {
             <HeroScallop />
             <section className="rewear-hero relative overflow-hidden bg-[#63303c] text-[#fbf4dc]">
                 <span className="absolute right-[12%] top-8 size-2 rounded-full bg-[#c8959c]" />
-                <span className="absolute left-[19%] top-[47%] size-2 rounded-full bg-[#f7f2e4]" />
                 <span className="absolute bottom-10 left-[27%] size-2 rounded-full bg-[#c8959c]" />
                 <span className="absolute bottom-10 right-[14%] size-2 rounded-full bg-[#f7f2e4]" />
                 <div className="rewear-hero-inner relative mx-auto grid min-h-0 max-w-[1440px] items-center gap-7 px-6 py-9 sm:min-h-[560px] sm:gap-10 sm:px-12 sm:py-16 lg:min-h-[630px] lg:grid-cols-[1fr_0.95fr] lg:items-start lg:px-[60px] lg:pt-[84px]">
@@ -206,10 +205,10 @@ export default function RewearPage() {
                             Introducing Renivet Rewear
                         </p>
                         <h1 className="rewear-hero-title mt-4 max-w-[11ch] font-sans text-[2.85rem] leading-[0.9] tracking-[-0.035em] sm:mt-5 sm:text-7xl">
-                            Make space for new beginnings.
+                            Make space for new beginnings
                         </h1>
                         <p className="rewear-hero-subtitle mt-5 max-w-md font-sans text-sm italic leading-6 text-[#d9a0a0]">
-                            This Diwali, start with your wardrobe.
+                            This Diwali, start with your wardrobe
                         </p>
                         <p className="rewear-hero-body mt-3 max-w-md text-xs leading-5 text-[#f4e9d3]/90">
                             <span className="sm:hidden">

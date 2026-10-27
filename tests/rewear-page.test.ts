@@ -6,7 +6,7 @@ test("Rewear page exists as a public route with the shared shell", async () => {
     expect(page).toContain("Rewear");
     expect(page).toContain("RenivetText");
     expect(page).toContain("assets will be placed here");
-    expect(page).toContain("Make space for new beginnings.");
+    expect(page).toContain("Make space for new beginnings");
     expect(page).toContain("Clear about");
     expect(page).toContain("How it works");
     expect(page).toContain("Request your");
