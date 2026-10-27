@@ -10,6 +10,8 @@ import {
     preprocessSearchQuery,
 } from "@/lib/python/sematic-search";
 import { buildEmbeddingServiceUrl } from "@/lib/python/service-url";
+import { normalizeBrandSearchIdentity } from "@/lib/search/brand-search-query";
+import { toSearchCandidateIds } from "@/lib/search/search-candidates";
 import { mediaCache } from "@/lib/redis/methods";
 import {
     convertPriceToPaise,
@@ -73,7 +75,6 @@ import {
     wishlists,
     womenPageFeaturedProducts,
 } from "../schema";
-import { runConcurrentSearchTasks } from "../search-concurrency";
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import {
@@ -97,7 +98,7 @@ import {
     buildPriorityProductOrderCase,
     shouldApplySearchRelevanceOrdering,
 } from "./product-ordering";
-import { getCatalogSearchPredicate } from "./product-search-predicate";
+import { getCatalogSearchPredicate, getCatalogTextSearchPredicate } from "./product-search-predicate";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
 
@@ -1199,8 +1200,6 @@ class ProductQuery {
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
         const shouldRequireMedia = shouldRequireCatalogMedia(requireMedia);
-        // --- Thresholds for semantic search ---
-        const BRAND_MATCH_THRESHOLD = 0.28;
 
         let topBrandMatch: {
             id: string;
@@ -1211,6 +1210,7 @@ class ProductQuery {
         let processedSearch: string | undefined;
         let searchQuery = undefined;
         let ragProductIds: string[] = [];
+        let vectorProductIds: string[] = [];
         let isRagSearchActive = false;
 
         // --- Search embedding (semantic) ---
@@ -1222,7 +1222,7 @@ class ProductQuery {
             const semanticSearch = preprocessSearchQuery(search!);
             processedSearch = semanticSearch;
             const normalizedSearch = search!.trim().toLowerCase();
-            const exactBrand = await db.query.brands.findFirst({
+            let exactBrand = await db.query.brands.findFirst({
                 columns: {
                     id: true,
                     name: true,
@@ -1232,6 +1232,21 @@ class ProductQuery {
                     sql`LOWER(TRIM(${brands.name})) = ${normalizedSearch}`
                 ),
             });
+
+            if (!exactBrand) {
+                const activeBrands = await db.query.brands.findMany({
+                    columns: { id: true, name: true },
+                    where: eq(brands.isActive, true),
+                });
+                const normalizedBrandIdentity =
+                    normalizeBrandSearchIdentity(normalizedSearch);
+                const matchingBrands = activeBrands.filter(
+                    (brand) =>
+                        normalizeBrandSearchIdentity(brand.name) ===
+                        normalizedBrandIdentity
+                );
+                exactBrand = matchingBrands.length === 1 ? matchingBrands[0] : undefined;
+            }
 
             if (exactBrand) {
                 topBrandMatch = {
@@ -1246,82 +1261,64 @@ class ProductQuery {
             } else {
                 isRagSearchActive = true;
 
-                await runConcurrentSearchTasks(
-                    async () => {
-                        try {
-                            // Generate 384-dim embedding for brand matching (brands still use 384-dim)
-                            const searchEmbedding =
-                                await getEmbedding(semanticSearch);
-
-                            // 🔍 Detect brand intent
-                            const brandResult = await db.execute(sql`
-                    SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
-                    FROM brands
-                    WHERE embeddings IS NOT NULL
-                    ORDER BY distance ASC
-                    LIMIT 1
-                `);
-
-                            const brandRow = Array.isArray(brandResult)
-                                ? brandResult[0]
-                                : brandResult?.rows?.[0];
-                            if (
-                                brandRow &&
-                                Number(brandRow.distance) <
-                                    BRAND_MATCH_THRESHOLD
-                            ) {
-                                topBrandMatch = {
-                                    id: brandRow.id,
-                                    name: brandRow.name,
-                                    distance: Number(brandRow.distance),
-                                };
-                                console.log(
-                                    `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
-                                );
-                            }
-                        } catch (e) {
-                            console.warn(
-                                "Brand intent matching skipped/failed",
-                                e
-                            );
-                        }
-                    },
-                    async () => {
-                        // Fetch absolute best products from the Advanced RAG Python backend
-                        try {
-                            const upstreamUrl = buildEmbeddingServiceUrl(
-                                "/search/advanced-rag"
-                            );
-                            if (!upstreamUrl) return;
-                            upstreamUrl.searchParams.set(
-                                "query",
-                                semanticSearch
-                            );
-                            upstreamUrl.searchParams.set("limit", "150");
-                            const response = await fetch(upstreamUrl, {
-                                next: { revalidate: 60 },
-                                redirect: "error",
-                                signal: AbortSignal.timeout(5000),
-                            });
-
-                            if (response.ok) {
-                                const data = await response.json();
-                                if (Array.isArray(data)) {
-                                    ragProductIds = data.map((d: any) =>
-                                        String(d.id)
-                                    );
-                                    return;
-                                }
-                            }
-                        } catch {
-                            // RAG is optional; the database/text-search path remains authoritative.
+                try {
+                    const upstreamUrl = buildEmbeddingServiceUrl("/search/advanced-rag");
+                    if (upstreamUrl) {
+                        upstreamUrl.searchParams.set("query", semanticSearch);
+                        upstreamUrl.searchParams.set("limit", "150");
+                        const response = await fetch(upstreamUrl, {
+                            cache: "no-store",
+                            redirect: "error",
+                            signal: AbortSignal.timeout(5000),
+                        });
+                        if (response.ok) {
+                            ragProductIds = toSearchCandidateIds(await response.json());
                         }
                     }
-                );
+                } catch {
+                    // Search continues with local vectors and text when RAG is unavailable.
+                }
+
+                // Advanced RAG can be temporarily unavailable or have no indexed
+                // candidates. Use the catalog's stored E5 vectors before falling
+                // back to literal text matching.
+                if (ragProductIds.length === 0) {
+                    try {
+                        const queryEmbedding = await getEmbedding768(semanticSearch, 4000);
+                        const vectorFilters = and(
+                            isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+                            isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+                            isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+                            isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
+                            verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
+                            categoryId ? eq(products.categoryId, categoryId) : undefined,
+                            subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+                            productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+                            brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+                            isActive === true && isAvailable === true && isPublished === true &&
+                            isDeleted === false && verificationStatus === "approved"
+                                ? publicProductBrandIsActiveFilter
+                                : undefined,
+                            getCatalogRequireMediaPredicate(shouldRequireMedia)
+                        );
+                        const vectorResult = await db.execute(sql`
+                            SELECT id::text AS id
+                            FROM products
+                            WHERE semantic_search_embeddings IS NOT NULL
+                              AND ${vectorFilters ?? sql`true`}
+                            ORDER BY (semantic_search_embeddings <=> ${JSON.stringify(queryEmbedding)}::vector) + 0 ASC
+                            LIMIT 150
+                        `);
+                        vectorProductIds = toSearchCandidateIds(vectorResult);
+                    } catch {
+                        // Local text search remains available if embedding lookup fails.
+                    }
+                }
 
                 searchQuery = getCatalogSearchPredicate({
                     processedSearch: semanticSearch,
                     ragProductIds,
+                    vectorProductIds,
                 });
             }
         }
@@ -1574,22 +1571,25 @@ class ProductQuery {
             );
         }
 
-        // 🟩 Step 2: semantic relevance (using Advanced RAG order)
+        // 🟩 Step 2: semantic relevance (using RAG or local vector order)
+        const semanticProductIds =
+            ragProductIds.length > 0 ? ragProductIds : vectorProductIds;
+        if (isRagSearchActive && processedSearch && !sortBy) {
+            const textMatch = getCatalogTextSearchPredicate(processedSearch);
+            if (textMatch) orderBy.push(sql`CASE WHEN ${textMatch} THEN 0 ELSE 1 END ASC`);
+        }
         if (
             shouldApplySearchRelevanceOrdering({
                 isRagSearchActive,
-                hasRagResults: ragProductIds.length > 0,
+                hasRagResults: semanticProductIds.length > 0,
                 sortBy,
             })
         ) {
-            // Sort exactly by the relevance order determined by the AI engine
-            const cases = ragProductIds
-                .map(
-                    (id, index) =>
-                        `WHEN products.id::text = '${id}' THEN ${index}`
-                )
-                .join(" ");
-            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
+            // Preserve the candidate ordering returned by the semantic source.
+            const cases = semanticProductIds.map(
+                (id, index) => sql`WHEN ${id} THEN ${index}`
+            );
+            orderBy.push(sql`CASE ${products.id} ${sql.join(cases, sql` `)} ELSE 999999 END ASC`);
         }
 
         // 🟪 Step 2.5: Sort by discount percentage when discount filter is applied
@@ -1655,9 +1655,29 @@ class ProductQuery {
         if (curatedProductIds !== undefined) {
             orderBy.push(asc(products.id));
         }
+        if (search) orderBy.push(asc(products.id));
 
         // --- Query the DB ---
-        const whereClause = and(...filters);
+        let whereClause = and(...filters);
+        let searchFallback = false;
+        let searchSimilarOnly = false;
+        let searchCountRows: { count: number; textCount?: number }[] | undefined;
+        if (!adminList && search?.trim()) {
+            const textMatch = getCatalogTextSearchPredicate(processedSearch ?? search);
+            searchCountRows = await db.select({
+                count: count(),
+                textCount: sql<number>`count(*) FILTER (WHERE ${textMatch ?? sql`false`})`,
+            }).from(products).where(whereClause);
+            searchSimilarOnly = isRagSearchActive && Number(searchCountRows[0]?.textCount ?? 0) === 0;
+            if (Number(searchCountRows[0]?.count ?? 0) === 0) {
+                // Keep the shopper's filters and public catalog restrictions.
+                // Only relax the unmatched search term, and label these results.
+                whereClause = and(...filters.filter((filter) => filter !== searchQuery));
+                searchFallback = true;
+                searchSimilarOnly = false;
+                searchCountRows = undefined;
+            }
+        }
         const productRows = adminList
             ? db.query.products.findMany({
                   with: {
@@ -1712,7 +1732,7 @@ class ProductQuery {
 
         const [data, totalRows] = await Promise.all([
             productRows,
-            db.select({ count: count() }).from(products).where(whereClause),
+            searchCountRows ?? db.select({ count: count() }).from(products).where(whereClause),
         ]);
 
         // --- Media mapping ---
@@ -1805,6 +1825,8 @@ class ProductQuery {
         return {
             data: filteredData,
             count: Number(totalRows?.[0]?.count ?? 0),
+            searchFallback,
+            searchSimilarOnly,
             topBrandMatch, // optional — can show in frontend
         };
     }

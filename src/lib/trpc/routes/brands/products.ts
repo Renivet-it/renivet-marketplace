@@ -219,6 +219,8 @@ export const productsRouter = createTRPCRouter({
                     return {
                         data: data.data,
                         count: data.count,
+                        searchFallback: data.searchFallback,
+                        searchSimilarOnly: data.searchSimilarOnly,
                         recommendationSource: recommendations.source,
                     };
                 }

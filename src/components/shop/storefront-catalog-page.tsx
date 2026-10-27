@@ -929,7 +929,10 @@ async function StorefrontProductsFetch({
     }
 
     if (searchId && page === 1) {
-        await logSearchResultCount(searchId, Number(finalData?.count ?? 0));
+        await logSearchResultCount(
+            searchId,
+            finalData?.searchFallback ? 0 : Number(finalData?.count ?? 0)
+        );
     }
 
     const userWishlist = userId

@@ -1,5 +1,3 @@
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
 export function getEmbeddingServiceOrigin(): URL | null {
     const configured = process.env.EMBEDDING_SERVICE_URL?.trim();
     if (!configured) return null;
@@ -10,12 +8,10 @@ export function getEmbeddingServiceOrigin(): URL | null {
         const isLocalDevelopment =
             process.env.NODE_ENV !== "production" &&
             (!appEnv || appEnv === "development");
-        const isLoopbackHttp =
-            origin.protocol === "http:" &&
-            LOOPBACK_HOSTS.has(origin.hostname) &&
-            isLocalDevelopment;
+        const isLocalDevelopmentHttp =
+            origin.protocol === "http:" && isLocalDevelopment;
 
-        if (origin.protocol !== "https:" && !isLoopbackHttp) return null;
+        if (origin.protocol !== "https:" && !isLocalDevelopmentHttp) return null;
         if (
             origin.username ||
             origin.password ||
