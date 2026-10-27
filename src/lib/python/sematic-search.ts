@@ -35,7 +35,10 @@ export async function getEmbedding(text: string): Promise<number[]> {
  * This is the preferred method for product search as it provides better
  * semantic understanding and relevance matching.
  */
-export async function getEmbedding768(text: string): Promise<number[]> {
+export async function getEmbedding768(
+    text: string,
+    timeoutMs = EMBEDDING_PROVIDER_TIMEOUT_MS
+): Promise<number[]> {
     try {
         const response = await axios.post(
             requireEmbeddingServiceUrl("/embeddings/generate-768"),
@@ -44,7 +47,7 @@ export async function getEmbedding768(text: string): Promise<number[]> {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                timeout: EMBEDDING_PROVIDER_TIMEOUT_MS,
+                timeout: timeoutMs,
                 maxRedirects: 0,
             }
         );

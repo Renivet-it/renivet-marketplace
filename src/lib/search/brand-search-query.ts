@@ -6,6 +6,17 @@ export function normalizeBrandSearchKey(value: string) {
     return normalize(value).replaceAll(" ", "");
 }
 
+export function normalizeBrandSearchIdentity(value: string) {
+    return normalize(value)
+        .split(" ")
+        .map((word) =>
+            word.length > 3 && word.endsWith("s") && !word.endsWith("ss")
+                ? word.slice(0, -1)
+                : word
+        )
+        .join("");
+}
+
 export function getBrandSearchTerms(
     originalQuery: string,
     brandName?: string,

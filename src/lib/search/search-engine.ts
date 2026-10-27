@@ -53,40 +53,16 @@ export function isSearchAnalyticsId(
     return !!value && SEARCH_ANALYTICS_ID_PATTERN.test(value);
 }
 
-interface BrandData {
+export interface BrandData {
     id: string;
     name: string;
     slug: string;
 }
 
-interface CategoryData {
+export interface CategoryData {
     id: string;
     name: string;
     slug: string;
-}
-
-interface SubCategoryData {
-    id: string;
-    name: string;
-    slug: string;
-    categoryId: string;
-}
-
-interface ProductTypeData {
-    id: string;
-    name: string;
-    slug: string;
-    categoryId: string;
-    subCategoryId: string;
-}
-
-interface IntentMapping {
-    id: string;
-    keyword: string;
-    intentType: "CATEGORY" | "PRODUCT" | "BRAND";
-    categoryIds: string;
-    priority: string;
-    source: string;
 }
 
 // ============================================
@@ -107,6 +83,57 @@ export function normalizeQuery(query: string): string {
         .replace(/[^a-z0-9\s&]/gi, "") // Remove noise chars except &
         .replace(/\s+/g, " ") // Collapse multiple spaces
         .trim();
+}
+
+export function resolveExactSearchIntent({
+    normalizedQuery,
+    originalQuery,
+    brandResult,
+    categoriesData,
+}: {
+    normalizedQuery: string;
+    originalQuery: string;
+    brandResult: Awaited<ReturnType<typeof detectBrandIntent>>;
+    categoriesData: CategoryData[];
+}): SearchResult {
+    if (
+        brandResult.matched &&
+        brandResult.brand &&
+        brandResult.matchType !== "partial"
+    ) {
+        return {
+            intentType: "BRAND",
+            brandId: brandResult.brand.id,
+            brandSlug: brandResult.brand.slug,
+            brandName: brandResult.brand.name,
+            normalizedQuery,
+            originalQuery,
+            confidence: brandResult.matchType === "exact" ? "high" : "medium",
+        };
+    }
+
+    const category = categoriesData.find(
+        (candidate) =>
+            normalizeQuery(candidate.name) === normalizedQuery ||
+            normalizeQuery(candidate.slug) === normalizedQuery
+    );
+    if (category) {
+        return {
+            intentType: "CATEGORY",
+            categoryId: category.id,
+            categorySlug: category.slug,
+            normalizedQuery,
+            originalQuery,
+            confidence: "high",
+        };
+    }
+
+    return {
+        intentType: "UNKNOWN",
+        normalizedQuery,
+        originalQuery,
+        confidence: "low",
+    };
 }
 
 /**
@@ -186,92 +213,6 @@ export async function detectBrandIntent(
 }
 
 // ============================================
-// STAGE 4: CATEGORY / PRODUCT INTENT DETECTION
-// ============================================
-
-/**
- * Check if query matches a search intent from the database
- */
-export async function detectIntentFromMapping(
-    normalizedQuery: string
-): Promise<{ matched: boolean; intent?: IntentMapping }> {
-    // Check exact match first
-    const exactMatch = await db.query.searchIntents.findFirst({
-        where: eq(searchIntents.keyword, normalizedQuery),
-    });
-
-    if (exactMatch) {
-        return { matched: true, intent: exactMatch };
-    }
-
-    // Check partial matches (query contains keyword or keyword contains query)
-    const allIntents = await db.query.searchIntents.findMany();
-
-    for (const intent of allIntents) {
-        if (
-            normalizedQuery.includes(intent.keyword) ||
-            intent.keyword.includes(normalizedQuery)
-        ) {
-            return { matched: true, intent };
-        }
-    }
-
-    return { matched: false };
-}
-
-/**
- * Fallback detection using category/subcategory/productType names directly
- */
-export async function detectCategoryIntentFallback(
-    normalizedQuery: string,
-    categoriesData: CategoryData[],
-    subCategoriesData: SubCategoryData[],
-    productTypesData: ProductTypeData[]
-): Promise<{
-    matched: boolean;
-    type?: "CATEGORY" | "SUBCATEGORY" | "PRODUCT_TYPE";
-    data?: CategoryData | SubCategoryData | ProductTypeData;
-}> {
-    // Check product types first (most specific)
-    for (const pt of productTypesData) {
-        const ptNameLower = pt.name.toLowerCase();
-        if (
-            normalizedQuery === ptNameLower ||
-            normalizedQuery.includes(ptNameLower) ||
-            ptNameLower.includes(normalizedQuery)
-        ) {
-            return { matched: true, type: "PRODUCT_TYPE", data: pt };
-        }
-    }
-
-    // Check subcategories
-    for (const sc of subCategoriesData) {
-        const scNameLower = sc.name.toLowerCase();
-        if (
-            normalizedQuery === scNameLower ||
-            normalizedQuery.includes(scNameLower) ||
-            scNameLower.includes(normalizedQuery)
-        ) {
-            return { matched: true, type: "SUBCATEGORY", data: sc };
-        }
-    }
-
-    // Check categories (least specific)
-    for (const cat of categoriesData) {
-        const catNameLower = cat.name.toLowerCase();
-        if (
-            normalizedQuery === catNameLower ||
-            normalizedQuery.includes(catNameLower) ||
-            catNameLower.includes(normalizedQuery)
-        ) {
-            return { matched: true, type: "CATEGORY", data: cat };
-        }
-    }
-
-    return { matched: false };
-}
-
-// ============================================
 // STAGE 5 & 6: INTENT CLASSIFICATION & ROUTING
 // ============================================
 
@@ -292,177 +233,23 @@ export async function processSearch(query: string): Promise<SearchResult> {
     }
 
     // Fetch all required data
-    const [brandsData, categoriesData, subCategoriesData, productTypesData] =
-        await Promise.all([
-            db.query.brands.findMany({
-                columns: { id: true, name: true, slug: true },
-                where: eq(brands.isActive, true),
-            }),
-            db.query.categories.findMany({
-                columns: { id: true, name: true, slug: true },
-            }),
-            db.query.subCategories.findMany({
-                columns: { id: true, name: true, slug: true, categoryId: true },
-            }),
-            db.query.productTypes.findMany({
-                columns: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                    categoryId: true,
-                    subCategoryId: true,
-                },
-            }),
-        ]);
+    const [brandsData, categoriesData] = await Promise.all([
+        db.query.brands.findMany({
+            columns: { id: true, name: true, slug: true },
+            where: eq(brands.isActive, true),
+        }),
+        db.query.categories.findMany({
+            columns: { id: true, name: true, slug: true },
+        }),
+    ]);
 
-    // STAGE 3: Brand Intent Detection (HIGHEST PRIORITY)
     const brandResult = await detectBrandIntent(normalizedQuery, brandsData);
-    if (brandResult.matched && brandResult.brand) {
-        return {
-            intentType: "BRAND",
-            brandId: brandResult.brand.id,
-            brandSlug: brandResult.brand.slug,
-            brandName: brandResult.brand.name,
-            normalizedQuery,
-            originalQuery,
-            confidence: brandResult.matchType === "exact" ? "high" : "medium",
-        };
-    }
-
-    // STAGE 4: Check intent mapping table first
-    const intentResult = await detectIntentFromMapping(normalizedQuery);
-    if (intentResult.matched && intentResult.intent) {
-        const intent = intentResult.intent;
-        const categoryPath = intent.categoryIds.split("|");
-
-        // Parse category path to find the most specific match
-        if (categoryPath.length >= 2) {
-            // Has subcategory
-            const categoryName = categoryPath[0];
-            const subcategoryName = categoryPath[1];
-
-            const category = categoriesData.find(
-                (c) => c.name.toLowerCase() === categoryName.toLowerCase()
-            );
-            const subcategory = subCategoriesData.find(
-                (sc) => sc.name.toLowerCase() === subcategoryName.toLowerCase()
-            );
-
-            if (subcategory) {
-                // Check if there's a product type match
-                if (
-                    intent.intentType === "PRODUCT" &&
-                    categoryPath.length >= 2
-                ) {
-                    const productType = productTypesData.find(
-                        (pt) =>
-                            pt.subCategoryId === subcategory.id &&
-                            pt.name.toLowerCase().includes(normalizedQuery)
-                    );
-                    if (productType) {
-                        return {
-                            intentType: "PRODUCT_TYPE",
-                            productTypeId: productType.id,
-                            productTypeSlug: productType.slug,
-                            subcategoryId: subcategory.id,
-                            subcategorySlug: subcategory.slug,
-                            categoryId: category?.id,
-                            categorySlug: category?.slug,
-                            normalizedQuery,
-                            originalQuery,
-                            confidence:
-                                intent.priority === "high" ? "high" : "medium",
-                        };
-                    }
-                }
-
-                return {
-                    intentType: "SUBCATEGORY",
-                    subcategoryId: subcategory.id,
-                    subcategorySlug: subcategory.slug,
-                    categoryId: category?.id,
-                    categorySlug: category?.slug,
-                    normalizedQuery,
-                    originalQuery,
-                    confidence: intent.priority === "high" ? "high" : "medium",
-                };
-            }
-
-            if (category) {
-                return {
-                    intentType: "CATEGORY",
-                    categoryId: category.id,
-                    categorySlug: category.slug,
-                    normalizedQuery,
-                    originalQuery,
-                    confidence: intent.priority === "high" ? "high" : "medium",
-                };
-            }
-        }
-    }
-
-    // Fallback: Direct category/subcategory/productType name matching
-    const fallbackResult = await detectCategoryIntentFallback(
-        normalizedQuery,
-        categoriesData,
-        subCategoriesData,
-        productTypesData
-    );
-
-    if (fallbackResult.matched && fallbackResult.data) {
-        if (fallbackResult.type === "PRODUCT_TYPE") {
-            const pt = fallbackResult.data as ProductTypeData;
-            const sc = subCategoriesData.find((s) => s.id === pt.subCategoryId);
-            const cat = categoriesData.find((c) => c.id === pt.categoryId);
-            return {
-                intentType: "PRODUCT_TYPE",
-                productTypeId: pt.id,
-                productTypeSlug: pt.slug,
-                subcategoryId: sc?.id,
-                subcategorySlug: sc?.slug,
-                categoryId: cat?.id,
-                categorySlug: cat?.slug,
-                normalizedQuery,
-                originalQuery,
-                confidence: "medium",
-            };
-        }
-
-        if (fallbackResult.type === "SUBCATEGORY") {
-            const sc = fallbackResult.data as SubCategoryData;
-            const cat = categoriesData.find((c) => c.id === sc.categoryId);
-            return {
-                intentType: "SUBCATEGORY",
-                subcategoryId: sc.id,
-                subcategorySlug: sc.slug,
-                categoryId: cat?.id,
-                categorySlug: cat?.slug,
-                normalizedQuery,
-                originalQuery,
-                confidence: "medium",
-            };
-        }
-
-        if (fallbackResult.type === "CATEGORY") {
-            const cat = fallbackResult.data as CategoryData;
-            return {
-                intentType: "CATEGORY",
-                categoryId: cat.id,
-                categorySlug: cat.slug,
-                normalizedQuery,
-                originalQuery,
-                confidence: "medium",
-            };
-        }
-    }
-
-    // UNKNOWN intent - will trigger global semantic search
-    return {
-        intentType: "UNKNOWN",
+    return resolveExactSearchIntent({
         normalizedQuery,
         originalQuery,
-        confidence: "low",
-    };
+        brandResult,
+        categoriesData,
+    });
 }
 
 // ============================================

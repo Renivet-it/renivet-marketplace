@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { getBrandSearchTerms } from "./brand-search-query";
+import {
+    getBrandSearchTerms,
+    normalizeBrandSearchIdentity,
+} from "./brand-search-query";
 
 test("keeps the non-brand terms when redirecting a brand product search", () => {
     expect(
@@ -17,4 +20,10 @@ test("treats a brand-only search as equivalent when spaces are omitted", () => {
     expect(
         getBrandSearchTerms("terraluna", "Terra Luna", "terra-luna")
     ).toBeUndefined();
+});
+
+test("matches a brand-only search when the query uses a singular word", () => {
+    expect(normalizeBrandSearchIdentity("island of loom")).toBe(
+        normalizeBrandSearchIdentity("Islands of Loom")
+    );
 });

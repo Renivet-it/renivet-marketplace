@@ -37,6 +37,8 @@ interface PageProps extends GenericProps {
     initialData: {
         data: ProductWithBrand[];
         count: number;
+        searchFallback?: boolean;
+        searchSimilarOnly?: boolean;
     };
     initialWishlist?: CachedWishlist[];
     userId?: string;
@@ -236,6 +238,8 @@ export function ShopProducts({
                   ...initialData,
                   recommendationSource: null,
                   topBrandMatch: null,
+                  searchFallback: initialData.searchFallback ?? false,
+                  searchSimilarOnly: initialData.searchSimilarOnly ?? false,
               }
             : undefined,
         // Never cache search results; always fetch fresh so search is accurate.
@@ -280,13 +284,12 @@ export function ShopProducts({
         initialData?.count ?? 0
     );
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [hasReachedEnd, setHasReachedEnd] = useState(
-        () =>
-            shouldStopCatalogPagination({
-                loadedCount: initialData?.data?.length ?? 0,
-                totalCount: initialData?.count ?? 0,
-                lastPageCount: initialData?.data?.length ?? 0,
-            })
+    const [hasReachedEnd, setHasReachedEnd] = useState(() =>
+        shouldStopCatalogPagination({
+            loadedCount: initialData?.data?.length ?? 0,
+            totalCount: initialData?.count ?? 0,
+            lastPageCount: initialData?.data?.length ?? 0,
+        })
     );
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -491,6 +494,26 @@ export function ShopProducts({
                     </div>
                 )}
 
+                {queryData?.searchFallback && allProducts.length > 0 && (
+                    <p
+                        role="status"
+                        className="mb-5 rounded-xl bg-[#f5f8fc] px-5 py-4 text-sm text-[#243754]"
+                    >
+                        We couldn&apos;t find a close match for &ldquo;{search}
+                        &rdquo;. Explore these products within your selected
+                        filters.
+                    </p>
+                )}
+                {queryData?.searchSimilarOnly && allProducts.length > 0 && (
+                    <p
+                        role="status"
+                        className="mb-5 rounded-xl bg-[#f5f8fc] px-5 py-4 text-sm text-[#243754]"
+                    >
+                        Showing similar products for &ldquo;{search}&rdquo;. Try
+                        adjusting your search or filters for a closer match.
+                    </p>
+                )}
+
                 <div
                     className={cn(
                         "grid grid-cols-2 gap-x-3 gap-y-6 transition-opacity duration-200 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-4",
@@ -594,7 +617,7 @@ function NoProductCard() {
                 </EmptyPlaceholderContent>
 
                 <Button asChild>
-                    <Link href="/">Go back</Link>
+                    <Link href="/shop">Clear filters and explore products</Link>
                 </Button>
             </EmptyPlaceholder>
         </div>

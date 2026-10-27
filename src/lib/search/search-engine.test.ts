@@ -3,6 +3,7 @@ import {
     detectBrandIntent,
     getSearchRedirectUrl,
     isSearchAnalyticsId,
+    resolveExactSearchIntent,
     type SearchResult,
 } from "./search-engine";
 
@@ -86,5 +87,89 @@ test("detects a spaced brand name when the shopper omits spaces", async () => {
         matched: true,
         brand: terraLuna,
         matchType: "exact",
+    });
+});
+
+describe("exact search intent routing", () => {
+    const categories = [{ id: "women-id", name: "Women", slug: "women" }];
+
+    test("sends a product query to global search unless it exactly names a category", () => {
+        const result = resolveExactSearchIntent({
+            normalizedQuery: "saree",
+            originalQuery: "saree",
+            brandResult: { matched: false },
+            categoriesData: categories,
+        });
+
+        expect(result.intentType).toBe("UNKNOWN");
+        expect(getSearchRedirectUrl(result)).toBe("/shop?search=saree");
+    });
+
+    test("routes an exact category name to that category", () => {
+        const result = resolveExactSearchIntent({
+            normalizedQuery: "women",
+            originalQuery: "Women",
+            brandResult: { matched: false },
+            categoriesData: categories,
+        });
+
+        expect(result.intentType).toBe("CATEGORY");
+        expect(result.categoryId).toBe("women-id");
+    });
+
+    test("keeps a query containing a category name on global product search", () => {
+        const result = resolveExactSearchIntent({
+            normalizedQuery: "women saree",
+            originalQuery: "women saree",
+            brandResult: { matched: false },
+            categoriesData: categories,
+        });
+
+        expect(result.intentType).toBe("UNKNOWN");
+        expect(getSearchRedirectUrl(result)).toBe(
+            "/shop?search=women%20saree"
+        );
+    });
+
+    test("does not turn a partial brand match into a brand route", () => {
+        const result = resolveExactSearchIntent({
+            normalizedQuery: "terra luna saree",
+            originalQuery: "Terra Luna saree",
+            brandResult: {
+                matched: true,
+                matchType: "partial",
+                brand: {
+                    id: "terra-luna-id",
+                    name: "Terra Luna",
+                    slug: "terra-luna",
+                },
+            },
+            categoriesData: categories,
+        });
+
+        expect(result.intentType).toBe("UNKNOWN");
+        expect(getSearchRedirectUrl(result)).toBe(
+            "/shop?search=Terra%20Luna%20saree"
+        );
+    });
+
+    test("routes an exact brand match to the brand", () => {
+        const result = resolveExactSearchIntent({
+            normalizedQuery: "terra luna",
+            originalQuery: "Terra Luna",
+            brandResult: {
+                matched: true,
+                matchType: "exact",
+                brand: {
+                    id: "terra-luna-id",
+                    name: "Terra Luna",
+                    slug: "terra-luna",
+                },
+            },
+            categoriesData: categories,
+        });
+
+        expect(result.intentType).toBe("BRAND");
+        expect(result.brandId).toBe("terra-luna-id");
     });
 });
