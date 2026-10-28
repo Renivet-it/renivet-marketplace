@@ -45,6 +45,7 @@ async function sendSupportEmail({
     href,
     actionLabel,
     eyebrow,
+    detailsHeading,
     footerNote,
 }: {
     to: string[];
@@ -54,6 +55,7 @@ async function sendSupportEmail({
     href?: string | null;
     actionLabel?: string;
     eyebrow?: string;
+    detailsHeading?: string;
     footerNote?: string;
 }) {
     if (!to.length) return;
@@ -77,6 +79,7 @@ async function sendSupportEmail({
             href,
             actionLabel,
             eyebrow,
+            detailsHeading,
             footerNote,
         }),
         text: lines.join("\n"),
@@ -144,6 +147,10 @@ export async function notifyAdmins(input: {
     emailSubject: string;
     emailIntro: string;
     emailDetails: string[];
+    emailActionLabel?: string;
+    emailEyebrow?: string;
+    emailDetailsHeading?: string;
+    emailFooterNote?: string;
     metadata?: Record<string, unknown> | null;
 }) {
     const admins = await getAdminRecipients();
@@ -171,9 +178,10 @@ export async function notifyAdmins(input: {
         intro: input.emailIntro,
         details: input.emailDetails,
         href: input.href ?? null,
-        actionLabel: "Open support desk",
-        eyebrow: "Internal Support Forward",
-        footerNote:
+        actionLabel: input.emailActionLabel ?? "Open support desk",
+        eyebrow: input.emailEyebrow ?? "Internal Support Forward",
+        detailsHeading: input.emailDetailsHeading,
+        footerNote: input.emailFooterNote ??
             "This is an automated support-forwarding email from the Renivet support system.",
     });
 }

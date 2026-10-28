@@ -16,7 +16,6 @@ import "./globals.css";
 import { env } from "@/../env";
 import { GuestAddToCartPopup } from "@/components/globals/modals/guest-add-to-cart-popup";
 import { WelcomePopupTrigger } from "@/components/globals/modals/welcome-popup-trigger";
-import { SwapProgressFloat } from "@/components/globals/swap-progress-float";
 import { FB_PIXEL_ID } from "@/lib/fbpixel";
 import { buildSiteIdentityJsonLd } from "@/lib/seo/structured-data";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -195,7 +194,6 @@ export default function RootLayout({ children }: LayoutProps) {
                         <WelcomePopupTrigger />
                         <GuestAddToCartPopup />
                         {children}
-                        <SwapProgressFloat />
                         <Toaster />
                         {/* Track page changes + enrich pixel with user data client-side */}
                         <FacebookPixel />

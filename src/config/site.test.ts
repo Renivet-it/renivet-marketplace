@@ -43,3 +43,21 @@ test("shows legacy product slug migration under Platform Settings", () => {
             BitFieldSitePermission.ADMINISTRATOR,
     });
 });
+
+test("places pickup requests in a dedicated ReWear sidebar section", () => {
+    const rewear = generalSidebarConfig.find(
+        (section) => section.title === "ReWear"
+    );
+    const growth = generalSidebarConfig.find(
+        (section) => section.title === "Growth"
+    );
+
+    expect(rewear?.items).toContainEqual({
+        title: "Pickup Request",
+        url: "/dashboard/general/rewear-requests",
+        permissions:
+            BitFieldSitePermission.MANAGE_FEEDBACK |
+            BitFieldSitePermission.VIEW_FEEDBACK,
+    });
+    expect(growth?.items?.some((item) => item.url === "/dashboard/general/rewear-requests")).toBe(false);
+});

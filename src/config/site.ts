@@ -409,13 +409,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_SETTINGS,
             },
             {
-                title: "Rewear Pickup Requests",
-                url: "/dashboard/general/rewear-requests",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-            {
                 title: "Partnerships",
                 url: "/dashboard/general/marketing-partnerships",
                 permissions:
@@ -431,6 +424,20 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 title: "Plans",
                 url: "/dashboard/general/plans",
                 permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "ReWear",
+        url: "#",
+        icon: "Recycle",
+        items: [
+            {
+                title: "Pickup Request",
+                url: "/dashboard/general/rewear-requests",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
             },
         ],
     },
