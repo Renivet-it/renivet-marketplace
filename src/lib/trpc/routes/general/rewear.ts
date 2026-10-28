@@ -9,12 +9,30 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "../../trpc";
+import { buildRewearPickupAdminNotification } from "@/lib/rewear/notifications";
+import { notifyAdmins } from "@/lib/support/utils";
 
 export const rewearRouter = createTRPCRouter({
     createPickupRequest: publicProcedure
         .input(createRewearPickupRequestSchema)
         .mutation(async ({ ctx, input }) => {
-            return ctx.queries.rewearPickupRequests.create(input);
+            const request = await ctx.queries.rewearPickupRequests.create(input);
+
+            const notification = buildRewearPickupAdminNotification(request);
+            const [delivery] = await Promise.allSettled([
+                notifyAdmins({
+                    ...notification,
+                }),
+            ]);
+
+            if (delivery.status === "rejected") {
+                console.error(
+                    "Failed to notify admins about a ReWear pickup request:",
+                    delivery.reason
+                );
+            }
+
+            return request;
         }),
     listPickupRequests: protectedProcedure
         .input(

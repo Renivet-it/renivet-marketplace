@@ -9,6 +9,7 @@ interface SupportNotificationEmailProps {
     href?: string | null;
     actionLabel?: string;
     eyebrow?: string;
+    detailsHeading?: string;
     footerNote?: string;
 }
 
@@ -19,6 +20,7 @@ export default function SupportNotificationEmail({
     href,
     actionLabel = "Open support case",
     eyebrow = "Support Update",
+    detailsHeading = "Case Summary",
     footerNote = "This is an automated update from the Renivet support team.",
 }: SupportNotificationEmailProps) {
     const absoluteHref = href
@@ -40,7 +42,7 @@ export default function SupportNotificationEmail({
             {details.length > 0 && (
                 <Section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
                     <Text className="m-0 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        Case Summary
+                        {detailsHeading}
                     </Text>
                     {details.map((detail, index) => {
                         const [label, ...rest] = detail.split(":");
