@@ -212,7 +212,7 @@ export default function RewearPage() {
                         </p>
                         <p className="rewear-hero-body mt-3 max-w-md text-xs leading-5 text-[#f4e9d3]/90">
                             <span className="sm:hidden">
-                                Give your unworn clothes a next chapter with
+                                Give your old clothes a next chapter with
                                 Renivet. We&apos;ll arrange pickup for eligible
                                 garments in Bengaluru, track their journey
                                 through sorting and processing, and reward you
@@ -282,7 +282,7 @@ export default function RewearPage() {
                     what happens next.
                 </h2>
                 <p className="rewear-next-copy mx-auto text-[#765c5e]">
-                    Give your unworn clothes a next chapter with Renivet.
+                    Give your old clothes a next chapter with Renivet.
                     We&apos;ll arrange pickup for eligible garments in
                     Bengaluru, track their journey through sorting and
                     processing, and reward you with Karma Points to shop on
