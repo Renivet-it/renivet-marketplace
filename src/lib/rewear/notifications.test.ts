@@ -17,9 +17,9 @@ test("builds an admin notification that links to the pickup request page", () =>
         title: "New ReWear pickup request",
         body: "Ayan Khan submitted a pickup request.",
         href: "/dashboard/general/rewear-requests",
-        emailSubject: "A new ReWear pickup request from Ayan Khan",
+        emailSubject: "New ReWear pickup request: Ayan Khan",
         emailIntro:
-            "Ayan Khan has asked us to collect some garments. Here are the details to help you follow up and arrange the pickup.",
+            "A new ReWear pickup request has been submitted. Please review the details below and contact Ayan Khan to coordinate collection.",
         emailDetails: [
             "Customer: Ayan Khan",
             "Phone number: +91 9876543210",
@@ -29,10 +29,10 @@ test("builds an admin notification that links to the pickup request page", () =>
             "Clothing notes: Mostly shirts and trousers",
         ],
         emailActionLabel: "Review pickup request",
-        emailEyebrow: "REWEAR PICKUP",
+        emailEyebrow: "REWEAR PICKUP REQUEST",
         emailDetailsHeading: "Customer details",
         emailFooterNote:
-            "Thanks for helping give these garments a second life.",
+            "Please use the customer's preferred contact method to arrange collection.",
         metadata: { requestId: "pickup-123" },
     });
 
