@@ -43,18 +43,11 @@ test("festive search and category controls stay pinned while scrolling", async (
     expect(header).not.toContain("ResizeObserver");
 });
 
-test("swap progress stays compact and bottom-fixed", async () => {
-    const widget = await readFile(
-        "src/components/globals/swap-progress-float.tsx",
-        "utf8"
-    );
+test("swap progress badge is not mounted globally", async () => {
+    const layout = await readFile("src/app/layout.tsx", "utf8");
 
-    expect(widget).not.toContain("window.scrollY");
-    expect(widget).not.toContain("top-4");
-    expect(widget).toContain(
-        "bottom-[calc(86px+max(env(safe-area-inset-bottom),0px))]"
-    );
-    expect(widget).toContain("h-[56px]");
+    expect(layout).not.toContain("SwapProgressFloat");
+    expect(layout).not.toContain("swap-progress-float");
 });
 
 test("festive loading keeps the header shape and waits before showing actions", async () => {
