@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import { Switch } from "@/components/ui/switch";
+import {
+    compressBannerImage,
+    MAX_BANNER_SOURCE_BYTES,
+} from "@/lib/image-compression";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn, handleClientError } from "@/lib/utils";
@@ -26,27 +30,32 @@ import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import {
-    generateClientDropzoneAccept,
-    generatePermittedFileTypes,
-} from "uploadthing/client";
+import { generateClientDropzoneAccept } from "uploadthing/client";
 
 interface PageProps {
     banner?: Banner;
+    isMobile?: boolean;
 }
 
-export function BannerManageForm({ banner }: PageProps) {
+export function BannerManageForm({ banner, isMobile = false }: PageProps) {
+    const mobilePlacement = banner?.isMobile ?? isMobile;
     const router = useRouter();
 
     const [preview, setPreview] = useState<string | null>(
         banner?.imageUrl ?? null
     );
     const [file, setFile] = useState<File | null>(null);
+    const [isCompressing, setIsCompressing] = useState(false);
 
-    const { startUpload, routeConfig } = useUploadThing("contentUploader");
+    useEffect(() => {
+        if (!preview?.startsWith("blob:")) return;
+        return () => URL.revokeObjectURL(preview);
+    }, [preview]);
+
+    const { startUpload } = useUploadThing("contentUploader");
 
     const form = useForm<CreateBanner>({
         resolver: zodResolver(createBannerSchema),
@@ -56,31 +65,60 @@ export function BannerManageForm({ banner }: PageProps) {
             imageUrl: banner?.imageUrl ?? null,
             url: banner?.url ?? "",
             isActive: banner?.isActive ?? false,
+            isMobile: mobilePlacement,
         },
     });
 
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
-        if (file) {
-            setFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            setPreview(previewUrl);
+    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+        const selectedFile = acceptedFiles[0];
+        if (!selectedFile) return;
+
+        setIsCompressing(true);
+        try {
+            const compressedFile = await compressBannerImage(selectedFile);
+            setFile(compressedFile);
+            setPreview(URL.createObjectURL(compressedFile));
+
+            if (compressedFile !== selectedFile) {
+                toast.success(
+                    `Image compressed to ${(compressedFile.size / (1024 * 1024)).toFixed(2)} MB.`
+                );
+            }
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : "The selected image could not be compressed."
+            );
+        } finally {
+            setIsCompressing(false);
         }
     }, []);
 
     const removeImage = () => {
         setPreview(null);
         setFile(null);
+        setIsCompressing(false);
         form.setValue("imageUrl", null);
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
-        accept: generateClientDropzoneAccept(
-            generatePermittedFileTypes(routeConfig).fileTypes
-        ),
+        accept: generateClientDropzoneAccept(["image/png", "image/jpeg"]),
         maxFiles: 1,
-        maxSize: 4 * 1024 * 1024,
+        maxSize: MAX_BANNER_SOURCE_BYTES,
+        onDropRejected: (rejections) => {
+            const tooLarge = rejections.some((rejection) =>
+                rejection.errors.some(
+                    (error) => error.code === "file-too-large"
+                )
+            );
+            toast.error(
+                tooLarge
+                    ? "Choose an image up to 20 MB; it will be compressed before upload."
+                    : "Choose a PNG or JPEG image."
+            );
+        },
     });
 
     const { mutateAsync: createBannerAsync } =
@@ -106,9 +144,14 @@ export function BannerManageForm({ banner }: PageProps) {
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Banner created successfully", { id: toastId });
-            router.push("/dashboard/general/banners");
+            router.push(
+                mobilePlacement
+                    ? "/dashboard/general/banners/mobile"
+                    : "/dashboard/general/banners"
+            );
             setPreview(null);
             setFile(null);
+            setIsCompressing(false);
         },
         onError: (err, _, ctx) => {
             return handleClientError(err, ctx?.toastId);
@@ -135,9 +178,14 @@ export function BannerManageForm({ banner }: PageProps) {
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Banner updated successfully", { id: toastId });
-            router.push("/dashboard/general/banners");
+            router.push(
+                mobilePlacement
+                    ? "/dashboard/general/banners/mobile"
+                    : "/dashboard/general/banners"
+            );
             setPreview(null);
             setFile(null);
+            setIsCompressing(false);
         },
         onError: (err, _, ctx) => {
             return handleClientError(err, ctx?.toastId);
@@ -235,14 +283,17 @@ export function BannerManageForm({ banner }: PageProps) {
                                             "border-green-500 bg-green-50",
                                         preview && "border-0 p-0",
                                         (isBannerCreating ||
-                                            isBannerUpdating) &&
+                                            isBannerUpdating ||
+                                            isCompressing) &&
                                             "cursor-not-allowed opacity-50"
                                     )}
                                 >
                                     <input
                                         {...getInputProps()}
                                         disabled={
-                                            isBannerCreating || isBannerUpdating
+                                            isBannerCreating ||
+                                            isBannerUpdating ||
+                                            isCompressing
                                         }
                                     />
 
@@ -284,13 +335,27 @@ export function BannerManageForm({ banner }: PageProps) {
                                                     Drop
                                                 </p>
                                                 <p className="text-xs text-muted-foreground md:text-sm">
-                                                    Image (4 MB)
+                                                    PNG or JPEG up to 20 MB;
+                                                    larger images are compressed
+                                                    below 4 MB.
                                                 </p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </FormControl>
+
+                            {isCompressing && (
+                                <p className="text-sm text-muted-foreground">
+                                    Compressing image…
+                                </p>
+                            )}
+                            {file && !isCompressing && (
+                                <p className="text-sm text-muted-foreground">
+                                    Ready to upload: {file.name} (
+                                    {(file.size / (1024 * 1024)).toFixed(2)} MB)
+                                </p>
+                            )}
 
                             <FormMessage />
                         </FormItem>
@@ -328,6 +393,7 @@ export function BannerManageForm({ banner }: PageProps) {
                     disabled={
                         isBannerCreating ||
                         isBannerUpdating ||
+                        isCompressing ||
                         (preview === (banner?.imageUrl ?? null) &&
                             !form.formState.isDirty)
                     }

@@ -854,9 +854,16 @@ export function NavbarHome({
                                     <NavigationMenuItem>
                                         <Link
                                             href="/rewear"
+                                            aria-label="ReWear, new section"
                                             className="flex h-10 items-center border-b-2 border-transparent px-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#33413a] transition-colors hover:text-primary min-[1500px]:px-3 min-[1500px]:text-[13px] min-[1500px]:tracking-[0.08em]"
                                         >
                                             REWEAR
+                                            <span
+                                                aria-hidden="true"
+                                                className="ml-1.5 rounded-sm bg-[#d4aa1d] px-1 py-0.5 text-[8px] font-bold leading-none tracking-normal text-[#63303c]"
+                                            >
+                                                NEW
+                                            </span>
                                         </Link>
                                     </NavigationMenuItem>
                                 </NavigationMenuList>

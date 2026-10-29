@@ -2,8 +2,11 @@ import { EmailCompletionCard } from "@/components/auth/email-completion-card";
 import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
 import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
+import { RewearMobileCta } from "@/components/home/rewear-mobile-cta";
 import { siteConfig } from "@/config/site";
+import { loadMobileBannersSafely } from "@/lib/banner-recovery";
 import {
+    bannerQueries,
     blogQueries,
     homeShopByCategoryTitleQueries,
     productQueries,
@@ -164,14 +167,14 @@ export default async function Page() {
     const { userId } = await auth();
 
     return (
-        <main className="min-h-screen bg-[#FAF7F2] [&_section]:bg-[#FAF7F2] [&_h1]:!text-[#3E2127] [&_h2]:!text-[#3E2127] [&_h3]:!text-[#3E2127] [&_h4]:!text-[#3E2127] [&_h5]:!text-[#3E2127] [&_h6]:!text-[#3E2127]">
+        <main className="min-h-screen bg-[#FAF7F2] [&_h1]:!text-[#3E2127] [&_h2]:!text-[#3E2127] [&_h3]:!text-[#3E2127] [&_h4]:!text-[#3E2127] [&_h5]:!text-[#3E2127] [&_h6]:!text-[#3E2127] [&_section]:bg-[#FAF7F2]">
             <h1 className="sr-only">Renivet Sustainable Marketplace</h1>
             <EmailCompletionCard />
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[calc(100vh-20vh)] w-full bg-white" />
-                }
+                    fallback={
+                        <div className="h-[calc(100vh-20vh)] w-full bg-white" />
+                    }
                 >
                     <BannersFetch />
                 </Suspense>
@@ -179,9 +182,7 @@ export default async function Page() {
             <ScrollReveal className="w-full">
                 <TrustBadgesMarquee />
             </ScrollReveal>
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <ShopCategoryFetch />
-            </Suspense> */}
+            <RewearMobileCta />
             {/* Temporarily hidden from the home page per the current UI direction. */}
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandTypesFetch />
@@ -198,54 +199,54 @@ export default async function Page() {
             </Suspense>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[320px] w-full animate-pulse bg-[#f8f5ef] md:h-[360px]" />
-                }
+                    fallback={
+                        <div className="h-[320px] w-full animate-pulse bg-[#f8f5ef] md:h-[360px]" />
+                    }
                 >
                     <RenivetEdit />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[370px] w-full animate-pulse bg-[#f8f5ef] md:h-[460px]" />
-                }
+                    fallback={
+                        <div className="h-[370px] w-full animate-pulse bg-[#f8f5ef] md:h-[460px]" />
+                    }
                 >
                     <HowRenivetCurates />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[560px] w-full animate-pulse bg-[#f8f5ef] md:h-[390px]" />
-                }
+                    fallback={
+                        <div className="h-[560px] w-full animate-pulse bg-[#f8f5ef] md:h-[390px]" />
+                    }
                 >
                     <ThoughtfulProducts />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[380px] w-full animate-pulse bg-[#FAF7F2] md:hidden" />
-                }
+                    fallback={
+                        <div className="h-[380px] w-full animate-pulse bg-[#FAF7F2] md:hidden" />
+                    }
                 >
                     <FeaturedBrandsEditorial />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[150px] w-full animate-pulse bg-[#f8f5ef] md:h-[190px]" />
-                }
+                    fallback={
+                        <div className="h-[150px] w-full animate-pulse bg-[#f8f5ef] md:h-[190px]" />
+                    }
                 >
                     <FeaturedBrandsFetch />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
                 <Suspense
-                fallback={
-                    <div className="h-[224px] w-full animate-pulse bg-[#f8f5ef] md:h-[400px]" />
-                }
+                    fallback={
+                        <div className="h-[224px] w-full animate-pulse bg-[#f8f5ef] md:h-[400px]" />
+                    }
                 >
                     <BotanicalBannerFetch />
                 </Suspense>
@@ -367,9 +368,17 @@ function TrustBadgesMarquee() {
         <div className="block w-full border-y border-[#c9aaa8] bg-[#ead8d5]">
             <div className="grid min-h-[62px] grid-cols-4 items-center px-2 py-1.5 text-center text-[10px] font-medium leading-[1.15] text-[#3E2127] md:min-h-[50px] md:px-16 md:py-1.5 md:text-[11px]">
                 {badges.map(({ label, icon: Icon }) => (
-                    <div key={label} className="flex min-w-0 flex-col items-center gap-1 px-1 md:gap-1">
-                        <Icon aria-hidden="true" className="size-4 stroke-[1.5] md:size-4" />
-                        <span className="max-w-[82px] md:max-w-none">{label}</span>
+                    <div
+                        key={label}
+                        className="flex min-w-0 flex-col items-center gap-1 px-1 md:gap-1"
+                    >
+                        <Icon
+                            aria-hidden="true"
+                            className="size-4 stroke-[1.5] md:size-4"
+                        />
+                        <span className="max-w-[82px] md:max-w-none">
+                            {label}
+                        </span>
                     </div>
                 ))}
             </div>
@@ -565,14 +574,32 @@ async function BlogsFetch() {
 
 async function BannersFetch() {
     const cachedBanners = await bannerCache.getAll();
-    if (!cachedBanners.length) return null;
+    const mobileBanners = await loadMobileBannersSafely(
+        async () => {
+            const mobileResult = await bannerQueries.getBanners({
+                limit: 50,
+                page: 1,
+                isActive: true,
+                isMobile: true,
+            });
+            return mobileResult.data.sort(
+                (a, b) =>
+                    new Date(a.createdAt).getTime() -
+                    new Date(b.createdAt).getTime()
+            );
+        },
+        (error) =>
+            console.error("Failed to load mobile homepage banners.", error)
+    );
+    const desktopBanners = cachedBanners.filter((banner) => !banner.isMobile);
+    if (!desktopBanners.length && !mobileBanners.length) return null;
 
-    const sorted = cachedBanners.sort(
+    const sorted = desktopBanners.sort(
         (a, b) =>
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
-    return <Landing banners={sorted} />;
+    return <Landing banners={sorted} mobileBanners={mobileBanners} />;
 }
 
 async function DealMarketingStripFetch() {

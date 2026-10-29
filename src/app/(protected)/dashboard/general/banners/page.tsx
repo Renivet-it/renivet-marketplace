@@ -35,15 +35,26 @@ export default function Page({ searchParams }: PageProps) {
                     </p>
                 </div>
 
-                <Button
-                    asChild
-                    className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
-                >
-                    <Link href="/dashboard/general/banners/new">
-                        <Icons.PlusCircle className="size-5" />
-                        Create New Banner
-                    </Link>
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        asChild
+                        className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
+                    >
+                        <Link href="/dashboard/general/banners/new">
+                            <Icons.PlusCircle className="size-5" />
+                            Create New Banner
+                        </Link>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
+                    >
+                        <Link href="/dashboard/general/banners/mobile">
+                            Manage Mobile Banners
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -73,6 +84,7 @@ async function BannersFetch({ searchParams }: PageProps) {
         page,
         isActive,
         search,
+        isMobile: false,
     });
 
     await bannerCache.drop();

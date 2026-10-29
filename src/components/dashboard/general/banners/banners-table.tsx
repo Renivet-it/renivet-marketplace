@@ -71,13 +71,14 @@ const columns: ColumnDef<TableBanner>[] = [
 ];
 
 interface PageProps {
+    isMobile?: boolean;
     initialData: {
         data: Banner[];
         count: number;
     };
 }
 
-export function BannersTable({ initialData }: PageProps) {
+export function BannersTable({ initialData, isMobile = false }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
@@ -96,7 +97,7 @@ export function BannersTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const bannersQuery = trpc.general.content.banners.getBanners.useQuery(
-        { page, limit, search, isActive },
+        { page, limit, search, isActive, isMobile },
         {
             initialData: {
                 data: initialData.data,

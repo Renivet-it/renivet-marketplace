@@ -3,9 +3,9 @@
 import { Button } from "@/components/ui/button-general";
 import {
     Carousel,
-    type CarouselApi,
     CarouselContent,
     CarouselItem,
+    type CarouselApi,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
@@ -17,53 +17,20 @@ import { Icons } from "../icons";
 
 interface PageProps extends GenericProps {
     banners: Banner[];
+    mobileBanners: Banner[];
 }
 
-export function Landing({ className, banners, ...props }: PageProps) {
+export function Landing({
+    className,
+    banners,
+    mobileBanners,
+    ...props
+}: PageProps) {
     const [mobileCarouselApi, setMobileCarouselApi] =
         useState<CarouselApi | null>(null);
     const [mobileImageIndex, setMobileImageIndex] = useState(0);
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
-    const mobileImages = [
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8o5y85jj1qpSPZJEOTHVgaenl2yArM78zCkm",
-            link: "https://renivet.com/swap-passport",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
-            link: "https://renivet.com/brands/my-mithila/shop",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFBC2sVUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
-            link: "https://renivet.com/brands/terra-luna/shop",
-        },
-        // {
-        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
-        //     link: "https://renivet.com/shop?sortBy=best-sellers",
-        // },
-        // {
-        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
-        //     link: "https://renivet.com/shop?sortBy=best-sellers",
-        // },
-        // {
-        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27J6WdQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
-        //     link: "https://renivet.com/brands/bamboology/shop",
-        // },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKIsQTDoXWY4M9GmONJv38rnKquVZUx0pjkQE",
-            link: "https://renivet.com/brands/bamboology/shop",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNHKdd5g0rgXZuWwadPABUqnljV5RbJMFsx1v",
-            link: "/shop/beauty-and-personal-care?sortBy=best-sellers",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIG3sMyLrApCnKbtW0hkXs6adUVPBQFlvOi2M",
-            link: "https://renivet.com/brands/greysome/shop",
-        },
-    ];
-
     useEffect(() => {
         if (!mobileCarouselApi) return;
 
@@ -141,13 +108,15 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     >
                         <Icons.Search className="size-5" />
                     </button>
-                    <Carousel
-                        opts={{ align: "start", loop: true }}
-                        plugins={[Autoplay({ delay: 5000 })]}
-                        setApi={setMobileCarouselApi}
-                    >
-                        <CarouselContent>
-                            {mobileImages.map((item, idx) => (
+                    <div className="min-h-10">
+                        {mobileBanners.length > 0 && (
+                            <Carousel
+                                opts={{ align: "start", loop: true }}
+                                plugins={[Autoplay({ delay: 5000 })]}
+                                setApi={setMobileCarouselApi}
+                            >
+                                <CarouselContent>
+                                    {mobileBanners.map((item, idx) => (
                                 <CarouselItem key={idx}>
                                     <div className="relative w-full overflow-visible pb-2">
                                         <div
@@ -155,17 +124,23 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                 paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
                                             }}
                                         />
-                                        <Image
-                                            src={item.src}
-                                            alt={`Mobile Banner ${idx + 1}`}
-                                            fill
-                                            sizes="100vw"
-                                            className="absolute inset-0 h-full w-full object-cover"
-                                            priority={idx === 0}
-                                            fetchPriority={
-                                                idx === 0 ? "high" : "auto"
-                                            }
-                                        />
+                                        <Link
+                                            href={item.url || "/shop"}
+                                            aria-label={item.title}
+                                            className="absolute inset-0"
+                                        >
+                                            <Image
+                                                src={item.imageUrl}
+                                                alt={item.title}
+                                                fill
+                                                sizes="100vw"
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                                priority={idx === 0}
+                                                fetchPriority={
+                                                    idx === 0 ? "high" : "auto"
+                                                }
+                                            />
+                                        </Link>
 
                                         {/* 🔵 CENTER BUTTON - NOW INSIDE SLIDE TO HAVE UNIQUE LINKS */}
                                         {false && (
@@ -182,20 +157,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                 </p>
                                             </div>
                                         )}
-
-                                        <div className="hidden">
-                                            <div className="pointer-events-auto">
-                                                <Link
-                                                    href={item.link}
-                                                    className="btn-liquid btn-liquid-secondary group relative inline-flex items-center gap-2 overflow-hidden px-8 py-3 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
-                                                >
-                                                    <span>
-                                                        Shop With Purpose
-                                                    </span>
-                                                    <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                                                </Link>
-                                            </div>
-                                        </div>
 
                                         {false && (
                                             <div className="relative z-20 mx-1 -mt-8 rounded-[18px] bg-white px-6 py-6 shadow-[0_3px_12px_rgba(65,48,37,0.1)]">
@@ -234,9 +195,11 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         )}
                                     </div>
                                 </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+                                    ))}
+                                </CarouselContent>
+                            </Carousel>
+                        )}
+                    </div>
                 </div>
 
                 {/* 🔵 CTA BUTTON */}
