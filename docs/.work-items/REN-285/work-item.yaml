@@ -1,0 +1,188 @@
+schema_version: "1.0"
+task:
+    id: REN-285
+    title: "Manage mobile homepage banners and highlight ReWear"
+    source: linear
+    branch: ayanganguly333/ren-285-manage-mobile-homepage-banners-and-highlight-rewear
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-285/manage-mobile-homepage-banners-and-highlight-rewear
+        priority: No priority
+        labels: []
+        status: In Progress
+        assignee: null
+        project: null
+        parent: null
+        linear_branch: ayanganguly333/ren-285-manage-mobile-homepage-banners-and-highlight-rewear
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - "The work adds and deploys a database column used by admin and public banner paths."
+        - "Banner CRUD includes protected mutations, uploaded media deletion, and cache invalidation."
+        - "Client-side image decoding/re-encoding must fail safely and stay within the provider upload limit."
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - "Linear REN-285 issue, relations, comments, branch metadata, and user-provided UI/assets"
+        - "Home page composition, desktop/mobile banner rendering, and ReWear card placement"
+        - "Desktop and mobile banner admin pages, shared form, validation, and image upload handling"
+        - "Banner schema, query filtering, protected tRPC mutations, cache paths, and migration seeding"
+        - "Global font setup and focused banner compression, placement, badge, and ReWear CTA tests"
+    excluded_areas:
+        - "Production database mutation or migration execution"
+        - "Changes to the existing MANAGE_CONTENT permission policy"
+        - "ReWear pickup-request lifecycle, login behavior, notification delivery, and request data"
+        - "Checkout, payments, inventory, seller data, and product ordering"
+        - "Desktop Shop By Category presentation and unrelated homepage sections"
+    dependencies: [DEP-285-001, DEP-285-002, DEP-285-003]
+    integrations: [INT-285-001, INT-285-002]
+    security_boundaries: [SEC-285-001, SEC-285-002]
+    state_transitions: [unselected, selected, compressing, ready, uploading, saved, failed, active, inactive, deleted]
+    related_tests: [TEXP-285-001, TEXP-285-002, TEXP-285-003, TEXP-285-004, TEXP-285-005, TEXP-285-006]
+    uncertainties:
+        - "The connected upload provider's enforcement limit is represented by the requested 4 MB ceiling; verify the deployed endpoint's actual byte convention before release."
+        - "A source PNG may remain above the target after all resize attempts; the expected behavior is an actionable failure, not uploading an oversized original."
+requirements:
+    - { id: REQ-285-001, description: "Provide a dedicated mobile banner admin section with title, description, image, destination URL, activation, edit, and delete controls.", type: explicit }
+    - { id: REQ-285-002, description: "Separate desktop and mobile banner records and preserve desktop placement for existing records through a false migration default.", type: explicit }
+    - { id: REQ-285-003, description: "Render active mobile banner records from the database in the mobile homepage carousel and navigate to each configured destination.", type: explicit }
+    - { id: REQ-285-004, description: "Migrate the six existing mobile carousel slides into database records while retaining their current images and destinations.", type: explicit }
+    - { id: REQ-285-005, description: "Allow PNG/JPEG sources up to 20 MiB and ensure uploaded output is at most 3.75 MiB (below 4 MB); preserve PNG alpha and give actionable errors when compression cannot succeed.", type: explicit }
+    - { id: REQ-285-006, description: "Show an accessible NEW badge for ReWear in the main navigation and a mobile-only home card linking to /rewear, using provided assets and the global Nunito Sans font.", type: explicit }
+    - { id: REQ-285-007, description: "Remove the broken Shop By Category block from the mobile homepage while preserving desktop category rendering.", type: explicit }
+    - { id: REQ-285-008, description: "Preserve existing MANAGE_CONTENT authorization for banner mutations and keep desktop banner behavior unchanged.", type: compatibility }
+    - { id: REQ-285-009, description: "Keep the database authoritative during banner media cleanup: commit update/delete and cache invalidation before deleting old media; preserve valid DB references if the DB write fails; clean up a newly uploaded image when create/update persistence fails; log post-commit cleanup failures with a stable file key for manual orphan cleanup.", type: compatibility }
+    - { id: REQ-285-010, description: "If the mobile banner query fails, log the failure, omit the mobile carousel, and continue rendering desktop banners from their existing cache.", type: compatibility }
+scenarios:
+    - { id: SCN-285-001, description: "An authorized admin creates, edits, activates, deactivates, and deletes a mobile banner with its title, description, image, and destination.", requirement_ids: [REQ-285-001, REQ-285-008] }
+    - { id: SCN-285-002, description: "Existing and newly created desktop banners remain in desktop administration and desktop homepage rendering after migration.", requirement_ids: [REQ-285-002, REQ-285-008] }
+    - { id: SCN-285-003, description: "A mobile shopper sees active database-backed slides and each slide follows its configured URL; empty/unavailable mobile records do not break desktop rendering.", requirement_ids: [REQ-285-003, REQ-285-004] }
+    - { id: SCN-285-004, description: "The migration creates the placement field and six mobile records while old records resolve to desktop placement.", requirement_ids: [REQ-285-002, REQ-285-004] }
+    - { id: SCN-285-005, description: "An admin uploads a source image below, at, and above the compression threshold; output remains at or below 3.75 MiB, PNG transparency remains intact, and processing failures block oversized upload.", requirement_ids: [REQ-285-005] }
+    - { id: SCN-285-006, description: "A mobile shopper sees the accessible ReWear navigation badge and supplied-art CTA, which uses Nunito Sans, opens /rewear, and does not appear on desktop.", requirement_ids: [REQ-285-006] }
+    - { id: SCN-285-007, description: "The broken category block is absent on mobile and the desktop category section continues to render.", requirement_ids: [REQ-285-007] }
+    - { id: SCN-285-008, description: "An unauthenticated or unauthorized caller cannot perform banner mutations, and existing public banner reads remain available.", requirement_ids: [REQ-285-008] }
+    - { id: SCN-285-009, description: "A failed database create/update retains valid database references and attempts deletion of the newly uploaded file; a post-commit old-asset deletion failure leaves the new row valid and emits a recoverable cleanup log. A banner delete removes the DB row/cache before external media deletion, so an external failure leaves only an orphan asset.", requirement_ids: [REQ-285-009] }
+    - { id: SCN-285-010, description: "A failed mobile banner read is logged, mobile carousel is omitted for that request, and available desktop cached banners still render.", requirement_ids: [REQ-285-010] }
+invariants:
+    - { id: INV-285-001, description: "A banner belongs to exactly one placement; records with no explicit placement remain desktop records." }
+    - { id: INV-285-002, description: "Public mobile and desktop carousel reads do not mix placements, and active state continues to control public visibility." }
+    - { id: INV-285-003, description: "Only callers with existing MANAGE_CONTENT permission can mutate banner records." }
+    - { id: INV-285-004, description: "No image larger than the approved output ceiling is sent to the upload provider by the banner form." }
+    - { id: INV-285-005, description: "The ReWear card is mobile-only, accessible, and routes to /rewear; the mobile category block does not render." }
+    - { id: INV-285-006, description: "External media cleanup never occurs before the database stops referencing the old media; a mobile-read failure does not suppress desktop cached banners." }
+flows:
+    - { id: FLOW-285-001, description: "Admin selects a placement, enters banner fields, uploads an image, saves through the protected procedure, and activates or removes the banner; public cache and carousel reflect current records.", state_transitions: [unselected, selected, compressing, ready, uploading, saved, failed, active, inactive, deleted] }
+    - { id: FLOW-285-002, description: "The database migration adds desktop-default placement and seeds existing mobile slides before app code reads the field.", state_transitions: [ready, saved] }
+    - { id: FLOW-285-003, description: "Mobile homepage loads mobile banners and ReWear discovery; viewport-specific rendering leaves desktop banners and category presentation intact.", state_transitions: [ready, failed] }
+dependencies:
+    - { id: DEP-285-001, name: existing home_banners records, purpose: "Persist banner fields and placement", description: "Existing records must default to desktop while six configured mobile slides are added.", status: resolved }
+    - { id: DEP-285-002, name: UploadThing contentUploader, purpose: "Store banner images", description: "The shared form sends accepted PNG/JPEG files only after they meet the configured byte ceiling.", status: resolved }
+    - { id: DEP-285-003, name: MANAGE_CONTENT permission and banner cache, purpose: "Protect changes and refresh active content", description: "Existing authorization and cache operations remain the ownership boundaries for banner mutations.", status: resolved }
+integrations:
+    - { id: INT-285-001, system: UploadThing, purpose: "Store uploaded banner images", name: contentUploader, contract: "Accept one PNG/JPEG image whose uploaded bytes are at most 3.75 MiB; the form blocks oversized output and reports failure.", failure_mode: "Provider or image-processing errors are shown to the admin and do not submit the original oversized source." }
+    - { id: INT-285-002, system: Redis cache, purpose: "Serve active homepage banners", name: bannerCache, contract: "Active banner create/update/status/delete mutations update or invalidate cache through existing helpers.", failure_mode: "Database remains authoritative; stale cache must not cause placement mixing or unauthorized mutation." }
+personas:
+    - { id: PER-285-001, name: content admin, role: "Manages desktop and mobile homepage campaigns.", applicability: "Has existing MANAGE_CONTENT permission." }
+    - { id: PER-285-002, name: mobile shopper, role: "Browses the Renivet homepage on a mobile viewport.", applicability: "Sees mobile campaign slides and ReWear discovery." }
+security_boundaries:
+    - { id: SEC-285-001, description: "Banner create/update/status/delete remain protected by MANAGE_CONTENT; public procedures expose reads only." }
+    - { id: SEC-285-002, description: "Image bytes sent to UploadThing are browser-processed, format-limited, and size-bounded; no secrets or authorization behavior are added to client code." }
+business_rules:
+    - { id: BR-285-001, description: "Mobile and desktop banner placements are managed independently and public rendering honors placement and active state." }
+    - { id: BR-285-002, description: "The upload result must not exceed the user-requested 4 MB limit; failures must be visible and prevent submission." }
+    - { id: BR-285-003, description: "ReWear promotion is present on mobile and does not displace or alter the desktop presentation." }
+decisions:
+    - { id: DEC-285-001, question: "How should mobile placement be stored?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Use a non-null boolean on home_banners with false default and migrate the six current mobile slides.", basis: "Current banner model is shared by desktop/mobile and the issue explicitly extends it.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-285-002, question: "What upload output size and formats should be supported?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Accept PNG/JPEG sources up to 20 MiB; emit at most 3.75 MiB before the requested 4 MB provider limit.", basis: "User requested compression to within 4 MB; the safety margin accounts for provider byte limits.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-285-003, question: "How should the mobile ReWear CTA match the supplied design?", class: AUTO_DECIDE, status: resolved, recommendation: "Use supplied artwork, link the card to /rewear, show only on mobile, and inherit the site's Nunito Sans face.", basis: "Direct user instruction and reference image; site global typeface is Nunito Sans.", confidence: high, consequence: low, human_confirmation_required: false }
+    - { id: DEC-285-004, question: "What happens to the reported broken mobile Shop By Category block?", class: AUTO_DECIDE, status: resolved, recommendation: "Remove it from mobile and preserve desktop category rendering.", basis: "Direct user request after reporting broken category images.", confidence: high, consequence: low, human_confirmation_required: false }
+    - { id: DEC-285-005, question: "In which order should migration and application deploy?", class: AUTO_DECIDE, status: resolved, recommendation: "Apply the additive migration before deploying application code that queries is_mobile.", basis: "Application queries require the column to exist.", confidence: high, consequence: low, human_confirmation_required: false }
+    - { id: DEC-285-006, question: "How should partial database/media outcomes be handled?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Commit row and cache state first; delete old media afterward; if create/update persistence fails, attempt to delete the new upload; log cleanup failures with stable file keys for manual reconciliation without invalidating committed DB state.", basis: "The database row is authoritative and current side-effect ordering can remove media still referenced by a row.", confidence: high, consequence: medium, human_confirmation_required: false }
+    - { id: DEC-285-007, question: "What should happen when the mobile banner read fails?", class: RECOMMEND_CONTINUE, status: resolved, recommendation: "Log the failure, omit mobile slides for this request, and render desktop banners from their independent cache.", basis: "The mobile query should not take down desktop homepage content.", confidence: high, consequence: medium, human_confirmation_required: false }
+test_expectations:
+    - { id: TEXP-285-001, category: api, classification: REQUIRED, reason: "Placement-specific reads, mutation inputs, permission checks, and cache operations must remain correct.", scenarios: [SCN-285-001, SCN-285-002, SCN-285-008] }
+    - { id: TEXP-285-002, category: integration, classification: REQUIRED, reason: "Migration seeding and UploadThing byte limits are external/data boundaries that unit tests alone cannot establish.", scenarios: [SCN-285-004, SCN-285-005] }
+    - { id: TEXP-285-003, category: component, classification: REQUIRED, reason: "Banner form and carousel states must reflect placement, compression, and configured destinations.", scenarios: [SCN-285-001, SCN-285-002, SCN-285-003, SCN-285-005] }
+    - { id: TEXP-285-004, category: ui_ux, classification: REQUIRED, reason: "Verify mobile-only ReWear card typography/assets and mobile category removal while preserving desktop layout.", scenarios: [SCN-285-006, SCN-285-007] }
+    - { id: TEXP-285-005, category: accessibility, classification: REQUIRED, reason: "ReWear navigation/card names and visible focus plus admin form feedback must remain usable with assistive technology and keyboard navigation.", scenarios: [SCN-285-001, SCN-285-006] }
+    - { id: TEXP-285-006, category: regression, classification: REQUIRED, reason: "Desktop banners, existing homepage behavior, and authorization boundaries must remain unchanged.", scenarios: [SCN-285-002, SCN-285-003, SCN-285-008] }
+    - { id: TEXP-285-007, category: integration, classification: REQUIRED, reason: "Fault-injection checks must establish DB-first media cleanup, new-upload cleanup after persistence failure, valid authoritative references, cache ordering, and mobile-query failure isolation.", scenarios: [SCN-285-009, SCN-285-010] }
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: "independent fresh-context Critic"
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - { id: CRIT-285-001, severity: MAJOR, status: resolved, summary: "Specify and test banner create/update/delete media failure ordering, DB authority, and recoverable orphan cleanup." }
+        - { id: CRIT-285-002, severity: MAJOR, status: resolved, summary: "Specify and test mobile banner query failure isolation so desktop cached banners continue rendering." }
+        - { id: CRIT-285-003, severity: MINOR, status: resolved, summary: "Add create persistence failure explicitly to SCN-285-009 for direct scenario-to-test traceability." }
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Renivet engineering governance — L2 Critic gate"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-285-001, scenario_ids: [SCN-285-001] }
+        - { requirement_id: REQ-285-002, scenario_ids: [SCN-285-002, SCN-285-004] }
+        - { requirement_id: REQ-285-003, scenario_ids: [SCN-285-003] }
+        - { requirement_id: REQ-285-004, scenario_ids: [SCN-285-003, SCN-285-004] }
+        - { requirement_id: REQ-285-005, scenario_ids: [SCN-285-005] }
+        - { requirement_id: REQ-285-006, scenario_ids: [SCN-285-006] }
+        - { requirement_id: REQ-285-007, scenario_ids: [SCN-285-007] }
+        - { requirement_id: REQ-285-008, scenario_ids: [SCN-285-001, SCN-285-002, SCN-285-008] }
+        - { requirement_id: REQ-285-009, scenario_ids: [SCN-285-009] }
+        - { requirement_id: REQ-285-010, scenario_ids: [SCN-285-010] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-285-001, invariant_ids: [INV-285-003, INV-285-004] }
+        - { scenario_id: SCN-285-002, invariant_ids: [INV-285-001, INV-285-002] }
+        - { scenario_id: SCN-285-003, invariant_ids: [INV-285-002, INV-285-005] }
+        - { scenario_id: SCN-285-004, invariant_ids: [INV-285-001, INV-285-002] }
+        - { scenario_id: SCN-285-005, invariant_ids: [INV-285-004] }
+        - { scenario_id: SCN-285-006, invariant_ids: [INV-285-005] }
+        - { scenario_id: SCN-285-007, invariant_ids: [INV-285-005] }
+        - { scenario_id: SCN-285-008, invariant_ids: [INV-285-003] }
+        - { scenario_id: SCN-285-009, invariant_ids: [INV-285-006] }
+        - { scenario_id: SCN-285-010, invariant_ids: [INV-285-006] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-285-001, test_expectation_ids: [TEXP-285-001, TEXP-285-003, TEXP-285-005] }
+        - { scenario_id: SCN-285-002, test_expectation_ids: [TEXP-285-001, TEXP-285-003, TEXP-285-006] }
+        - { scenario_id: SCN-285-003, test_expectation_ids: [TEXP-285-003, TEXP-285-006] }
+        - { scenario_id: SCN-285-004, test_expectation_ids: [TEXP-285-002] }
+        - { scenario_id: SCN-285-005, test_expectation_ids: [TEXP-285-002, TEXP-285-003] }
+        - { scenario_id: SCN-285-006, test_expectation_ids: [TEXP-285-004, TEXP-285-005] }
+        - { scenario_id: SCN-285-007, test_expectation_ids: [TEXP-285-004] }
+        - { scenario_id: SCN-285-008, test_expectation_ids: [TEXP-285-001, TEXP-285-006] }
+        - { scenario_id: SCN-285-009, test_expectation_ids: [TEXP-285-007] }
+        - { scenario_id: SCN-285-010, test_expectation_ids: [TEXP-285-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: master
+    base_commit: "bf2998d0e3c074be9c1913b567b63a58adb519c1"
+    head_commit: "952c41f6089885157eff2acfb58226f1da4a1fec"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Verify live migration/provider limits and keyboard/screen-reader behavior before release."
+    evidence:
+        - "Compared origin/master bf2998d0e3c074be9c1913b567b63a58adb519c1 with implementation commit 952c41f6089885157eff2acfb58226f1da4a1fec."
+        - "Static reconciliation covers REQ/SCN/INV/FLOW/SEC/INT/TEXP-285-001 through -010; see REVIEW.md."
+    governance_reentry_required: false
