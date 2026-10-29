@@ -9,17 +9,20 @@ class BannerQuery {
         page,
         isActive,
         search,
+        isMobile = false,
     }: {
         limit: number;
         page: number;
         isActive?: boolean;
         search?: string;
+        isMobile?: boolean;
     }) {
         const data = await db.query.banners.findMany({
             where: and(
                 isActive !== undefined
                     ? eq(banners.isActive, isActive)
                     : undefined,
+                eq(banners.isMobile, isMobile),
                 !!search?.length
                     ? ilike(banners.title, `%${search}%`)
                     : undefined
@@ -35,6 +38,7 @@ class BannerQuery {
                             isActive !== undefined
                                 ? eq(banners.isActive, isActive)
                                 : undefined,
+                            eq(banners.isMobile, isMobile),
                             !!search?.length
                                 ? ilike(banners.title, `%${search}%`)
                                 : undefined

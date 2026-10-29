@@ -27,6 +27,22 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+export const MOBILE_HOME_CATEGORIES = [
+    { name: "Women", image: "/images/home-categories/women.png", href: "/women" },
+    { name: "Men", image: "/images/home-categories/men.png", href: "/men" },
+    { name: "Kids", image: "/images/home-categories/kids.png", href: "/kids" },
+    {
+        name: "Beauty",
+        image: "/images/home-categories/beauty.png",
+        href: "/beauty-personal",
+    },
+    {
+        name: "Home & Living",
+        image: "/images/home-categories/home-living.png",
+        href: "/home-living",
+    },
+] as const;
+
 /* =============================
    ⭐ GUEST CART HOOK (UNCHANGED)
 ============================= */
@@ -97,33 +113,7 @@ export const BEST_SELLER_CARD_DIMENSIONS = {
     mobile: { width: 163, height: 294 },
 } as const;
 
-export const MOBILE_HOME_CATEGORIES = [
-    {
-        name: "Women",
-        image: "/images/home-categories/women.png",
-        href: "/women",
-    },
-    {
-        name: "Men",
-        image: "/images/home-categories/men.png",
-        href: "/men",
-    },
-    {
-        name: "Kids",
-        image: "/images/home-categories/kids.png",
-        href: "/kids",
-    },
-    {
-        name: "Beauty",
-        image: "/images/home-categories/beauty.png",
-        href: "/beauty-personal",
-    },
-    {
-        name: "Home & Living",
-        image: "/images/home-categories/home-living.png",
-        href: "/home-living",
-    },
-] as const;
+
 
 /* =============================
    ⭐ PRODUCT CARD
@@ -957,72 +947,6 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
     return (
         <section className={cn("w-full bg-[#f8f5ef]", className)}>
-            <div className="bg-[#f8f5ef] px-5 pb-6 pt-5 md:hidden">
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-serif text-[28px] font-medium leading-none text-[#302e2b]">
-                        Shop by category
-                    </h2>
-                    <Link
-                        href="/shop"
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-[#494641]"
-                    >
-                        See all{" "}
-                        <span
-                            aria-hidden="true"
-                            className="text-[15px] leading-none"
-                        >
-                            →
-                        </span>
-                    </Link>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2.5">
-                    {MOBILE_HOME_CATEGORIES.slice(0, 3).map((category) => (
-                        <Link
-                            key={category.name}
-                            href={category.href}
-                            className="min-w-0"
-                        >
-                            <div className="relative aspect-[0.8] overflow-hidden rounded-[13px] bg-white">
-                                <Image
-                                    src={category.image}
-                                    alt={category.name}
-                                    fill
-                                    sizes="(max-width: 767px) 30vw"
-                                    className="object-cover"
-                                />
-                            </div>
-                            <span className="mt-1 block text-[12px] leading-tight text-[#302e2b]">
-                                {category.name}
-                            </span>
-                        </Link>
-                    ))}
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                    {MOBILE_HOME_CATEGORIES.slice(3).map((category) => (
-                        <Link
-                            key={category.name}
-                            href={category.href}
-                            className="min-w-0"
-                        >
-                            <div className="relative aspect-square overflow-hidden rounded-[13px] bg-white">
-                                <Image
-                                    src={category.image}
-                                    alt={category.name}
-                                    fill
-                                    sizes="(max-width: 767px) 45vw"
-                                    className="object-cover"
-                                />
-                            </div>
-                            <span className="mt-1 block text-[12px] leading-tight text-[#302e2b]">
-                                {category.name}
-                            </span>
-                        </Link>
-                    ))}
-                </div>
-            </div>
-
             <div className="max-w-screen-3xl mx-auto px-4 pb-5 pt-1 sm:px-6 md:py-4 lg:px-8">
                 <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
                     <div>

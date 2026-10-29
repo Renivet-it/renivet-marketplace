@@ -25,15 +25,15 @@ export const bannerSchema = z.object({
             invalid_type_error: "Image URL must be a string",
         })
         .url("Image URL is invalid"),
-    url: z
-        .preprocess(
-            (value) => (value === "" ? null : value),
-            z.string().nullable().optional()
-        ),
+    url: z.preprocess(
+        (value) => (value === "" ? null : value),
+        z.string().nullable().optional()
+    ),
     isActive: z.boolean({
         required_error: "Is Active is required",
         invalid_type_error: "Is Active must be a boolean",
     }),
+    isMobile: z.boolean().optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -61,6 +61,7 @@ export const createBannerSchema = bannerSchema
                 invalid_type_error: "Image URL must be a string",
             })
             .nullable(),
+        isMobile: z.boolean().default(false),
     });
 
 export const updateBannerSchema = createBannerSchema;

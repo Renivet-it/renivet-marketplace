@@ -2,6 +2,10 @@ import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import {
+    cleanupBannerMediaAfterCommit,
+    persistBannerWithUploadCompensation,
+} from "@/lib/banner-recovery";
+import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
@@ -12425,18 +12429,20 @@ export const bannerRouter = createTRPCRouter({
                 limit: z.number().int().positive().default(10),
                 page: z.number().int().positive().default(1),
                 isActive: z.boolean().optional(),
+                isMobile: z.boolean().default(false),
                 search: z.string().optional(),
             })
         )
         .query(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { limit, page, isActive, search } = input;
+            const { limit, page, isActive, search, isMobile } = input;
 
             const banners = await queries.banners.getBanners({
                 limit,
                 page,
                 isActive,
                 search,
+                isMobile,
             });
 
             return banners;
@@ -12486,9 +12492,15 @@ export const bannerRouter = createTRPCRouter({
                     message: "Image URL is required",
                 });
 
-            const newBanner = await queries.banners.createBanner({
-                ...input,
-                imageUrl: input.imageUrl,
+            const imageUrl = input.imageUrl;
+            const newBanner = await persistBannerWithUploadCompensation({
+                fileKey: getUploadThingFileKey(imageUrl),
+                persist: () =>
+                    queries.banners.createBanner({
+                        ...input,
+                        imageUrl,
+                    }),
+                deleteFile: async (fileKey) => utApi.deleteFiles([fileKey]),
             });
             if (input.isActive) await bannerCache.add(newBanner);
 
@@ -12534,17 +12546,28 @@ export const bannerRouter = createTRPCRouter({
                 });
 
             const existingImageUrl = existingBanner.imageUrl;
-            if (existingImageUrl !== data.imageUrl) {
-                const existingKey = getUploadThingFileKey(existingImageUrl);
-                await utApi.deleteFiles([existingKey]);
-            }
-
-            const updatedBanner = await queries.banners.updateBanner(id, {
-                ...data,
-                imageUrl: data.imageUrl,
-            });
+            const imageChanged = existingImageUrl !== data.imageUrl;
+            const persistUpdate = () =>
+                queries.banners.updateBanner(id, {
+                    ...data,
+                    imageUrl: data.imageUrl,
+                });
+            const updatedBanner = imageChanged
+                ? await persistBannerWithUploadCompensation({
+                      fileKey: getUploadThingFileKey(data.imageUrl),
+                      persist: persistUpdate,
+                      deleteFile: async (fileKey) =>
+                          utApi.deleteFiles([fileKey]),
+                  })
+                : await persistUpdate();
 
             await bannerCache.remove(updatedBanner.id);
+            if (imageChanged) {
+                await cleanupBannerMediaAfterCommit({
+                    fileKey: getUploadThingFileKey(existingImageUrl),
+                    deleteFile: async (fileKey) => utApi.deleteFiles([fileKey]),
+                });
+            }
 
             return updatedBanner;
         }),
@@ -12625,11 +12648,12 @@ export const bannerRouter = createTRPCRouter({
             const existingImageUrl = existingBanner.imageUrl;
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
-            await Promise.all([
-                queries.banners.deleteBanner(id),
-                utApi.deleteFiles([existingKey]),
-                ...(existingBanner.isActive ? [bannerCache.remove(id)] : []),
-            ]);
+            await queries.banners.deleteBanner(id);
+            await bannerCache.remove(id);
+            await cleanupBannerMediaAfterCommit({
+                fileKey: existingKey,
+                deleteFile: async (fileKey) => utApi.deleteFiles([fileKey]),
+            });
 
             return true;
         }),
