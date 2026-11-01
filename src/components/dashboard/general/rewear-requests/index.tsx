@@ -1,12 +1,25 @@
 import type { RewearPickupRequest } from "@/lib/validations";
+import Link from "next/link";
 
 export function RewearRequestsTable({
     data,
     count,
+    page,
+    pageSize,
 }: {
     data: RewearPickupRequest[];
     count: number;
+    page: number;
+    pageSize: number;
 }) {
+    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const pageHref = (targetPage: number) =>
+        targetPage === 1
+            ? "/dashboard/general/rewear-requests"
+            : `/dashboard/general/rewear-requests?page=${targetPage}`;
+    const rangeStart = count === 0 ? 0 : (page - 1) * pageSize + 1;
+    const rangeEnd = Math.min(page * pageSize, count);
+
     return (
         <div className="w-full min-w-0 space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -19,7 +32,7 @@ export function RewearRequestsTable({
 
             <div
                 aria-label="Rewear pickup requests table. Scroll horizontally to see all columns."
-                className="w-full min-w-0 max-w-full overflow-x-scroll overscroll-x-contain rounded-lg border bg-card"
+                className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border bg-white"
                 role="region"
                 tabIndex={0}
             >
@@ -78,6 +91,44 @@ export function RewearRequestsTable({
                     </tbody>
                 </table>
             </div>
+
+            <nav
+                aria-label="Rewear pickup requests pagination"
+                className="flex flex-wrap items-center justify-between gap-3 text-sm"
+            >
+                <p className="text-muted-foreground">
+                    Showing {rangeStart}–{rangeEnd} of {count}
+                </p>
+                <div className="flex items-center gap-2">
+                    {page > 1 ? (
+                        <Link
+                            href={pageHref(page - 1)}
+                            className="rounded-md border px-3 py-2 hover:bg-accent"
+                        >
+                            Previous
+                        </Link>
+                    ) : (
+                        <span className="rounded-md border px-3 py-2 text-muted-foreground" aria-disabled="true">
+                            Previous
+                        </span>
+                    )}
+                    <span className="text-muted-foreground">
+                        Page {page} of {totalPages}
+                    </span>
+                    {page < totalPages ? (
+                        <Link
+                            href={pageHref(page + 1)}
+                            className="rounded-md border px-3 py-2 hover:bg-accent"
+                        >
+                            Next
+                        </Link>
+                    ) : (
+                        <span className="rounded-md border px-3 py-2 text-muted-foreground" aria-disabled="true">
+                            Next
+                        </span>
+                    )}
+                </div>
+            </nav>
         </div>
     );
 }
