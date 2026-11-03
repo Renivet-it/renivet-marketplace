@@ -6,20 +6,26 @@ export const RENIVET_EDIT_CARDS = [
         title: "Everyday Conscious",
         description: "Timeless staples for a brighter tomorrow.",
         image: "/assets/renivet-edit/everyday-conscious.png",
+        desktopImage:
+            "/assets/renivet-edit/everyday-conscious-cups-desktop.png",
         href: "/shop",
     },
     {
         title: "Festive, Reimagined",
         description: "Celebrate traditions with a lighter footprint.",
         image: "/assets/renivet-edit/festive-reimagined.png",
+        desktopImage:
+            "/assets/renivet-edit/festive-polka-dot-portrait-desktop.png",
         href: "/festive",
     },
     {
         title: "Home with Intention",
         description: "Thoughtful pieces for calmer, mindful spaces.",
         image: "/assets/renivet-edit/home-with-intention.png",
+        desktopImage:
+            "/assets/renivet-edit/home-beach-candle-desktop.png",
         mobileImage: "/assets/renivet-edit/home-with-intention-mobile.png",
-        href: "/shop/home-and-living",
+        href: "/shop/home-and-living?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
     },
 ] as const;
 
@@ -67,21 +73,19 @@ export function RenivetEdit() {
 
                             <div className="relative h-[126px] w-[47%] shrink-0 overflow-hidden md:mx-5 md:aspect-[1.5/1] md:h-auto md:w-auto md:rounded-[9px] lg:mx-6 lg:rounded-[11px]">
                                 <Image
-                                    src={card.image}
+                                    src={card.desktopImage}
                                     alt=""
                                     fill
-                                    className={`${card.mobileImage ? "hidden md:block" : "block"} object-cover transition-transform duration-500 group-hover:scale-[1.03]`}
-                                    sizes="(max-width: 767px) 47vw, 33vw"
+                                    className="hidden object-cover transition-transform duration-500 group-hover:scale-[1.03] md:block"
+                                    sizes="(min-width: 768px) 33vw, 0px"
                                 />
-                                {card.mobileImage ? (
-                                    <Image
-                                        src={card.mobileImage}
-                                        alt=""
-                                        fill
-                                        className="block object-cover transition-transform duration-500 group-hover:scale-[1.03] md:hidden"
-                                        sizes="47vw"
-                                    />
-                                ) : null}
+                                <Image
+                                    src={card.mobileImage ?? card.image}
+                                    alt=""
+                                    fill
+                                    className="block object-cover transition-transform duration-500 group-hover:scale-[1.03] md:hidden"
+                                    sizes="47vw"
+                                />
                             </div>
 
                             <span className="absolute bottom-3 left-4 flex size-6 items-center justify-center rounded-full bg-[#61333d] text-sm leading-none text-white transition-transform group-hover:translate-x-0.5 md:static md:mb-4 md:ml-5 md:mt-4 md:self-start lg:mb-5 lg:ml-6 lg:mt-4 lg:size-10 lg:text-lg">
