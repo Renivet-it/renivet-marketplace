@@ -12,7 +12,7 @@ test("botanical banner uses the approved responsive artwork", () => {
         "/assets/botanical-banner/botanical-mobile.png"
     );
     expect(BOTANICAL_DESKTOP_IMAGE).toBe(
-        "/assets/botanical-banner/botanical-desktop.png"
+        "/assets/botanical-banner/botanical-side-expansion-desktop.png"
     );
     expect(BOTANICAL_BANNER_COPY.heading).toBe(
         "Meet the brands changing the way we shop."

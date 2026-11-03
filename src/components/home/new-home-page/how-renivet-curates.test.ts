@@ -14,18 +14,18 @@ test("How Renivet curates keeps the approved editorial content and image", () =>
         "We choose better together",
     ]);
     expect(CURATION_IMAGE).toBe(
-        "/assets/how-renivet-curates/artisanal-incense.png"
+        "/assets/how-renivet-curates/handmade-packaging-desktop.png"
     );
 });
 
 test("How Renivet curates uses the approved desktop dimensions", () => {
     expect(CURATION_DESKTOP_DIMENSIONS).toEqual({
-        width: 1184,
+        width: 1360,
         height: 591,
     });
     expect(CURATION_IMAGE_DESKTOP_DIMENSIONS).toEqual({
-        width: 507,
-        height: 350,
+        width: 656,
+        height: 410,
     });
 });
 

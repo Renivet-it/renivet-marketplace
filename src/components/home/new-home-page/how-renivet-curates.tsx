@@ -3,16 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const CURATION_IMAGE =
-    "/assets/how-renivet-curates/artisanal-incense.png";
+    "/assets/how-renivet-curates/handmade-packaging-desktop.png";
 
 export const CURATION_DESKTOP_DIMENSIONS = {
-    width: 1184,
+    width: 1360,
     height: 591,
 } as const;
 
 export const CURATION_IMAGE_DESKTOP_DIMENSIONS = {
-    width: 507,
-    height: 350,
+    width: 656,
+    height: 410,
 } as const;
 
 export const CURATION_STEPS = [
@@ -39,20 +39,15 @@ export const CURATION_STEPS = [
 export function HowRenivetCurates() {
     return (
         <section className="w-full bg-[#f8f5ef] px-4 pb-4 sm:px-6 md:bg-[#FAF7F2] md:pb-4 lg:px-8">
-            <div className="mx-auto grid w-full gap-8 rounded-[18px] border border-[#e9e2d8] bg-white px-4 py-6 md:grid-cols-[minmax(0,0.94fr)_minmax(420px,1.06fr)] md:items-center md:gap-12 md:border-[#e9d7d3] md:bg-[#f5ebe7] md:px-12 md:py-12 lg:min-h-[520px] lg:w-[1184px] lg:max-w-full lg:grid-cols-[minmax(0,1fr)_507px] lg:gap-14 lg:px-14 lg:py-10">
+            <div className="mx-auto grid w-full gap-8 rounded-[18px] border border-[#e9e2d8] bg-white px-4 py-6 md:grid-cols-2 md:items-center md:gap-8 md:border-[#e9d7d3] md:bg-[#f5ebe7] md:px-12 md:py-12 lg:min-h-[520px] lg:w-[1360px] lg:max-w-full lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14 lg:px-14 lg:py-10">
                 <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h2 className="font-serif text-[23px] font-normal leading-tight text-[#3E2127] md:text-[32px] md:leading-[1.08]">
-                                How Renivet curates
-                            </h2>
-                            <p className="mt-2 font-serif text-[17px] italic leading-snug text-[#61333d] md:max-w-[390px] md:text-[19px]">
-                                More than a marketplace. A movement!
-                            </p>
-                        </div>
-                        <span className="mt-1 shrink-0 rounded-sm bg-[#f4efe8] px-2 py-1 font-mono text-[9px] tracking-[0.14em] text-[#8c8479] md:bg-[#FAF7F2] md:px-2.5 md:py-1.5 md:shadow-sm">
-                            01 / 03
-                        </span>
+                    <div>
+                        <h2 className="font-serif text-[23px] font-normal leading-tight text-[#3E2127] md:text-[32px] md:leading-[1.08]">
+                            How Renivet curates
+                        </h2>
+                        <p className="mt-2 font-serif text-[17px] italic leading-snug text-[#61333d] md:max-w-[390px] md:text-[19px]">
+                            More than a marketplace. A movement!
+                        </p>
                     </div>
 
                     <div className="mt-6 space-y-5 md:mt-8 md:space-y-5">
@@ -93,14 +88,14 @@ export function HowRenivetCurates() {
                     </Link>
                 </div>
 
-                <div className="relative hidden md:block md:justify-self-end lg:h-[350px] lg:w-[507px]">
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-[12px] md:shadow-[0_16px_30px_rgba(62,33,39,0.14)] lg:aspect-auto lg:h-full lg:w-full">
+                <div className="relative hidden w-full md:block">
+                    <div className="relative aspect-[8/5] w-full overflow-hidden rounded-[12px] md:shadow-[0_16px_30px_rgba(62,33,39,0.14)]">
                         <Image
                             src={CURATION_IMAGE}
-                            alt="Artisanal incense and conscious packaging arranged on a wooden table"
+                            alt="Hands stamping a handmade fabric package beside natural craft materials"
                             fill
                             className="object-cover"
-                            sizes="(min-width: 1024px) 507px, 48vw"
+                            sizes="(min-width: 1424px) 656px, (min-width: 1024px) calc((100vw - 232px) * 0.55), 48vw"
                         />
                     </div>
                     <div className="absolute bottom-5 left-5 w-[250px] rounded-[10px] bg-white px-5 py-4 shadow-sm md:border md:border-[#e9d7d3] md:bg-[#FAF7F2] md:shadow-[0_12px_24px_rgba(62,33,39,0.12)]">

@@ -8,7 +8,7 @@ import { useState } from "react";
 export const BOTANICAL_MOBILE_IMAGE =
     "/assets/botanical-banner/botanical-mobile.png";
 export const BOTANICAL_DESKTOP_IMAGE =
-    "/assets/botanical-banner/botanical-desktop.png";
+    "/assets/botanical-banner/botanical-side-expansion-desktop.png";
 
 export const BOTANICAL_DESKTOP_LAYOUT = {
     fullWidth: true,

@@ -5,7 +5,7 @@ import Link from "next/link";
 export const THOUGHTFUL_PRODUCTS_MOBILE_IMAGE =
     "/assets/thoughtful-products/mobile-incense.png";
 export const THOUGHTFUL_PRODUCTS_EDITORIAL_IMAGE =
-    "/assets/thoughtful-products/lemons-natural-cotton-bag.png";
+    "/assets/thoughtful-products/desktop-weaving.png";
 
 export const THOUGHTFUL_PRODUCT_BENEFITS = [
     {
@@ -57,13 +57,13 @@ export function ThoughtfulProducts() {
                     </p>
                 </div>
 
-                <div className="relative mx-auto mt-7 hidden aspect-[3.4/1] w-full max-w-[760px] overflow-hidden rounded-[16px] shadow-[0_14px_30px_rgba(62,33,39,0.12)] md:block">
+                <div className="relative left-1/2 mt-7 hidden aspect-[3.4/1] w-screen -translate-x-1/2 overflow-hidden md:block">
                     <Image
                         src={THOUGHTFUL_PRODUCTS_EDITORIAL_IMAGE}
-                        alt="Thoughtfully made natural products arranged in a sunlit setting"
+                        alt="A craftsperson weaving blue fabric on a traditional handloom"
                         fill
                         className="object-cover"
-                        sizes="760px"
+                        sizes="100vw"
                     />
                 </div>
 

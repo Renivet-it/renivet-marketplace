@@ -16,13 +16,18 @@ test("Renivet Edit keeps the three approved editorial cards and responsive asset
         "/assets/renivet-edit/festive-reimagined.png",
         "/assets/renivet-edit/home-with-intention.png",
     ]);
+    expect(RENIVET_EDIT_CARDS.map((card) => card.desktopImage)).toEqual([
+        "/assets/renivet-edit/everyday-conscious-cups-desktop.png",
+        "/assets/renivet-edit/festive-polka-dot-portrait-desktop.png",
+        "/assets/renivet-edit/home-beach-candle-desktop.png",
+    ]);
     expect(RENIVET_EDIT_CARDS[2].mobileImage).toBe(
         "/assets/renivet-edit/home-with-intention-mobile.png"
     );
     expect(RENIVET_EDIT_CARDS.map((card) => card.href)).toEqual([
         "/shop",
         "/festive",
-        "/shop/home-and-living",
+        "/shop/home-and-living?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
     ]);
 });
 
