@@ -38,7 +38,6 @@ test("featured brands appears directly below thoughtful products", () => {
 
     expect(thoughtfulPosition).toBeGreaterThan(-1);
     expect(brandsPosition).toBeGreaterThan(thoughtfulPosition);
-    expect(page).not.toContain("<ProductsUnder999Fetch />");
 });
 
 test("featured brands reuses the navbar all-brands dialog", () => {

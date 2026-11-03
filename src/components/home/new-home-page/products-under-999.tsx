@@ -720,11 +720,11 @@ export function ProductsUnder999({
 
     return (
         <section
-            className={cn("w-full bg-white py-10 md:py-14", className)}
+            className={cn("w-full bg-white pb-1 pt-3 md:pb-1 md:pt-4", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex flex-col items-start">
+                <div className="mb-4 flex flex-col items-start">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
                         Affordable Picks
                     </span>
@@ -745,7 +745,7 @@ export function ProductsUnder999({
 
                 <div
                     ref={desktopRef}
-                    className="scrollbar-hide overflow-x-auto scroll-smooth pb-4"
+                    className="scrollbar-hide overflow-x-auto scroll-smooth pb-1"
                 >
                     <div className="flex w-max space-x-5">
                         {shownProducts.map((product) => (
@@ -767,7 +767,7 @@ export function ProductsUnder999({
             </div>
 
             {/* MOBILE */}
-            <div className="scrollbar-hide overflow-x-auto px-4 pb-4 md:hidden">
+            <div className="scrollbar-hide overflow-x-auto px-4 pb-1 md:hidden">
                 <div ref={mobileRef} className="flex space-x-3">
                     {shownProducts.map((product) => (
                         <Under999ProductCard

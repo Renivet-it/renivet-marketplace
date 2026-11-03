@@ -38,7 +38,7 @@ export const CURATION_STEPS = [
 
 export function HowRenivetCurates() {
     return (
-        <section className="w-full bg-[#f8f5ef] px-4 pb-4 sm:px-6 md:bg-[#FAF7F2] md:pb-4 lg:px-8">
+        <section className="w-full bg-[#f8f5ef] px-4 pb-2 sm:px-6 md:bg-[#FAF7F2] md:pb-2 lg:px-8">
             <div className="mx-auto grid w-full gap-8 rounded-[18px] border border-[#e9e2d8] bg-white px-4 py-6 md:grid-cols-2 md:items-center md:gap-8 md:border-[#e9d7d3] md:bg-[#f5ebe7] md:px-12 md:py-12 lg:min-h-[520px] lg:w-[1360px] lg:max-w-full lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14 lg:px-14 lg:py-10">
                 <div className="min-w-0">
                     <div>

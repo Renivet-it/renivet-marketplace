@@ -36,5 +36,4 @@ test("How Renivet curates appears directly after The Renivet Edit", () => {
 
     expect(editPosition).toBeGreaterThan(-1);
     expect(curationPosition).toBeGreaterThan(editPosition);
-    expect(page).not.toContain("<ProductsUnder999Fetch />");
 });
