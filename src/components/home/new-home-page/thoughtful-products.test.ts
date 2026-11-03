@@ -19,12 +19,15 @@ test("thoughtful products keeps the approved four benefit messages and mobile im
     );
 });
 
-test("thoughtful products appears after How Renivet curates", () => {
+test("Products Under 999 appears between curation and thoughtful products", () => {
     const page = readFileSync("src/app/(home)/page.tsx", "utf8");
     const curationPosition = page.indexOf("<HowRenivetCurates />");
+    const affordablePosition = page.indexOf(
+        "<ProductsUnder999Fetch userId={userId} />"
+    );
     const thoughtfulPosition = page.indexOf("<ThoughtfulProducts />");
 
     expect(curationPosition).toBeGreaterThan(-1);
-    expect(thoughtfulPosition).toBeGreaterThan(curationPosition);
-    expect(page).not.toContain("<ProductsUnder999Fetch />");
+    expect(affordablePosition).toBeGreaterThan(curationPosition);
+    expect(thoughtfulPosition).toBeGreaterThan(affordablePosition);
 });

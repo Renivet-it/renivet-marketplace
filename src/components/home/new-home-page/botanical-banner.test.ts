@@ -34,5 +34,4 @@ test("botanical banner appears directly below featured brands", () => {
 
     expect(brandsPosition).toBeGreaterThan(-1);
     expect(botanicalPosition).toBeGreaterThan(brandsPosition);
-    expect(page).not.toContain("<ProductsUnder999Fetch />");
 });

@@ -137,6 +137,11 @@ const ThoughtfulProducts = dynamic(() =>
         default: m.ThoughtfulProducts,
     }))
 );
+const ProductsUnder999 = dynamic(() =>
+    import("@/components/home/new-home-page/products-under-999").then((m) => ({
+        default: m.ProductsUnder999,
+    }))
+);
 const FeaturedBrands = dynamic(() =>
     import("@/components/home/new-home-page/featured-brands").then((m) => ({
         default: m.FeaturedBrands,
@@ -213,6 +218,15 @@ export default async function Page() {
                     }
                 >
                     <HowRenivetCurates />
+                </Suspense>
+            </ScrollReveal>
+            <ScrollReveal className="w-full">
+                <Suspense
+                    fallback={
+                        <div className="h-[400px] w-full animate-pulse bg-[#FAF7F2]" />
+                    }
+                >
+                    <ProductsUnder999Fetch userId={userId} />
                 </Suspense>
             </ScrollReveal>
             <ScrollReveal className="w-full">
@@ -512,6 +526,17 @@ async function HomePageMainProductFetch() {
             <MobileBottom banners={brandProducts} />
         </ScrollReveal>
     );
+}
+
+async function ProductsUnder999Fetch({
+    userId,
+}: {
+    userId: string | null;
+}) {
+    const products = await productQueries.getHomeProductsUnder999();
+    if (!products.length) return null;
+
+    return <ProductsUnder999 products={products} userId={userId ?? undefined} />;
 }
 
 async function MatchaBagFetch() {

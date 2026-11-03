@@ -48,6 +48,10 @@ import { useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import {
+    isProductSizeOptionName,
+    sortProductSizeValues,
+} from "./product-size-order";
 import { DeliveryOption } from "../../products/product/product-delivery";
 import { WishlistButton } from "../buttons";
 
@@ -441,7 +445,16 @@ export function ProductCartAddForm({
             : (product.quantity ?? 0) <= 0);
 
     const sortedOptions = useMemo(() => {
-        return [...product.options].sort((a, b) => {
+        const optionsWithSortedSizes = product.options.map((option) =>
+            isProductSizeOptionName(option.name)
+                ? {
+                      ...option,
+                      values: sortProductSizeValues(option.values),
+                  }
+                : option
+        );
+
+        return optionsWithSortedSizes.sort((a, b) => {
             const order = ["color", "size"];
             const aIndex = order.indexOf(a.name.toLowerCase());
             const bIndex = order.indexOf(b.name.toLowerCase());
