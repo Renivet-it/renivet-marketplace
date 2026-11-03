@@ -720,7 +720,7 @@ export function ProductsUnder999({
 
     return (
         <section
-            className={cn("w-full bg-white py-10 md:py-14", className)}
+            className={cn("w-full bg-white py-6 md:py-8", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
